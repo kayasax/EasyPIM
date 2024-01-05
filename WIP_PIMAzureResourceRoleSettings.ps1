@@ -60,7 +60,7 @@ param(
 
     [Parameter(Position = 2, Mandatory = $true, ValueFromPipeline = $true)]
     [ValidateNotNullOrEmpty()]
-    [System.string]
+    [System.string[]]
     $rolename,
 
     [switch]
@@ -256,7 +256,7 @@ try {
             "Body"        = $TeamMessageBody
             "ContentType" = 'application/json'
         }
-        $null=Invoke-RestMethod @parameters
+        $null = Invoke-RestMethod @parameters
     }#end function senfd-teamsnotif
    
     #log "`n******************************************`nInfo : script is starting`n******************************************"
@@ -290,99 +290,105 @@ try {
         'Authorization' = 'Bearer ' + $token.Token
     }
 
-    # 1 Get ID for the role $rolename assignable at the provided scope
+    #run the flow for each role name.
+
+    $rolename | ForEach-Object {
+
+        # 1 Get ID for the role $rolename assignable at the provided scope
    
-    $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$rolename'"
-    write-verbose ">> Get role definition for the role $rolename assignable at the scope $scope at $restUri"
-    $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader 
-    $roleID = $response.value.id
-    if($null -eq $roleID) { throw "An exception occured : can't find a roleID for $rolename at scope $scope" }
-    Write-Verbose ">> RodeId = $roleID"
+        $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$_'"
+        write-verbose ">> Get role definition for the role $_ assignable at the scope $scope at $restUri"
+        $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader 
+        $roleID = $response.value.id
+        if ($null -eq $roleID) { throw "An exception occured : can't find a roleID for $_ at scope $scope" }
+        Write-Verbose ">> RodeId = $roleID"
 
-    # 2  get the role assignment for the roleID found at #1
-    $restUri = "$ARMendpoint/roleManagementPolicyAssignments?api-version=2020-10-01&`$filter=roleDefinitionId eq '$roleID'"
-    write-verbose "Get the Assignment for $rolename at $restUri"
-    $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader
-    $policyId = $response.value.properties.policyId #.split('/')[-1] 
-    Write-Verbose ">> Sub-policy ID = $policyId"
+        # 2  get the role assignment for the roleID found at #1
+        $restUri = "$ARMendpoint/roleManagementPolicyAssignments?api-version=2020-10-01&`$filter=roleDefinitionId eq '$roleID'"
+        write-verbose "Get the Assignment for $_ at $restUri"
+        $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader
+        $policyId = $response.value.properties.policyId #.split('/')[-1] 
+        Write-Verbose ">> Sub-policy ID = $policyId"
 
-    # 3 get the role policy for the policyID found in #2
-    $restUri = "$ARMhost/$policyId/?api-version=2020-10-01"
-    write-verbose ">> get role policy at $restUri"
-    $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader
+        # 3 get the role policy for the policyID found in #2
+        $restUri = "$ARMhost/$policyId/?api-version=2020-10-01"
+        write-verbose ">> get role policy at $restUri"
+        $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader
 
-    # Maximum end user activation duration in Hour (PT24H) // Max 24H in portal but can be greater
-    $_activationDuration = $response.properties.rules | ? { $_.id -eq "Expiration_EndUser_Assignment" } | select -ExpandProperty maximumduration
+        # Maximum end user activation duration in Hour (PT24H) // Max 24H in portal but can be greater
+        $_activationDuration = $response.properties.rules | ? { $_.id -eq "Expiration_EndUser_Assignment" } | select -ExpandProperty maximumduration
     
-    # End user enablement rule (MultiFactorAuthentication, Justification, Ticketing)
-    $enablementRules = $response.properties.rules | ? { $_.id -eq "Enablement_EndUser_Assignment" } | select enabledRules
+        # End user enablement rule (MultiFactorAuthentication, Justification, Ticketing)
+        $enablementRules = $response.properties.rules | ? { $_.id -eq "Enablement_EndUser_Assignment" } | select -expand enabledRules
     
-    # approval required 
-    $_approvalrequired = $($response.properties.rules | ? { $_.id -eq "Approval_EndUser_Assignment" }).setting.isapprovalrequired
-    #approvers 
-    $_approvers = $($response.properties.rules | ? { $_.id -eq "Approval_EndUser_Assignment" }).setting.approvalstages.primaryapprovers
+        # approval required 
+        $_approvalrequired = $($response.properties.rules | ? { $_.id -eq "Approval_EndUser_Assignment" }).setting.isapprovalrequired
+        #approvers 
+        $_approvers = $($response.properties.rules | ? { $_.id -eq "Approval_EndUser_Assignment" }).setting.approvalstages.primaryapprovers
 
-    $config = [PSCustomObject]@{
-        ActivationDuration = $_activationDuration;
-        EnablementRules    = $enablementRules;
-        ApprovalRequired   = $_approvalrequired
-        Approvers          = $_approvers
-    }
-
-    if ($show) {
-        #show curent config and quit
-        return $config # $response 
-    }
-    
-    # Build our rules to patch based on parameter used
-    $rules = @()
-
-    # Set Maximum activation duration
-    if ( $null -ne $ActivationDuration ) {
-        $properties = @{
-            "isExpirationRequired" = "true";
-            "maximumDuration"      = "$ActivationDuration";
-            "id"                   = "Expiration_EndUser_Assignment";
-            "ruleType"             = "RoleManagementPolicyExpirationRule";
-            "target"               = @{
-                "caller"     = "EndUser";
-                "operations" = @("All")
-            };
-            "level"                = "Assignment"
-        }       
-        $rule = $properties | ConvertTo-Json  
-        $rules += $rule
-    }
-
-    # Set activation requirement MFA/justification/ticketing
-    if ($null -ne $ActivationRequirement) {
-
-        $properties = @{
-            "enabledRules" = $ActivationRequirement;
-            "id"           = "Enablement_EndUser_Assignment";
-            "ruleType"     = "RoleManagementPolicyEnablementRule";
-            "target"       = @{
-                "caller"     = "EndUser";
-                "operations" = @("All");
-                "level"      = "Assignment"
-            }
+        $config = [PSCustomObject]@{
+            RoleName = $_
+            ActivationDuration = $_activationDuration;
+            EnablementRules    = $enablementRules;
+            ApprovalRequired   = $_approvalrequired
+            Approvers          = $_approvers
         }
-        $rule = $properties | ConvertTo-Json  
 
-        $rules += $rule
-    }
+        if ($show) {
+            #show curent config and quit
+            return $config # $response 
+        }
+    
+        # Build our rules to patch based on parameter used
+        $rules = @()
 
-    # Approval and approvers
-    if ( ($null -ne $ApprovalRequired) -or ($null -ne $Approvers)) {
-        if ($ApprovalRequired -eq $false) { $req = "false" }else { $req = "true" }
+        # Set Maximum activation duration
+        if ( ($null -ne $ActivationDuration) -and ("" -ne $ActivationDuration) ) {
+            Write-Verbose "Editing Activation duration : $activationDuration"
+            $properties = @{
+                "isExpirationRequired" = "true";
+                "maximumDuration"      = "$ActivationDuration";
+                "id"                   = "Expiration_EndUser_Assignment";
+                "ruleType"             = "RoleManagementPolicyExpirationRule";
+                "target"               = @{
+                    "caller"     = "EndUser";
+                    "operations" = @("All")
+                };
+                "level"                = "Assignment"
+            }       
+            $rule = $properties | ConvertTo-Json  
+            $rules += $rule
+        }
+
+        # Set activation requirement MFA/justification/ticketing
+        if ($null -ne $ActivationRequirement) {
+
+            $properties = @{
+                "enabledRules" = $ActivationRequirement;
+                "id"           = "Enablement_EndUser_Assignment";
+                "ruleType"     = "RoleManagementPolicyEnablementRule";
+                "target"       = @{
+                    "caller"     = "EndUser";
+                    "operations" = @("All");
+                    "level"      = "Assignment"
+                }
+            }
+            $rule = $properties | ConvertTo-Json  
+
+            $rules += $rule
+        }
+
+        # Approval and approvers
+        if ( ($null -ne $ApprovalRequired) -or ($null -ne $Approvers)) {
+            if ($ApprovalRequired -eq $false) { $req = "false" }else { $req = "true" }
         
-        $rule = '
+            $rule = '
         {
         "setting": {'
-        if ($null -ne $ApprovalRequired) {
-            $rule += '"isApprovalRequired": ' + $req + ','
-        }
-        $rule += '
+            if ($null -ne $ApprovalRequired) {
+                $rule += '"isApprovalRequired": ' + $req + ','
+            }
+            $rule += '
         "isApprovalRequiredForExtension": false,
         "isRequestorJustificationRequired": true,
         "approvalMode": "SingleStage",
@@ -393,21 +399,21 @@ try {
             "escalationTimeInMinutes": 0,
         '
 
-        if ($null -ne $Approvers) {
-            #at least one approver required if approval is enable
-            $rule += '
+            if ($null -ne $Approvers) {
+                #at least one approver required if approval is enable
+                $rule += '
             "primaryApprovers": [
             '
-            $cpt = 0    
-            $Approvers | ForEach-Object {
-                $id = $_.Id
-                $name = $_.Name
-                $type = $_.Type
+                $cpt = 0    
+                $Approvers | ForEach-Object {
+                    $id = $_.Id
+                    $name = $_.Name
+                    $type = $_.Type
 
-                if ($cpt -gt 0) {
-                    $rule += ","
-                }
-                $rule += '
+                    if ($cpt -gt 0) {
+                        $rule += ","
+                    }
+                    $rule += '
             {
                 "id": "'+ $id + '",
                 "description": "'+ $name + '",
@@ -415,14 +421,14 @@ try {
                 "userType": "'+ $type + '"
             }
             '
-                $cpt++
+                    $cpt++
+                }
+
+                $rule += '
+            ],'
             }
 
-            $rule += '
-            ],'
-        }
-
-        $rule += ' 
+            $rule += ' 
         "isEscalationEnabled": false,
             "escalationApprovers": null
                     }]
@@ -440,33 +446,33 @@ try {
             "enforcedSettings": null
         
         }}'
-        $rules += $rule
-    }
+            $rules += $rule
+        }
 
-    $allrules = $rules -join ','
-    Write-Verbose "All rules: $allrules"
+        $allrules = $rules -join ','
+        Write-Verbose "All rules: $allrules"
 
-    $body = '
+        $body = '
     {
         "properties": {
           "scope": "'+ $scope + '",  
           "rules": [
     '
-    $body += $allrules
-    $body += '
+        $body += $allrules
+        $body += '
           ],
           "level": "Assignment"
         }
     }'
-    write-verbose ">> PATCH body: $body"
+        write-verbose ">> PATCH body: $body"
 
-    $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body
-    Write-Verbose $response
-    # 4 Patch the policy
-    # example 1 change maximum activation duration 
-    # Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
+        $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body
+        Write-Verbose $response
+        # 4 Patch the policy
+        # example 1 change maximum activation duration 
+        # Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
   
-    <#   $body='
+        <#   $body='
     {
         "properties": {
           "scope": "'+$scope+'",  
@@ -491,8 +497,8 @@ try {
 #>
     
 
-    #Example 2 require justfification  MFA and ticketing on enablement , add/remove rule as needed
-    <#   $body2='{
+        #Example 2 require justfification  MFA and ticketing on enablement , add/remove rule as needed
+        <#   $body2='{
         "properties": {
             "scope": "'+$scope+'",  
             "rules": [
@@ -517,13 +523,13 @@ try {
     }'
     $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body2
 #>
-    #Exemple 3 Send notifications when eligible members activate this role 
-    #For each recipient type you can set below highlighted property.
-    #NotificationLevel are Critical, All.
-    #Notification Recipients can be list.
+        #Exemple 3 Send notifications when eligible members activate this role 
+        #For each recipient type you can set below highlighted property.
+        #NotificationLevel are Critical, All.
+        #Notification Recipients can be list.
 
 
-    $body3 = '{
+        $body3 = '{
         "properties": {
             "scope": "'+ $scope + '",  
             "rules": [
@@ -586,11 +592,11 @@ try {
         }
     }
     ]    
+}'
+   
+        $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body3
     }
-    }'
-    $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body3
-
-
+    
     
 }
 catch {
