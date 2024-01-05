@@ -70,8 +70,17 @@ param(
     $ActivationDuration = $null,
 
     [System.string[]]
+    [Parameter(HelpMessage="Accepted values: 'null' or any combination of these options (Case SENSITIVE):  'Justification, 'MultiFactorAuthentication', 'Ticketing'", ValueFromPipeline = $true)]
+    [ValidateScript({
+
+        # WARNING: options are CASE SENSITIVE
+        $valid = $true
+        $acceptedValues=@("Justification","MultiFactorAuthentication", "Ticketing")
+        $_ | ForEach-Object{ if (!( $acceptedValues -Ccontains $_)) { $valid = $false}}
+        $valid
+    })]
     $ActivationRequirement, # accepted values: "Justification", "MultiFactorAuthentication", "Ticketing"
-    #todo : constraint the values
+    
  
     [bool]
     $ApprovalRequired,
@@ -81,7 +90,8 @@ param(
 # ERROR HANDLING
 $ErrorActionPreference = "STOP" # make all errors terminating ones so they can be catch
 
-$TeamsNotif = $true # set to $true if you want to send fatal error on a Teams channel using Webhook
+# TEAMS NOTIDICATION
+$TeamsNotif = $true # set to $true if you want to send fatal error on a Teams channel using Webhook see doc to setup
 $description = "Script notification" #The description will be use in the mail subject 
 $teamsWebhookURL = "https://microsoft.webhook.office.com/webhookb2/0b9bf9c2-fc4b-42b2-aa56-c58c805068af@72f988bf-86f1-41af-91ab-2d7cd011db47/IncomingWebhook/40db225a69854e49b617eb3427bcded8/8dd39776-145b-4f26-8ac4-41c5415307c7"
  
@@ -328,6 +338,7 @@ try {
 
         $config = [PSCustomObject]@{
             RoleName = $_
+            PolicyID = $policyId
             ActivationDuration = $_activationDuration;
             EnablementRules    = $enablementRules;
             ApprovalRequired   = $_approvalrequired
@@ -361,6 +372,7 @@ try {
         }
 
         # Set activation requirement MFA/justification/ticketing
+        # todo code no requirement
         if ($null -ne $ActivationRequirement) {
 
             $properties = @{
@@ -608,7 +620,7 @@ catch {
     $Exception = $ErrorRecord.Exception
     
     if ($TeamsNotif) { send-teamsnotif "$err" "$details<BR/> TIPS: try to check the scope and the role name" "$position" }
-    Log "An exception occured: $err `nDetails: $details `nPosition: $position" -noEcho
+    Log "An exception occured: $err `nDetails: $details `nPosition: $position"
     Log "Error, script did not terminate normaly"
     break
 }
