@@ -256,19 +256,9 @@ try {
             "Body"        = $TeamMessageBody
             "ContentType" = 'application/json'
         }
-        Invoke-RestMethod @parameters
+        $null=Invoke-RestMethod @parameters
     }#end function senfd-teamsnotif
-
-    function Resolve-Error ($ErrorRecord = $Error[0]) {
-        $ErrorRecord | Format-List * -Force
-        $ErrorRecord.InvocationInfo | Format-List *
-        $Exception = $ErrorRecord.Exception
-        for ($i = 0; $Exception; $i++, ($Exception = $Exception.InnerException)) {
-            "$i" * 80
-            $Exception | Format-List * -Force
-        }
-    }
-
+   
     #log "`n******************************************`nInfo : script is starting`n******************************************"
       
     #$rolename="Webmaster"
@@ -304,10 +294,9 @@ try {
    
     $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$rolename'"
     write-verbose ">> Get role definition for the role $rolename assignable at the scope $scope at $restUri"
-    $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -StatusCodeVariable "requestStatus"
-    $requestStatus
-    if ($requestStatus -ne 200) { throw "There was an error processing the query, HTTP status code = $requestStatus" }
+    $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader 
     $roleID = $response.value.id
+    if($null -eq $roleID) { throw "An exception occured : can't find a roleID for $rolename at scope $scope" }
     Write-Verbose ">> RodeId = $roleID"
 
     # 2  get the role assignment for the roleID found at #1
@@ -607,15 +596,13 @@ try {
 catch {
     $_ # echo the exception
     $err = $($_.exception.message | out-string) 
-      
     $errorRecord = $Error[0] 
-    #$errorRecord |fl -Force
     $details = $errorRecord.errordetails # |fl -force
     $position = $errorRecord.InvocationInfo.positionMessage
     $Exception = $ErrorRecord.Exception
     
     if ($TeamsNotif) { send-teamsnotif "$err" "$details<BR/> TIPS: try to check the scope and the role name" "$position" }
-    Log "An exception occured: $err `nDetails: $details `nPosition: $position"
+    Log "An exception occured: $err `nDetails: $details `nPosition: $position" -noEcho
     Log "Error, script did not terminate normaly"
     break
 }
