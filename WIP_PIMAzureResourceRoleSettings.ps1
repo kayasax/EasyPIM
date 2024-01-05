@@ -1,7 +1,10 @@
 <# 
 .Synopsis
-Modify an Azure resource role setting
-General flow:
+Sript to manage the Azure Resource Roles settings with simplicity in mind
+
+.Description
+    
+    General flow:
 
     1  Get-AzRoleAssignment -RoleDefinitionName webmaster
     2 run the query GET https://management.azure.com//subscriptions/eedcaa84-3756-4da9-bf87-40068c3dd2a2/providers/Microsoft.Authorization/roleManagementPolicyAssignments?api-version=2020-10-01
@@ -12,9 +15,6 @@ General flow:
     5 update the rule
     PATCH https://management.azure.com//subscriptions/eedcaa84-3756-4da9-bf87-40068c3dd2a2/providers/Microsoft.Authorization/roleManagementPolicies/507081b0-bdfc-4a40-9403-fd447a75712a?api-version=2020-10-01
 
-.Description
-    Sript to manage the Azure Resource Roles settings with simplicity in mind
-    
 
 .Parameter param1 
     describe param1
@@ -70,16 +70,16 @@ param(
     $ActivationDuration = $null,
 
     [System.string[]]
-    [Parameter(HelpMessage="Accepted values: 'null' or any combination of these options (Case SENSITIVE):  'Justification, 'MultiFactorAuthentication', 'Ticketing'", ValueFromPipeline = $true)]
+    [Parameter(HelpMessage="Accepted values: 'None' or any combination of these options (Case SENSITIVE):  'Justification, 'MultiFactorAuthentication', 'Ticketing'", ValueFromPipeline = $true)]
     [ValidateScript({
 
         # WARNING: options are CASE SENSITIVE
         $valid = $true
-        $acceptedValues=@("Justification","MultiFactorAuthentication", "Ticketing")
+        $acceptedValues=@("None","Justification","MultiFactorAuthentication", "Ticketing")
         $_ | ForEach-Object{ if (!( $acceptedValues -Ccontains $_)) { $valid = $false}}
         $valid
     })]
-    $ActivationRequirement, # accepted values: "Justification", "MultiFactorAuthentication", "Ticketing"
+    $ActivationRequirement, # accepted values: "None","Justification", "MultiFactorAuthentication", "Ticketing"
     
  
     [bool]
@@ -87,24 +87,32 @@ param(
 
     $Approvers # @({"Id"="XXXXXX";"Name"="John":"Type"="user|group"}, .... )
 )
-# ERROR HANDLING
-$ErrorActionPreference = "STOP" # make all errors terminating ones so they can be catch
+#***************************************
+#* CONFIGURATION
+#***************************************
+
+# LOG TO FILE ( if enable by default it will create a LOGS subfolder in the script folder, and create a logfile with the name of the script )
+$logToFile=$false
 
 # TEAMS NOTIDICATION
-$TeamsNotif = $true # set to $true if you want to send fatal error on a Teams channel using Webhook see doc to setup
-$description = "Script notification" #The description will be use in the mail subject 
+# set to $true if you want to send fatal error on a Teams channel using Webhook see doc to setup
+$TeamsNotif = $false 
+# your Teams Inbound WebHook URL
 $teamsWebhookURL = "https://microsoft.webhook.office.com/webhookb2/0b9bf9c2-fc4b-42b2-aa56-c58c805068af@72f988bf-86f1-41af-91ab-2d7cd011db47/IncomingWebhook/40db225a69854e49b617eb3427bcded8/8dd39776-145b-4f26-8ac4-41c5415307c7"
- 
-$description = "PIM Azure role setting" #The description will be use in the mail subject 
+#The description will be used as the notification subject
+$description = "PIM Azure role setting" 
 
-# PRIVATE VARIABLES DON'T TOUCH !!
-###################
+#***************************************
+#* PRIVATE VARIABLES DON'T TOUCH !!
+#***************************************
 $_scriptFullName = $MyInvocation.myCommand.definition
 $_scriptName = Split-Path -Leaf $_scriptFullName
 $_scriptPath = split-path -Parent   $_scriptFullName
 $HostFQDN = $env:computername + "." + $env:USERDNSDOMAIN
+# ERROR HANDLING
+$ErrorActionPreference = "STOP" # make all errors terminating ones so they can be catch
 
-
+#from now every error will be treated as exception and terminate the script
 try {
     
     <# 
@@ -152,6 +160,9 @@ try {
             #$MaxSize = 1,
             $Maxfile = 3 # how many files to keep
         )
+
+        #do nothing if logging is disabled
+        if ($true -eq $logToFile ){
      
         # When no logfile is specified we append .log to the scriptname 
         if ( $logfile -eq $null ) { 
@@ -193,7 +204,8 @@ try {
         }
      
         echo "$(Get-Date -Format yyy-MM-dd-HHmm) - $(whoami) - $($MyInvocation.ScriptName) (L $($MyInvocation.ScriptLineNumber)) : $msg" >> $logfile
-     
+        }# end logging to file
+
         # Display $msg if $noEcho is not set
         if ( $noEcho -eq $false) {
             #colour it up...
@@ -270,10 +282,10 @@ try {
     }#end function senfd-teamsnotif
    
     #log "`n******************************************`nInfo : script is starting`n******************************************"
-      
     #$rolename="Webmaster"
 
     #at least one approver required if approval is enable
+    # todo chech if a parameterset wwould be better
     if ($ApprovalRequired -eq $true -and $Approvers -eq $null) { throw "`n /!\ At least one approver is required if approval is enable, please set -Approvers parameter`n`n" }
     
     $scope = "subscriptions/$subscriptionID"
@@ -281,20 +293,15 @@ try {
     $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
     
     # Log in first with Connect-AzAccount if not using Cloud Shell
-    Write-Verbose ">> Connecting to Azure"
+    Write-Verbose ">> Connecting to Azure with tenantID $tenantID"
     if ( (get-azcontext) -eq $null) { Connect-AzAccount -Tenant $tenantID }
 
     # Get access Token
     Write-Verbose ">> Getting access token"
-    <# $azContext = Get-AzContext
-    $azProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
-    $profileClient = New-Object -TypeName Microsoft.Azure.Commands.ResourceManager.Common.RMProfileClient -ArgumentList ($azProfile)
-    $token = $profileClient.AcquireAccessToken($azContext.Subscription.TenantId)
-    #>
     $token = Get-AzAccessToken
-
+    #Write-Verbose ">> token=$($token.Token)"
     
-    Write-Verbose ">> token=$token"
+    # setting the authentication headers for MSGraph calls
     $authHeader = @{
         'Content-Type'  = 'application/json'
         'Authorization' = 'Bearer ' + $token.Token
@@ -307,7 +314,7 @@ try {
         # 1 Get ID for the role $rolename assignable at the provided scope
    
         $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$_'"
-        write-verbose ">> Get role definition for the role $_ assignable at the scope $scope at $restUri"
+        write-verbose ">> #1 Get role definition for the role $_ assignable at the scope $scope at $restUri"
         $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader 
         $roleID = $response.value.id
         if ($null -eq $roleID) { throw "An exception occured : can't find a roleID for $_ at scope $scope" }
@@ -316,7 +323,7 @@ try {
         # 2  get the role assignment for the roleID found at #1
         $restUri = "$ARMendpoint/roleManagementPolicyAssignments?api-version=2020-10-01&`$filter=roleDefinitionId eq '$roleID'"
         write-verbose "Get the Assignment for $_ at $restUri"
-        $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader
+        $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader 
         $policyId = $response.value.properties.policyId #.split('/')[-1] 
         Write-Verbose ">> Sub-policy ID = $policyId"
 
@@ -372,20 +379,42 @@ try {
         }
 
         # Set activation requirement MFA/justification/ticketing
-        # todo code no requirement
         if ($null -ne $ActivationRequirement) {
-
-            $properties = @{
-                "enabledRules" = $ActivationRequirement;
-                "id"           = "Enablement_EndUser_Assignment";
-                "ruleType"     = "RoleManagementPolicyEnablementRule";
-                "target"       = @{
-                    "caller"     = "EndUser";
-                    "operations" = @("All");
-                    "level"      = "Assignment"
-                }
+            if ($ActivationRequirement -eq "None"){
+                # didnt find the proper way to create empty array with convertto-json so using json directly here
+                $properties = '{
+                    "enabledRules": [],
+                    "id": "Enablement_EndUser_Assignment",
+                    "ruleType": "RoleManagementPolicyEnablementRule",
+                    "target": {
+                        "caller": "EndUser",
+                        "operations": [
+                            "All"
+                        ],
+                        "level": "Assignment",
+                        "targetObjects": [],
+                        "inheritableSettings": [],
+                        "enforcedSettings": []
+                    }
+                }'
+                $rule = $properties
             }
-            $rule = $properties | ConvertTo-Json  
+            else{
+                "PAS NONE"
+                $properties = @{
+                    "enabledRules" = $ActivationRequirement;
+                    "id"           = "Enablement_EndUser_Assignment";
+                    "ruleType"     = "RoleManagementPolicyEnablementRule";
+                    "target"       = @{
+                        "caller"     = "EndUser";
+                        "operations" = @("All");
+                        "level"      = "Assignment"
+                    }
+                }
+                $rule = $properties | ConvertTo-Json  
+            }
+            
+            
 
             $rules += $rule
         }
@@ -462,7 +491,7 @@ try {
         }
 
         $allrules = $rules -join ','
-        Write-Verbose "All rules: $allrules"
+        #Write-Verbose "All rules: $allrules"
 
         $body = '
     {
@@ -476,7 +505,7 @@ try {
           "level": "Assignment"
         }
     }'
-        write-verbose ">> PATCH body: $body"
+        write-verbose "`n>> PATCH body: $body"
 
         $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body
         Write-Verbose $response
