@@ -48,17 +48,17 @@ General flow:
 param(
     
 
-    [Parameter(Position=0, Mandatory=$true,ValueFromPipeline = $true)]
+    [Parameter(Position = 0, Mandatory = $true, ValueFromPipeline = $true)]
     [ValidateNotNullOrEmpty()]
     [System.String]
     $TenantID,
 
-    [Parameter(Position=1, Mandatory=$true,ValueFromPipeline = $true)]
+    [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline = $true)]
     [ValidateNotNullOrEmpty()]
     [System.string]
     $SubscriptionId,
 
-    [Parameter(Position=2, Mandatory=$true,ValueFromPipeline = $true)]
+    [Parameter(Position = 2, Mandatory = $true, ValueFromPipeline = $true)]
     [ValidateNotNullOrEmpty()]
     [System.string]
     $rolename,
@@ -67,7 +67,7 @@ param(
     $show, # show current config only, no change made
 
     [System.string]
-    $ActivationDuration=$null,
+    $ActivationDuration = $null,
 
     [System.string[]]
     $ActivationRequirement, # accepted values: "Justification", "MultiFactorAuthentication", "Ticketing"
@@ -81,22 +81,23 @@ param(
 # ERROR HANDLING
 $ErrorActionPreference = "STOP" # make all errors terminating ones so they can be catch
 
-#todo : replace email by teams notif
-$emailAlert = $false # set to $true if you want to send fatal error by mail
-$to="loicmichel@microsoft.com" # email recipients  you can use several addresses like this "user1@dom.com","user2@dom.com"  
-$description="PIM Azure role setting" #The description will be use in the mail subject 
+$TeamsNotif = $true # set to $true if you want to send fatal error on a Teams channel using Webhook
+$description = "Script notification" #The description will be use in the mail subject 
+$teamsWebhookURL = "https://microsoft.webhook.office.com/webhookb2/0b9bf9c2-fc4b-42b2-aa56-c58c805068af@72f988bf-86f1-41af-91ab-2d7cd011db47/IncomingWebhook/40db225a69854e49b617eb3427bcded8/8dd39776-145b-4f26-8ac4-41c5415307c7"
+ 
+$description = "PIM Azure role setting" #The description will be use in the mail subject 
 
 # PRIVATE VARIABLES DON'T TOUCH !!
 ###################
-$_scriptFullName=$MyInvocation.myCommand.definition
-$_scriptName=Split-Path -Leaf $_scriptFullName
-$_scriptPath=split-path -Parent   $_scriptFullName
-$HostFQDN=$env:computername+"."+$env:USERDNSDOMAIN
+$_scriptFullName = $MyInvocation.myCommand.definition
+$_scriptName = Split-Path -Leaf $_scriptFullName
+$_scriptPath = split-path -Parent   $_scriptFullName
+$HostFQDN = $env:computername + "." + $env:USERDNSDOMAIN
 
 
-try{
+try {
     
-     <# 
+    <# 
       .Synopsis
        Log message to file and display it on screen with basic colour hilights.
        The function include a log rotate feature.
@@ -130,94 +131,158 @@ try{
          * 21/09/2017 correction of rotating step
       	Todo : 
      #>
-     function log{
-         [CmdletBinding()]
-         param(
-             [string]$msg,
-             $logfile = $null,
-             $logdir = $(join-path -path $script:_scriptPath -childpath "LOGS"), # Path to logfile
-             [switch]$noEcho, # if set dont display output to screen, only to logfile
-             $MaxSize = 3145728, # 3MB
-             #$MaxSize = 1,
-             $Maxfile = 3 # how many files to keep
-         )
+    function log {
+        [CmdletBinding()]
+        param(
+            [string]$msg,
+            $logfile = $null,
+            $logdir = $(join-path -path $script:_scriptPath -childpath "LOGS"), # Path to logfile
+            [switch]$noEcho, # if set dont display output to screen, only to logfile
+            $MaxSize = 3145728, # 3MB
+            #$MaxSize = 1,
+            $Maxfile = 3 # how many files to keep
+        )
      
-         # When no logfile is specified we append .log to the scriptname 
-         if( $logfile -eq $null ){ 
-             $logfile =  $(Split-Path -Leaf $MyInvocation.ScriptName)+".log"
-         }
+        # When no logfile is specified we append .log to the scriptname 
+        if ( $logfile -eq $null ) { 
+            $logfile = $(Split-Path -Leaf $MyInvocation.ScriptName) + ".log"
+        }
        
-         # Create folder if needed
-         if( !(test-path  $logdir) ){
-             $null=New-Item -ItemType Directory -Path $logdir  -Force
-         }
+        # Create folder if needed
+        if ( !(test-path  $logdir) ) {
+            $null = New-Item -ItemType Directory -Path $logdir  -Force
+        }
          
-         # Ensure logfile will be save in logdir
-         if( $logfile -notmatch [regex]::escape($logdir)) {
-             $logfile="$logdir\$logfile"
-         }
+        # Ensure logfile will be save in logdir
+        if ( $logfile -notmatch [regex]::escape($logdir)) {
+            $logfile = "$logdir\$logfile"
+        }
          
-         # Create file
-         if( !(Test-Path $logfile) ){
-             write-verbose "$logfile not found, creating it"
-             $null=New-Item -ItemType file $logfile -Force  
-         }
-         else{ # file exists, do size exceeds limit ?
-             if ( (get-childitem $logfile | select -expand length) -gt $Maxsize){
-                 echo "$(Get-Date -Format yyy-MM-dd-HHmm) - $(whoami) - $($MyInvocation.ScriptName) (L $($MyInvocation.ScriptLineNumber)) : Log size exceed $MaxSize, creating a new file." >> $logfile 
+        # Create file
+        if ( !(Test-Path $logfile) ) {
+            write-verbose "$logfile not found, creating it"
+            $null = New-Item -ItemType file $logfile -Force  
+        }
+        else {
+            # file exists, do size exceeds limit ?
+            if ( (get-childitem $logfile | select -expand length) -gt $Maxsize) {
+                echo "$(Get-Date -Format yyy-MM-dd-HHmm) - $(whoami) - $($MyInvocation.ScriptName) (L $($MyInvocation.ScriptLineNumber)) : Log size exceed $MaxSize, creating a new file." >> $logfile 
                  
-                 # rename current logfile
-                 $LogFileName = $($($LogFile -split "\\")[-1])
-                 $basename = ls $LogFile |select -expand basename
-                 $dirname = ls $LogFile |select -expand directoryname
+                # rename current logfile
+                $LogFileName = $($($LogFile -split "\\")[-1])
+                $basename = ls $LogFile | select -expand basename
+                $dirname = ls $LogFile | select -expand directoryname
      
-                 Write-Verbose "Rename-Item $LogFile ""$($LogFileName.substring(0,$LogFileName.length-4))-$(Get-Date -format yyyddMM-HHmmss).log"""
-                 Rename-Item $LogFile "$($LogFileName.substring(0,$LogFileName.length-4))-$(Get-Date -format yyyddMM-HHmmss).log"
+                Write-Verbose "Rename-Item $LogFile ""$($LogFileName.substring(0,$LogFileName.length-4))-$(Get-Date -format yyyddMM-HHmmss).log"""
+                Rename-Item $LogFile "$($LogFileName.substring(0,$LogFileName.length-4))-$(Get-Date -format yyyddMM-HHmmss).log"
      
-                 # keep $Maxfile  logfiles and delete the older ones
-                 $filesToDelete = ls  "$dirname\$basename*.log" | sort LastWriteTime -desc | select -Skip $Maxfile 
-                 $filesToDelete | remove-item  -force
-             }
-         }
+                # keep $Maxfile  logfiles and delete the older ones
+                $filesToDelete = ls  "$dirname\$basename*.log" | sort LastWriteTime -desc | select -Skip $Maxfile 
+                $filesToDelete | remove-item  -force
+            }
+        }
      
-         echo "$(Get-Date -Format yyy-MM-dd-HHmm) - $(whoami) - $($MyInvocation.ScriptName) (L $($MyInvocation.ScriptLineNumber)) : $msg" >> $logfile
+        echo "$(Get-Date -Format yyy-MM-dd-HHmm) - $(whoami) - $($MyInvocation.ScriptName) (L $($MyInvocation.ScriptLineNumber)) : $msg" >> $logfile
      
-         # Display $msg if $noEcho is not set
-         if( $noEcho -eq $false){
-             #colour it up...
-             if( $msg -match "Erreur|error"){
-                 write-host $msg -ForegroundColor red
-             }
-             elseif ($msg -match "avertissement|attention|warning") {
-                 write-host $msg -ForegroundColor yellow
-             }
-             elseif ($msg -match "info|information") {
-                 write-host $msg -ForegroundColor cyan
-             }    
-             elseif ($msg -match "succès|succes|success|OK") {
-                 write-host $msg -ForegroundColor green
-             }
-             else{
-                 write-host $msg 
-             }
-         }
-     } #end function log
-     
+        # Display $msg if $noEcho is not set
+        if ( $noEcho -eq $false) {
+            #colour it up...
+            if ( $msg -match "Erreur|error") {
+                write-host $msg -ForegroundColor red
+            }
+            elseif ($msg -match "avertissement|attention|warning") {
+                write-host $msg -ForegroundColor yellow
+            }
+            elseif ($msg -match "info|information") {
+                write-host $msg -ForegroundColor cyan
+            }    
+            elseif ($msg -match "succès|succes|success|OK") {
+                write-host $msg -ForegroundColor green
+            }
+            else {
+                write-host $msg 
+            }
+        }
+    } #end function log
+    function send-teamsnotif {
+        [CmdletBinding()] #make script react as cmdlet (-verbose etc..)
+        param(
+            [Parameter(Mandatory = $true)]
+            [ValidateNotNullOrEmpty()]
+            [string] $message,
+            [string] $details,
+            [string] $stacktrace = $null
+        )
+
+        
+        <#$JSONBody = [PSCustomObject][Ordered]@{
+            "@type"      = "MessageCard"
+            "@context"   = "http://schema.org/extensions"
+            "summary"    = "Alert from : $description ($_scriptFullName)"
+            "themeColor" = '0078D7'
+            "title"      = "Alert from $env:computername"
+            "text"       = "$message"
+        }#>
+
+        $JSONBody = @{
+            "@type"    = "MessageCard"
+            "@context" = "<http://schema.org/extensions>"
+            "title"    = "Alert for $description @ $env:computername  "
+            "text"     = "An exception occured:"
+            "sections" = @(
+                @{
+                    "activityTitle" = "Message : $message"
+                },
+                @{
+                    "activityTitle" = "Details : $details"
+                },
+                @{
+                    "activityTitle" = " Script path "
+                    "activityText"  = "$_scriptFullName"
+                },
+            
+                @{
+                    "activityTitle" = "Stacktrace"
+                    "activityText"  = "$stacktrace"
+                }
+            )
+        }
+
+        $TeamMessageBody = ConvertTo-Json $JSONBody -Depth 100
+        
+        $parameters = @{
+            "URI"         = $teamsWebhookURL
+            "Method"      = 'POST'
+            "Body"        = $TeamMessageBody
+            "ContentType" = 'application/json'
+        }
+        Invoke-RestMethod @parameters
+    }#end function senfd-teamsnotif
+
+    function Resolve-Error ($ErrorRecord = $Error[0]) {
+        $ErrorRecord | Format-List * -Force
+        $ErrorRecord.InvocationInfo | Format-List *
+        $Exception = $ErrorRecord.Exception
+        for ($i = 0; $Exception; $i++, ($Exception = $Exception.InnerException)) {
+            "$i" * 80
+            $Exception | Format-List * -Force
+        }
+    }
 
     #log "`n******************************************`nInfo : script is starting`n******************************************"
       
     #$rolename="Webmaster"
 
     #at least one approver required if approval is enable
-    if ($ApprovalRequired -eq $true -and  $Approvers -eq $null){throw "`n /!\ At least one approver is required if approval is enable, please set -Approvers parameter`n`n"}
+    if ($ApprovalRequired -eq $true -and $Approvers -eq $null) { throw "`n /!\ At least one approver is required if approval is enable, please set -Approvers parameter`n`n" }
     
-    $scope="subscriptions/$subscriptionID"
-    $ARMhost="https://management.azure.com"
-    $ARMendpoint="$ARMhost/$scope/providers/Microsoft.Authorization"
+    $scope = "subscriptions/$subscriptionID"
+    $ARMhost = "https://management.azure.com"
+    $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
     
     # Log in first with Connect-AzAccount if not using Cloud Shell
     Write-Verbose ">> Connecting to Azure"
-    if( (get-azcontext) -eq $null){Connect-AzAccount -Tenant $tenantID}
+    if ( (get-azcontext) -eq $null) { Connect-AzAccount -Tenant $tenantID }
 
     # Get access Token
     Write-Verbose ">> Getting access token"
@@ -226,21 +291,23 @@ try{
     $profileClient = New-Object -TypeName Microsoft.Azure.Commands.ResourceManager.Common.RMProfileClient -ArgumentList ($azProfile)
     $token = $profileClient.AcquireAccessToken($azContext.Subscription.TenantId)
     #>
-    $token=Get-AzAccessToken
+    $token = Get-AzAccessToken
 
     
     Write-Verbose ">> token=$token"
     $authHeader = @{
-        'Content-Type'='application/json'
-        'Authorization'='Bearer ' + $token.Token
+        'Content-Type'  = 'application/json'
+        'Authorization' = 'Bearer ' + $token.Token
     }
 
     # 1 Get ID for the role $rolename assignable at the provided scope
    
-    $restUri="$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$rolename'"
+    $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$rolename'"
     write-verbose ">> Get role definition for the role $rolename assignable at the scope $scope at $restUri"
-    $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader
-    $roleID=$response.value.id
+    $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -StatusCodeVariable "requestStatus"
+    $requestStatus
+    if ($requestStatus -ne 200) { throw "There was an error processing the query, HTTP status code = $requestStatus" }
+    $roleID = $response.value.id
     Write-Verbose ">> RodeId = $roleID"
 
     # 2  get the role assignment for the roleID found at #1
@@ -251,81 +318,82 @@ try{
     Write-Verbose ">> Sub-policy ID = $policyId"
 
     # 3 get the role policy for the policyID found in #2
-    $restUri="$ARMhost/$policyId/?api-version=2020-10-01"
+    $restUri = "$ARMhost/$policyId/?api-version=2020-10-01"
     write-verbose ">> get role policy at $restUri"
     $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader
 
     # Maximum end user activation duration in Hour (PT24H) // Max 24H in portal but can be greater
-    $_activationDuration=$response.properties.rules |?{$_.id -eq "Expiration_EndUser_Assignment"}|select -ExpandProperty maximumduration
+    $_activationDuration = $response.properties.rules | ? { $_.id -eq "Expiration_EndUser_Assignment" } | select -ExpandProperty maximumduration
     
     # End user enablement rule (MultiFactorAuthentication, Justification, Ticketing)
-    $enablementRules=$response.properties.rules |?{$_.id -eq "Enablement_EndUser_Assignment"}|select enabledRules
+    $enablementRules = $response.properties.rules | ? { $_.id -eq "Enablement_EndUser_Assignment" } | select enabledRules
     
     # approval required 
-    $_approvalrequired=$($response.properties.rules |?{$_.id -eq "Approval_EndUser_Assignment"}).setting.isapprovalrequired
+    $_approvalrequired = $($response.properties.rules | ? { $_.id -eq "Approval_EndUser_Assignment" }).setting.isapprovalrequired
     #approvers 
-    $_approvers=$($response.properties.rules |?{$_.id -eq "Approval_EndUser_Assignment"}).setting.approvalstages.primaryapprovers
+    $_approvers = $($response.properties.rules | ? { $_.id -eq "Approval_EndUser_Assignment" }).setting.approvalstages.primaryapprovers
 
-    $config=[PSCustomObject]@{
+    $config = [PSCustomObject]@{
         ActivationDuration = $_activationDuration;
-        EnablementRules = $enablementRules;
-        ApprovalRequired = $_approvalrequired
-        Approvers = $_approvers
+        EnablementRules    = $enablementRules;
+        ApprovalRequired   = $_approvalrequired
+        Approvers          = $_approvers
     }
 
-    if ($show){ #show curent config and quit
+    if ($show) {
+        #show curent config and quit
         return $config # $response 
     }
     
     # Build our rules to patch based on parameter used
-    $rules=@()
+    $rules = @()
 
     # Set Maximum activation duration
-    if( $null -ne $ActivationDuration ){
-        $properties=@{
+    if ( $null -ne $ActivationDuration ) {
+        $properties = @{
             "isExpirationRequired" = "true";
-            "maximumDuration" = "$ActivationDuration";
-            "id" = "Expiration_EndUser_Assignment";
-            "ruleType" = "RoleManagementPolicyExpirationRule";
-            "target" = @{
-                "caller" = "EndUser";
+            "maximumDuration"      = "$ActivationDuration";
+            "id"                   = "Expiration_EndUser_Assignment";
+            "ruleType"             = "RoleManagementPolicyExpirationRule";
+            "target"               = @{
+                "caller"     = "EndUser";
                 "operations" = @("All")
             };
-            "level" = "Assignment"
+            "level"                = "Assignment"
         }       
-        $rule =  $properties | ConvertTo-Json  
-        $rules+=$rule
+        $rule = $properties | ConvertTo-Json  
+        $rules += $rule
     }
 
     # Set activation requirement MFA/justification/ticketing
-    if($null -ne $ActivationRequirement){
+    if ($null -ne $ActivationRequirement) {
 
-        $properties=@{
+        $properties = @{
             "enabledRules" = $ActivationRequirement;
-            "id"= "Enablement_EndUser_Assignment";
-            "ruleType"= "RoleManagementPolicyEnablementRule";
-            "target"= @{
-                "caller"= "EndUser";
-                "operations"= @("All");
-                "level"= "Assignment"
+            "id"           = "Enablement_EndUser_Assignment";
+            "ruleType"     = "RoleManagementPolicyEnablementRule";
+            "target"       = @{
+                "caller"     = "EndUser";
+                "operations" = @("All");
+                "level"      = "Assignment"
             }
         }
-        $rule =  $properties | ConvertTo-Json  
+        $rule = $properties | ConvertTo-Json  
 
-        $rules+=$rule
+        $rules += $rule
     }
 
     # Approval and approvers
-    if( ($null -ne $ApprovalRequired) -or ($null -ne $Approvers)){
-        if($ApprovalRequired -eq $false){$req="false"}else{$req="true"}
+    if ( ($null -ne $ApprovalRequired) -or ($null -ne $Approvers)) {
+        if ($ApprovalRequired -eq $false) { $req = "false" }else { $req = "true" }
         
-        $rule='
+        $rule = '
         {
         "setting": {'
-        if($null -ne $ApprovalRequired){
-            $rule+='"isApprovalRequired": '+$req+','
+        if ($null -ne $ApprovalRequired) {
+            $rule += '"isApprovalRequired": ' + $req + ','
         }
-        $rule+='
+        $rule += '
         "isApprovalRequiredForExtension": false,
         "isRequestorJustificationRequired": true,
         "approvalMode": "SingleStage",
@@ -336,35 +404,36 @@ try{
             "escalationTimeInMinutes": 0,
         '
 
-        if ($null -ne $Approvers){ #at least one approver required if approval is enable
-        $rule+='
+        if ($null -ne $Approvers) {
+            #at least one approver required if approval is enable
+            $rule += '
             "primaryApprovers": [
             '
-        $cpt=0    
-        $Approvers | ForEach-Object{
-            $id=$_.Id
-            $name=$_.Name
-            $type=$_.Type
+            $cpt = 0    
+            $Approvers | ForEach-Object {
+                $id = $_.Id
+                $name = $_.Name
+                $type = $_.Type
 
-            if($cpt -gt 0){
-                $rule+=","
-            }
-            $rule+='
+                if ($cpt -gt 0) {
+                    $rule += ","
+                }
+                $rule += '
             {
-                "id": "'+$id+'",
-                "description": "'+$name+'",
+                "id": "'+ $id + '",
+                "description": "'+ $name + '",
                 "isBackup": false,
-                "userType": "'+$type+'"
+                "userType": "'+ $type + '"
             }
             '
-            $cpt++
-        }
+                $cpt++
+            }
 
-        $rule+='
+            $rule += '
             ],'
         }
 
-        $rule+=' 
+        $rule += ' 
         "isEscalationEnabled": false,
             "escalationApprovers": null
                     }]
@@ -382,20 +451,20 @@ try{
             "enforcedSettings": null
         
         }}'
-        $rules+=$rule
+        $rules += $rule
     }
 
-    $allrules=$rules -join ','
+    $allrules = $rules -join ','
     Write-Verbose "All rules: $allrules"
 
-    $body='
+    $body = '
     {
         "properties": {
-          "scope": "'+$scope+'",  
+          "scope": "'+ $scope + '",  
           "rules": [
     '
-    $body+=$allrules
-    $body+='
+    $body += $allrules
+    $body += '
           ],
           "level": "Assignment"
         }
@@ -408,7 +477,7 @@ try{
     # example 1 change maximum activation duration 
     # Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
   
- <#   $body='
+    <#   $body='
     {
         "properties": {
           "scope": "'+$scope+'",  
@@ -434,7 +503,7 @@ try{
     
 
     #Example 2 require justfification  MFA and ticketing on enablement , add/remove rule as needed
- <#   $body2='{
+    <#   $body2='{
         "properties": {
             "scope": "'+$scope+'",  
             "rules": [
@@ -465,9 +534,9 @@ try{
     #Notification Recipients can be list.
 
 
-    $body3='{
+    $body3 = '{
         "properties": {
-            "scope": "'+$scope+'",  
+            "scope": "'+ $scope + '",  
             "rules": [
     
         {
@@ -535,19 +604,18 @@ try{
 
     
 }
-catch{
+catch {
     $_ # echo the exception
-
-    # MAIL
-    $_enc=[system.text.encoding]::UTF8 # encoding for mail
-    $message="Error : $description ($_scriptFullName)" # subjcet of mails
-    $from="$env:computername@domain.com" # sender
-    $PSEmailServer="mail.domain.com" # smtp server
-    if ($emailAlert){
-        send-mailmessage  -encoding $_enc -subject $message -bodyasHTML  "$($_.Exception.message )<br/><br/> $($_.ScriptStackTrace) " -to $to -from $from #-attachments $logdir\trace2.txt
-    }
+    $err = $($_.exception.message | out-string) 
+      
+    $errorRecord = $Error[0] 
+    #$errorRecord |fl -Force
+    $details = $errorRecord.errordetails # |fl -force
+    $position = $errorRecord.InvocationInfo.positionMessage
+    $Exception = $ErrorRecord.Exception
     
-    #>
+    if ($TeamsNotif) { send-teamsnotif "$err" "$details<BR/> TIPS: try to check the scope and the role name" "$position" }
+    Log "An exception occured: $err `nDetails: $details `nPosition: $position"
     Log "Error, script did not terminate normaly"
     break
 }
