@@ -83,7 +83,7 @@ param(
     [Bool]
     $ApprovalRequired,
 
-    $Approvers, # @({"Id"="XXXXXX";"Name"="John":"Type"="user|group"}, .... )
+    $Approvers, # @(@{"Id"="XXXXXX";"Name"="John":"Type"="user|group"}, .... )
     
     [Parameter(ValueFromPipeline = $true)]
     [System.String]
@@ -99,7 +99,14 @@ param(
     
     [Parameter(ValueFromPipeline = $true)]
     [Bool]
-    $AllowPermanentActiveAssignment
+    $AllowPermanentActiveAssignment,
+
+    [Parameter(ValueFromPipeline = $true)]
+    [System.Collections.Hashtable]
+    $Notification_EligibleAssignment # @{"Notification_Eligibility_isDefaultRecipientEnabed"="true|false"; "Notification_EligibleAssignment_notificationLevel"="All|Critical"};"Notification_Admin_Admin_Eligibility_notificationRecipients" = @("email1@domain.com","email2@domain.com")} 
+    
+    
+
 )
 #***************************************
 #* CONFIGURATION
@@ -299,7 +306,7 @@ try {
     #$rolename="Webmaster"
 
     #at least one approver required if approval is enable
-    # todo chech if a parameterset wwould be better
+    # todo chech if a parameterset would be better
     if ($ApprovalRequired -eq $true -and $Approvers -eq $null) { throw "`n /!\ At least one approver is required if approval is enable, please set -Approvers parameter`n`n" }
     
     $scope = "subscriptions/$subscriptionID"
@@ -321,8 +328,7 @@ try {
         'Authorization' = 'Bearer ' + $token.Token
     }
 
-    #run the flow for each role name.
-
+    # run the flow for each role name.
     $rolename | ForEach-Object {
 
         # 1 Get ID of the role $rolename assignable at the provided scope
@@ -376,19 +382,28 @@ try {
         }
         # maximum activation duration
         $_maxActiveAssignmentDuration = $response.properties.rules | ? { $_.id -eq "Expiration_Admin_Assignment" } | Select-Object -expand maximumDuration
-         
+
+        # Notifications
+        # Notification_Admin_Admin_Eligibility (Send notifications when members are assigned as eligible to this role)
+        $_Notification_Admin_Admin_Eligibility = $response.properties.rules | ? { $_.id -eq "Notification_Admin_Admin_Eligibility" } 
+        $_Notification_Admin_Admin_Eligibility_isDefaultRecipientEnabed = $_Notification_Admin_Admin_Eligibility.isDefaultRecipientsEnabled
+        $_Notification_Admin_Admin_Eligibility_notificationLevel = $_Notification_Admin_Admin_Eligibility.notificationLevel
+        $_Notification_Admin_Admin_Eligibility_notificationRecipients = $_Notification_Admin_Admin_Eligibility.notificationRecipients
 
         $config = [PSCustomObject]@{
-            RoleName                        = $_
-            PolicyID                        = $policyId
-            ActivationDuration              = $_activationDuration
-            EnablementRules                 = $_enablementRules
-            ApprovalRequired                = $_approvalrequired
-            Approvers                       = $_approvers
-            AllowPermanentEligibilty        = $_permanantEligibility
-            MaximumAssignationDuration      = $_maxAssignmentDuration
-            AllowPermanentActiveAssignment  = $_permanantActiveAssignment
-            MaximumActiveAssignmentDuration = $_maxActiveAssignmentDuration
+            RoleName                                          = $_
+            PolicyID                                          = $policyId
+            ActivationDuration                                = $_activationDuration
+            EnablementRules                                   = $_enablementRules
+            ApprovalRequired                                  = $_approvalrequired
+            Approvers                                         = $_approvers
+            AllowPermanentEligibilty                          = $_permanantEligibility
+            MaximumAssignationDuration                        = $_maxAssignmentDuration
+            AllowPermanentActiveAssignment                    = $_permanantActiveAssignment
+            MaximumActiveAssignmentDuration                   = $_maxActiveAssignmentDuration
+            Notification_Eligibility_isDefaultRecipientEnabed = $_Notification_Admin_Admin_Eligibility_isDefaultRecipientEnabed
+            Notification_Eligibility_NotificationLevel        = $_Notification_Admin_Admin_Eligibility_notificationLevel
+            Notification_Eligibility_notificationRecipients   = $_Notification_Admin_Admin_Eligibility_notificationRecipients
 
         }
 
@@ -415,17 +430,33 @@ try {
                 "level"                = "Assignment"
             }       
             $rule = $properties | ConvertTo-Json
-            if($PSBoundParameters.Keys.Contains('ActivationDuration')){  
-            $rules += $rule
+            #update rules if required
+            if ($PSBoundParameters.Keys.Contains('ActivationDuration')) {  
+                $rules += $rule
             }
         }
 
         # Set activation requirement MFA/justification/ticketing
         if ($null -ne $ActivationRequirement) {
             if ($ActivationRequirement -eq "None") {
-                # didnt find the proper way to create empty array with convertto-json so using json directly here
-                $properties = '{
-                    "enabledRules": [],
+                $enabledRules = "[],"
+            }
+            else {
+                $formatedRules = '['
+                
+                $ActivationRequirement | % {
+                    $formatedRules += '"'
+                    $formatedRules += "$_"
+                    $formatedRules += '",'
+                    
+                }
+                $formatedRules += "],"
+                $enabledRules = $formatedRules
+                Write-Verbose "************* $enabledRules "
+            }
+                
+            $properties = '{
+                    "enabledRules": '+ $enabledRules + '
                     "id": "Enablement_EndUser_Assignment",
                     "ruleType": "RoleManagementPolicyEnablementRule",
                     "target": {
@@ -439,29 +470,18 @@ try {
                         "enforcedSettings": []
                     }
                 }'
-                $rule = $properties
-            }
-            else {
-                $properties = @{
-                    "enabledRules" = $ActivationRequirement;
-                    "id"           = "Enablement_EndUser_Assignment";
-                    "ruleType"     = "RoleManagementPolicyEnablementRule";
-                    "target"       = @{
-                        "caller"     = "EndUser";
-                        "operations" = @("All");
-                        "level"      = "Assignment"
-                    }
-                }
-                $rule = $properties | ConvertTo-Json  
-            }
+            $rule = $properties
             
-            
-
-            $rules += $rule
+            #update if required
+            if ($PSBoundParameters.Keys.Contains('ActivationRequirement')) {  
+                $rules += $rule
+            }          
         }
 
         # Approval and approvers
-        if ( ($null -ne $ApprovalRequired) -or ($null -ne $Approvers)) {
+        $approvalChanged = $false
+        if ( ($PSBoundParameters.Keys.Contains('ApprovalRequired')) -or  ($PSBoundParameters.Keys.Contains('Approvers'))) {
+            $approvalChanged = $true
             if ($ApprovalRequired -eq $false) { $req = "false" }else { $req = "true" }
         
             $rule = '
@@ -528,7 +548,10 @@ try {
             "enforcedSettings": null
         
         }}'
-            $rules += $rule
+            if ($true -eq $approvalChanged) {
+                $rules += $rule
+            }
+            
         }
 
 
@@ -593,54 +616,92 @@ try {
         else { $expire2 = $_activeExpirationRequired.ToString().ToLower() }
 
         $rule = '
-{
-"isExpirationRequired": '+ $expire2 + ',
-"maximumDuration": "'+ $max2 + '",
-"id": "Expiration_Admin_Assignment",
-"ruleType": "RoleManagementPolicyExpirationRule",
-"target": {
-  "caller": "Admin",
-  "operations": [
-    "All"
-  ],
-  "level": "Eligibility",
-  "targetObjects": null,
-  "inheritableSettings": null,
-  "enforcedSettings": null
-}
-}
+        {
+        "isExpirationRequired": '+ $expire2 + ',
+        "maximumDuration": "'+ $max2 + '",
+        "id": "Expiration_Admin_Assignment",
+        "ruleType": "RoleManagementPolicyExpirationRule",
+        "target": {
+        "caller": "Admin",
+        "operations": [
+            "All"
+        ],
+        "level": "Eligibility",
+        "targetObjects": null,
+        "inheritableSettings": null,
+        "enforcedSettings": null
+        }
+        }
 '
-if ( $true -eq $ActiveAssignmentChanged) {
-    $rules += $rule
-}
+        if ( $true -eq $ActiveAssignmentChanged) {
+            $rules += $rule
+        }
+
+
+        # Notifications
+        # Eligibility assignment
+        if ($PSBoundParameters.Keys.Contains('Notification_EligibleAssignment')) {
+            # @{"Notification_Eligibility_isDefaultRecipientEnabed"="true|false"; "Notification_EligibleAssignment_notificationLevel"="All|Critical"};"Notification_Admin_Admin_Eligibility_notificationRecipients" = @("email1@domain.com","email2@domain.com")} 
+            $rule = '
+        {
+        "notificationType": "Email",
+        "recipientType": "Admin",
+        "isDefaultRecipientsEnabled": '+$Notification_EligibleAssignment.isDefaultRecipientEnabed+',
+        "notificationLevel": "'+$Notification_EligibleAssignment.notificationLevel+'",
+        "notificationRecipients": [
+        '
+        $Notification_EligibleAssignment.Recipients|%{
+            $rule+='"'+$_+'",'
+        }
+        
+        $rule+='
+        ],
+        "id": "Notification_Admin_Admin_Eligibility",
+        "ruleType": "RoleManagementPolicyNotificationRule",
+        "target": {
+        "caller": "Admin",
+        "operations": [
+            "All"
+        ],
+        "level": "Eligibility",
+        "targetObjects": null,
+        "inheritableSettings": null,
+        "enforcedSettings": null
+        }
+    }
+    '
+            $rules += $rule
+        }
+ 
 
 
 
-        # bringing all the rules
-        $allrules = $rules -join ','
-        #Write-Verbose "All rules: $allrules"
 
-        $body = '
+            # bringing all the rules together
+            $allrules = $rules -join ','
+            #Write-Verbose "All rules: $allrules"
+
+            $body = '
     {
         "properties": {
           "scope": "'+ $scope + '",  
           "rules": [
     '
-        $body += $allrules
-        $body += '
+            $body += $allrules
+            $body += '
           ],
           "level": "Assignment"
         }
     }'
-        write-verbose "`n>> PATCH body: $body"
+            write-verbose "`n>> PATCH body: $body"
 
-        $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body
-        #Write-Verbose $response
-        # 4 Patch the policy
-        # example 1 change maximum activation duration 
-        # Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
+            $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body -verbose:$false
+            #Write-Verbose $response
+            # 4 Patch the policy
+            # example 1 change maximum activation duration 
+            # Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
   
-        <#   $body='
+            <#   $body='
     {
         "properties": {
           "scope": "'+$scope+'",  
@@ -665,8 +726,8 @@ if ( $true -eq $ActiveAssignmentChanged) {
 #>
     
 
-        #Example 2 require justfification  MFA and ticketing on enablement , add/remove rule as needed
-        <#   $body2='{
+            #Example 2 require justfification  MFA and ticketing on enablement , add/remove rule as needed
+            <#   $body2='{
         "properties": {
             "scope": "'+$scope+'",  
             "rules": [
@@ -691,13 +752,13 @@ if ( $true -eq $ActiveAssignmentChanged) {
     }'
     $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body2
 #>
-        #Exemple 3 Send notifications when eligible members activate this role 
-        #For each recipient type you can set below highlighted property.
-        #NotificationLevel are Critical, All.
-        #Notification Recipients can be list.
+            #Exemple 3 Send notifications when eligible members activate this role 
+            #For each recipient type you can set below highlighted property.
+            #NotificationLevel are Critical, All.
+            #Notification Recipients can be list.
 
 
-        $body3 = '{
+            $body3 = '{
         "properties": {
             "scope": "'+ $scope + '",  
             "rules": [
@@ -762,26 +823,26 @@ if ( $true -eq $ActiveAssignmentChanged) {
     ]    
 }'
    
-        $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body3
+            #$response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body3
+        }
+    
+    
     }
+    catch {
+        $_ # echo the exception
+        $err = $($_.exception.message | out-string) 
+        $errorRecord = $Error[0] 
+        $details = $errorRecord.errordetails # |fl -force
+        $position = $errorRecord.InvocationInfo.positionMessage
+        $Exception = $ErrorRecord.Exception
     
-    
-}
-catch {
-    $_ # echo the exception
-    $err = $($_.exception.message | out-string) 
-    $errorRecord = $Error[0] 
-    $details = $errorRecord.errordetails # |fl -force
-    $position = $errorRecord.InvocationInfo.positionMessage
-    $Exception = $ErrorRecord.Exception
-    
-    if ($TeamsNotif) { send-teamsnotif "$err" "$details<BR/> TIPS: try to check the scope and the role name" "$position" }
-    Log "An exception occured: $err `nDetails: $details `nPosition: $position"
-    Log "Error, script did not terminate normaly"
-    break
-}
+        if ($TeamsNotif) { send-teamsnotif "$err" "$details<BR/> TIPS: try to check the scope and the role name" "$position" }
+        Log "An exception occured: $err `nDetails: $details `nPosition: $position"
+        Log "Error, script did not terminate normaly"
+        break
+    }
 
-log "Success! Script ended normaly"
+    log "Success! Script ended normaly"
 
 
 
