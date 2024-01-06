@@ -68,15 +68,15 @@ param(
     $ActivationDuration = $null,
 
    
-    [Parameter(HelpMessage="Accepted values: 'None' or any combination of these options (Case SENSITIVE):  'Justification, 'MultiFactorAuthentication', 'Ticketing'", ValueFromPipeline = $true)]
+    [Parameter(HelpMessage = "Accepted values: 'None' or any combination of these options (Case SENSITIVE):  'Justification, 'MultiFactorAuthentication', 'Ticketing'", ValueFromPipeline = $true)]
     [ValidateScript({
 
-        # WARNING: options are CASE SENSITIVE
-        $valid = $true
-        $acceptedValues=@("None","Justification","MultiFactorAuthentication", "Ticketing")
-        $_ | ForEach-Object{ if (!( $acceptedValues -Ccontains $_)) { $valid = $false}}
-        $valid
-    })]
+            # WARNING: options are CASE SENSITIVE
+            $valid = $true
+            $acceptedValues = @("None", "Justification", "MultiFactorAuthentication", "Ticketing")
+            $_ | ForEach-Object { if (!( $acceptedValues -Ccontains $_)) { $valid = $false } }
+            $valid
+        })]
     [System.String[]]
     $ActivationRequirement, # accepted values: "None","Justification", "MultiFactorAuthentication", "Ticketing"
      
@@ -87,14 +87,26 @@ param(
     
     [Parameter(ValueFromPipeline = $true)]
     [System.String]
-    $MaximumAssignationDuration
+    $MaximumAssignationDuration = $null,
+    
+    [Parameter(ValueFromPipeline = $true)]
+    [Bool]
+    $AllowPermanentEligibilty,
+
+    [Parameter(ValueFromPipeline = $true)]
+    [System.String]
+    $MaximumActiveAssignmentDuration = $null,
+    
+    [Parameter(ValueFromPipeline = $true)]
+    [Bool]
+    $AllowPermanentActiveAssignment
 )
 #***************************************
 #* CONFIGURATION
 #***************************************
 
 # LOG TO FILE ( if enable by default it will create a LOGS subfolder in the script folder, and create a logfile with the name of the script )
-$logToFile=$false
+$logToFile = $false
 
 # TEAMS NOTIDICATION
 # set to $true if you want to send fatal error on a Teams channel using Webhook see doc to setup
@@ -164,48 +176,48 @@ try {
         )
 
         #do nothing if logging is disabled
-        if ($true -eq $logToFile ){
+        if ($true -eq $logToFile ) {
      
-        # When no logfile is specified we append .log to the scriptname 
-        if ( $logfile -eq $null ) { 
-            $logfile = $(Split-Path -Leaf $MyInvocation.ScriptName) + ".log"
-        }
-       
-        # Create folder if needed
-        if ( !(test-path  $logdir) ) {
-            $null = New-Item -ItemType Directory -Path $logdir  -Force
-        }
-         
-        # Ensure logfile will be save in logdir
-        if ( $logfile -notmatch [regex]::escape($logdir)) {
-            $logfile = "$logdir\$logfile"
-        }
-         
-        # Create file
-        if ( !(Test-Path $logfile) ) {
-            write-verbose "$logfile not found, creating it"
-            $null = New-Item -ItemType file $logfile -Force  
-        }
-        else {
-            # file exists, do size exceeds limit ?
-            if ( (get-childitem $logfile | select -expand length) -gt $Maxsize) {
-                echo "$(Get-Date -Format yyy-MM-dd-HHmm) - $(whoami) - $($MyInvocation.ScriptName) (L $($MyInvocation.ScriptLineNumber)) : Log size exceed $MaxSize, creating a new file." >> $logfile 
-                 
-                # rename current logfile
-                $LogFileName = $($($LogFile -split "\\")[-1])
-                $basename = ls $LogFile | select -expand basename
-                $dirname = ls $LogFile | select -expand directoryname
-     
-                Write-Verbose "Rename-Item $LogFile ""$($LogFileName.substring(0,$LogFileName.length-4))-$(Get-Date -format yyyddMM-HHmmss).log"""
-                Rename-Item $LogFile "$($LogFileName.substring(0,$LogFileName.length-4))-$(Get-Date -format yyyddMM-HHmmss).log"
-     
-                # keep $Maxfile  logfiles and delete the older ones
-                $filesToDelete = ls  "$dirname\$basename*.log" | sort LastWriteTime -desc | select -Skip $Maxfile 
-                $filesToDelete | remove-item  -force
+            # When no logfile is specified we append .log to the scriptname 
+            if ( $logfile -eq $null ) { 
+                $logfile = $(Split-Path -Leaf $MyInvocation.ScriptName) + ".log"
             }
-        }
+       
+            # Create folder if needed
+            if ( !(test-path  $logdir) ) {
+                $null = New-Item -ItemType Directory -Path $logdir  -Force
+            }
+         
+            # Ensure logfile will be save in logdir
+            if ( $logfile -notmatch [regex]::escape($logdir)) {
+                $logfile = "$logdir\$logfile"
+            }
+         
+            # Create file
+            if ( !(Test-Path $logfile) ) {
+                write-verbose "$logfile not found, creating it"
+                $null = New-Item -ItemType file $logfile -Force  
+            }
+            else {
+                # file exists, do size exceeds limit ?
+                if ( (get-childitem $logfile | select -expand length) -gt $Maxsize) {
+                    echo "$(Get-Date -Format yyy-MM-dd-HHmm) - $(whoami) - $($MyInvocation.ScriptName) (L $($MyInvocation.ScriptLineNumber)) : Log size exceed $MaxSize, creating a new file." >> $logfile 
+                 
+                    # rename current logfile
+                    $LogFileName = $($($LogFile -split "\\")[-1])
+                    $basename = ls $LogFile | select -expand basename
+                    $dirname = ls $LogFile | select -expand directoryname
      
-        echo "$(Get-Date -Format yyy-MM-dd-HHmm) - $(whoami) - $($MyInvocation.ScriptName) (L $($MyInvocation.ScriptLineNumber)) : $msg" >> $logfile
+                    Write-Verbose "Rename-Item $LogFile ""$($LogFileName.substring(0,$LogFileName.length-4))-$(Get-Date -format yyyddMM-HHmmss).log"""
+                    Rename-Item $LogFile "$($LogFileName.substring(0,$LogFileName.length-4))-$(Get-Date -format yyyddMM-HHmmss).log"
+     
+                    # keep $Maxfile  logfiles and delete the older ones
+                    $filesToDelete = ls  "$dirname\$basename*.log" | sort LastWriteTime -desc | select -Skip $Maxfile 
+                    $filesToDelete | remove-item  -force
+                }
+            }
+     
+            echo "$(Get-Date -Format yyy-MM-dd-HHmm) - $(whoami) - $($MyInvocation.ScriptName) (L $($MyInvocation.ScriptLineNumber)) : $msg" >> $logfile
         }# end logging to file
 
         # Display $msg if $noEcho is not set
@@ -315,23 +327,23 @@ try {
 
         # 1 Get ID of the role $rolename assignable at the provided scope
         $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$_'"
-        write-verbose ">> #1 Get role definition for the role $_ assignable at the scope $scope at $restUri"
-        $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader 
+        write-verbose " #1 Get role definition for the role $_ assignable at the scope $scope at $restUri"
+        $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
         $roleID = $response.value.id
         if ($null -eq $roleID) { throw "An exception occured : can't find a roleID for $_ at scope $scope" }
         Write-Verbose ">> RodeId = $roleID"
 
         # 2  get the role assignment for the roleID found at #1
         $restUri = "$ARMendpoint/roleManagementPolicyAssignments?api-version=2020-10-01&`$filter=roleDefinitionId eq '$roleID'"
-        write-verbose "Get the Assignment for $_ at $restUri"
-        $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader 
+        write-verbose " #2 Get the Assignment for $_ at $restUri"
+        $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
         $policyId = $response.value.properties.policyId #.split('/')[-1] 
-        Write-Verbose ">> Sub-policy ID = $policyId"
+        Write-Verbose ">> policy ID = $policyId"
 
         # 3 get the role policy for the policyID found in #2
         $restUri = "$ARMhost/$policyId/?api-version=2020-10-01"
-        write-verbose ">> get role policy at $restUri"
-        $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader
+        write-verbose " #3 get role policy at $restUri"
+        $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
 
         # Get config values in a new object:
 
@@ -341,26 +353,42 @@ try {
         $_enablementRules = $response.properties.rules | ? { $_.id -eq "Enablement_EndUser_Assignment" } | select -expand enabledRules
         # approval required 
         $_approvalrequired = $($response.properties.rules | ? { $_.id -eq "Approval_EndUser_Assignment" }).setting.isapprovalrequired
-        #approvers 
+        # approvers 
         $_approvers = $($response.properties.rules | ? { $_.id -eq "Approval_EndUser_Assignment" }).setting.approvalstages.primaryapprovers
-        #permanent assignmnent eligibility
+        # permanent assignmnent eligibility
         $_eligibilityExpirationRequired = $response.properties.rules | ? { $_.id -eq "Expiration_Admin_Eligibility" } | Select-Object -expand isExpirationRequired
-        if ($_eligibilityExpirationRequired -eq "True"){ 
-            $_permanantEligibility="False"
-        }else { 
-            $_permanantEligibility="False"}
+        if ($_eligibilityExpirationRequired -eq "true") { 
+            $_permanantEligibility = "false"
+        }
+        else { 
+            $_permanantEligibility = "true"
+        }
         # maximum assignment eligibility duration
-        $_maxAssignmentDuration= $response.properties.rules | ? { $_.id -eq "Expiration_Admin_Eligibility" } | Select-Object -expand maximumDuration
+        $_maxAssignmentDuration = $response.properties.rules | ? { $_.id -eq "Expiration_Admin_Eligibility" } | Select-Object -expand maximumDuration
+        
+        # pemanent activation
+        $_activeExpirationRequired = $response.properties.rules | ? { $_.id -eq "Expiration_Admin_Assignment" } | Select-Object -expand isExpirationRequired
+        if ($_activeExpirationRequired -eq "true") { 
+            $_permanantActiveAssignment = "false"
+        }
+        else { 
+            $_permanantActiveAssignment = "true"
+        }
+        # maximum activation duration
+        $_maxActiveAssignmentDuration = $response.properties.rules | ? { $_.id -eq "Expiration_Admin_Assignment" } | Select-Object -expand maximumDuration
+         
 
         $config = [PSCustomObject]@{
-            RoleName = $_
-            PolicyID = $policyId
-            ActivationDuration = $_activationDuration
-            EnablementRules    = $_enablementRules
-            ApprovalRequired   = $_approvalrequired
-            Approvers          = $_approvers
-            AllowPermanentEligibilty = $_permanantEligibility
-            MaximumAssignationDuration = $_maxAssignmentDuration
+            RoleName                        = $_
+            PolicyID                        = $policyId
+            ActivationDuration              = $_activationDuration
+            EnablementRules                 = $_enablementRules
+            ApprovalRequired                = $_approvalrequired
+            Approvers                       = $_approvers
+            AllowPermanentEligibilty        = $_permanantEligibility
+            MaximumAssignationDuration      = $_maxAssignmentDuration
+            AllowPermanentActiveAssignment  = $_permanantActiveAssignment
+            MaximumActiveAssignmentDuration = $_maxActiveAssignmentDuration
 
         }
 
@@ -392,7 +420,7 @@ try {
 
         # Set activation requirement MFA/justification/ticketing
         if ($null -ne $ActivationRequirement) {
-            if ($ActivationRequirement -eq "None"){
+            if ($ActivationRequirement -eq "None") {
                 # didnt find the proper way to create empty array with convertto-json so using json directly here
                 $properties = '{
                     "enabledRules": [],
@@ -411,8 +439,7 @@ try {
                 }'
                 $rule = $properties
             }
-            else{
-                "PAS NONE"
+            else {
                 $properties = @{
                     "enabledRules" = $ActivationRequirement;
                     "id"           = "Enablement_EndUser_Assignment";
@@ -502,6 +529,92 @@ try {
             $rules += $rule
         }
 
+
+        # eligibility assignement
+        $eligibilityChanged = $false
+        if ( $PSBoundParameters.ContainsKey('MaximumAssignationDuration')) {
+            $max = $PSBoundParameters["MaximumAssignationDuration"]
+            $eligibilityChanged = $true
+        }
+        else { $max = $_maxAssignmentDuration }
+        if ( $PSBoundParameters.ContainsKey('AllowPermanentEligibilty')) {
+            if ( $AllowPermanentEligibilty) {
+                $expire = "false"
+            }
+            else {
+                $expire = "true"
+            }
+            $eligibilityChanged = $true
+        }
+        else { $expire = $_eligibilityExpirationRequired.ToString().ToLower() }
+       
+        $rule = '
+        {
+        "isExpirationRequired": '+ $expire + ',
+        "maximumDuration": "'+ $max + '",
+        "id": "Expiration_Admin_Eligibility",
+        "ruleType": "RoleManagementPolicyExpirationRule",
+        "target": {
+          "caller": "Admin",
+          "operations": [
+            "All"
+          ],
+          "level": "Eligibility",
+          "targetObjects": null,
+          "inheritableSettings": null,
+          "enforcedSettings": null
+        }
+    }
+    '
+        # update rule only if a change was requested
+        if ( $true -eq $eligibilityChanged) {
+            $rules += $rule
+        }
+        
+
+        #active assignement limits
+        $ActiveAssignmentChanged = $false
+        if ( $PSBoundParameters.ContainsKey('MaximumActiveAssignmentDuration')) {
+            $max2 = $PSBoundParameters["MaximumActiveAssignmentDuration"]
+            $ActiveAssignmentChanged = $true
+        }
+        else { $max2 = $_maxAssignmentDuration }
+        if ( $PSBoundParameters.ContainsKey('AllowPermanentActiveAssignment')) {
+            if ( $AllowPermanentActiveAssignment) {
+                $expire2 = "false"
+            }
+            else {
+                $expire2 = "true"
+            }
+            $ActiveAssignmentChanged = $true
+        }
+        else { $expire2 = $_activeExpirationRequired.ToString().ToLower() }
+
+        $rule = '
+{
+"isExpirationRequired": '+ $expire2 + ',
+"maximumDuration": "'+ $max2 + '",
+"id": "Expiration_Admin_Assignment",
+"ruleType": "RoleManagementPolicyExpirationRule",
+"target": {
+  "caller": "Admin",
+  "operations": [
+    "All"
+  ],
+  "level": "Eligibility",
+  "targetObjects": null,
+  "inheritableSettings": null,
+  "enforcedSettings": null
+}
+}
+'
+if ( $true -eq $ActiveAssignmentChanged) {
+    $rules += $rule
+}
+
+
+
+        # bringing all the rules
         $allrules = $rules -join ','
         #Write-Verbose "All rules: $allrules"
 
@@ -520,7 +633,7 @@ try {
         write-verbose "`n>> PATCH body: $body"
 
         $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body
-        Write-Verbose $response
+        #Write-Verbose $response
         # 4 Patch the policy
         # example 1 change maximum activation duration 
         # Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
