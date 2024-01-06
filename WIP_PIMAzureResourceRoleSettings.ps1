@@ -414,8 +414,10 @@ try {
                 };
                 "level"                = "Assignment"
             }       
-            $rule = $properties | ConvertTo-Json  
+            $rule = $properties | ConvertTo-Json
+            if($PSBoundParameters.Keys.Contains('ActivationDuration')){  
             $rules += $rule
+            }
         }
 
         # Set activation requirement MFA/justification/ticketing
