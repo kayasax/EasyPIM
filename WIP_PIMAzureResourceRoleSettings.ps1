@@ -46,8 +46,6 @@ Sript to manage the Azure Resource Roles settings with simplicity in mind
 
 [CmdletBinding()] #make script react as cmdlet (-verbose etc..)
 param(
-    
-
     [Parameter(Position = 0, Mandatory = $true, ValueFromPipeline = $true)]
     [ValidateNotNullOrEmpty()]
     [System.String]
@@ -55,21 +53,21 @@ param(
 
     [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline = $true)]
     [ValidateNotNullOrEmpty()]
-    [System.string]
+    [System.String]
     $SubscriptionId,
 
     [Parameter(Position = 2, Mandatory = $true, ValueFromPipeline = $true)]
     [ValidateNotNullOrEmpty()]
-    [System.string[]]
+    [System.String[]]
     $rolename,
 
-    [switch]
+    [Switch]
     $show, # show current config only, no change made
 
-    [System.string]
+    [System.String]
     $ActivationDuration = $null,
 
-    [System.string[]]
+   
     [Parameter(HelpMessage="Accepted values: 'None' or any combination of these options (Case SENSITIVE):  'Justification, 'MultiFactorAuthentication', 'Ticketing'", ValueFromPipeline = $true)]
     [ValidateScript({
 
@@ -79,13 +77,17 @@ param(
         $_ | ForEach-Object{ if (!( $acceptedValues -Ccontains $_)) { $valid = $false}}
         $valid
     })]
+    [System.String[]]
     $ActivationRequirement, # accepted values: "None","Justification", "MultiFactorAuthentication", "Ticketing"
-    
- 
-    [bool]
+     
+    [Bool]
     $ApprovalRequired,
 
-    $Approvers # @({"Id"="XXXXXX";"Name"="John":"Type"="user|group"}, .... )
+    $Approvers, # @({"Id"="XXXXXX";"Name"="John":"Type"="user|group"}, .... )
+    
+    [Parameter(ValueFromPipeline = $true)]
+    [System.String]
+    $MaximumAssignationDuration
 )
 #***************************************
 #* CONFIGURATION
@@ -311,8 +313,7 @@ try {
 
     $rolename | ForEach-Object {
 
-        # 1 Get ID for the role $rolename assignable at the provided scope
-   
+        # 1 Get ID of the role $rolename assignable at the provided scope
         $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$_'"
         write-verbose ">> #1 Get role definition for the role $_ assignable at the scope $scope at $restUri"
         $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader 
@@ -332,24 +333,35 @@ try {
         write-verbose ">> get role policy at $restUri"
         $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader
 
+        # Get config values in a new object:
+
         # Maximum end user activation duration in Hour (PT24H) // Max 24H in portal but can be greater
         $_activationDuration = $response.properties.rules | ? { $_.id -eq "Expiration_EndUser_Assignment" } | select -ExpandProperty maximumduration
-    
         # End user enablement rule (MultiFactorAuthentication, Justification, Ticketing)
-        $enablementRules = $response.properties.rules | ? { $_.id -eq "Enablement_EndUser_Assignment" } | select -expand enabledRules
-    
+        $_enablementRules = $response.properties.rules | ? { $_.id -eq "Enablement_EndUser_Assignment" } | select -expand enabledRules
         # approval required 
         $_approvalrequired = $($response.properties.rules | ? { $_.id -eq "Approval_EndUser_Assignment" }).setting.isapprovalrequired
         #approvers 
         $_approvers = $($response.properties.rules | ? { $_.id -eq "Approval_EndUser_Assignment" }).setting.approvalstages.primaryapprovers
+        #permanent assignmnent eligibility
+        $_eligibilityExpirationRequired = $response.properties.rules | ? { $_.id -eq "Expiration_Admin_Eligibility" } | Select-Object -expand isExpirationRequired
+        if ($_eligibilityExpirationRequired -eq "True"){ 
+            $_permanantEligibility="False"
+        }else { 
+            $_permanantEligibility="False"}
+        # maximum assignment eligibility duration
+        $_maxAssignmentDuration= $response.properties.rules | ? { $_.id -eq "Expiration_Admin_Eligibility" } | Select-Object -expand maximumDuration
 
         $config = [PSCustomObject]@{
             RoleName = $_
             PolicyID = $policyId
-            ActivationDuration = $_activationDuration;
-            EnablementRules    = $enablementRules;
+            ActivationDuration = $_activationDuration
+            EnablementRules    = $_enablementRules
             ApprovalRequired   = $_approvalrequired
             Approvers          = $_approvers
+            AllowPermanentEligibilty = $_permanantEligibility
+            MaximumAssignationDuration = $_maxAssignmentDuration
+
         }
 
         if ($show) {
