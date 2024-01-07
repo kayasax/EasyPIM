@@ -36,6 +36,8 @@ Sript to manage the Azure Resource Roles settings with simplicity in mind
 
         .Link
     https://learn.microsoft.com/en-us/azure/governance/resource-graph/first-query-rest-api 
+    https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview
+    Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
 .Notes
     Author: MICHEL, Loic 
     Changelog:
@@ -95,7 +97,7 @@ param(
 
     [Parameter(ValueFromPipeline = $true)]
     [System.String]
-    $MaximumActiveAssignmentDuration = $null,
+    $MaximumActiveAssignmentDuration = $null, # Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
     
     [Parameter(ValueFromPipeline = $true)]
     [Bool]
@@ -103,10 +105,26 @@ param(
 
     [Parameter(ValueFromPipeline = $true)]
     [System.Collections.Hashtable]
-    $Notification_EligibleAssignment # @{"Notification_Eligibility_isDefaultRecipientEnabed"="true|false"; "Notification_EligibleAssignment_notificationLevel"="All|Critical"};"Notification_Admin_Admin_Eligibility_notificationRecipients" = @("email1@domain.com","email2@domain.com")} 
+    $Notification_EligibleAssignment_Alert, # @{"isDefaultRecipientEnabed"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
     
+    [Parameter(ValueFromPipeline = $true)]
+    [System.Collections.Hashtable]
+    $Notification_EligibleAssignment_Assignee, # @{"isDefaultRecipientEnabed"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
     
+    [Parameter(ValueFromPipeline = $true)]
+    [System.Collections.Hashtable]
+    $Notification_EligibleAssignment_Approvers, # @{"isDefaultRecipientEnabed"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+    
+    [Parameter(ValueFromPipeline = $true)]
+    [System.Collections.Hashtable]
+    $Notification_ActiveAssignment_Alert,
 
+    [Parameter(ValueFromPipeline = $true)]
+    [System.Collections.Hashtable]
+    $Notification_ActiveAssignment_Assignee,
+    [Parameter(ValueFromPipeline = $true)]
+    [System.Collections.Hashtable]
+    $Notification_ActiveAssignment_Approvers
 )
 #***************************************
 #* CONFIGURATION
@@ -383,27 +401,56 @@ try {
         # maximum activation duration
         $_maxActiveAssignmentDuration = $response.properties.rules | ? { $_.id -eq "Expiration_Admin_Assignment" } | Select-Object -expand maximumDuration
 
-        # Notifications
-        # Notification_Admin_Admin_Eligibility (Send notifications when members are assigned as eligible to this role)
+        #################
+        # Notifications #
+        #################
+
+        # Notification Eligibility Alert (Send notifications when members are assigned as eligible to this role)
         $_Notification_Admin_Admin_Eligibility = $response.properties.rules | ? { $_.id -eq "Notification_Admin_Admin_Eligibility" } 
-        $_Notification_Admin_Admin_Eligibility_isDefaultRecipientEnabed = $_Notification_Admin_Admin_Eligibility.isDefaultRecipientsEnabled
-        $_Notification_Admin_Admin_Eligibility_notificationLevel = $_Notification_Admin_Admin_Eligibility.notificationLevel
-        $_Notification_Admin_Admin_Eligibility_notificationRecipients = $_Notification_Admin_Admin_Eligibility.notificationRecipients
+       
+        # Notification Eligibility Assignee (Send notifications when members are assigned as eligible to this role: Notification to the assigned user (assignee))
+        $_Notification_Eligibility_Assignee = $response.properties.rules | ? { $_.id -eq "Notification_Requestor_Admin_Eligibility" } 
+        
+        # Notification Eligibility Approvers (Send notifications when members are assigned as eligible to this role: request to approve a role assignment renewal/extension)
+        $_Notification_Eligibility_Approvers = $response.properties.rules | ? { $_.id -eq "Notification_Approver_Admin_Eligibility" }
+
+        # Notification Active Assignment Alert (Send notifications when members are assigned as active to this role)
+        $_Notification_Active_Alert = $response.properties.rules | ? { $_.id -eq "Notification_Admin_Admin_Assignment" } 
+        # Notification Active Assignment Assignee (Send notifications when members are assigned as active to this role: Notification to the assigned user (assignee))
+        $_Notification_Active_Assignee = $response.properties.rules | ? { $_.id -eq "Notification_Requestor_Admin_Assignment" } 
+        # Notification Active Assignment Approvers (Send notifications when members are assigned as active to this role: Request to approve a role assignment renewal/extension)
+        $_Notification_Active_Approvers = $response.properties.rules | ? { $_.id -eq "Notification_Approver_Admin_Assignment" } 
+
 
         $config = [PSCustomObject]@{
-            RoleName                                          = $_
-            PolicyID                                          = $policyId
-            ActivationDuration                                = $_activationDuration
-            EnablementRules                                   = $_enablementRules
-            ApprovalRequired                                  = $_approvalrequired
-            Approvers                                         = $_approvers
-            AllowPermanentEligibilty                          = $_permanantEligibility
-            MaximumAssignationDuration                        = $_maxAssignmentDuration
-            AllowPermanentActiveAssignment                    = $_permanantActiveAssignment
-            MaximumActiveAssignmentDuration                   = $_maxActiveAssignmentDuration
-            Notification_Eligibility_isDefaultRecipientEnabed = $_Notification_Admin_Admin_Eligibility_isDefaultRecipientEnabed
-            Notification_Eligibility_NotificationLevel        = $_Notification_Admin_Admin_Eligibility_notificationLevel
-            Notification_Eligibility_notificationRecipients   = $_Notification_Admin_Admin_Eligibility_notificationRecipients
+            RoleName                                                    = $_
+            PolicyID                                                    = $policyId
+            ActivationDuration                                          = $_activationDuration
+            EnablementRules                                             = $_enablementRules
+            ApprovalRequired                                            = $_approvalrequired
+            Approvers                                                   = $_approvers
+            AllowPermanentEligibilty                                    = $_permanantEligibility
+            MaximumAssignationDuration                                  = $_maxAssignmentDuration
+            AllowPermanentActiveAssignment                              = $_permanantActiveAssignment
+            MaximumActiveAssignmentDuration                             = $_maxActiveAssignmentDuration
+            Notification_Eligibility_Alert_isDefaultRecipientEnabed     = $($_Notification_Admin_Admin_Eligibility.isDefaultRecipientsEnabled)
+            Notification_Eligibility_Alert_NotificationLevel            = $($_Notification_Admin_Admin_Eligibility.notificationLevel)
+            Notification_Eligibility_Alert_Recipients                   = $($_Notification_Admin_Admin_Eligibility.notificationRecipients)
+            Notification_Eligibility_Assignee_isDefaultRecipientEnabed  = $($_Notification_Eligibility_Assignee.isDefaultRecipientsEnabled)
+            Notification_Eligibility_Assignee_NotificationLevel         = $($_Notification_Eligibility_Assignee.NotificationLevel)
+            Notification_Eligibility_Assignee_Recipients                = $($_Notification_Eligibility_Assignee.notificationRecipients)
+            Notification_Eligibility_Approvers_isDefaultRecipientEnabed = $($_Notification_Eligibility_Approvers.isDefaultRecipientsEnabled)
+            Notification_Eligibility_Approvers_NotificationLevel        = $($_Notification_Eligibility_Approvers.NotificationLevel)
+            Notification_Eligibility_Approvers_Recipients               = $($_Notification_Eligibility_Approvers.notificationRecipients)
+            Notification_Active_Alert_isDefaultRecipientEnabed          = $($_Notification_Active_Alert.isDefaultRecipientsEnabled)
+            Notification_Active_Alert_NotificationLevel                 = $($_Notification_Active_Alert.notificationLevel)
+            Notification_Active_Alert_Recipients                        = $($_Notification_Active_Alert.notificationRecipients)
+            Notification_Active_Assignee_isDefaultRecipientEnabed       = $($_Notification_Active_Assignee.isDefaultRecipientsEnabled)
+            Notification_Active_Assignee_NotificationLevel              = $($_Notification_Active_Assignee.notificationLevel)
+            Notification_Active_Assignee_Recipients                     = $($_Notification_Active_Assignee.notificationRecipients)
+            Notification_Active_Approvers_isDefaultRecipientEnabed       = $($_Notification_Active_Approvers.isDefaultRecipientsEnabled)
+            Notification_Active_Approvers_NotificationLevel              = $($_Notification_Active_Approvers.notificationLevel)
+            Notification_Active_Approvers_Recipients                     = $($_Notification_Active_Approvers.notificationRecipients)
 
         }
 
@@ -480,7 +527,7 @@ try {
 
         # Approval and approvers
         $approvalChanged = $false
-        if ( ($PSBoundParameters.Keys.Contains('ApprovalRequired')) -or  ($PSBoundParameters.Keys.Contains('Approvers'))) {
+        if ( ($PSBoundParameters.Keys.Contains('ApprovalRequired')) -or ($PSBoundParameters.Keys.Contains('Approvers'))) {
             $approvalChanged = $true
             if ($ApprovalRequired -eq $false) { $req = "false" }else { $req = "true" }
         
@@ -637,24 +684,26 @@ try {
             $rules += $rule
         }
 
+        #################
+        # Notifications #
+        #################
 
-        # Notifications
-        # Eligibility assignment
-        if ($PSBoundParameters.Keys.Contains('Notification_EligibleAssignment')) {
-            # @{"Notification_Eligibility_isDefaultRecipientEnabed"="true|false"; "Notification_EligibleAssignment_notificationLevel"="All|Critical"};"Notification_Admin_Admin_Eligibility_notificationRecipients" = @("email1@domain.com","email2@domain.com")} 
+        # Notif Eligibility assignment Alert
+        if ($PSBoundParameters.Keys.Contains('Notification_EligibleAssignment_Alert')) {
+            # @{"Notification_Eligibility_isDefaultRecipientEnabed"="true|false"; "Notification_EligibleAssignment_Alert_notificationLevel"="All|Critical"};"Notification_Admin_Admin_Eligibility_notificationRecipients" = @("email1@domain.com","email2@domain.com")} 
             $rule = '
         {
         "notificationType": "Email",
         "recipientType": "Admin",
-        "isDefaultRecipientsEnabled": '+$Notification_EligibleAssignment.isDefaultRecipientEnabed+',
-        "notificationLevel": "'+$Notification_EligibleAssignment.notificationLevel+'",
+        "isDefaultRecipientsEnabled": '+ $Notification_EligibleAssignment_Alert.isDefaultRecipientEnabed + ',
+        "notificationLevel": "'+ $Notification_EligibleAssignment_Alert.notificationLevel + '",
         "notificationRecipients": [
         '
-        $Notification_EligibleAssignment.Recipients|%{
-            $rule+='"'+$_+'",'
-        }
+            $Notification_EligibleAssignment_Alert.Recipients | % {
+                $rule += '"' + $_ + '",'
+            }
         
-        $rule+='
+            $rule += '
         ],
         "id": "Notification_Admin_Admin_Eligibility",
         "ruleType": "RoleManagementPolicyNotificationRule",
@@ -668,40 +717,210 @@ try {
         "inheritableSettings": null,
         "enforcedSettings": null
         }
-    }
+        }
     '
             $rules += $rule
         }
  
+        # Notif elligibility assignee
+        if ($PSBoundParameters.Keys.Contains('Notification_EligibleAssignment_Assignee')) {
+            # @{"Notification_Eligibility_isDefaultRecipientEnabed"="true|false"; "Notification_EligibleAssignment_Assignee_notificationLevel"="All|Critical"};"Notification_Admin_Admin_Eligibility_notificationRecipients" = @("email1@domain.com","email2@domain.com")} 
+            $rule = '
+        {
+        "notificationType": "Email",
+        "recipientType": "Requestor",
+        "isDefaultRecipientsEnabled": '+ $Notification_EligibleAssignment_Assignee.isDefaultRecipientEnabed + ',
+        "notificationLevel": "'+ $Notification_EligibleAssignment_Assignee.notificationLevel + '",
+        "notificationRecipients": [
+        '
+            $Notification_EligibleAssignment_Assignee.Recipients | % {
+                $rule += '"' + $_ + '",'
+            }
+        
+            $rule += '
+        ],
+        "id": "Notification_Requestor_Admin_Eligibility",
+        "ruleType": "RoleManagementPolicyNotificationRule",
+        "target": {
+        "caller": "Admin",
+        "operations": [
+            "All"
+        ],
+        "level": "Eligibility",
+        "targetObjects": null,
+        "inheritableSettings": null,
+        "enforcedSettings": null
+        }
+        }'
+            $rules += $rule
+        }
 
 
+        # Notif elligibility approver
+        if ($PSBoundParameters.Keys.Contains('Notification_EligibleAssignment_Approvers')) {
+            # @{"Notification_Eligibility_isDefaultRecipientEnabed"="true|false"; "Notification_EligibleAssignment_Approvers_notificationLevel"="All|Critical"};"Notification_Admin_Admin_Eligibility_notificationRecipients" = @("email1@domain.com","email2@domain.com")} 
+            $rule = '
+        {
+        "notificationType": "Email",
+        "recipientType": "Approver",
+        "isDefaultRecipientsEnabled": '+ $Notification_EligibleAssignment_Approvers.isDefaultRecipientEnabed + ',
+        "notificationLevel": "'+ $Notification_EligibleAssignment_Approvers.notificationLevel + '",
+        "notificationRecipients": [
+        '
+            $Notification_EligibleAssignment_Approvers.Recipients | % {
+                $rule += '"' + $_ + '",'
+            }
+        
+            $rule += '
+        ],
+        "id": "Notification_Approver_Admin_Eligibility",
+        "ruleType": "RoleManagementPolicyNotificationRule",
+        "target": {
+        "caller": "Admin",
+        "operations": [
+            "All"
+        ],
+        "level": "Eligibility",
+        "targetObjects": null,
+        "inheritableSettings": null,
+        "enforcedSettings": null
+        }
+        }'
+            $rules += $rule
+        }
 
 
-            # bringing all the rules together
-            $allrules = $rules -join ','
-            #Write-Verbose "All rules: $allrules"
+        # Notif Active Assignment Alert
+        if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Alert')) {
+            # @{"Notification_Eligibility_isDefaultRecipientEnabed"="true|false"; "Notification_EligibleAssignment_Alert_notificationLevel"="All|Critical"};"Notification_Admin_Admin_Eligibility_notificationRecipients" = @("email1@domain.com","email2@domain.com")} 
+            $rule = '
+        {
+        "notificationType": "Email",
+        "recipientType": "Admin",
+        "isDefaultRecipientsEnabled": '+ $Notification_ActiveAssignment_Alert.isDefaultRecipientEnabed + ',
+        "notificationLevel": "'+ $Notification_ActiveAssignment_Alert.notificationLevel + '",
+        "notificationRecipients": [
+        '
+            $Notification_ActiveAssignment_Alert.Recipients | % {
+                $rule += '"' + $_ + '",'
+            }
+        
+            $rule += '
+        ],
+        "id": "Notification_Admin_Admin_Assignment",
+        "ruleType": "RoleManagementPolicyNotificationRule",
+        "target": {
+        "caller": "Admin",
+        "operations": [
+            "All"
+        ],
+        "level": "Eligibility",
+        "targetObjects": null,
+        "inheritableSettings": null,
+        "enforcedSettings": null
+        }
+        }
+        '
+            $rules += $rule
+        }
 
-            $body = '
+      
+        # Notif Active Assignment Assignee
+        if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Assignee')) {
+            # @{"Notification_Eligibility_isDefaultRecipientEnabed"="true|false"; "Notification_EligibleAssignment_Alert_notificationLevel"="All|Critical"};"Notification_Admin_Admin_Eligibility_notificationRecipients" = @("email1@domain.com","email2@domain.com")} 
+            $rule = '
+                {
+                "notificationType": "Email",
+                "recipientType": "Requestor",
+                "isDefaultRecipientsEnabled": '+ $Notification_ActiveAssignment_Assignee.isDefaultRecipientEnabed + ',
+                "notificationLevel": "'+ $Notification_ActiveAssignment_Assignee.notificationLevel + '",
+                "notificationRecipients": [
+                '
+                            $Notification_ActiveAssignment_Assignee.Recipients | % {
+                                $rule += '"' + $_ + '",'
+                            }
+
+                            $rule += '
+                ],
+                "id": "Notification_Requestor_Admin_Assignment",
+                "ruleType": "RoleManagementPolicyNotificationRule",
+                "target": {
+                "caller": "Admin",
+                "operations": [
+                    "All"
+                ],
+                "level": "Eligibility",
+                "targetObjects": null,
+                "inheritableSettings": null,
+                "enforcedSettings": null
+                }
+                }
+                '
+            $rules += $rule
+        }
+
+           # Notif Active Assignment Approvers
+           if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Approvers')) {
+            # @{"Notification_Eligibility_isDefaultRecipientEnabed"="true|false"; "Notification_EligibleAssignment_Alert_notificationLevel"="All|Critical"};"Notification_Admin_Admin_Eligibility_notificationRecipients" = @("email1@domain.com","email2@domain.com")} 
+            $rule = '
+                {
+                "notificationType": "Email",
+                "recipientType": "Approver",
+                "isDefaultRecipientsEnabled": '+ $Notification_ActiveAssignment_Approvers.isDefaultRecipientEnabed + ',
+                "notificationLevel": "'+ $Notification_ActiveAssignment_Approvers.notificationLevel + '",
+                "notificationRecipients": [
+                '
+                            $Notification_ActiveAssignment_Approvers.Recipients | % {
+                                $rule += '"' + $_ + '",'
+                            }
+
+                            $rule += '
+                ],
+                "id": "Notification_Approver_Admin_Assignment",
+                "ruleType": "RoleManagementPolicyNotificationRule",
+                "target": {
+                "caller": "Admin",
+                "operations": [
+                    "All"
+                ],
+                "level": "Eligibility",
+                "targetObjects": null,
+                "inheritableSettings": null,
+                "enforcedSettings": null
+                }
+                }
+                '
+            $rules += $rule
+        }
+
+        
+
+
+        # bringing all the rules together
+        $allrules = $rules -join ','
+        #Write-Verbose "All rules: $allrules"
+
+        $body = '
     {
         "properties": {
           "scope": "'+ $scope + '",  
           "rules": [
     '
-            $body += $allrules
-            $body += '
+        $body += $allrules
+        $body += '
           ],
           "level": "Assignment"
         }
     }'
-            write-verbose "`n>> PATCH body: $body"
+        write-verbose "`n>> PATCH body: $body"
 
-            $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body -verbose:$false
-            #Write-Verbose $response
-            # 4 Patch the policy
-            # example 1 change maximum activation duration 
-            # Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
+        $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body -verbose:$false
+        #Write-Verbose $response
+        # 4 Patch the policy
+        # example 1 change maximum activation duration 
+        # Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
   
-            <#   $body='
+        <#   $body='
     {
         "properties": {
           "scope": "'+$scope+'",  
@@ -726,8 +945,8 @@ try {
 #>
     
 
-            #Example 2 require justfification  MFA and ticketing on enablement , add/remove rule as needed
-            <#   $body2='{
+        #Example 2 require justfification  MFA and ticketing on enablement , add/remove rule as needed
+        <#   $body2='{
         "properties": {
             "scope": "'+$scope+'",  
             "rules": [
@@ -752,97 +971,32 @@ try {
     }'
     $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body2
 #>
-            #Exemple 3 Send notifications when eligible members activate this role 
-            #For each recipient type you can set below highlighted property.
-            #NotificationLevel are Critical, All.
-            #Notification Recipients can be list.
+        #Exemple 3 Send notifications when eligible members activate this role 
+        #For each recipient type you can set below highlighted property.
+        #NotificationLevel are Critical, All.
+        #Notification Recipients can be list.
 
 
-            $body3 = '{
-        "properties": {
-            "scope": "'+ $scope + '",  
-            "rules": [
-    
-        {
-        "notificationType": "Email",
-        "recipientType": "Admin",
-        "isDefaultRecipientsEnabled": false,
-        "notificationLevel": "Critical",
-        "notificationRecipients": ["admin_enduser_member@test.com"],
-        "id": "Notification_Admin_EndUser_Assignment",
-        "ruleType": "RoleManagementPolicyNotificationRule",
-        "target": {
-            "caller": "EndUser",
-            "operations": [
-                "All"
-            ],
-            "level": "Assignment",
-            "targetObjects": null,
-            "inheritableSettings": null,
-            "enforcedSettings": null
-        }
-    },
-    {
-        "notificationType": "Email",
-        "recipientType": "Requestor",
-        "isDefaultRecipientsEnabled": false,
-        "notificationLevel": "Critical",
-        "notificationRecipients": ["requestor_enduser_member@test.com"],
-        "id": "Notification_Requestor_EndUser_Assignment",
-        "ruleType": "RoleManagementPolicyNotificationRule",
-        "target": {
-            "caller": "EndUser",
-            "operations": [
-                "All"
-            ],
-            "level": "Assignment",
-            "targetObjects": null,
-            "inheritableSettings": null,
-            "enforcedSettings": null
-        }
-    },
-    {
-        "notificationType": "Email",
-        "recipientType": "Approver",
-        "isDefaultRecipientsEnabled": true,
-        "notificationLevel": "Critical",
-        "notificationRecipients": null,
-        "id": "Notification_Approver_EndUser_Assignment",
-        "ruleType": "RoleManagementPolicyNotificationRule",
-        "target": {
-            "caller": "EndUser",
-            "operations": [
-                "All"
-            ],
-            "level": "Assignment",
-            "targetObjects": null,
-            "inheritableSettings": null,
-            "enforcedSettings": null
-        }
+ 
     }
-    ]    
-}'
-   
-            #$response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body3
-        }
     
     
-    }
-    catch {
-        $_ # echo the exception
-        $err = $($_.exception.message | out-string) 
-        $errorRecord = $Error[0] 
-        $details = $errorRecord.errordetails # |fl -force
-        $position = $errorRecord.InvocationInfo.positionMessage
-        $Exception = $ErrorRecord.Exception
+}
+catch {
+    $_ # echo the exception
+    $err = $($_.exception.message | out-string) 
+    $errorRecord = $Error[0] 
+    $details = $errorRecord.errordetails # |fl -force
+    $position = $errorRecord.InvocationInfo.positionMessage
+    $Exception = $ErrorRecord.Exception
     
-        if ($TeamsNotif) { send-teamsnotif "$err" "$details<BR/> TIPS: try to check the scope and the role name" "$position" }
-        Log "An exception occured: $err `nDetails: $details `nPosition: $position"
-        Log "Error, script did not terminate normaly"
-        break
-    }
+    if ($TeamsNotif) { send-teamsnotif "$err" "$details<BR/> TIPS: try to check the scope and the role name" "$position" }
+    Log "An exception occured: $err `nDetails: $details `nPosition: $position"
+    Log "Error, script did not terminate normaly"
+    break
+}
 
-    log "Success! Script ended normaly"
+log "Success! Script ended normaly"
 
 
 
