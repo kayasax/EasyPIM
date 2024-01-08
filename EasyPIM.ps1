@@ -1,6 +1,12 @@
 <# 
 .Synopsis
-Sript to manage the Azure Resource Roles settings with simplicity in mind
+Powershell function to manage PIM Azure Resource Role settings with simplicity in mind
+
+Easily manage settings at the subscription level : enter a tenant ID, a subscription ID, a role name then the options you want to set for example require justification on activation
+Support multi roles
+Export role settings to csv
+Sample usage
+EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -ActivationRequirement "Justification","Ticketing","MultiFactorAuthentication"
 
 .Description
     
@@ -39,9 +45,9 @@ Sript to manage the Azure Resource Roles settings with simplicity in mind
     https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview
     Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
 .Notes
-    Author: MICHEL, Loic 
+    Homepage: https://github.com/kayasax/easyPIM
+    Author: MICHEL, Loic <loic.michel@yespapa.eu>
     Changelog:
-    * 2018/01/08 08:00 Template generated with NewTemplate.ps1 V 0.2
     Todo: 
     * allow other scopes
 #>
@@ -72,6 +78,12 @@ param(
     [String]
     $exportFilename = $null,
 
+    [String]
+    $import = $null,
+    
+    [Switch]
+    $backup,
+
     [System.String]
     $ActivationDuration = $null,
 
@@ -95,11 +107,11 @@ param(
     
     [Parameter(ValueFromPipeline = $true)]
     [System.String]
-    $MaximumAssignationDuration = $null,
+    $MaximumEligibilityDuration = $null,
     
     [Parameter(ValueFromPipeline = $true)]
     [Bool]
-    $AllowPermanentEligibilty,
+    $AllowPermanentEligibility,
 
     [Parameter(ValueFromPipeline = $true)]
     [System.String]
@@ -339,50 +351,22 @@ try {
         }
         $null = Invoke-RestMethod @parameters
     }#end function senfd-teamsnotif
-   
-    #log "`n******************************************`nInfo : script is starting`n******************************************"
-    #$rolename="Webmaster"
 
-    #at least one approver required if approval is enable
-    # todo chech if a parameterset would be better
-    if ($ApprovalRequired -eq $true -and $Approvers -eq $null) { throw "`n /!\ At least one approver is required if approval is enable, please set -Approvers parameter`n`n" }
-    
-    $scope = "subscriptions/$subscriptionID"
-    $ARMhost = "https://management.azure.com"
-    $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
-    
-    # Log in first with Connect-AzAccount if not using Cloud Shell
-    Write-Verbose ">> Connecting to Azure with tenantID $tenantID"
-    if ( (get-azcontext) -eq $null) { Connect-AzAccount -Tenant $tenantID }
-
-    # Get access Token
-    Write-Verbose ">> Getting access token"
-    $token = Get-AzAccessToken
-    #Write-Verbose ">> token=$($token.Token)"
-    
-    # setting the authentication headers for MSGraph calls
-    $authHeader = @{
-        'Content-Type'  = 'application/json'
-        'Authorization' = 'Bearer ' + $token.Token
-    }
-
-    # export 
-    $exports=@()
-
-    # run the flow for each role name.
-    $rolename | ForEach-Object {
+    function get-config ($scope, $rolename) {
+        $ARMhost = "https://management.azure.com"
+        $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
 
         # 1 Get ID of the role $rolename assignable at the provided scope
-        $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$_'"
-        write-verbose " #1 Get role definition for the role $_ assignable at the scope $scope at $restUri"
+        $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$rolename'"
+        write-verbose " #1 Get role definition for the role $rolename assignable at the scope $scope at $restUri"
         $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
         $roleID = $response.value.id
-        if ($null -eq $roleID) { throw "An exception occured : can't find a roleID for $_ at scope $scope" }
+        if ($null -eq $roleID) { throw "An exception occured : can't find a roleID for $rolename at scope $scope" }
         Write-Verbose ">> RodeId = $roleID"
 
         # 2  get the role assignment for the roleID found at #1
         $restUri = "$ARMendpoint/roleManagementPolicyAssignments?api-version=2020-10-01&`$filter=roleDefinitionId eq '$roleID'"
-        write-verbose " #2 Get the Assignment for $_ at $restUri"
+        write-verbose " #2 Get the Assignment for $rolename at $restUri"
         $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
         $policyId = $response.value.properties.policyId #.split('/')[-1] 
         Write-Verbose ">> policy ID = $policyId"
@@ -491,22 +475,14 @@ try {
             Notification_Activation_Approvers_NotificationLevel         = $($_Notification_Activation_Approvers.NotificationLevel)
             Notification_Activation_Approvers_Recipients                = $($_Notification_Activation_Approvers.NotificationRecipients -join ',')
         }
+        return $config
 
-        if ($show) {
-            #show curent config and quit
-            return $config # $response 
-        }
+    } #end function get-config
 
-        if ( $export ) {
-          $exports +=  $config     
-        }
-    
-        # Build our rules to patch based on parameter used
-        $rules = @()
-
+    function Set-ActivationDuration ($ActivationDuration) {
         # Set Maximum activation duration
         if ( ($null -ne $ActivationDuration) -and ("" -ne $ActivationDuration) ) {
-            Write-Verbose "Editing Activation duration : $activationDuration"
+            Write-Verbose "Editing Activation duration : $ActivationDuration"
             $properties = @{
                 "isExpirationRequired" = "true";
                 "maximumDuration"      = "$ActivationDuration";
@@ -520,66 +496,59 @@ try {
             }       
             $rule = $properties | ConvertTo-Json
             #update rules if required
-            if ($PSBoundParameters.Keys.Contains('ActivationDuration')) {  
-                $rules += $rule
-            }
+            return $rule
         }
+    }# end function set-ActivationDuration
 
-        # Set activation requirement MFA/justification/ticketing
-        if ($null -ne $ActivationRequirement) {
-            if ($ActivationRequirement -eq "None") {
-                $enabledRules = "[],"
-            }
-            else {
-                $formatedRules = '['
-                
-                $ActivationRequirement | % {
-                    $formatedRules += '"'
-                    $formatedRules += "$_"
-                    $formatedRules += '",'
-                    
-                }
-                $formatedRules += "],"
-                $enabledRules = $formatedRules
-                Write-Verbose "************* $enabledRules "
-            }
-                
-            $properties = '{
-                    "enabledRules": '+ $enabledRules + '
-                    "id": "Enablement_EndUser_Assignment",
-                    "ruleType": "RoleManagementPolicyEnablementRule",
-                    "target": {
-                        "caller": "EndUser",
-                        "operations": [
-                            "All"
-                        ],
-                        "level": "Assignment",
-                        "targetObjects": [],
-                        "inheritableSettings": [],
-                        "enforcedSettings": []
-                    }
-                }'
-            $rule = $properties
+    function Set-ActivationRequirement( $ActivationRequirement) {
+        if ($ActivationRequirement -eq "None") {
+            $enabledRules = "[],"
+        }
+        else {
+            $formatedRules = '['
             
-            #update if required
-            if ($PSBoundParameters.Keys.Contains('ActivationRequirement')) {  
-                $rules += $rule
-            }          
+            $ActivationRequirement | % {
+                $formatedRules += '"'
+                $formatedRules += "$_"
+                $formatedRules += '",'
+                
+            }
+            $formatedRules += "],"
+            $enabledRules = $formatedRules
+            Write-Verbose "************* $enabledRules "
         }
+            
+        $properties = '{
+                "enabledRules": '+ $enabledRules + '
+                "id": "Enablement_EndUser_Assignment",
+                "ruleType": "RoleManagementPolicyEnablementRule",
+                "target": {
+                    "caller": "EndUser",
+                    "operations": [
+                        "All"
+                    ],
+                    "level": "Assignment",
+                    "targetObjects": [],
+                    "inheritableSettings": [],
+                    "enforcedSettings": []
+                }
+            }'
 
-        # Approval and approvers
-        $approvalChanged = $false
-        if ( ($PSBoundParameters.Keys.Contains('ApprovalRequired')) -or ($PSBoundParameters.Keys.Contains('Approvers'))) {
-            $approvalChanged = $true
-            if ($ApprovalRequired -eq $false) { $req = "false" }else { $req = "true" }
+        return $properties
+    } #end function set-ActivationRequirement
+
+    function Set-Approval ($ApprovalRequired, $Approvers) {
+               
+        if ($null -eq $Approvers) { $Approvers = $config.Approvers }
+        if ($ApprovalRequired -eq $false) { $req = "false" }else { $req = "true" }
         
-            $rule = '
+        $rule = '
         {
         "setting": {'
-            if ($null -ne $ApprovalRequired) {
-                $rule += '"isApprovalRequired": ' + $req + ','
-            }
-            $rule += '
+        if ($null -ne $ApprovalRequired) {
+            $rule += '"isApprovalRequired": ' + $req + ','
+        }
+        $rule += '
         "isApprovalRequiredForExtension": false,
         "isRequestorJustificationRequired": true,
         "approvalMode": "SingleStage",
@@ -590,21 +559,21 @@ try {
             "escalationTimeInMinutes": 0,
         '
 
-            if ($null -ne $Approvers) {
-                #at least one approver required if approval is enable
-                $rule += '
+        if ($null -ne $Approvers) {
+            #at least one approver required if approval is enable
+            $rule += '
             "primaryApprovers": [
             '
-                $cpt = 0    
-                $Approvers | ForEach-Object {
-                    $id = $_.Id
-                    $name = $_.Name
-                    $type = $_.Type
+            $cpt = 0    
+            $Approvers | ForEach-Object {
+                $id = $_.Id
+                $name = $_.Name
+                $type = $_.Type
 
-                    if ($cpt -gt 0) {
-                        $rule += ","
-                    }
-                    $rule += '
+                if ($cpt -gt 0) {
+                    $rule += ","
+                }
+                $rule += '
             {
                 "id": "'+ $id + '",
                 "description": "'+ $name + '",
@@ -612,14 +581,14 @@ try {
                 "userType": "'+ $type + '"
             }
             '
-                    $cpt++
-                }
-
-                $rule += '
-            ],'
+                $cpt++
             }
 
-            $rule += ' 
+            $rule += '
+            ],'
+        }
+
+        $rule += ' 
         "isEscalationEnabled": false,
             "escalationApprovers": null
                     }]
@@ -637,31 +606,20 @@ try {
             "enforcedSettings": null
         
         }}'
-            if ($true -eq $approvalChanged) {
-                $rules += $rule
-            }
-            
-        }
+        return $rule
+    }#end function Set-Approval
 
-
-        # eligibility assignement
-        $eligibilityChanged = $false
-        if ( $PSBoundParameters.ContainsKey('MaximumAssignationDuration')) {
-            $max = $PSBoundParameters["MaximumAssignationDuration"]
-            $eligibilityChanged = $true
+    function Set-EligibilityAssignment($MaximumEligibilityDuration, $AllowPermanentEligibility) {
+        write-verbose "received allowpermanenteligibility: $AllowPermanentEligibility"
+        $max = $MaximumEligibilityDuration
+     
+        if ( $true -eq $AllowPermanentEligibility) {
+            $expire = "false"
         }
-        else { $max = $_maxAssignmentDuration }
-        if ( $PSBoundParameters.ContainsKey('AllowPermanentEligibilty')) {
-            if ( $AllowPermanentEligibilty) {
-                $expire = "false"
-            }
-            else {
-                $expire = "true"
-            }
-            $eligibilityChanged = $true
+        else {
+            $expire = "true"
         }
-        else { $expire = $_eligibilityExpirationRequired.ToString().ToLower() }
-       
+      
         $rule = '
         {
         "isExpirationRequired": '+ $expire + ',
@@ -681,33 +639,24 @@ try {
     }
     '
         # update rule only if a change was requested
-        if ( $true -eq $eligibilityChanged) {
-            $rules += $rule
+        return $rule
+    }# end function Set-EligibilityAssignment
+   
+    function Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment) {
+    
+        if ( $true -eq 'AllowPermanentActiveAssignment') {
+            $expire2 = "false"
         }
+        else {
+            $expire2 = "true"
+        }
+            
         
-
-        #active assignement limits
-        $ActiveAssignmentChanged = $false
-        if ( $PSBoundParameters.ContainsKey('MaximumActiveAssignmentDuration')) {
-            $max2 = $PSBoundParameters["MaximumActiveAssignmentDuration"]
-            $ActiveAssignmentChanged = $true
-        }
-        else { $max2 = $_maxAssignmentDuration }
-        if ( $PSBoundParameters.ContainsKey('AllowPermanentActiveAssignment')) {
-            if ( $AllowPermanentActiveAssignment) {
-                $expire2 = "false"
-            }
-            else {
-                $expire2 = "true"
-            }
-            $ActiveAssignmentChanged = $true
-        }
-        else { $expire2 = $_activeExpirationRequired.ToString().ToLower() }
-
+        
         $rule = '
         {
         "isExpirationRequired": '+ $expire2 + ',
-        "maximumDuration": "'+ $max2 + '",
+        "maximumDuration": "'+ $MaximumActiveAssignmentDuration + '",
         "id": "Expiration_Admin_Assignment",
         "ruleType": "RoleManagementPolicyExpirationRule",
         "target": {
@@ -721,19 +670,14 @@ try {
         "enforcedSettings": null
         }
         }
-'
-        if ( $true -eq $ActiveAssignmentChanged) {
-            $rules += $rule
-        }
+    '
+        
+        return $rule
+        
+    } #end function set-activeAssignment
 
-        #################
-        # Notifications #
-        #################
-
-        # Notif Eligibility assignment Alert
-        if ($PSBoundParameters.Keys.Contains('Notification_EligibleAssignment_Alert')) {
-            # @{"Notification_Eligibility_isDefaultRecipientEnabed"="true|false"; "Notification_EligibleAssignment_Alert_notificationLevel"="All|Critical"};"Notification_Admin_Admin_Eligibility_notificationRecipients" = @("email1@domain.com","email2@domain.com")} 
-            $rule = '
+    function Set-Notification_EligibleAssignment_Alert($Notification_EligibleAssignment_Alert) {
+        $rule = '
         {
         "notificationType": "Email",
         "recipientType": "Admin",
@@ -741,11 +685,11 @@ try {
         "notificationLevel": "'+ $Notification_EligibleAssignment_Alert.notificationLevel + '",
         "notificationRecipients": [
         '
-            $Notification_EligibleAssignment_Alert.Recipients | % {
-                $rule += '"' + $_ + '",'
-            }
+        $Notification_EligibleAssignment_Alert.Recipients | % {
+            $rule += '"' + $_ + '",'
+        }
         
-            $rule += '
+        $rule += '
         ],
         "id": "Notification_Admin_Admin_Eligibility",
         "ruleType": "RoleManagementPolicyNotificationRule",
@@ -761,13 +705,11 @@ try {
         }
         }
     '
-            $rules += $rule
-        }
- 
-        # Notif elligibility assignee
-        if ($PSBoundParameters.Keys.Contains('Notification_EligibleAssignment_Assignee')) {
-            # @{"Notification_Eligibility_isDefaultRecipientEnabed"="true|false"; "Notification_EligibleAssignment_Assignee_notificationLevel"="All|Critical"};"Notification_Admin_Admin_Eligibility_notificationRecipients" = @("email1@domain.com","email2@domain.com")} 
-            $rule = '
+        return $rule
+    }# end function set-Notification_EligibleAssignment_Alert
+
+    function Set-Notification_EligibleAssignment_Assignee($Notification_EligibleAssignment_Assignee) {
+        $rule = '
         {
         "notificationType": "Email",
         "recipientType": "Requestor",
@@ -775,11 +717,11 @@ try {
         "notificationLevel": "'+ $Notification_EligibleAssignment_Assignee.notificationLevel + '",
         "notificationRecipients": [
         '
-            $Notification_EligibleAssignment_Assignee.Recipients | % {
-                $rule += '"' + $_ + '",'
-            }
+        $Notification_EligibleAssignment_Assignee.Recipients | % {
+            $rule += '"' + $_ + '",'
+        }
         
-            $rule += '
+        $rule += '
         ],
         "id": "Notification_Requestor_Admin_Eligibility",
         "ruleType": "RoleManagementPolicyNotificationRule",
@@ -794,14 +736,12 @@ try {
         "enforcedSettings": null
         }
         }'
-            $rules += $rule
-        }
 
+        return $rule
+    }# end function Set-Notification_EligibleAssignment_Assignee
 
-        # Notif elligibility approver
-        if ($PSBoundParameters.Keys.Contains('Notification_EligibleAssignment_Approvers')) {
-            # @{"Notification_Eligibility_isDefaultRecipientEnabed"="true|false"; "Notification_EligibleAssignment_Approvers_notificationLevel"="All|Critical"};"Notification_Admin_Admin_Eligibility_notificationRecipients" = @("email1@domain.com","email2@domain.com")} 
-            $rule = '
+    function Set-Notification_EligibleAssignment_Approvers($Notification_EligibleAssignment_Approvers) {
+        $rule = '
         {
         "notificationType": "Email",
         "recipientType": "Approver",
@@ -809,11 +749,11 @@ try {
         "notificationLevel": "'+ $Notification_EligibleAssignment_Approvers.notificationLevel + '",
         "notificationRecipients": [
         '
-            $Notification_EligibleAssignment_Approvers.Recipients | % {
-                $rule += '"' + $_ + '",'
-            }
-        
-            $rule += '
+        $Notification_EligibleAssignment_Approvers.Recipients | % {
+            $rule += '"' + $_ + '",'
+        }
+
+        $rule += '
         ],
         "id": "Notification_Approver_Admin_Eligibility",
         "ruleType": "RoleManagementPolicyNotificationRule",
@@ -828,49 +768,43 @@ try {
         "enforcedSettings": null
         }
         }'
-            $rules += $rule
-        }
+        return $rule
+    }# end function Set-Notification_EligibleAssignment_Approvers
 
+    function Set-Notification_ActiveAssignment_Alert($Notification_ActiveAssignment_Alert) {
+        $rule = '
+    {
+    "notificationType": "Email",
+    "recipientType": "Admin",
+    "isDefaultRecipientsEnabled": '+ $Notification_ActiveAssignment_Alert.isDefaultRecipientEnabed + ',
+    "notificationLevel": "'+ $Notification_ActiveAssignment_Alert.notificationLevel + '",
+    "notificationRecipients": [
+    '
+        $Notification_ActiveAssignment_Alert.Recipients | % {
+            $rule += '"' + $_ + '",'
+        }
+    
+        $rule += '
+    ],
+    "id": "Notification_Admin_Admin_Assignment",
+    "ruleType": "RoleManagementPolicyNotificationRule",
+    "target": {
+    "caller": "Admin",
+    "operations": [
+        "All"
+    ],
+    "level": "Eligibility",
+    "targetObjects": null,
+    "inheritableSettings": null,
+    "enforcedSettings": null
+    }
+    }
+    '
+        return $rule
+    } #end function Set-Notification_ActiveAssignment_Alert
 
-        # Notif Active Assignment Alert
-        if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Alert')) {
-            # @{"Notification_Eligibility_isDefaultRecipientEnabed"="true|false"; "Notification_EligibleAssignment_Alert_notificationLevel"="All|Critical"};"Notification_Admin_Admin_Eligibility_notificationRecipients" = @("email1@domain.com","email2@domain.com")} 
-            $rule = '
-        {
-        "notificationType": "Email",
-        "recipientType": "Admin",
-        "isDefaultRecipientsEnabled": '+ $Notification_ActiveAssignment_Alert.isDefaultRecipientEnabed + ',
-        "notificationLevel": "'+ $Notification_ActiveAssignment_Alert.notificationLevel + '",
-        "notificationRecipients": [
-        '
-            $Notification_ActiveAssignment_Alert.Recipients | % {
-                $rule += '"' + $_ + '",'
-            }
-        
-            $rule += '
-        ],
-        "id": "Notification_Admin_Admin_Assignment",
-        "ruleType": "RoleManagementPolicyNotificationRule",
-        "target": {
-        "caller": "Admin",
-        "operations": [
-            "All"
-        ],
-        "level": "Eligibility",
-        "targetObjects": null,
-        "inheritableSettings": null,
-        "enforcedSettings": null
-        }
-        }
-        '
-            $rules += $rule
-        }
-
-      
-        # Notif Active Assignment Assignee
-        if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Assignee')) {
-            # @{"Notification_Eligibility_isDefaultRecipientEnabed"="true|false"; "Notification_EligibleAssignment_Alert_notificationLevel"="All|Critical"};"Notification_Admin_Admin_Eligibility_notificationRecipients" = @("email1@domain.com","email2@domain.com")} 
-            $rule = '
+    function Set-Notification_ActiveAssignment_Assignee($Notification_ActiveAssignment_Assignee) {
+        $rule = '
                 {
                 "notificationType": "Email",
                 "recipientType": "Requestor",
@@ -878,11 +812,11 @@ try {
                 "notificationLevel": "'+ $Notification_ActiveAssignment_Assignee.notificationLevel + '",
                 "notificationRecipients": [
                 '
-            $Notification_ActiveAssignment_Assignee.Recipients | % {
-                $rule += '"' + $_ + '",'
-            }
+        $Notification_ActiveAssignment_Assignee.Recipients | % {
+            $rule += '"' + $_ + '",'
+        }
 
-            $rule += '
+        $rule += '
                 ],
                 "id": "Notification_Requestor_Admin_Assignment",
                 "ruleType": "RoleManagementPolicyNotificationRule",
@@ -898,48 +832,43 @@ try {
                 }
                 }
                 '
-            $rules += $rule
+        return $rule
+    } #end function Set-Notification_ActiveAssignment_Assignee
+
+    function  Set-Notification_ActiveAssignment_Approvers($Notification_ActiveAssignment_Approvers) {
+        $rule = '
+        {
+        "notificationType": "Email",
+        "recipientType": "Approver",
+        "isDefaultRecipientsEnabled": '+ $Notification_ActiveAssignment_Approvers.isDefaultRecipientEnabed + ',
+        "notificationLevel": "'+ $Notification_ActiveAssignment_Approvers.notificationLevel + '",
+        "notificationRecipients": [
+        '
+        $Notification_ActiveAssignment_Approvers.Recipients | % {
+            $rule += '"' + $_ + '",'
         }
 
-        # Notif Active Assignment Approvers
-        if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Approvers')) {
-            # @{"Notification_Eligibility_isDefaultRecipientEnabed"="true|false"; "Notification_EligibleAssignment_Alert_notificationLevel"="All|Critical"};"Notification_Admin_Admin_Eligibility_notificationRecipients" = @("email1@domain.com","email2@domain.com")} 
-            $rule = '
-                {
-                "notificationType": "Email",
-                "recipientType": "Approver",
-                "isDefaultRecipientsEnabled": '+ $Notification_ActiveAssignment_Approvers.isDefaultRecipientEnabed + ',
-                "notificationLevel": "'+ $Notification_ActiveAssignment_Approvers.notificationLevel + '",
-                "notificationRecipients": [
-                '
-            $Notification_ActiveAssignment_Approvers.Recipients | % {
-                $rule += '"' + $_ + '",'
-            }
-
-            $rule += '
-                ],
-                "id": "Notification_Approver_Admin_Assignment",
-                "ruleType": "RoleManagementPolicyNotificationRule",
-                "target": {
-                "caller": "Admin",
-                "operations": [
-                    "All"
-                ],
-                "level": "Eligibility",
-                "targetObjects": null,
-                "inheritableSettings": null,
-                "enforcedSettings": null
-                }
-                }
-                '
-            $rules += $rule
+        $rule += '
+        ],
+        "id": "Notification_Approver_Admin_Assignment",
+        "ruleType": "RoleManagementPolicyNotificationRule",
+        "target": {
+        "caller": "Admin",
+        "operations": [
+            "All"
+        ],
+        "level": "Eligibility",
+        "targetObjects": null,
+        "inheritableSettings": null,
+        "enforcedSettings": null
         }
+        }
+        '
+        return $rule
+    }Set-Notification_ActiveAssignment_Approvers
 
-        
-        # Notification Activation alert 
-        if ($PSBoundParameters.Keys.Contains('Notification_Activation_Alert')) {
-            # @{"Notification_Eligibility_isDefaultRecipientEnabed"="true|false"; "Notification_EligibleAssignment_Alert_notificationLevel"="All|Critical"};"Notification_Admin_Admin_Eligibility_notificationRecipients" = @("email1@domain.com","email2@domain.com")} 
-            $rule = '
+    function Set-Notification_Activation_Alert($Notification_Activation_Alert) {
+        $rule = '
         {
         "notificationType": "Email",
         "recipientType": "Admin",
@@ -947,11 +876,11 @@ try {
         "notificationLevel": "'+ $Notification_Activation_Alert.notificationLevel + '",
         "notificationRecipients": [
         '
-            $Notification_Activation_Alert.Recipients | % {
-                $rule += '"' + $_ + '",'
-            }
+        $Notification_Activation_Alert.Recipients | % {
+            $rule += '"' + $_ + '",'
+        }
 
-            $rule += '
+        $rule += '
         ],
         "id": "Notification_Admin_EndUser_Assignment",
         "ruleType": "RoleManagementPolicyNotificationRule",
@@ -967,47 +896,43 @@ try {
         }
         }
         '
-            $rules += $rule
-        }
+        return $rule
+    }
 
-        # Notification Activation Assignee 
-        if ($PSBoundParameters.Keys.Contains('Notification_Activation_Assignee')) {
-            # @{"Notification_Eligibility_isDefaultRecipientEnabed"="true|false"; "Notification_EligibleAssignment_Alert_notificationLevel"="All|Critical"};"Notification_Admin_Admin_Eligibility_notificationRecipients" = @("email1@domain.com","email2@domain.com")} 
-            $rule = '
-        {
-        "notificationType": "Email",
-        "recipientType": "Requestor",
-        "isDefaultRecipientsEnabled": '+ $Notification_Activation_Assignee.isDefaultRecipientEnabed + ',
-        "notificationLevel": "'+ $Notification_Activation_Assignee.notificationLevel + '",
-        "notificationRecipients": [
-        '
-            $Notification_Activation_Assignee.Recipients | % {
-                $rule += '"' + $_ + '",'
-            }
+    function setNotification_Activation_Assignee($Notification_Activation_Assignee) {
+        $rule = '
+         {
+         "notificationType": "Email",
+         "recipientType": "Requestor",
+         "isDefaultRecipientsEnabled": '+ $Notification_Activation_Assignee.isDefaultRecipientEnabed + ',
+         "notificationLevel": "'+ $Notification_Activation_Assignee.notificationLevel + '",
+         "notificationRecipients": [
+         '
+        $Notification_Activation_Assignee.Recipients | % {
+            $rule += '"' + $_ + '",'
+        }
+ 
+        $rule += '
+         ],
+         "id": "Notification_Requestor_EndUser_Assignment",
+         "ruleType": "RoleManagementPolicyNotificationRule",
+         "target": {
+         "caller": "Admin",
+         "operations": [
+             "All"
+         ],
+         "level": "Eligibility",
+         "targetObjects": null,
+         "inheritableSettings": null,
+         "enforcedSettings": null
+         }
+         }
+         '
+        return $rule
+    }
 
-            $rule += '
-        ],
-        "id": "Notification_Requestor_EndUser_Assignment",
-        "ruleType": "RoleManagementPolicyNotificationRule",
-        "target": {
-        "caller": "Admin",
-        "operations": [
-            "All"
-        ],
-        "level": "Eligibility",
-        "targetObjects": null,
-        "inheritableSettings": null,
-        "enforcedSettings": null
-        }
-        }
-        '
-            $rules += $rule
-        }
-
-        # Notification Activation Approvers 
-        if ($PSBoundParameters.Keys.Contains('Notification_Activation_Approvers')) {
-            # @{"Notification_Eligibility_isDefaultRecipientEnabed"="true|false"; "Notification_EligibleAssignment_Alert_notificationLevel"="All|Critical"};"Notification_Admin_Admin_Eligibility_notificationRecipients" = @("email1@domain.com","email2@domain.com")} 
-            $rule = '
+    function Set-Notification_Activation_Approvers ($Notification_Activation_Approvers){
+        $rule = '
         {
         "notificationType": "Email",
         "recipientType": "Approver",
@@ -1038,42 +963,185 @@ try {
         }
         }
         '
-            $rules += $rule
+        return $rule
+    }
+
+
+    # ******************************************
+    # * Script is starting
+    # ******************************************
+    
+
+    #at least one approver required if approval is enable
+    # todo chech if a parameterset would be better
+    if ($ApprovalRequired -eq $true -and $Approvers -eq $null) { throw "`n /!\ At least one approver is required if approval is enable, please set -Approvers parameter`n`n" }
+    
+    $scope = "subscriptions/$subscriptionID"
+    $ARMhost = "https://management.azure.com"
+    $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
+    
+    # Log in first with Connect-AzAccount if not using Cloud Shell
+    Write-Verbose ">> Connecting to Azure with tenantID $tenantID"
+    if ( (get-azcontext) -eq $null) { Connect-AzAccount -Tenant $tenantID }
+
+    # Get access Token
+    Write-Verbose ">> Getting access token"
+    $token = Get-AzAccessToken
+    #Write-Verbose ">> token=$($token.Token)"
+    
+    # setting the authentication headers for MSGraph calls
+    $authHeader = @{
+        'Content-Type'  = 'application/json'
+        'Authorization' = 'Bearer ' + $token.Token
+    }
+
+    # Array to contain the settings of each selected roles 
+    $exports = @()
+
+    # run the flow for each role name.
+    $rolename | ForEach-Object {
+        
+        #get curent config
+        $config = get-config $scope $_
+
+        if ($show) {
+            #show curent config and quit
+            return $config # $response 
         }
-        # bringing all the rules together
+
+        if ( $export ) {
+            $exports += $config     
+        }
+        
+        if ($import) {
+            if (!(test-path $import)) {
+                throw "Operation failed, file $import cannot be found"
+            }
+            $t = Import-Csv $import
+            if (($t | measure | select -expand count) -ne 1) {
+                throw "I can't import settings from a file containing more than 1 role"
+            }
+            $t
+            exit
+        }
+
+        # Build our rules to patch based on parameter used
+        $rules = @()
+
+        if ($PSBoundParameters.Keys.Contains('ActivationDuration')) {  
+            $rules += Set-ActivationDuration $ActivationDuration
+        }
+
+        if ($PSBoundParameters.Keys.Contains('ActivationRequirement')) {  
+            $rules += Set-ActivationRequirement $ActivationRequirement
+        }          
+
+        # Approval and approvers
+        if ( ($PSBoundParameters.Keys.Contains('ApprovalRequired')) -or ($PSBoundParameters.Keys.Contains('Approvers'))) {
+            $rules += Set-Approval $ApprovalRequired $Approvers
+        }
+
+        # eligibility assignement
+        if ( $PSBoundParameters.ContainsKey('MaximumEligibilityDuration') -or ( $PSBoundParameters.ContainsKey('AllowPermanentEligibility'))) {
+            #if values are not set, use the ones from the curent config
+            if (!( $PSBoundParameters.ContainsKey('MaximumEligibilityDuration'))) { $MaximumEligibilityDuration = $config.MaximumEligibilityDuration }
+            if (!( $PSBoundParameters.ContainsKey('AllowPermanentEligibility'))) { $AllowPermanentEligibility = $config.AllowPermanentEligibleAssignment }
+            $rules += Set-EligibilityAssignment $MaximumEligibilityDuration $AllowPermanentEligibility
+        }
+     
+        #active assignement limits
+        if ( $PSBoundParameters.ContainsKey('MaximumActiveAssignmentDuration') -or ( $PSBoundParameters.ContainsKey('AllowPermanentActiveAssignment'))) {
+            #if values are not set, use the ones from the curent config
+            if (!( $PSBoundParameters.ContainsKey('MaximumActiveAssignmentDuration'))) { $MaximumEligibilityDuration = $config.MaximumActiveAssignmentDuration }
+            if (!( $PSBoundParameters.ContainsKey('AllowPermanentActiveAssignment'))) { $AllowPermanentEligibility = $config.AllowPermanentActiveAssignment }
+            $rules += Set-ActiveAssignment $MaximumActiveAssignmentDuration $AllowPermanentActiveAssignment
+        }
+
+        #################
+        # Notifications #
+        #################
+
+        # Notif Eligibility assignment Alert
+        if ($PSBoundParameters.Keys.Contains('Notification_EligibleAssignment_Alert')) {
+            $rules += Set-Notification_EligibleAssignment_Alert $Notification_EligibleAssignment_Alert
+        }
+
+        # Notif elligibility assignee
+        if ($PSBoundParameters.Keys.Contains('Notification_EligibleAssignment_Assignee')) {
+            $rules += Set-Notification_EligibleAssignment_Assignee $Notification_EligibleAssignment_Assignee
+        }
+
+        # Notif elligibility approver
+        if ($PSBoundParameters.Keys.Contains('Notification_EligibleAssignment_Approvers')) {
+            $rules += Set-Notification_EligibleAssignment_Approvers $Notification_EligibleAssignment_Approvers
+        }
+
+        # Notif Active Assignment Alert
+        if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Alert')) {
+            $rules += Set-Notification_ActiveAssignment_Alert $Notification_ActiveAssignment_Alert
+        }
+      
+        # Notif Active Assignment Assignee
+        if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Assignee')) {
+            $rules += Set-Notification_ActiveAssignment_Assignee $Notification_ActiveAssignment_Assignee
+        }
+
+        # Notif Active Assignment Approvers
+        if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Approvers')) {
+            $rules += Set-Notification_ActiveAssignment_Approvers $Notification_ActiveAssignment_Approvers
+        }
+        
+        # Notification Activation alert 
+        if ($PSBoundParameters.Keys.Contains('Notification_Activation_Alert')) {
+            $rules += Set-Notification_Activation_Alert $Notification_Activation_Alert
+        }
+
+        # Notification Activation Assignee 
+        if ($PSBoundParameters.Keys.Contains('Notification_Activation_Assignee')) {
+       
+            $rules += Set-Notification_Activation_Assignee $Notification_Activation_Assignee
+        }
+
+        # Notification Activation Approvers 
+        if ($PSBoundParameters.Keys.Contains('Notification_Activation_Approvers')) {
+            $rules += Set-Notification_Activation_Approvers $Notification_Activation_Approvers
+        }
+
+        
+        # Bringing all the rules together and patch the policy
         $allrules = $rules -join ','
         #Write-Verbose "All rules: $allrules"
 
         $body = '
-    {
-        "properties": {
-          "scope": "'+ $scope + '",  
-          "rules": [
-    '
+        {
+            "properties": {
+            "scope": "'+ $scope + '",  
+            "rules": [
+        '
         $body += $allrules
         $body += '
           ],
           "level": "Assignment"
-        }
+            }
     }'
         write-verbose "`n>> PATCH body: $body"
-
+        $restUri = "$ARMhost/$($config.policyId)/?api-version=2020-10-01"
+        write-verbose "Patch URI : $restURI"
         $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body -verbose:$false
-       
- 
     }
     
     # finalize export
-    $date=get-date -Format FileDate
-    if(!($exportFilename)){$exportFilename = ".\EXPORTS\$date.csv"}
+    $date = get-date -Format FileDateTime
+    if (!($exportFilename)) { $exportFilename = ".\EXPORTS\$date.csv" }
     $exportPath = Split-Path $exportFilename -Parent
     #create export folder if no exist
     if ( !(test-path  $exportFilename) ) {
         $null = New-Item -ItemType Directory -Path $exportPath -Force
     }
     $exports | select * | ConvertTo-Csv | out-file $exportFilename
-    
 }
+
+
 catch {
     $_ # echo the exception
     $err = $($_.exception.message | out-string) 
