@@ -67,7 +67,10 @@ param(
     $show, # show current config only, no change made
     
     [Switch]
-    $export, # show current config only, no change made
+    $export, # export config to csv
+
+    [String]
+    $exportFilename = $null,
 
     [System.String]
     $ActivationDuration = $null,
@@ -363,6 +366,9 @@ try {
         'Authorization' = 'Bearer ' + $token.Token
     }
 
+    # export 
+    $exports=@()
+
     # run the flow for each role name.
     $rolename | ForEach-Object {
 
@@ -450,9 +456,9 @@ try {
             RoleName                                                    = $_
             PolicyID                                                    = $policyId
             ActivationDuration                                          = $_activationDuration
-            EnablementRules                                             = $_enablementRules
+            EnablementRules                                             = $_enablementRules -join ','
             ApprovalRequired                                            = $_approvalrequired
-            Approvers                                                   = $_approvers
+            Approvers                                                   = $_approvers -join ','
             AllowPermanentEligibleAssignment                            = $_permanantEligibility
             MaximumEligibleAssignmentDuration                           = $_maxAssignmentDuration
             AllowPermanentActiveAssignment                              = $_permanantActiveAssignment
@@ -492,8 +498,7 @@ try {
         }
 
         if ( $export ) {
-            $config |select * | ConvertTo-Csv -NoTypeInformation |Out-File .\$rolename.csv
-            return
+          $exports +=  $config     
         }
     
         # Build our rules to patch based on parameter used
@@ -1058,6 +1063,15 @@ try {
  
     }
     
+    # finalize export
+    $date=get-date -Format FileDate
+    if(!($exportFilename)){$exportFilename = ".\EXPORTS\$date.csv"}
+    $exportPath = Split-Path $exportFilename -Parent
+    #create export folder if no exist
+    if ( !(test-path  $exportFilename) ) {
+        $null = New-Item -ItemType Directory -Path $exportPath -Force
+    }
+    $exports | select * | ConvertTo-Csv | out-file $exportFilename
     
 }
 catch {
