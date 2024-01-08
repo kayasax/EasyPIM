@@ -65,6 +65,9 @@ param(
 
     [Switch]
     $show, # show current config only, no change made
+    
+    [Switch]
+    $export, # show current config only, no change made
 
     [System.String]
     $ActivationDuration = $null,
@@ -456,36 +459,41 @@ try {
             MaximumActiveAssignmentDuration                             = $_maxActiveAssignmentDuration
             Notification_Eligibility_Alert_isDefaultRecipientEnabed     = $($_Notification_Admin_Admin_Eligibility.isDefaultRecipientsEnabled)
             Notification_Eligibility_Alert_NotificationLevel            = $($_Notification_Admin_Admin_Eligibility.notificationLevel)
-            Notification_Eligibility_Alert_Recipients                   = $($_Notification_Admin_Admin_Eligibility.notificationRecipients)
+            Notification_Eligibility_Alert_Recipients                   = $($_Notification_Admin_Admin_Eligibility.notificationRecipients) -join ','
             Notification_Eligibility_Assignee_isDefaultRecipientEnabed  = $($_Notification_Eligibility_Assignee.isDefaultRecipientsEnabled)
             Notification_Eligibility_Assignee_NotificationLevel         = $($_Notification_Eligibility_Assignee.NotificationLevel)
-            Notification_Eligibility_Assignee_Recipients                = $($_Notification_Eligibility_Assignee.notificationRecipients)
+            Notification_Eligibility_Assignee_Recipients                = $($_Notification_Eligibility_Assignee.notificationRecipients) -join ','
             Notification_Eligibility_Approvers_isDefaultRecipientEnabed = $($_Notification_Eligibility_Approvers.isDefaultRecipientsEnabled)
             Notification_Eligibility_Approvers_NotificationLevel        = $($_Notification_Eligibility_Approvers.NotificationLevel)
-            Notification_Eligibility_Approvers_Recipients               = $($_Notification_Eligibility_Approvers.notificationRecipients)
+            Notification_Eligibility_Approvers_Recipients               = $($_Notification_Eligibility_Approvers.notificationRecipients -join ',')
             Notification_Active_Alert_isDefaultRecipientEnabed          = $($_Notification_Active_Alert.isDefaultRecipientsEnabled)
             Notification_Active_Alert_NotificationLevel                 = $($_Notification_Active_Alert.notificationLevel)
-            Notification_Active_Alert_Recipients                        = $($_Notification_Active_Alert.notificationRecipients)
+            Notification_Active_Alert_Recipients                        = $($_Notification_Active_Alert.notificationRecipients -join ',')
             Notification_Active_Assignee_isDefaultRecipientEnabed       = $($_Notification_Active_Assignee.isDefaultRecipientsEnabled)
             Notification_Active_Assignee_NotificationLevel              = $($_Notification_Active_Assignee.notificationLevel)
-            Notification_Active_Assignee_Recipients                     = $($_Notification_Active_Assignee.notificationRecipients)
+            Notification_Active_Assignee_Recipients                     = $($_Notification_Active_Assignee.notificationRecipients -join ',')
             Notification_Active_Approvers_isDefaultRecipientEnabed      = $($_Notification_Active_Approvers.isDefaultRecipientsEnabled)
             Notification_Active_Approvers_NotificationLevel             = $($_Notification_Active_Approvers.notificationLevel)
-            Notification_Active_Approvers_Recipients                    = $($_Notification_Active_Approvers.notificationRecipients)
+            Notification_Active_Approvers_Recipients                    = $($_Notification_Active_Approvers.notificationRecipients -join ',')
             Notification_Activation_Alert_isDefaultRecipientEnabed      = $($_Notification_Activation_Alert.isDefaultRecipientsEnabled)
             Notification_Activation_Alert_NotificationLevel             = $($_Notification_Activation_Alert.NotificationLevel)
-            Notification_Activation_Alert_Recipients                    = $($_Notification_Activation_Alert.NotificationRecipients)
+            Notification_Activation_Alert_Recipients                    = $($_Notification_Activation_Alert.NotificationRecipients -join ',')
             Notification_Activation_Assignee_isDefaultRecipientEnabed   = $($_Notification_Activation_Assignee.isDefaultRecipientsEnabled)
             Notification_Activation_Assignee_NotificationLevel          = $($_Notification_Activation_Assignee.NotificationLevel)
-            Notification_Activation_Assignee_Recipients                 = $($_Notification_Activation_Assignee.NotificationRecipients)
+            Notification_Activation_Assignee_Recipients                 = $($_Notification_Activation_Assignee.NotificationRecipients -join ',')
             Notification_Activation_Approvers_isDefaultRecipientEnabed  = $($_Notification_Activation_Approvers.isDefaultRecipientsEnabled)
             Notification_Activation_Approvers_NotificationLevel         = $($_Notification_Activation_Approvers.NotificationLevel)
-            Notification_Activation_Approvers_Recipients                = $($_Notification_Activation_Approvers.NotificationRecipients)
+            Notification_Activation_Approvers_Recipients                = $($_Notification_Activation_Approvers.NotificationRecipients -join ',')
         }
 
         if ($show) {
             #show curent config and quit
             return $config # $response 
+        }
+
+        if ( $export ) {
+            $config |select * | ConvertTo-Csv -NoTypeInformation |Out-File .\$rolename.csv
+            return
         }
     
         # Build our rules to patch based on parameter used
@@ -1002,7 +1010,7 @@ try {
         "notificationLevel": "'+ $Notification_Activation_Approvers.notificationLevel + '",
         "notificationRecipients": [
         '
-        <# 
+            <# 
             # Cant add backup recipient for this rule
 
             $Notification_Activation_Approvers.Recipients | % {
