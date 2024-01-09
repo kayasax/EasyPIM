@@ -1,3 +1,4 @@
-LOGS/WIP_PIMAzureResourceRoleSettings.ps1.log
-TEST/
+LOGS
+TEST
+EXPORTS
 *.csv
