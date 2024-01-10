@@ -36,7 +36,7 @@ EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "web
        *  Require approval on activation and define approvers
         wip_PIMAzureResourceRoleSettings.ps1 -TenantID $tenant -SubscriptionId $subscripyion -rolename $rolename -ApprovalRequired $true -Approvers @( @{"id"="00b34bb3-8a6b-45ce-a7bb-c7f7fb400507";"name"="Bob";"type"="User"} , @{"id"="cf0a2f3e-1223-49d4-b10b-01f2538dd5d7";"name"="TestDL";"type"="Group"} )
     
-       *  Diable approval
+       *  Disable approval
         wip_PIMAzureResourceRoleSettings.ps1 -TenantID $tenant -SubscriptionId $subscripyion -rolename $rolename -ApprovalRequired $false 
 
 
@@ -166,11 +166,11 @@ param(
 #***************************************
 
 # LOG TO FILE ( if enable by default it will create a LOGS subfolder in the script folder, and create a logfile with the name of the script )
-$logToFile = $false
+$logToFile = $true
 
 # TEAMS NOTIDICATION
 # set to $true if you want to send fatal error on a Teams channel using Webhook see doc to setup
-$TeamsNotif = $false 
+$TeamsNotif = $true
 # your Teams Inbound WebHook URL
 $teamsWebhookURL = "https://microsoft.webhook.office.com/webhookb2/0b9bf9c2-fc4b-42b2-aa56-c58c805068af@72f988bf-86f1-41af-91ab-2d7cd011db47/IncomingWebhook/40db225a69854e49b617eb3427bcded8/8dd39776-145b-4f26-8ac4-41c5415307c7"
 #The description will be used as the notification subject
@@ -1126,6 +1126,7 @@ try {
     }
 
     function Update-Policy ($policyID, $rules) {
+        Log "Updating Policy $policyID"
         write-verbose "rules: $rules"
         $body = '
         {
@@ -1233,6 +1234,13 @@ try {
     # * Script is starting
     # ******************************************
     
+    $p=@()
+    $PSBoundParameters.Keys |%{
+        $p += "$_ =>"+$PSBoundParameters[$_]
+    }
+    $p= $p -join ', '
+
+    log "Script is starting with parameters: $p" -noEcho
 
     #at least one approver required if approval is enable
     # todo chech if a parameterset would be better
@@ -1259,7 +1267,8 @@ try {
 
     
     if ($import) {
-        Import-Settings $import  
+        Import-Settings $import
+        exit  
     }
 
     elseif ("" -ne $copyFrom){
@@ -1267,15 +1276,11 @@ try {
        Log "Copying settings from $copyFrom"
         
         $config2 = get-config $scope $copyFrom $true
-        #$config2
         
-        
-        echo "***** $rules *********"
         $rolename|%{
             $config = get-config $scope $_
             [string]$policyID= $config.policyID
             $policyID= $policyID.Trim()
-            #echo "***$policyID***"
             Update-Policy $policyID $config2 
         }
         
@@ -1300,8 +1305,6 @@ try {
             $exports += $config     
         }
         
-        
-
         # Build our rules to patch based on parameter used
         $rules = @()
 
@@ -1384,27 +1387,10 @@ try {
             $rules += Set-Notification_Activation_Approvers $Notification_Activation_Approvers
         }
 
-        
         # Bringing all the rules together and patch the policy
         $allrules = $rules -join ','
         #Write-Verbose "All rules: $allrules"
 
-        $body = '
-        {
-            "properties": {
-            "scope": "'+ $scope + '",  
-            "rules": [
-        '
-        $body += $allrules
-        $body += '
-          ],
-          "level": "Assignment"
-            }
-    }'
-        write-verbose "`n>> PATCH body: $body"
-        $restUri = "$ARMhost/$($config.policyId)/?api-version=2020-10-01"
-        write-verbose "Patch URI : $restURI"
-        $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body -verbose:$false
     }
     
     # finalize export
