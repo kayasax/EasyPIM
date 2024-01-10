@@ -80,6 +80,9 @@ param(
 
     [String]
     $import = $null,
+
+    [String]
+    $copyFrom = "",
     
     [Switch]
     $backup,
@@ -352,7 +355,7 @@ try {
         $null = Invoke-RestMethod @parameters
     }#end function senfd-teamsnotif
 
-    function get-config ($scope, $rolename) {
+    function get-config ($scope, $rolename, $copyFrom=$null) {
         $ARMhost = "https://management.azure.com"
         $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
 
@@ -375,6 +378,19 @@ try {
         $restUri = "$ARMhost/$policyId/?api-version=2020-10-01"
         write-verbose " #3 get role policy at $restUri"
         $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
+        #Write-Verbose "copy from = $copyFrom"
+        if ($null -ne $copyFrom){
+            Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false -OutFile "$_scriptPath\temp.json"
+            $response = Get-Content "$_scriptPath\temp.json"
+            $response = $response -replace '^.*"rules":\['
+            $response = $response -replace '\],"effectiveRules":.*$'
+            Remove-Item "$_scriptPath\temp.json" 
+
+            return $response
+        
+        }
+        $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
+        #$response
         # Get config values in a new object:
 
         # Maximum end user activation duration in Hour (PT24H) // Max 24H in portal but can be greater
@@ -675,7 +691,6 @@ try {
         return $rule
     }#end function Set-ApprovalFromCSV
 
-
     function Set-EligibilityAssignment($MaximumEligibilityDuration, $AllowPermanentEligibility) {
         write-verbose "Set-EligibilityAssignment: $MaximumEligibilityDuration $AllowPermanentEligibility"
         $max = $MaximumEligibilityDuration
@@ -782,7 +797,6 @@ try {
         
     } #end function set-activeAssignment
 
-    
     function Set-ActiveAssignmentFromCSV($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment) {
     write-verbose "Set-ActiveAssignmentFromCSV($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment)"
         if ( "true" -eq $AllowPermanentActiveAssignment) {
@@ -1112,6 +1126,7 @@ try {
     }
 
     function Update-Policy ($policyID, $rules) {
+        write-verbose "rules: $rules"
         $body = '
         {
             "properties": {
@@ -1127,7 +1142,6 @@ try {
         write-verbose "Patch URI : $restURI"
         $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body -verbose:$false
     }
-
 
     function Import-Settings ($import) {
         log "Importing setting from $import"
@@ -1243,9 +1257,29 @@ try {
         'Authorization' = 'Bearer ' + $token.Token
     }
 
-
+    
     if ($import) {
         Import-Settings $import  
+    }
+
+    elseif ("" -ne $copyFrom){
+
+       Log "Copying settings from $copyFrom"
+        
+        $config2 = get-config $scope $copyFrom $true
+        #$config2
+        
+        
+        echo "***** $rules *********"
+        $rolename|%{
+            $config = get-config $scope $_
+            [string]$policyID= $config.policyID
+            $policyID= $policyID.Trim()
+            #echo "***$policyID***"
+            Update-Policy $policyID $config2 
+        }
+        
+        exit
     }
 
     # Array to contain the settings of each selected roles 
