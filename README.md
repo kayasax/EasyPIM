@@ -7,7 +7,7 @@ then the options you want to set for example require justification on activation
 - Import role settings from csv
 - Backup all roles
 
-### Sample usage
+## Sample usage
 * Require justification, ticketing and MFA when activating the role "Webmaster"  
  `EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -ActivationRequirement "Justification","Ticketing","MultiFactorAuthentication"`
 * Require approval and set approvers for roles webmaster and contributor  
@@ -21,3 +21,10 @@ then the options you want to set for example require justification on activation
 * Backup (export all roles)
 `EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -backup`
 
+## Requirement
+* Graph permissions: RoleManagementPolicy.ReadWrite.Directory, RoleManagement.ReadWrite.Directory
+* Azure PowerShell: https://learn.microsoft.com/en-us/powershell/azure/install-azure-powershell?view=azps-11.1.0
+
+## Configuration
+* Enable file logging : set **$logToFile** to **$true**
+* You can receive fatal error in a Teams channel: set **$TeamsNotif** to **$true** and configure  your Teams Inbound WebHook URL in **$teamsWebhookURL**
