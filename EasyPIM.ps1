@@ -375,7 +375,6 @@ try {
         $restUri = "$ARMhost/$policyId/?api-version=2020-10-01"
         write-verbose " #3 get role policy at $restUri"
         $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
-
         # Get config values in a new object:
 
         # Maximum end user activation duration in Hour (PT24H) // Max 24H in portal but can be greater
@@ -385,7 +384,12 @@ try {
         # approval required 
         $_approvalrequired = $($response.properties.rules | ? { $_.id -eq "Approval_EndUser_Assignment" }).setting.isapprovalrequired
         # approvers 
-        $_approvers = $($response.properties.rules | ? { $_.id -eq "Approval_EndUser_Assignment" }).setting.approvalstages.primaryapprovers
+        $approvers = $($response.properties.rules | ? { $_.id -eq "Approval_EndUser_Assignment" }).setting.approvalStages.primaryApprovers
+        $approvers |%{
+            $_approvers += '@{"id"="'+$_.id +'";"description"="'+$_.description+'";"userType"="'+$_.userType+'"},'
+        }
+        
+
         # permanent assignmnent eligibility
         $_eligibilityExpirationRequired = $response.properties.rules | ? { $_.id -eq "Expiration_Admin_Eligibility" } | Select-Object -expand isExpirationRequired
         if ($_eligibilityExpirationRequired -eq "true") { 
@@ -437,43 +441,43 @@ try {
 
 
         $config = [PSCustomObject]@{
-            RoleName                                                    = $_
-            PolicyID                                                    = $policyId
-            ActivationDuration                                          = $_activationDuration
-            EnablementRules                                             = $_enablementRules -join ','
-            ApprovalRequired                                            = $_approvalrequired
-            Approvers                                                   = $_approvers -join ','
-            AllowPermanentEligibleAssignment                            = $_permanantEligibility
-            MaximumEligibleAssignmentDuration                           = $_maxAssignmentDuration
-            AllowPermanentActiveAssignment                              = $_permanantActiveAssignment
-            MaximumActiveAssignmentDuration                             = $_maxActiveAssignmentDuration
+            RoleName                                                     = $_
+            PolicyID                                                     = $policyId
+            ActivationDuration                                           = $_activationDuration
+            EnablementRules                                              = $_enablementRules -join ','
+            ApprovalRequired                                             = $_approvalrequired
+            Approvers                                                    = $_approvers -join ','
+            AllowPermanentEligibleAssignment                             = $_permanantEligibility
+            MaximumEligibleAssignmentDuration                            = $_maxAssignmentDuration
+            AllowPermanentActiveAssignment                               = $_permanantActiveAssignment
+            MaximumActiveAssignmentDuration                              = $_maxActiveAssignmentDuration
             Notification_Eligibility_Alert_isDefaultRecipientEnabled     = $($_Notification_Admin_Admin_Eligibility.isDefaultRecipientsEnabled)
-            Notification_Eligibility_Alert_NotificationLevel            = $($_Notification_Admin_Admin_Eligibility.notificationLevel)
-            Notification_Eligibility_Alert_Recipients                   = $($_Notification_Admin_Admin_Eligibility.notificationRecipients) -join ','
+            Notification_Eligibility_Alert_NotificationLevel             = $($_Notification_Admin_Admin_Eligibility.notificationLevel)
+            Notification_Eligibility_Alert_Recipients                    = $($_Notification_Admin_Admin_Eligibility.notificationRecipients) -join ','
             Notification_Eligibility_Assignee_isDefaultRecipientEnabled  = $($_Notification_Eligibility_Assignee.isDefaultRecipientsEnabled)
-            Notification_Eligibility_Assignee_NotificationLevel         = $($_Notification_Eligibility_Assignee.NotificationLevel)
-            Notification_Eligibility_Assignee_Recipients                = $($_Notification_Eligibility_Assignee.notificationRecipients) -join ','
+            Notification_Eligibility_Assignee_NotificationLevel          = $($_Notification_Eligibility_Assignee.NotificationLevel)
+            Notification_Eligibility_Assignee_Recipients                 = $($_Notification_Eligibility_Assignee.notificationRecipients) -join ','
             Notification_Eligibility_Approvers_isDefaultRecipientEnabled = $($_Notification_Eligibility_Approvers.isDefaultRecipientsEnabled)
-            Notification_Eligibility_Approvers_NotificationLevel        = $($_Notification_Eligibility_Approvers.NotificationLevel)
-            Notification_Eligibility_Approvers_Recipients               = $($_Notification_Eligibility_Approvers.notificationRecipients -join ',')
+            Notification_Eligibility_Approvers_NotificationLevel         = $($_Notification_Eligibility_Approvers.NotificationLevel)
+            Notification_Eligibility_Approvers_Recipients                = $($_Notification_Eligibility_Approvers.notificationRecipients -join ',')
             Notification_Active_Alert_isDefaultRecipientEnabled          = $($_Notification_Active_Alert.isDefaultRecipientsEnabled)
-            Notification_Active_Alert_NotificationLevel                 = $($_Notification_Active_Alert.notificationLevel)
-            Notification_Active_Alert_Recipients                        = $($_Notification_Active_Alert.notificationRecipients -join ',')
+            Notification_Active_Alert_NotificationLevel                  = $($_Notification_Active_Alert.notificationLevel)
+            Notification_Active_Alert_Recipients                         = $($_Notification_Active_Alert.notificationRecipients -join ',')
             Notification_Active_Assignee_isDefaultRecipientEnabled       = $($_Notification_Active_Assignee.isDefaultRecipientsEnabled)
-            Notification_Active_Assignee_NotificationLevel              = $($_Notification_Active_Assignee.notificationLevel)
-            Notification_Active_Assignee_Recipients                     = $($_Notification_Active_Assignee.notificationRecipients -join ',')
+            Notification_Active_Assignee_NotificationLevel               = $($_Notification_Active_Assignee.notificationLevel)
+            Notification_Active_Assignee_Recipients                      = $($_Notification_Active_Assignee.notificationRecipients -join ',')
             Notification_Active_Approvers_isDefaultRecipientEnabled      = $($_Notification_Active_Approvers.isDefaultRecipientsEnabled)
-            Notification_Active_Approvers_NotificationLevel             = $($_Notification_Active_Approvers.notificationLevel)
-            Notification_Active_Approvers_Recipients                    = $($_Notification_Active_Approvers.notificationRecipients -join ',')
+            Notification_Active_Approvers_NotificationLevel              = $($_Notification_Active_Approvers.notificationLevel)
+            Notification_Active_Approvers_Recipients                     = $($_Notification_Active_Approvers.notificationRecipients -join ',')
             Notification_Activation_Alert_isDefaultRecipientEnabled      = $($_Notification_Activation_Alert.isDefaultRecipientsEnabled)
-            Notification_Activation_Alert_NotificationLevel             = $($_Notification_Activation_Alert.NotificationLevel)
-            Notification_Activation_Alert_Recipients                    = $($_Notification_Activation_Alert.NotificationRecipients -join ',')
+            Notification_Activation_Alert_NotificationLevel              = $($_Notification_Activation_Alert.NotificationLevel)
+            Notification_Activation_Alert_Recipients                     = $($_Notification_Activation_Alert.NotificationRecipients -join ',')
             Notification_Activation_Assignee_isDefaultRecipientEnabled   = $($_Notification_Activation_Assignee.isDefaultRecipientsEnabled)
-            Notification_Activation_Assignee_NotificationLevel          = $($_Notification_Activation_Assignee.NotificationLevel)
-            Notification_Activation_Assignee_Recipients                 = $($_Notification_Activation_Assignee.NotificationRecipients -join ',')
+            Notification_Activation_Assignee_NotificationLevel           = $($_Notification_Activation_Assignee.NotificationLevel)
+            Notification_Activation_Assignee_Recipients                  = $($_Notification_Activation_Assignee.NotificationRecipients -join ',')
             Notification_Activation_Approvers_isDefaultRecipientEnabled  = $($_Notification_Activation_Approvers.isDefaultRecipientsEnabled)
-            Notification_Activation_Approvers_NotificationLevel         = $($_Notification_Activation_Approvers.NotificationLevel)
-            Notification_Activation_Approvers_Recipients                = $($_Notification_Activation_Approvers.NotificationRecipients -join ',')
+            Notification_Activation_Approvers_NotificationLevel          = $($_Notification_Activation_Approvers.NotificationLevel)
+            Notification_Activation_Approvers_Recipients                 = $($_Notification_Activation_Approvers.NotificationRecipients -join ',')
         }
         return $config
 
@@ -501,7 +505,7 @@ try {
     }# end function set-ActivationDuration
 
     function Set-ActivationRequirement( $ActivationRequirement) {
-        
+        write-verbose "Set-ActivationRequirement : $activationRequirement"
         if ($ActivationRequirement -eq "None") {
             $enabledRules = "[],"
         }
@@ -541,7 +545,7 @@ try {
     } #end function set-ActivationRequirement
 
     function Set-Approval ($ApprovalRequired, $Approvers) {
-               
+        Write-Verbose "Set-Approval"       
         if ($null -eq $Approvers) { $Approvers = $config.Approvers }
         if ($ApprovalRequired -eq $false) { $req = "false" }else { $req = "true" }
         
@@ -615,7 +619,7 @@ try {
 
     # we need to parse the approvers list differently when importing from the csv
     function Set-ApprovalFromCSV ($ApprovalRequired, $Approvers) {
-               
+        write-verbose "Set-ApprovalFromCSV"
         if ($null -eq $Approvers) { $Approvers = $config.Approvers }
         if ($ApprovalRequired -eq $false) { $req = "false" }else { $req = "true" }
         
@@ -638,29 +642,15 @@ try {
 
         if ($null -ne $Approvers) {
             #at least one approver required if approval is enable
+
+            $Approvers=$Approvers -replace "@"
+            $Approvers=$Approvers -replace ";",","
             $rule += '
             "primaryApprovers": [
-            '
-            
-            $Approvers | ForEach-Object {
-                $parts=$_.split(';')
-                $id=$parts[0].split('=')[1]
-                $name=$parts[1].split('=')[1]
-                $type=$parts[3].split('=')[1].split('}')[0]
+            '+$Approvers
+        }
 
-            } 
-                $rule += '
-            {
-                "id": "'+ $id + '",
-                "description": "'+ $name + '",
-                "isBackup": false,
-                "userType": "'+ $type + '"
-            }
-            '
-                $cpt++
-            }
-
-            $rule += '
+        $rule += '
             ],'
         
 
@@ -683,11 +673,11 @@ try {
         
         }}'
         return $rule
-    }#end function Set-Approval
+    }#end function Set-ApprovalFromCSV
 
 
     function Set-EligibilityAssignment($MaximumEligibilityDuration, $AllowPermanentEligibility) {
-        write-verbose "received allowpermanenteligibility: $AllowPermanentEligibility"
+        write-verbose "Set-EligibilityAssignment: $MaximumEligibilityDuration $AllowPermanentEligibility"
         $max = $MaximumEligibilityDuration
      
         if ( ($true -eq $AllowPermanentEligibility) -or ("true" -eq $AllowPermanentEligibility) -and ("false" -ne $AllowPermanentEligibility)) {
@@ -723,7 +713,7 @@ try {
     }# end function Set-EligibilityAssignment
 
     function Set-EligibilityAssignmentFromCSV($MaximumEligibilityDuration, $AllowPermanentEligibility) {
-        write-verbose "received allowpermanenteligibility: $AllowPermanentEligibility"
+        write-verbose "Set-EligibilityAssignmentFromCSV: $MaximumEligibilityDuration $AllowPermanentEligibility"
         $max = $MaximumEligibilityDuration
      
         if ( "true" -eq $AllowPermanentEligibility) {
@@ -759,7 +749,7 @@ try {
     }# end function Set-EligibilityAssignmentFromCSV
    
     function Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment) {
-    
+    write-verbose "Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment)"
         if ( $true -eq 'AllowPermanentActiveAssignment') {
             $expire2 = "false"
         }
@@ -794,7 +784,7 @@ try {
 
     
     function Set-ActiveAssignmentFromCSV($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment) {
-    
+    write-verbose "Set-ActiveAssignmentFromCSV($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment)"
         if ( "true" -eq $AllowPermanentActiveAssignment) {
             $expire2 = "false"
         }
@@ -827,6 +817,8 @@ try {
         
     } #end function set-activeAssignmentFromCSV
     function Set-Notification_EligibleAssignment_Alert($Notification_EligibleAssignment_Alert) {
+        write-verbose "Set-Notification_EligibleAssignment_Alert($Notification_EligibleAssignment_Alert)"
+
         $rule = '
         {
         "notificationType": "Email",
@@ -838,7 +830,7 @@ try {
         $Notification_EligibleAssignment_Alert.Recipients | % {
             $rule += '"' + $_ + '",'
         }
-        $rule=$rule -replace ".$"
+        $rule = $rule -replace ".$"
         $rule += '
         ],
         "id": "Notification_Admin_Admin_Eligibility",
@@ -855,6 +847,7 @@ try {
         }
         }
     '
+    write-verbose "end function notif elligible alert"
         return $rule
     }# end function set-Notification_EligibleAssignment_Alert
 
@@ -1134,100 +1127,92 @@ try {
         write-verbose "Patch URI : $restURI"
         $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body -verbose:$false
     }
-#Maybe useless
-    function format-CSVToJSON($s) {
-        $s = $s -replace '{', '{"'
-        $s = $s -replace '=', '"="'
-        $s = $s -replace '; ', '"; "'
-        $s = $s -replace '}', '"}'
-        return $s
-    }
 
-        function Import-Settings ($import) {
-            log "Importing setting from $import"
-            if (!(test-path $import)) {
-                throw "Operation failed, file $import cannot be found"
-            }
-            $csv = Import-Csv $import
 
-            $csv | % {
-                $rules = @()
-                $rules += Set-ActivationDuration $_.ActivationDuration
-                $enablementRules = $_.EnablementRules.Split(',')
-                $rules += Set-ActivationRequirement $enablementRules
-                $approvers=@()
-                $approvers += $_.approvers
-                write-verbose "approvers:  $approvers"
-                $rules += Set-ApprovalFromCSV $_.ApprovalRequired $Approvers
-                $rules += Set-EligibilityAssignmentFromCSV $_.MaximumEligibleAssignmentDuration $_.AllowPermanentEligibleAssignment
-                $rules += Set-ActiveAssignmentFromCSV $_.MaximumActiveAssignmentDuration $_.AllowPermanentActiveAssignment
-                
-                $Notification_EligibleAssignment_Alert=@{
-                    "isDefaultRecipientEnabled"=$_.Notification_Eligibility_Alert_isDefaultRecipientEnabed;
-                    "notificationLevel"=$_.Notification_Eligibility_Alert_notificationLevel;
-                    "Recipients" = $_.Notification_Eligibility_Alert_Recipients.split(',')
-                }
-                $rules += Set-Notification_EligibleAssignment_Alert $Notification_EligibleAssignment_Alert
-
-                $Notification_EligibleAssignment_Assignee=@{
-                    "isDefaultRecipientEnabled"=$_.Notification_Eligibility_Assignee_isDefaultRecipientEnabed;
-                    "notificationLevel"=$_.Notification_Eligibility_Assignee_notificationLevel;
-                    "Recipients" = $_.Notification_Eligibility_Assignee_Recipients.split(',')
-                }
-                $rules += Set-Notification_EligibleAssignment_Assignee $Notification_EligibleAssignment_Assignee
-                
-                $Notification_EligibleAssignment_Approvers=@{
-                    "isDefaultRecipientEnabled"=$_.Notification_Eligibility_Approvers_isDefaultRecipientEnabed;
-                    "notificationLevel"=$_.Notification_Eligibility_Approvers_notificationLevel;
-                    "Recipients"=$_.Notification_Eligibility_Approvers_Recipients.split(',')
-                }
-                $rules += Set-Notification_EligibleAssignment_Approvers $Notification_EligibleAssignment_Approvers
-
-                $Notification_Active_Alert=@{
-                    "isDefaultRecipientEnabled"=$_.Notification_Active_Alert_isDefaultRecipientEnabed;
-                    "notificationLevel"=$_.Notification_Active_Alert_notificationLevel;
-                    "Recipients"=$_.Notification_Active_Alert_Recipients.split(',')
-                }
-                $rules += Set-Notification_ActiveAssignment_Alert $Notification_Active_Alert
-                
-                $Notification_Active_Assignee=@{
-                    "isDefaultRecipientEnabled"=$_.Notification_Active_Assignee_isDefaultRecipientEnabed;
-                    "notificationLevel"=$_.Notification_Active_Assignee_notificationLevel;
-                    "Recipients"=$_.Notification_Active_Assignee_Recipients.split(',')
-                }
-                $rules += Set-Notification_ActiveAssignment_Assignee $Notification_Active_Assignee
-                
-                $Notification_Active_Approvers=@{
-                    "isDefaultRecipientEnabled"=$_.Notification_Active_Approvers_isDefaultRecipientEnabed;
-                    "notificationLevel"=$_.Notification_Active_Approvers_notificationLevel;
-                    "Recipients"=$_.Notification_Active_Approvers_Recipients.split(',')
-                }
-                $rules += Set-Notification_ActiveAssignment_Approvers $Notification_Active_Approvers
-
-                $Notification_Activation_Alert=@{
-                    "isDefaultRecipientEnabled"=$_.Notification_Activation_Alert_isDefaultRecipientEnabed;
-                    "notificationLevel"=$_.Notification_Activation_Alert_notificationLevel;
-                    "Recipients"=$_.Notification_Activation_Alert_Recipients.split(',')
-                }
-                $rules += Set-Notification_Activation_Alert $Notification_Activation_Alert
-
-                $Notification_Activation_Assignee=@{
-                    "isDefaultRecipientEnabled"=$_.Notification_Activation_Assignee_isDefaultRecipientEnabed;
-                    "notificationLevel"=$_.Notification_Activation_Assignee_notificationLevel;
-                    "Recipients"=$_.Notification_Activation_Assignee_Recipients.split(',')
-                }
-                $rules += Set-Notification_Activation_Assignee $Notification_Activation_Assignee
-
-                $Notification_Activation_Approvers=@{
-                    "isDefaultRecipientEnabled"=$_.Notification_Activation_Approvers_isDefaultRecipientEnabed;
-                    "notificationLevel"=$_.Notification_Activation_Approvers_notificationLevel;
-                    "Recipients"=$_.Notification_Activation_Approvers_Recipients.split(',')
-                }
-                $rules += Set-Notification_Activation_Approvers $Notification_Activation_Approvers
-                
-                # patch the policy
-                Update-Policy $_.policyID $($rules -join ',')
+    function Import-Settings ($import) {
+        log "Importing setting from $import"
+        if (!(test-path $import)) {
+            throw "Operation failed, file $import cannot be found"
         }
+        $csv = Import-Csv $import
+
+        $csv | % {
+            $rules = @()
+            $rules += Set-ActivationDuration $_.ActivationDuration
+            $enablementRules = $_.EnablementRules.Split(',')
+            $rules += Set-ActivationRequirement $enablementRules
+            $approvers = @()
+            $approvers += $_.approvers
+            $rules += Set-ApprovalFromCSV $_.ApprovalRequired $Approvers
+            $rules += Set-EligibilityAssignmentFromCSV $_.MaximumEligibleAssignmentDuration $_.AllowPermanentEligibleAssignment
+            $rules += Set-ActiveAssignmentFromCSV $_.MaximumActiveAssignmentDuration $_.AllowPermanentActiveAssignment
+            
+            $Notification_EligibleAssignment_Alert = @{
+                "isDefaultRecipientEnabled" = $_.Notification_Eligibility_Alert_isDefaultRecipientEnabled;
+                "notificationLevel"         = $_.Notification_Eligibility_Alert_notificationLevel;
+                "Recipients"                = $_.Notification_Eligibility_Alert_Recipients.split(',')
+            }
+            $rules += Set-Notification_EligibleAssignment_Alert $Notification_EligibleAssignment_Alert
+
+            $Notification_EligibleAssignment_Assignee = @{
+                "isDefaultRecipientEnabled" = $_.Notification_Eligibility_Assignee_isDefaultRecipientEnabled;
+                "notificationLevel"         = $_.Notification_Eligibility_Assignee_notificationLevel;
+                "Recipients"                = $_.Notification_Eligibility_Assignee_Recipients.split(',')
+            }
+            $rules += Set-Notification_EligibleAssignment_Assignee $Notification_EligibleAssignment_Assignee
+            
+            $Notification_EligibleAssignment_Approvers = @{
+                "isDefaultRecipientEnabled" = $_.Notification_Eligibility_Approvers_isDefaultRecipientEnabled;
+                "notificationLevel"         = $_.Notification_Eligibility_Approvers_notificationLevel;
+                "Recipients"                = $_.Notification_Eligibility_Approvers_Recipients.split(',')
+            }
+            $rules += Set-Notification_EligibleAssignment_Approvers $Notification_EligibleAssignment_Approvers
+
+            $Notification_Active_Alert = @{
+                "isDefaultRecipientEnabled" = $_.Notification_Active_Alert_isDefaultRecipientEnabled;
+                "notificationLevel"         = $_.Notification_Active_Alert_notificationLevel;
+                "Recipients"                = $_.Notification_Active_Alert_Recipients.split(',')
+            }
+            $rules += Set-Notification_ActiveAssignment_Alert $Notification_Active_Alert
+            
+            $Notification_Active_Assignee = @{
+                "isDefaultRecipientEnabled" = $_.Notification_Active_Assignee_isDefaultRecipientEnabled;
+                "notificationLevel"         = $_.Notification_Active_Assignee_notificationLevel;
+                "Recipients"                = $_.Notification_Active_Assignee_Recipients.split(',')
+            }
+            $rules += Set-Notification_ActiveAssignment_Assignee $Notification_Active_Assignee
+            
+            $Notification_Active_Approvers = @{
+                "isDefaultRecipientEnabled" = $_.Notification_Active_Approvers_isDefaultRecipientEnabled;
+                "notificationLevel"         = $_.Notification_Active_Approvers_notificationLevel;
+                "Recipients"                = $_.Notification_Active_Approvers_Recipients.split(',')
+            }
+            $rules += Set-Notification_ActiveAssignment_Approvers $Notification_Active_Approvers
+
+            $Notification_Activation_Alert = @{
+                "isDefaultRecipientEnabled" = $_.Notification_Activation_Alert_isDefaultRecipientEnabled;
+                "notificationLevel"         = $_.Notification_Activation_Alert_notificationLevel;
+                "Recipients"                = $_.Notification_Activation_Alert_Recipients.split(',')
+            }
+            $rules += Set-Notification_Activation_Alert $Notification_Activation_Alert
+
+            $Notification_Activation_Assignee = @{
+                "isDefaultRecipientEnabled" = $_.Notification_Activation_Assignee_isDefaultRecipientEnabled;
+                "notificationLevel"         = $_.Notification_Activation_Assignee_notificationLevel;
+                "Recipients"                = $_.Notification_Activation_Assignee_Recipients.split(',')
+            }
+            $rules += Set-Notification_Activation_Assignee $Notification_Activation_Assignee
+
+            $Notification_Activation_Approvers = @{
+                "isDefaultRecipientEnabled" = $_.Notification_Activation_Approvers_isDefaultRecipientEnabled;
+                "notificationLevel"         = $_.Notification_Activation_Approvers_notificationLevel;
+                "Recipients"                = $_.Notification_Activation_Approvers_Recipients.split(',')
+            }
+            $rules += Set-Notification_Activation_Approvers $Notification_Activation_Approvers
+            
+            # patch the policy
+            Update-Policy $_.policyID $($rules -join ',')
+        }   
     }
 
     # ******************************************
@@ -1389,14 +1374,20 @@ try {
     }
     
     # finalize export
-    $date = get-date -Format FileDateTime
-    if (!($exportFilename)) { $exportFilename = ".\EXPORTS\$date.csv" }
-    $exportPath = Split-Path $exportFilename -Parent
-    #create export folder if no exist
-    if ( !(test-path  $exportFilename) ) {
-        $null = New-Item -ItemType Directory -Path $exportPath -Force
+    if ($export) {
+
+    
+        $date = get-date -Format FileDateTime
+        if (!($exportFilename)) { $exportFilename = ".\EXPORTS\$date.csv" }
+        log "exporting to $exportFilename"
+        $exportPath = Split-Path $exportFilename -Parent
+        #create export folder if no exist
+        if ( !(test-path  $exportFilename) ) {
+            $null = New-Item -ItemType Directory -Path $exportPath -Force
+        }
+        $exports |select *
+        $exports | select * | ConvertTo-Csv | out-file $exportFilename
     }
-    $exports | select * | ConvertTo-Csv | out-file $exportFilename
 }
 
 
