@@ -3,10 +3,13 @@
 Powershell function to manage PIM Azure Resource Role settings with simplicity in mind
 
 Easily manage settings at the subscription level : enter a tenant ID, a subscription ID, a role name then the options you want to set for example require justification on activation
-Support multi roles
-Export role settings to csv
+* Support multi roles
+* Export role settings to csv
+* Import from csv
+* Backup (export all roles settings)
+
 Sample usage
-EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -ActivationRequirement "Justification","Ticketing","MultiFactorAuthentication"
+EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -ActivationRequirement "Justification","MultiFactorAuthentication"
 
 .Description
     
@@ -21,11 +24,6 @@ EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "web
     5 update the rule
     PATCH https://management.azure.com//subscriptions/eedcaa84-3756-4da9-bf87-40068c3dd2a2/providers/Microsoft.Authorization/roleManagementPolicies/507081b0-bdfc-4a40-9403-fd447a75712a?api-version=2020-10-01
 
-
-.Parameter param1 
-    describe param1
-.Parameter param2
-    describe param2
 .Example
        *  show curent config :
        wip_PIMAzureResourceRoleSettings.ps1 -TenantID $tenant -SubscriptionId $subscripyion -rolename $rolename -show
@@ -57,43 +55,53 @@ param(
     [Parameter(Position = 0, Mandatory = $true, ValueFromPipeline = $true)]
     [ValidateNotNullOrEmpty()]
     [System.String]
+    # Entra ID TenantID
     $TenantID,
 
     [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline = $true)]
     [ValidateNotNullOrEmpty()]
     [System.String]
+    # Subscription ID
     $SubscriptionId,
 
     [Parameter(Position = 2, Mandatory = $true, ValueFromPipeline = $true)]
     [ValidateNotNullOrEmpty()]
     [System.String[]]
+    # name of roles to update/export ex -rolename "webmaster","contributor"
     $rolename,
 
     [Switch]
-    $show, # show current config only, no change made
+    # show current config only, no change made
+    $show, 
     
     [Switch]
-    $export, # export config to csv
+    # export role config to csv
+    $export, 
 
     [String]
+    # save export to this file
     $exportFilename = $null,
 
     [String]
+    # import settings from this csv file
     $import = $null,
 
     [String]
+    # copy settings from this role name 
     $copyFrom = "",
     
     [Switch]
+    # backup all roles to csv 
     $backup,
 
     [System.String]
+    # Maximum activation duration
     $ActivationDuration = $null,
 
    
     [Parameter(HelpMessage = "Accepted values: 'None' or any combination of these options (Case SENSITIVE):  'Justification, 'MultiFactorAuthentication', 'Ticketing'", ValueFromPipeline = $true)]
     [ValidateScript({
-
+            # accepted values: "None","Justification", "MultiFactorAuthentication", "Ticketing"
             # WARNING: options are CASE SENSITIVE
             $valid = $true
             $acceptedValues = @("None", "Justification", "MultiFactorAuthentication", "Ticketing")
@@ -101,27 +109,32 @@ param(
             $valid
         })]
     [System.String[]]
-    $ActivationRequirement, # accepted values: "None","Justification", "MultiFactorAuthentication", "Ticketing"
+    $ActivationRequirement, 
      
     [Bool]
+    # Is approval required to activate a role? ($true|$false)
     $ApprovalRequired,
-
-    $Approvers, # @(@{"Id"="XXXXXX";"Name"="John":"Type"="user|group"}, .... )
+    # Array of approvers in the format: @(@{"Id"="XXXXXX";"Name"="John":"Type"="user|group"}, .... )
+    $Approvers, 
     
     [Parameter(ValueFromPipeline = $true)]
     [System.String]
+    # Maximum Eligility Duration
     $MaximumEligibilityDuration = $null,
     
     [Parameter(ValueFromPipeline = $true)]
     [Bool]
+    # Allow permanent eligibility? ($true|$false)
     $AllowPermanentEligibility,
 
     [Parameter(ValueFromPipeline = $true)]
     [System.String]
-    $MaximumActiveAssignmentDuration = $null, # Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
-    
+    # Maximum active assignment duration # Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
+    $MaximumActiveAssignmentDuration = $null, 
+
     [Parameter(ValueFromPipeline = $true)]
     [Bool]
+    # Allow permanent active assignement? ($true|$false)
     $AllowPermanentActiveAssignment,
 
     [Parameter(ValueFromPipeline = $true)]
@@ -170,7 +183,7 @@ $logToFile = $true
 
 # TEAMS NOTIDICATION
 # set to $true if you want to send fatal error on a Teams channel using Webhook see doc to setup
-$TeamsNotif = $true
+$TeamsNotif = $false
 # your Teams Inbound WebHook URL
 $teamsWebhookURL = "https://microsoft.webhook.office.com/webhookb2/0b9bf9c2-fc4b-42b2-aa56-c58c805068af@72f988bf-86f1-41af-91ab-2d7cd011db47/IncomingWebhook/40db225a69854e49b617eb3427bcded8/8dd39776-145b-4f26-8ac4-41c5415307c7"
 #The description will be used as the notification subject
@@ -355,41 +368,55 @@ try {
         $null = Invoke-RestMethod @parameters
     }#end function senfd-teamsnotif
 
-    function get-config ($scope, $rolename, $copyFrom=$null) {
+    function get-config ($scope, $rolename, $copyFrom = $null) {
+
         $ARMhost = "https://management.azure.com"
         $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
+        try {
 
-        # 1 Get ID of the role $rolename assignable at the provided scope
-        $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$rolename'"
-        write-verbose " #1 Get role definition for the role $rolename assignable at the scope $scope at $restUri"
-        $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
-        $roleID = $response.value.id
-        if ($null -eq $roleID) { throw "An exception occured : can't find a roleID for $rolename at scope $scope" }
-        Write-Verbose ">> RodeId = $roleID"
-
-        # 2  get the role assignment for the roleID found at #1
-        $restUri = "$ARMendpoint/roleManagementPolicyAssignments?api-version=2020-10-01&`$filter=roleDefinitionId eq '$roleID'"
-        write-verbose " #2 Get the Assignment for $rolename at $restUri"
-        $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
-        $policyId = $response.value.properties.policyId #.split('/')[-1] 
-        Write-Verbose ">> policy ID = $policyId"
-
-        # 3 get the role policy for the policyID found in #2
-        $restUri = "$ARMhost/$policyId/?api-version=2020-10-01"
-        write-verbose " #3 get role policy at $restUri"
-        $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
-        #Write-Verbose "copy from = $copyFrom"
-        if ($null -ne $copyFrom){
-            Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false -OutFile "$_scriptPath\temp.json"
-            $response = Get-Content "$_scriptPath\temp.json"
-            $response = $response -replace '^.*"rules":\['
-            $response = $response -replace '\],"effectiveRules":.*$'
-            Remove-Item "$_scriptPath\temp.json" 
-
-            return $response
         
+            # 1 Get ID of the role $rolename assignable at the provided scope
+            if ($null -ne $policyId) {
+                $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$rolename'"
+            }
+
+            write-verbose " #1 Get role definition for the role $rolename assignable at the scope $scope at $restUri"
+            $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
+            $roleID = $response.value.id
+            #if ($null -eq $roleID) { throw "An exception occured : can't find a roleID for $rolename at scope $scope" }
+            Write-Verbose ">> RodeId = $roleID"
+
+            # 2  get the role assignment for the roleID found at #1
+            $restUri = "$ARMendpoint/roleManagementPolicyAssignments?api-version=2020-10-01&`$filter=roleDefinitionId eq '$roleID'"
+            write-verbose " #2 Get the Assignment for $rolename at $restUri"
+            $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
+            $policyId = $response.value.properties.policyId #.split('/')[-1] 
+            Write-Verbose ">> policy ID = $policyId"
+
+            # 3 get the role policy for the policyID found in #2
+            $restUri = "$ARMhost/$policyId/?api-version=2020-10-01"
+            write-verbose " #3 get role policy at $restUri"
+            $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
+
+            #Write-Verbose "copy from = $copyFrom"
+            if ($null -ne $copyFrom) {
+                Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false -OutFile "$_scriptPath\temp.json"
+                $response = Get-Content "$_scriptPath\temp.json"
+                $response = $response -replace '^.*"rules":\['
+                $response = $response -replace '\],"effectiveRules":.*$'
+                Remove-Item "$_scriptPath\temp.json" 
+
+                return $response
+        
+            }
+      
         }
-        $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
+        catch {
+            log "An Error occured while trying to get the setting of role $rolename"
+            
+        }
+      
+        
         #$response
         # Get config values in a new object:
 
@@ -401,8 +428,8 @@ try {
         $_approvalrequired = $($response.properties.rules | ? { $_.id -eq "Approval_EndUser_Assignment" }).setting.isapprovalrequired
         # approvers 
         $approvers = $($response.properties.rules | ? { $_.id -eq "Approval_EndUser_Assignment" }).setting.approvalStages.primaryApprovers
-        $approvers |%{
-            $_approvers += '@{"id"="'+$_.id +'";"description"="'+$_.description+'";"userType"="'+$_.userType+'"},'
+        $approvers | % {
+            $_approvers += '@{"id"="' + $_.id + '";"description"="' + $_.description + '";"userType"="' + $_.userType + '"},'
         }
         
 
@@ -520,12 +547,14 @@ try {
         }
     }# end function set-ActivationDuration
 
-    function Set-ActivationRequirement( $ActivationRequirement) {
-        write-verbose "Set-ActivationRequirement : $activationRequirement"
-        if ($ActivationRequirement -eq "None") {
+    function Set-ActivationRequirement($ActivationRequirement) {
+        write-verbose "Set-ActivationRequirement : $($ActivationRequirement.length)"
+        if (($ActivationRequirement -eq "None") -or ($ActivationRequirement[0].length -eq 0 )) { #if none or a null array
+            write-verbose "requirement is nul"
             $enabledRules = "[],"
         }
         else {
+            write-verbose "requirement is NOT nul"
             $formatedRules = '['
             
             $ActivationRequirement | % {
@@ -643,8 +672,9 @@ try {
         {
         "setting": {'
         if ($null -ne $ApprovalRequired) {
-            $rule += '"isApprovalRequired": ' + $req + ','
+            $rule += '"isApprovalRequired":'+$req+','
         }
+       
         $rule += '
         "isApprovalRequiredForExtension": false,
         "isRequestorJustificationRequired": true,
@@ -659,11 +689,13 @@ try {
         if ($null -ne $Approvers) {
             #at least one approver required if approval is enable
 
-            $Approvers=$Approvers -replace "@"
-            $Approvers=$Approvers -replace ";",","
+            $Approvers = $Approvers -replace "@"
+            $Approvers = $Approvers -replace ";", ","
+            $Approvers = $Approvers -replace "=", ":"
+
             $rule += '
             "primaryApprovers": [
-            '+$Approvers
+            '+ $Approvers
         }
 
         $rule += '
@@ -764,7 +796,7 @@ try {
     }# end function Set-EligibilityAssignmentFromCSV
    
     function Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment) {
-    write-verbose "Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment)"
+        write-verbose "Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment)"
         if ( $true -eq 'AllowPermanentActiveAssignment') {
             $expire2 = "false"
         }
@@ -798,7 +830,7 @@ try {
     } #end function set-activeAssignment
 
     function Set-ActiveAssignmentFromCSV($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment) {
-    write-verbose "Set-ActiveAssignmentFromCSV($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment)"
+        write-verbose "Set-ActiveAssignmentFromCSV($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment)"
         if ( "true" -eq $AllowPermanentActiveAssignment) {
             $expire2 = "false"
         }
@@ -861,7 +893,7 @@ try {
         }
         }
     '
-    write-verbose "end function notif elligible alert"
+        write-verbose "end function notif elligible alert"
         return $rule
     }# end function set-Notification_EligibleAssignment_Alert
 
@@ -1127,7 +1159,7 @@ try {
 
     function Update-Policy ($policyID, $rules) {
         Log "Updating Policy $policyID"
-        write-verbose "rules: $rules"
+        #write-verbose "rules: $rules"
         $body = '
         {
             "properties": {
@@ -1230,16 +1262,28 @@ try {
         }   
     }
 
+    function Get-AllPolicies() {
+        $restUri = "$ARMendpoint/roleDefinitions?`$select=roleName&api-version=2022-04-01"
+        write-verbose "Getting All Policies at $restUri"
+        $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
+        $roles = $response | % { 
+            $_.value.properties.roleName
+        }
+        return $roles
+    }
+
     # ******************************************
+
     # * Script is starting
     # ******************************************
     
-    $p=@()
-    $PSBoundParameters.Keys |%{
-        $p += "$_ =>"+$PSBoundParameters[$_]
+    $p = @()
+    $PSBoundParameters.Keys | % {
+        $p += "$_ =>" + $PSBoundParameters[$_]
     }
-    $p= $p -join ', '
-
+    $p = $p -join ', '
+    log "
+    ****************************************" -noEcho
     log "Script is starting with parameters: $p" -noEcho
 
     #at least one approver required if approval is enable
@@ -1268,22 +1312,45 @@ try {
     
     if ($import) {
         Import-Settings $import
+        Log "Success, exiting."
         exit  
     }
 
-    elseif ("" -ne $copyFrom){
+    elseif ("" -ne $copyFrom) {
 
-       Log "Copying settings from $copyFrom"
+        Log "Copying settings from $copyFrom"
         
         $config2 = get-config $scope $copyFrom $true
         
-        $rolename|%{
+        $rolename | % {
             $config = get-config $scope $_
-            [string]$policyID= $config.policyID
-            $policyID= $policyID.Trim()
+            [string]$policyID = $config.policyID
+            $policyID = $policyID.Trim()
             Update-Policy $policyID $config2 
         }
         
+        exit
+    }
+
+    if ($backup) {
+        $exports = @()
+        $policies = Get-AllPolicies
+        
+        $policies | % {
+            log "exporting $_ role settings"
+            write-verbose  $_
+            $exports += get-config $scope $_.Trim()
+        }
+        $date = get-date -Format FileDateTime
+        if (!($exportFilename)) { $exportFilename = ".\EXPORTS\BACKUP_$date.csv" }
+        log "exporting to $exportFilename"
+        $exportPath = Split-Path $exportFilename -Parent
+        #create export folder if no exist
+        if ( !(test-path  $exportFilename) ) {
+            $null = New-Item -ItemType Directory -Path $exportPath -Force
+        }
+        
+        $exports | select * | ConvertTo-Csv | out-file $exportFilename
         exit
     }
 
@@ -1405,7 +1472,7 @@ try {
         if ( !(test-path  $exportFilename) ) {
             $null = New-Item -ItemType Directory -Path $exportPath -Force
         }
-        $exports |select *
+        ##$exports |select *
         $exports | select * | ConvertTo-Csv | out-file $exportFilename
     }
 }
