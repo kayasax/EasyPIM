@@ -84,8 +84,7 @@ EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -backup
 |`$AllowPermanentEligibility`| Allow permanent eligibility? ($true|$false)| 
 |`$MaximumActiveAssignmentDuration`| Maximum active assignment duration (# Duration )ref https://en.wikipedia.org/wiki/ISO_8601#Durations)|
 |`$AllowPermanentActiveAssignment`| Allow permanent active assignement? ($true|$false)|
-|`$Notification_EligibleAssignment_Alert`| Admin Notification when eligible role is assigned  
-Format: `@{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}`|   
+|`$Notification_EligibleAssignment_Alert`| Admin Notification when eligible role is assigned  Format: `@{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}`|   
 
   
     
