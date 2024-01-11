@@ -16,18 +16,10 @@ Sample usage
 EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -ActivationRequirement "Justification","MultiFactorAuthentication"
 
 .Description
-    
-    General flow:
-
-    1  Get-AzRoleAssignment -RoleDefinitionName webmaster
-    2 run the query GET https://management.azure.com//subscriptions/eedcaa84-3756-4da9-bf87-40068c3dd2a2/providers/Microsoft.Authorization/roleManagementPolicyAssignments?api-version=2020-10-01
-    3 filter with role id found in 1 et get sub policyid
-    "policyId": "/subscriptions/eedcaa84-3756-4da9-bf87-40068c3dd2a2/providers/Microsoft.Authorization/roleManagementPolicies/507081b0-bdfc-4a40-9403-fd447a75712a",
-    4 use the policy id found in 3 to view the rules
-    GET https://management.azure.com//subscriptions/eedcaa84-3756-4da9-bf87-40068c3dd2a2/providers/Microsoft.Authorization/roleManagementPolicies/507081b0-bdfc-4a40-9403-fd447a75712a?api-version=2020-10-01
-    5 update the rule
-    PATCH https://management.azure.com//subscriptions/eedcaa84-3756-4da9-bf87-40068c3dd2a2/providers/Microsoft.Authorization/roleManagementPolicies/507081b0-bdfc-4a40-9403-fd447a75712a?api-version=2020-10-01
-
+ 
+EasyPIM will manage the MS Graph APIs calls to implement the settings you want. You can set these settings individualy, copying them from another role or by importing a csv file.
+EasyPIM will create the rules and use a PATCH request to update  the settings.
+ 
 .Example
        *  show curent config :
        wip_PIMAzureResourceRoleSettings.ps1 -TenantID $tenant -SubscriptionId $subscripyion -rolename $rolename -show
@@ -51,6 +43,7 @@ EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "web
     Author: MICHEL, Loic <loic.michel@yespapa.eu>
     Changelog:
     Todo: 
+    * configure paramet sets
     * allow other scopes
 #>
 
@@ -206,7 +199,7 @@ $logToFile = $true
 
 # TEAMS NOTIDICATION
 # set to $true if you want to send fatal error on a Teams channel using Webhook see doc to setup
-$TeamsNotif = $false
+$TeamsNotif = $true
 # your Teams Inbound WebHook URL
 $teamsWebhookURL = "https://microsoft.webhook.office.com/webhookb2/0b9bf9c2-fc4b-42b2-aa56-c58c805068af@72f988bf-86f1-41af-91ab-2d7cd011db47/IncomingWebhook/40db225a69854e49b617eb3427bcded8/8dd39776-145b-4f26-8ac4-41c5415307c7"
 #The description will be used as the notification subject
@@ -219,15 +212,16 @@ $_scriptFullName = $MyInvocation.myCommand.definition
 $_scriptName = Split-Path -Leaf $_scriptFullName
 $_scriptPath = split-path -Parent   $_scriptFullName
 $HostFQDN = $env:computername + "." + $env:USERDNSDOMAIN
+
 # ERROR HANDLING
-$ErrorActionPreference = "STOP" # make all errors terminating ones so they can be catch
+$ErrorActionPreference = "STOP" # make all errors terminating ones so they can be catched
 
 #from now every error will be treated as exception and terminate the script
 try {
     
     <# 
       .Synopsis
-       Log message to file and display it on screen with basic colour hilights.
+       Log message to file and display it on screen with basic colour hilighting.
        The function include a log rotate feature.
       .Description
        Write $msg to screen and file with additional inforamtions : date and time, 
@@ -240,7 +234,7 @@ try {
       .Parameter logfile
        Name of the logfile to use (default = <scriptname>.ps1.log)
       .Parameter logdir
-       Path to the logfile's directory (defaut = C:\UPF\LOGS)
+       Path to the logfile's directory (defaut = <scriptpath>\LOGS)
        .Parameter noEcho 
        Don't print message on screen
       .Parameter maxSize
@@ -252,7 +246,7 @@ try {
       .Example
         log "this message will not appear on screen" -noEcho
       .Link
-      http://www.colas.com
+     
       .Notes
       	Changelog :
          * 27/08/2017 version initiale	
@@ -346,16 +340,6 @@ try {
             [string] $stacktrace = $null
         )
 
-        
-        <#$JSONBody = [PSCustomObject][Ordered]@{
-            "@type"      = "MessageCard"
-            "@context"   = "http://schema.org/extensions"
-            "summary"    = "Alert from : $description ($_scriptFullName)"
-            "themeColor" = '0078D7'
-            "title"      = "Alert from $env:computername"
-            "text"       = "$message"
-        }#>
-
         $JSONBody = @{
             "@type"    = "MessageCard"
             "@context" = "<http://schema.org/extensions>"
@@ -399,9 +383,7 @@ try {
 
         
             # 1 Get ID of the role $rolename assignable at the provided scope
-            if ($null -ne $policyId) {
-                $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$rolename'"
-            }
+            $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$rolename'"
 
             write-verbose " #1 Get role definition for the role $rolename assignable at the scope $scope at $restUri"
             $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
@@ -430,13 +412,11 @@ try {
                 Remove-Item "$_scriptPath\temp.json" 
 
                 return $response
-        
             }
       
         }
         catch {
             log "An Error occured while trying to get the setting of role $rolename"
-            
         }
       
         
@@ -454,7 +434,6 @@ try {
         $approvers | % {
             $_approvers += '@{"id"="' + $_.id + '";"description"="' + $_.description + '";"userType"="' + $_.userType + '"},'
         }
-        
 
         # permanent assignmnent eligibility
         $_eligibilityExpirationRequired = $response.properties.rules | ? { $_.id -eq "Expiration_Admin_Eligibility" } | Select-Object -expand isExpirationRequired
@@ -484,10 +463,8 @@ try {
 
         # Notification Eligibility Alert (Send notifications when members are assigned as eligible to this role)
         $_Notification_Admin_Admin_Eligibility = $response.properties.rules | ? { $_.id -eq "Notification_Admin_Admin_Eligibility" } 
-       
         # Notification Eligibility Assignee (Send notifications when members are assigned as eligible to this role: Notification to the assigned user (assignee))
         $_Notification_Eligibility_Assignee = $response.properties.rules | ? { $_.id -eq "Notification_Requestor_Admin_Eligibility" } 
-        
         # Notification Eligibility Approvers (Send notifications when members are assigned as eligible to this role: request to approve a role assignment renewal/extension)
         $_Notification_Eligibility_Approvers = $response.properties.rules | ? { $_.id -eq "Notification_Approver_Admin_Eligibility" }
 
@@ -827,8 +804,6 @@ try {
             $expire2 = "true"
         }
             
-        
-        
         $rule = '
         {
         "isExpirationRequired": '+ $expire2 + ',
@@ -847,7 +822,6 @@ try {
         }
         }
     '
-        
         return $rule
         
     } #end function set-activeAssignment
@@ -861,8 +835,6 @@ try {
             $expire2 = "true"
         }
             
-        
-        
         $rule = '
         {
         "isExpirationRequired": '+ $expire2 + ',
@@ -881,7 +853,6 @@ try {
         }
         }
     '
-        
         return $rule
         
     } #end function set-activeAssignmentFromCSV
@@ -1284,7 +1255,6 @@ try {
             Update-Policy $_.policyID $($rules -join ',')
         }   
     }
-
     function Get-AllPolicies() {
         $restUri = "$ARMendpoint/roleDefinitions?`$select=roleName&api-version=2022-04-01"
         write-verbose "Getting All Policies at $restUri"
@@ -1296,7 +1266,6 @@ try {
     }
 
     # ******************************************
-
     # * Script is starting
     # ******************************************
     
@@ -1332,17 +1301,16 @@ try {
         'Authorization' = 'Bearer ' + $token.Token
     }
 
-    
+    # importing from a csv
     if ($import) {
         Import-Settings $import
         Log "Success, exiting."
         exit  
     }
 
+    # copy from another role
     elseif ("" -ne $copyFrom) {
-
         Log "Copying settings from $copyFrom"
-        
         $config2 = get-config $scope $copyFrom $true
         
         $rolename | % {
@@ -1351,10 +1319,10 @@ try {
             $policyID = $policyID.Trim()
             Update-Policy $policyID $config2 
         }
-        
         exit
     }
 
+    # export all roles
     if ($backup) {
         $exports = @()
         $policies = Get-AllPolicies
@@ -1395,7 +1363,7 @@ try {
             $exports += $config     
         }
         
-        # Build our rules to patch based on parameter used
+        # Build our rules to patch the policy based on parameter used
         $rules = @()
 
         if ($PSBoundParameters.Keys.Contains('ActivationDuration')) {  
@@ -1481,12 +1449,12 @@ try {
         $allrules = $rules -join ','
         #Write-Verbose "All rules: $allrules"
 
+        #Patching the policy
+        Update-Policy $config.policyID $allrules
     }
     
     # finalize export
     if ($export) {
-
-    
         $date = get-date -Format FileDateTime
         if (!($exportFilename)) { $exportFilename = ".\EXPORTS\$date.csv" }
         log "exporting to $exportFilename"
@@ -1495,11 +1463,9 @@ try {
         if ( !(test-path  $exportFilename) ) {
             $null = New-Item -ItemType Directory -Path $exportPath -Force
         }
-        ##$exports |select *
         $exports | select * | ConvertTo-Csv | out-file $exportFilename
     }
 }
-
 
 catch {
     $_ # echo the exception
@@ -1516,6 +1482,3 @@ catch {
 }
 
 log "Success! Script ended normaly"
-
-
-
