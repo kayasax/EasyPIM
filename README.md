@@ -4,21 +4,25 @@ Powershell function to manage PIM Azure Resource Role settings with simplicity i
 Easily manage settings at the subscription level : enter a tenant ID, a subscription ID, a role name 
 then the options you want to set, for example require justification on activation.
 
-With the export function you can edit your PIM settings in excel then import your changes
+With the export function you can edit your PIM settings in Excel then import your changes :wink:
 
 ## Key features
-- Support editing multiple roles at once
-- Copy settings from another role
-- Export role settings to csv
-- Import role settings from csv
-- Backup all roles
+:boom: Support editing multiple roles at once
+:boom: Copy settings from another role
+:boom: Export role settings to csv
+:boom: Import role settings from csv
+:boom: Backup all roles
 
 ## Sample usage
 * Require justification, ticketing and MFA when activating the role "Webmaster"  
- ```EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -ActivationRequirement "Justification","Ticketing","MultiFactorAuthentication"```
+ ```pwsh
+ EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -ActivationRequirement "Justification","Ticketing","MultiFactorAuthentication"
+ ```
 
 * Require approval and set approvers for roles webmaster and contributor  
-```EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster","contributor" -Approvers  @(@{"Id"="00b34bb3-8a6b-45ce-a7bb-c7f7fb400507";"Name"="John";"Type"="user"}) -ApprovalRequired $true```
+```pwsh
+EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster","contributor" -Approvers  @(@{"Id"="00b34bb3-8a6b-45ce-a7bb-c7f7fb400507";"Name"="John";"Type"="user"}) -ApprovalRequired $true
+```
 
 * Set maximum activation duration to 12h  
 ```EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -Approvers  @(@{"Id"="00b34bb3-8a6b-45ce-a7bb-c7f7fb400507";"Name"="John";"Type"="user"}) -ActivationDuration "PT12H"```
@@ -45,8 +49,11 @@ With the export function you can edit your PIM settings in excel then import you
 
 ## Parameters
 
-    Entra ID TenantID
-    * $TenantID
+|Parameter|description|
+|---|---|
+|`$TenantID`|Entra ID TenantID
+    
+    
 
     # Subscription ID
     * $SubscriptionId
