@@ -1,11 +1,15 @@
 <# 
 .Synopsis
+EASYPIM
 Powershell function to manage PIM Azure Resource Role settings with simplicity in mind
 
-Easily manage settings at the subscription level : enter a tenant ID, a subscription ID, a role name then the options you want to set for example require justification on activation
-* Support multi roles
+Easily manage settings at the subscription level : enter a tenant ID, a subscription ID, a role name  
+then the options you want to set for example require justification on activation
+
+* Support editing multi roles at once
 * Export role settings to csv
 * Import from csv
+* Copy settings from another role
 * Backup (export all roles settings)
 
 Sample usage
@@ -139,41 +143,60 @@ param(
 
     [Parameter(ValueFromPipeline = $true)]
     [System.Collections.Hashtable]
-    $Notification_EligibleAssignment_Alert, # @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+    # Admin Notification when eligible role is assigned
+    # Format:  @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+    $Notification_EligibleAssignment_Alert, 
     
     [Parameter(ValueFromPipeline = $true)]
     [System.Collections.Hashtable]
-    $Notification_EligibleAssignment_Assignee, # @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+    # End user notification when eligible role is assigned
+    # Format:  @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+    $Notification_EligibleAssignment_Assignee, 
     
     [Parameter(ValueFromPipeline = $true)]
     [System.Collections.Hashtable]
-    $Notification_EligibleAssignment_Approvers, # @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+    # Approver notification when eligible role is assigned
+    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+    $Notification_EligibleAssignment_Approvers, 
     
     [Parameter(ValueFromPipeline = $true)]
     [System.Collections.Hashtable]
+    # Admin Notification when an active role is assigned
+    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
     $Notification_ActiveAssignment_Alert,
 
     [Parameter(ValueFromPipeline = $true)]
     [System.Collections.Hashtable]
+    # End user Notification when an active role is assigned
+    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
     $Notification_ActiveAssignment_Assignee,
 
     [Parameter(ValueFromPipeline = $true)]
     [System.Collections.Hashtable]
+    # Approver Notification when an active role is assigned
+    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
     $Notification_ActiveAssignment_Approvers,
 
     [Parameter(ValueFromPipeline = $true)]
     [System.Collections.Hashtable]
+    # Admin Notification when a is activated
+    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
     $Notification_Activation_Alert,
 
     [Parameter(ValueFromPipeline = $true)]
     [System.Collections.Hashtable]
+    # End user Notification when a role is activated
+    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
     $Notification_Activation_Assignee,
 
     [Parameter(ValueFromPipeline = $true)]
     [System.Collections.Hashtable]
+    # Approvers Notification when a role is activated
+    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
     $Notification_Activation_Approvers
-
 )
+
+
 #***************************************
 #* CONFIGURATION
 #***************************************
