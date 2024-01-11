@@ -14,43 +14,43 @@ With the export function you can edit your PIM settings in Excel then import you
 :boom: Backup all roles  
 
 ## Sample usage
-:memo: Require justification, ticketing and MFA when activating the role "Webmaster"  
+:large_blue_diamond: Require justification, ticketing and MFA when activating the role "Webmaster"  
  ```pwsh
  EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -ActivationRequirement "Justification","Ticketing","MultiFactorAuthentication"
  ```
 
 
-:memo: Require approval and set approvers for roles webmaster and contributor  
+:large_blue_diamond: Require approval and set approvers for roles webmaster and contributor  
 ```pwsh
 EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster","contributor" -Approvers  @(@{"Id"="00b34bb3-8a6b-45ce-a7bb-c7f7fb400507";"Name"="John";"Type"="user"}) -ApprovalRequired $true
 ```
 
 
-:memo: Set maximum activation duration to 12h  
+:large_blue_diamond: Set maximum activation duration to 12h  
 ```pwsh
 EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -Approvers  @(@{"Id"="00b34bb3-8a6b-45ce-a7bb-c7f7fb400507";"Name"="John";"Type"="user"}) -ActivationDuration "PT12H"
 ```
 
 
-:memo: Copy settings from the role Contributor to the roles webmaster and role1  
+:large_blue_diamond: Copy settings from the role Contributor to the roles webmaster and role1  
 ```pwsh
 EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster", "role1" -copyFrom "contributor"
 ```
 
 
-:memo: Export role settings to CSV  
+:large_blue_diamond: Export role settings to CSV  
 ```pwsh
 EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster","contributor" -export -exportFilename .\EXPORTS\roles.csv
 ```
 
 
-:memo: Import role settings from CSV  
+:large_blue_diamond: Import role settings from CSV  
 ```pwsh
 EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -import
 ```
 
 
-:memo: Backup (export all roles)  
+:large_blue_diamond: Backup (export all roles)  
 ```pwsh
 EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -backup
 ```
@@ -70,43 +70,22 @@ EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -backup
 |`$TenantID`| Entra ID TenantID|
 |`$SubscriptionId`| Subscription ID|
 |`$rolename`| name of roles to update/export ex `-rolename "webmaster","contributor"`|   
-|`[Switch] $show `|  show current config only, no change made|
+|`[Switch] $show`|  show current config only, no change made|
 |`[Switch] $export`| export role config to csv|
 |`$exportFilename`| save export to this file, if not specified it will create a new file in the EXPORTS folder with curent timestamp|
-|`$import `| import settings from this csv file ex `-import c:\temp\myfile.csv`|
-|`$$copyFrom`| copy settings from this role name ex `-copyFrom "contributor"`|  
+|`$import`| import settings from this csv file ex `-import c:\temp\myfile.csv`|
+|`$copyFrom`| copy settings from this role name ex `-copyFrom "contributor"`|  
 |`[Switch] $backup`| backup all roles to csv |
-    
- 
-
-    # Maximum activation duration (Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations)
-    * $ActivationDuration
-
+|`$ActivationDuration`| Maximum activation duration (Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations)|
+|`$ActivationRequirement `| Accepted values: "None" or one or more options from "Justification", "MultiFactorAuthentication", "Ticketing" ex `-ActivationRequirement "justification","Ticketing" WARNING: options are CASE SENSITIVE!|
+|`$ApprovalRequired`| Is approval required to activate a role? ($true|$false)|
+|`$Approvers`| Array of approvers in the format: @(@{"Id"="XXXXXX";"Name"="John":"Type"="user|group"}, .... )|
+|`$MaximumEligibilityDuration`| Maximum Eligility Duration (ref https://en.wikipedia.org/wiki/ISO_8601#Durations)|
+|`$AllowPermanentEligibility`| Allow permanent eligibility? ($true|$false)| 
+|`$MaximumActiveAssignmentDuration`| Maximum active assignment duration (# Duration )ref https://en.wikipedia.org/wiki/ISO_8601#Durations)|
+|`$AllowPermanentActiveAssignment`| Allow permanent active assignement? ($true|$false)|
    
-    # Activation requirement    
-    # accepted values: "None" or one or more options from "Justification", "MultiFactorAuthentication", "Ticketing" ex `-ActivationRequirement "justification","Ticketing"`
-    # WARNING: options are CASE SENSITIVE
-    * $ActivationRequirement 
-     
-    # Is approval required to activate a role? ($true|$false)
-    * $ApprovalRequired
 
-    # Array of approvers in the format: @(@{"Id"="XXXXXX";"Name"="John":"Type"="user|group"}, .... )
-    * $Approvers
-    
-    # Maximum Eligility Duration
-    * $MaximumEligibilityDuration (Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations)
-    
-    # Allow permanent eligibility? ($true|$false)
-    * $AllowPermanentEligibility
-
-    # Maximum active assignment duration # Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
-    * $MaximumActiveAssignmentDuration 
-
-    # Allow permanent active assignement? ($true|$false)
-    * $AllowPermanentActiveAssignment
-
-    
     # Admin Notification when eligible role is assigned
     # Format:  @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
     * $Notification_EligibleAssignment_Alert
