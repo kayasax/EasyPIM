@@ -14,30 +14,46 @@ With the export function you can edit your PIM settings in Excel then import you
 :boom: Backup all roles  
 
 ## Sample usage
-* Require justification, ticketing and MFA when activating the role "Webmaster"  
+:memo: Require justification, ticketing and MFA when activating the role "Webmaster"  
  ```pwsh
  EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -ActivationRequirement "Justification","Ticketing","MultiFactorAuthentication"
  ```
 
-* Require approval and set approvers for roles webmaster and contributor  
+
+:memo: Require approval and set approvers for roles webmaster and contributor  
 ```pwsh
 EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster","contributor" -Approvers  @(@{"Id"="00b34bb3-8a6b-45ce-a7bb-c7f7fb400507";"Name"="John";"Type"="user"}) -ApprovalRequired $true
 ```
 
-* Set maximum activation duration to 12h  
-```EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -Approvers  @(@{"Id"="00b34bb3-8a6b-45ce-a7bb-c7f7fb400507";"Name"="John";"Type"="user"}) -ActivationDuration "PT12H"```
 
-* Copy settings from the role Contributor to the roles webmaster and role1  
-```EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster", "role1" -copyFrom "contributor"```
+:memo: Set maximum activation duration to 12h  
+```pwsh
+EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -Approvers  @(@{"Id"="00b34bb3-8a6b-45ce-a7bb-c7f7fb400507";"Name"="John";"Type"="user"}) -ActivationDuration "PT12H"
+```
 
-* Export role settings to CSV  
-```EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster","contributor" -export -exportFilename .\EXPORTS\roles.csv```
 
-* Import role settings from CSV  
-```EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -import```
+:memo: Copy settings from the role Contributor to the roles webmaster and role1  
+```pwsh
+EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster", "role1" -copyFrom "contributor"
+```
 
-* Backup (export all roles)  
-```EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -backup```
+
+:memo: Export role settings to CSV  
+```pwsh
+EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster","contributor" -export -exportFilename .\EXPORTS\roles.csv
+```
+
+
+:memo: Import role settings from CSV  
+```pwsh
+EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -import
+```
+
+
+:memo: Backup (export all roles)  
+```pwsh
+EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -backup
+```
 
 ## Requirement
 * Graph permissions: RoleManagementPolicy.ReadWrite.Directory, RoleManagement.ReadWrite.Directory
