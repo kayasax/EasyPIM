@@ -7,11 +7,11 @@ then the options you want to set, for example require justification on activatio
 With the export function you can edit your PIM settings in Excel then import your changes :wink:
 
 ## Key features
-:boom: Support editing multiple roles at once
-:boom: Copy settings from another role
-:boom: Export role settings to csv
-:boom: Import role settings from csv
-:boom: Backup all roles
+:boom: Support editing multiple roles at once  
+:boom: Copy settings from another role  
+:boom: Export role settings to csv  
+:boom: Import role settings from csv  
+:boom: Backup all roles  
 
 ## Sample usage
 * Require justification, ticketing and MFA when activating the role "Webmaster"  
