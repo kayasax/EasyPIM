@@ -67,33 +67,17 @@ EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -backup
 
 |Parameter|description|
 |---|---|
-|`$TenantID`|Entra ID TenantID
+|`$TenantID`| Entra ID TenantID|
+|`$SubscriptionId`| Subscription ID|
+|`$rolename`| name of roles to update/export ex `-rolename "webmaster","contributor"`|   
+|`[Switch] $show `|  show current config only, no change made|
+|`[Switch] $export`| export role config to csv|
+|`$exportFilename`| save export to this file, if not specified it will create a new file in the EXPORTS folder with curent timestamp|
+|`$import `| import settings from this csv file ex `-import c:\temp\myfile.csv`|
+|`$$copyFrom`| copy settings from this role name ex `-copyFrom "contributor"`|  
+|`[Switch] $backup`| backup all roles to csv |
     
-    
-
-    # Subscription ID
-    * $SubscriptionId
-
-    # name of roles to update/export ex `-rolename "webmaster","contributor"`
-    * $rolename
-
-    # show current config only, no change made
-    * [Switch] $show 
-    
-    # export role config to csv
-    * [Switch] $export
-
-    # save export to this file, if not specified it will create a new file in the EXPORTS folder with curent timestamp
-    * $exportFilename
-
-    # import settings from this csv file ex `-import c:\temp\myfile.csv`
-    * $import 
-
-    # copy settings from this role name ex `-copyFrom "contributor"`
-    * $copyFrom
-    
-    # backup all roles to csv 
-    * [Switch] $backup
+ 
 
     # Maximum activation duration (Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations)
     * $ActivationDuration
