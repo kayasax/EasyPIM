@@ -87,44 +87,17 @@ EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -backup
 |`$Notification_EligibleAssignment_Alert`| Admin Notification when eligible role is assigned, see Notification Format|   
 |`$Notification_EligibleAssignment_Assignee`| End-user notification when eligible role is assigned, see Notification Format|  
 |`$Notification_EligibleAssignment_Approvers`| Approver notification when eligible role is assigned, see Notification Format|
-    
+|`$Notification_ActiveAssignment_Alert`| Admin Notification when an active role is assigned, see Notification Format|
+|`$Notification_ActiveAssignment_Assignee`| End user Notification when an active role is assigned, see Notification Format|
+|`$Notification_ActiveAssignment_Approvers`| Approver Notification when an active role is assigned, see Notification Format|
+|`$Notification_Activation_Alert`| Admin Notification when a role is activated, see Notification Format|
+|`$Notification_Activation_Assignee`| End user Notification when a role is activated, see Notification Format|
+|`$Notification_Activation_Approvers`| Approvers Notification when a role is activated, see Notification Format|
 
-    # Format:  @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
 
-   
-    
-    [Parameter(ValueFromPipeline = $true)]
-    [System.Collections.Hashtable]
-    # Admin Notification when an active role is assigned
-    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-    $Notification_ActiveAssignment_Alert,
 
-    [Parameter(ValueFromPipeline = $true)]
-    [System.Collections.Hashtable]
-    # End user Notification when an active role is assigned
-    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-    $Notification_ActiveAssignment_Assignee,
-
-    [Parameter(ValueFromPipeline = $true)]
-    [System.Collections.Hashtable]
-    # Approver Notification when an active role is assigned
-    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-    $Notification_ActiveAssignment_Approvers,
-
-    [Parameter(ValueFromPipeline = $true)]
-    [System.Collections.Hashtable]
-    # Admin Notification when a is activated
-    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-    $Notification_Activation_Alert,
-
-    [Parameter(ValueFromPipeline = $true)]
-    [System.Collections.Hashtable]
-    # End user Notification when a role is activated
-    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-    $Notification_Activation_Assignee,
-
-    [Parameter(ValueFromPipeline = $true)]
-    [System.Collections.Hashtable]
-    # Approvers Notification when a role is activated
-    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-    $Notification_Activation_Approvers
+### Notification format
+All Notifications accept value with the following format:
+```pwsh
+EasyPIM.ps1 -$Notification_Activation_Alert @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+```
