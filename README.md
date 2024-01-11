@@ -2,7 +2,8 @@
 Powershell function to manage PIM Azure Resource Role settings with simplicity in mind.
 
 Easily manage settings at the subscription level : enter a tenant ID, a subscription ID, a role name 
-then the options you want to set for example require justification on activation.
+then the options you want to set, for example require justification on activation.
+
 With the export function you can edit your PIM settings in excel then import your changes
 
 ## Key features
@@ -29,7 +30,7 @@ With the export function you can edit your PIM settings in excel then import you
 ```EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster","contributor" -export -exportFilename .\EXPORTS\roles.csv```
 
 * Import role settings from CSV  
-```EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster","contributor" -import```
+```EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -import```
 
 * Backup (export all roles)  
 ```EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -backup```
@@ -44,7 +45,7 @@ With the export function you can edit your PIM settings in excel then import you
 
 ## Parameters
 
-    # Entra ID TenantID
+    Entra ID TenantID
     * $TenantID
 
     # Subscription ID
