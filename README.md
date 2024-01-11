@@ -28,7 +28,7 @@ EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "web
 
 :large_blue_diamond: Set maximum activation duration to 12h  
 ```pwsh
-EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -Approvers  @(@{"Id"="00b34bb3-8a6b-45ce-a7bb-c7f7fb400507";"Name"="John";"Type"="user"}) -ActivationDuration "PT12H"
+EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -ActivationDuration "PT12H"
 ```
 
 
@@ -46,7 +46,7 @@ EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "web
 
 :large_blue_diamond: Import role settings from CSV  
 ```pwsh
-EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -import
+EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -import "c:\temp\roles.csv"
 ```
 
 
@@ -99,5 +99,5 @@ EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -backup
 ### Notification format
 All Notifications accept value with the following format:
 ```pwsh
-EasyPIM.ps1 -$Notification_Activation_Alert @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+EasyPIM.ps1 -Notification_Activation_Alert @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
 ```
