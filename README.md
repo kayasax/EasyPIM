@@ -101,3 +101,5 @@ All Notifications accept value with the following format:
 ```pwsh
 EasyPIM.ps1 -Notification_Activation_Alert @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
 ```
+![image](https://github.com/kayasax/EasyPIM/assets/1241767/5da187a5-a51b-48d0-ba80-dad0fc73bfaf)
+
