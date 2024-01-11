@@ -69,7 +69,7 @@ EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -backup
 |---|---|
 |`$TenantID`| Entra ID TenantID|
 |`$SubscriptionId`| Subscription ID|
-|`$rolename`| name of roles to update/export ex `-rolename "webmaster","contributor"`|   
+|`$rolename`| name of the roles to update/export ex `-rolename "webmaster","contributor"`|   
 |`[Switch] $show`|  show current config only, no change made|
 |`[Switch] $export`| export role config to csv|
 |`$exportFilename`| save export to this file, if not specified it will create a new file in the EXPORTS folder with curent timestamp|
@@ -77,18 +77,17 @@ EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -backup
 |`$copyFrom`| copy settings from this role name ex `-copyFrom "contributor"`|  
 |`[Switch] $backup`| backup all roles to csv |
 |`$ActivationDuration`| Maximum activation duration (Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations)|
-|`$ActivationRequirement `| Accepted values: "None" or one or more options from "Justification", "MultiFactorAuthentication", "Ticketing" ex `-ActivationRequirement "justification","Ticketing" WARNING: options are CASE SENSITIVE!|
+|`$ActivationRequirement `| Accepted values: "None" or one or more options from "Justification", "MultiFactorAuthentication", "Ticketing" ex `-ActivationRequirement "justification","Ticketing"` WARNING: options are CASE SENSITIVE!|
 |`$ApprovalRequired`| Is approval required to activate a role? ($true|$false)|
 |`$Approvers`| Array of approvers in the format: @(@{"Id"="XXXXXX";"Name"="John":"Type"="user|group"}, .... )|
 |`$MaximumEligibilityDuration`| Maximum Eligility Duration (ref https://en.wikipedia.org/wiki/ISO_8601#Durations)|
 |`$AllowPermanentEligibility`| Allow permanent eligibility? ($true|$false)| 
 |`$MaximumActiveAssignmentDuration`| Maximum active assignment duration (# Duration )ref https://en.wikipedia.org/wiki/ISO_8601#Durations)|
 |`$AllowPermanentActiveAssignment`| Allow permanent active assignement? ($true|$false)|
-   
+|`$Notification_EligibleAssignment_Alert`| Admin Notification when eligible role is assigned  
+Format: `@{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}`|   
 
-    # Admin Notification when eligible role is assigned
-    # Format:  @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-    * $Notification_EligibleAssignment_Alert
+  
     
     [Parameter(ValueFromPipeline = $true)]
     [System.Collections.Hashtable]
