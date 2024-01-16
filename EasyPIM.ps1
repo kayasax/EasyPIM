@@ -1328,7 +1328,7 @@ try {
     if ($import) {
         Import-Settings $import
         Log "Success, exiting."
-        exit  
+        return  
     }
 
     # copy from another role
