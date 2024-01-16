@@ -47,56 +47,76 @@ EasyPIM will create the rules and use a PATCH request to update  the settings.
     * allow other scopes
 #>
 
-[CmdletBinding()] #make script react as cmdlet (-verbose etc..)
+[CmdletBinding( DefaultParameterSetName='Default')] #make script react as cmdlet (-verbose etc..)
 param(
-    [Parameter(Position = 0, Mandatory = $true, ValueFromPipeline = $true)]
+    [Parameter(ParameterSetName = 'Default',Position = 0, Mandatory = $true, ValueFromPipeline = $true)]
+    [Parameter(ParameterSetName = 'Show',Position = 0, Mandatory = $true, ValueFromPipeline = $true)]
+    [Parameter(ParameterSetName = 'Backup',Position = 0, Mandatory = $true, ValueFromPipeline = $true)]
+    [Parameter(ParameterSetName = 'Import',Position = 0, Mandatory = $true, ValueFromPipeline = $true)]
+    [Parameter(ParameterSetName = 'Export',Position = 0, Mandatory = $true, ValueFromPipeline = $true)]
+    [Parameter(ParameterSetName = 'Copy',Position = 0, Mandatory = $true, ValueFromPipeline = $true)]
     [ValidateNotNullOrEmpty()]
     [System.String]
     # Entra ID TenantID
     $TenantID,
 
-    [Parameter(Position = 1, Mandatory = $true, ValueFromPipeline = $true)]
+    [Parameter(ParameterSetName = 'Default',Position = 1, Mandatory = $true, ValueFromPipeline = $true)]
+    [Parameter(ParameterSetName = 'Show',Position = 1, Mandatory = $true, ValueFromPipeline = $true)]
+    [Parameter(ParameterSetName = 'Backup',Position = 1, Mandatory = $true, ValueFromPipeline = $true)]
+    [Parameter(ParameterSetName = 'Import',Position = 1, Mandatory = $true, ValueFromPipeline = $true)]
+    [Parameter(ParameterSetName = 'Export',Position = 1, Mandatory = $true, ValueFromPipeline = $true)]
+    [Parameter(ParameterSetName = 'Copy',Position = 1, Mandatory = $true, ValueFromPipeline = $true)]
     [ValidateNotNullOrEmpty()]
     [System.String]
     # Subscription ID
     $SubscriptionId,
 
-    [Parameter(Position = 2, Mandatory = $true, ValueFromPipeline = $true)]
+    [Parameter(ParameterSetName = 'Default',Position = 2, Mandatory = $true, ValueFromPipeline = $true)]
+    [Parameter(ParameterSetName = 'Show',Position = 2, Mandatory = $true, ValueFromPipeline = $true)]
+    [Parameter(ParameterSetName = 'Export',Position = 2, Mandatory = $true, ValueFromPipeline = $true)]
+    [Parameter(ParameterSetName = 'Copy',Position = 2, Mandatory = $true, ValueFromPipeline = $true)]
     [ValidateNotNullOrEmpty()]
     [System.String[]]
     # name of roles to update/export ex -rolename "webmaster","contributor"
     $rolename,
 
+    [Parameter(ParameterSetName = 'Show')]
     [Switch]
     # show current config only, no change made
     $show, 
-    
+
+    [Parameter(ParameterSetName = 'Export', Mandatory=$true)]
     [Switch]
     # export role config to csv
     $export, 
 
+    [Parameter(ParameterSetName = 'Export')]
     [String]
     # save export to this file
     $exportFilename = $null,
 
+    [Parameter(ParameterSetName = 'Import',Mandatory = $true, ValueFromPipeline = $true)]
     [String]
     # import settings from this csv file
     $import = $null,
 
+    [Parameter(ParameterSetName = 'Copy',Mandatory=$true)]
     [String]
     # copy settings from this role name 
     $copyFrom = "",
     
+    [Parameter(Position = 0, ParameterSetName = 'Backup')]
     [Switch]
     # backup all roles to csv 
     $backup,
 
+    [Parameter(ParameterSetName = 'Default')]
     [System.String]
     # Maximum activation duration
     $ActivationDuration = $null,
 
    
-    [Parameter(HelpMessage = "Accepted values: 'None' or any combination of these options (Case SENSITIVE):  'Justification, 'MultiFactorAuthentication', 'Ticketing'", ValueFromPipeline = $true)]
+    [Parameter(ParameterSetName = 'Default',HelpMessage = "Accepted values: 'None' or any combination of these options (Case SENSITIVE):  'Justification, 'MultiFactorAuthentication', 'Ticketing'", ValueFromPipeline = $true)]
     [ValidateScript({
             # accepted values: "None","Justification", "MultiFactorAuthentication", "Ticketing"
             # WARNING: options are CASE SENSITIVE
@@ -107,82 +127,85 @@ param(
         })]
     [System.String[]]
     $ActivationRequirement, 
-     
+    
+    [Parameter(ParameterSetName = 'Default')]
     [Bool]
     # Is approval required to activate a role? ($true|$false)
     $ApprovalRequired,
+
+    [Parameter(ParameterSetName = 'Default')]
     # Array of approvers in the format: @(@{"Id"="XXXXXX";"Name"="John":"Type"="user|group"}, .... )
     $Approvers, 
     
-    [Parameter(ValueFromPipeline = $true)]
+    [Parameter(ValueFromPipeline = $true,ParameterSetName = 'Default')]
     [System.String]
     # Maximum Eligility Duration
     $MaximumEligibilityDuration = $null,
     
-    [Parameter(ValueFromPipeline = $true)]
+    [Parameter(ValueFromPipeline = $true,ParameterSetName = 'Default')]
     [Bool]
     # Allow permanent eligibility? ($true|$false)
     $AllowPermanentEligibility,
 
-    [Parameter(ValueFromPipeline = $true)]
+    [Parameter(ValueFromPipeline = $true,ParameterSetName = 'Default')]
     [System.String]
     # Maximum active assignment duration # Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
     $MaximumActiveAssignmentDuration = $null, 
 
-    [Parameter(ValueFromPipeline = $true)]
+    [Parameter(ValueFromPipeline = $true,ParameterSetName = 'Default')]
     [Bool]
     # Allow permanent active assignement? ($true|$false)
     $AllowPermanentActiveAssignment,
 
-    [Parameter(ValueFromPipeline = $true)]
+    [Parameter(ValueFromPipeline = $true,ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
     # Admin Notification when eligible role is assigned
     # Format:  @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
     $Notification_EligibleAssignment_Alert, 
     
-    [Parameter(ValueFromPipeline = $true)]
+    [Parameter(ValueFromPipeline = $true,ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
     # End user notification when eligible role is assigned
     # Format:  @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
     $Notification_EligibleAssignment_Assignee, 
     
-    [Parameter(ValueFromPipeline = $true)]
+    [Parameter(ValueFromPipeline = $true,ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
     # Approver notification when eligible role is assigned
     # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
     $Notification_EligibleAssignment_Approvers, 
     
-    [Parameter(ValueFromPipeline = $true)]
+    [Parameter(ValueFromPipeline = $true,ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
     # Admin Notification when an active role is assigned
     # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
     $Notification_ActiveAssignment_Alert,
 
-    [Parameter(ValueFromPipeline = $true)]
+    [Parameter(ValueFromPipeline = $true,ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
     # End user Notification when an active role is assigned
     # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
     $Notification_ActiveAssignment_Assignee,
 
-    [Parameter(ValueFromPipeline = $true)]
+    [Parameter(ValueFromPipeline = $true,ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
     # Approver Notification when an active role is assigned
     # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
     $Notification_ActiveAssignment_Approvers,
 
-    [Parameter(ValueFromPipeline = $true)]
+    [Parameter(ValueFromPipeline = $true,ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
     # Admin Notification when a is activated
     # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
     $Notification_Activation_Alert,
 
-    [Parameter(ValueFromPipeline = $true)]
+    [Parameter(ValueFromPipeline = $true,ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
     # End user Notification when a role is activated
     # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
     $Notification_Activation_Assignee,
 
-    [Parameter(ValueFromPipeline = $true)]
+    [Parameter(ValueFromPipeline = $true,ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
     # Approvers Notification when a role is activated
     # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 

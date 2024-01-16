@@ -78,10 +78,10 @@ EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -backup
 |`[Switch] $backup`| backup all roles to csv |
 |`$ActivationDuration`| Maximum activation duration (Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations)|
 |`$ActivationRequirement `| Accepted values: "None" or one or more options from "Justification", "MultiFactorAuthentication", "Ticketing" ex `-ActivationRequirement "justification","Ticketing"` WARNING: options are CASE SENSITIVE!|
-|`$ApprovalRequired`| Is approval required to activate a role? ($true|$false)|
-|`$Approvers`| Array of approvers in the format: @(@{"Id"="XXXXXX";"Name"="John":"Type"="user|group"}, .... )|
+|`$ApprovalRequired`| Is approval required to activate a role? ($true/$false)|
+|`$Approvers`| Array of approvers in the format: @(@{"Id"="XXXXXX";"Name"="John":"Type"="user/group"}, .... )|
 |`$MaximumEligibilityDuration`| Maximum Eligility Duration (ref https://en.wikipedia.org/wiki/ISO_8601#Durations)|
-|`$AllowPermanentEligibility`| Allow permanent eligibility? ($true|$false)| 
+|`$AllowPermanentEligibility`| Allow permanent eligibility? ($true/$false)| 
 |`$MaximumActiveAssignmentDuration`| Maximum active assignment duration (# Duration )ref https://en.wikipedia.org/wiki/ISO_8601#Durations)|
 |`$AllowPermanentActiveAssignment`| Allow permanent active assignement? ($true|$false)|
 |`$Notification_EligibleAssignment_Alert`| Admin Notification when eligible role is assigned, rule 9 see Notification Format|   
@@ -99,7 +99,7 @@ EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -backup
 ### Notification format
 All Notifications accept value with the following format:
 ```pwsh
-EasyPIM.ps1 -Notification_Activation_Alert @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+EasyPIM.ps1 -Notification_Activation_Alert @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical";"Recipients" = @("email1@domain.com","email2@domain.com")} 
 ```
 ![image](https://github.com/kayasax/EasyPIM/assets/1241767/5da187a5-a51b-48d0-ba80-dad0fc73bfaf)
 
