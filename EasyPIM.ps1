@@ -360,7 +360,7 @@ function send-teamsnotif {
         [ValidateNotNullOrEmpty()]
         [string] $message,
         [string] $details,
-        [string] $stacktrace = $null
+        [string] $myStackTrace = $null
     )
 
     $JSONBody = @{
@@ -381,8 +381,8 @@ function send-teamsnotif {
             },
             
             @{
-                "activityTitle" = "Stacktrace"
-                "activityText"  = "$stacktrace"
+                "activityTitle" = "myStackTrace"
+                "activityText"  = "$myStackTrace"
             }
         )
     }

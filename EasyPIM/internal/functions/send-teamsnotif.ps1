@@ -7,7 +7,7 @@
        message to display
       .Parameter details
        placeholder for more details
-      .Parameter stackTrace
+      .Parameter myStackTrace
        place holder for stack trace
       .Example
        send-teamsnotif "Error occured" "The source file was not found" 
@@ -20,7 +20,7 @@
         [ValidateNotNullOrEmpty()]
         [string] $message,
         [string] $details,
-        [string] $stacktrace = $null
+        [string] $myStackTrace = $null
     )
 
     $JSONBody = @{
@@ -41,8 +41,8 @@
             },
             
             @{
-                "activityTitle" = "Stacktrace"
-                "activityText"  = "$stacktrace"
+                "activityTitle" = "myStackTrace"
+                "activityText"  = "$myStackTrace"
             }
         )
     }
