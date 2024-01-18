@@ -1,4 +1,20 @@
-﻿function Set-EligibilityAssignment($MaximumEligibilityDuration, $AllowPermanentEligibility) {
+﻿<# 
+      .Synopsis
+       definne the eligible assognment setting : max duration and if permanent eligibility is allowed
+      .Description
+       correspond to rule 5 here: https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview#assignment-rules
+      .Parameter MaximumEligibilityDuration 
+       maximum duration of an eligibility
+      .Parameter AllowPermanentEligibility
+       Do we allow permanent eligibility
+      
+      .Example
+        Set-EligibilityAssignment -MaximumEligibilityDuration "P30D" -AllowPermanentEligibility $false
+      .Link
+     
+      .Notes
+#>
+function Set-EligibilityAssignment($MaximumEligibilityDuration, $AllowPermanentEligibility) {
     write-verbose "Set-EligibilityAssignment: $MaximumEligibilityDuration $AllowPermanentEligibility"
     $max = $MaximumEligibilityDuration
      

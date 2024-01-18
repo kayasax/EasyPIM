@@ -51,7 +51,7 @@
         if ( !(test-path  $exportFilename) ) {
             $null = New-Item -ItemType Directory -Path $exportPath -Force
         }
-        $exports | select * | ConvertTo-Csv | out-file $exportFilename
+        $exports | Select-Object * | ConvertTo-Csv | out-file $exportFilename
         log "Success! Script ended normaly"
     }
     catch {

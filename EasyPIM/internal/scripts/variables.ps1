@@ -26,6 +26,7 @@ $script:HostFQDN = $env:computername + "." + $env:USERDNSDOMAIN
 # ERROR HANDLING
 $ErrorActionPreference = "STOP" # make all errors terminating ones so they can be catched
 
+<# moved to invoke-arm function
 # Log in first with Connect-AzAccount if not using Cloud Shell
 Write-Verbose ">> Connecting to Azure with tenantID $tenantID"
 if ( (get-azcontext) -eq $null) { Connect-AzAccount -Tenant $tenantID }
@@ -40,3 +41,4 @@ $script:authHeader = @{
     'Content-Type'  = 'application/json'
     'Authorization' = 'Bearer ' + $token.Token
 }
+#>

@@ -20,9 +20,13 @@ function Set-PIMAzureResourcePolicy {
     param (
         [Parameter(Position = 0, Mandatory = $true)]
         [System.String]
+        # Tenant ID
+        $tenantID,
+        [Parameter(Position = 1, Mandatory = $true)]
+        [System.String]
         $subscriptionID,
 
-        [Parameter(Position = 1, Mandatory = $true)]
+        [Parameter(Position = 2, Mandatory = $true)]
         [System.String[]]
         $rolename,
 
@@ -87,7 +91,7 @@ function Set-PIMAzureResourcePolicy {
         [System.Collections.Hashtable]
         # Approver notification when eligible role is assigned
         # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-        $Notification_EligibleAssignment_Approvers, 
+        $Notification_EligibleAssignment_Approver, 
         
         [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
         [System.Collections.Hashtable]
@@ -105,7 +109,7 @@ function Set-PIMAzureResourcePolicy {
         [System.Collections.Hashtable]
         # Approver Notification when an active role is assigned
         # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-        $Notification_ActiveAssignment_Approvers,
+        $Notification_ActiveAssignment_Approver,
     
         [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
         [System.Collections.Hashtable]
@@ -123,12 +127,12 @@ function Set-PIMAzureResourcePolicy {
         [System.Collections.Hashtable]
         # Approvers Notification when a role is activated
         # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-        $Notification_Activation_Approvers
+        $Notification_Activation_Approver
       
     )
     try {  
         $p = @()
-        $PSBoundParameters.Keys | % {
+        $PSBoundParameters.Keys | ForEach-Object {
             $p += "$_ =>" + $PSBoundParameters[$_]
         }
         $p = $p -join ', '
@@ -137,6 +141,7 @@ function Set-PIMAzureResourcePolicy {
 
         $script:subscriptionID = $subscriptionID
         $scope = "subscriptions/$script:subscriptionID"
+        $script:tenantID=$tenantID
 
         #at least one approver required if approval is enable
         # todo chech if a parameterset would be better
@@ -190,8 +195,8 @@ function Set-PIMAzureResourcePolicy {
             }
 
             # Notif elligibility approver
-            if ($PSBoundParameters.Keys.Contains('Notification_EligibleAssignment_Approvers')) {
-                $rules += Set-Notification_EligibleAssignment_Approvers $Notification_EligibleAssignment_Approvers
+            if ($PSBoundParameters.Keys.Contains('Notification_EligibleAssignment_Approver')) {
+                $rules += Set-Notification_EligibleAssignment_Approver $Notification_EligibleAssignment_Approver
             }
 
             # Notif Active Assignment Alert
@@ -205,8 +210,8 @@ function Set-PIMAzureResourcePolicy {
             }
 
             # Notif Active Assignment Approvers
-            if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Approvers')) {
-                $rules += Set-Notification_ActiveAssignment_Approvers $Notification_ActiveAssignment_Approvers
+            if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Approver')) {
+                $rules += Set-Notification_ActiveAssignment_Approver $Notification_ActiveAssignment_Approver
             }
         
             # Notification Activation alert 
@@ -221,8 +226,8 @@ function Set-PIMAzureResourcePolicy {
             }
 
             # Notification Activation Approvers 
-            if ($PSBoundParameters.Keys.Contains('Notification_Activation_Approvers')) {
-                $rules += Set-Notification_Activation_Approvers $Notification_Activation_Approvers
+            if ($PSBoundParameters.Keys.Contains('Notification_Activation_Approver')) {
+                $rules += Set-Notification_Activation_Approver $Notification_Activation_Approver
             }
 
             # Bringing all the rules together and patch the policy
@@ -230,9 +235,10 @@ function Set-PIMAzureResourcePolicy {
             #Write-Verbose "All rules: $allrules"
 
             #Patching the policy
-            Update-Policy $config.policyID $allrules
+            $null=Update-Policy $config.policyID $allrules
         }
         log "Success, policy updated"
+        return
     }
     catch {
         MyCatch $_

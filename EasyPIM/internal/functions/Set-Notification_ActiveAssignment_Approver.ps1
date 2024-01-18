@@ -1,13 +1,13 @@
-﻿function  Set-Notification_ActiveAssignment_Approvers($Notification_ActiveAssignment_Approvers) {
+﻿function  Set-Notification_ActiveAssignment_Approver($Notification_ActiveAssignment_Approver) {
     $rule = '
         {
         "notificationType": "Email",
         "recipientType": "Approver",
-        "isDefaultRecipientsEnabled": '+ $Notification_ActiveAssignment_Approvers.isDefaultRecipientEnabled.ToLower() + ',
-        "notificationLevel": "'+ $Notification_ActiveAssignment_Approvers.notificationLevel + '",
+        "isDefaultRecipientsEnabled": '+ $Notification_ActiveAssignment_Approver.isDefaultRecipientEnabled.ToLower() + ',
+        "notificationLevel": "'+ $Notification_ActiveAssignment_Approver.notificationLevel + '",
         "notificationRecipients": [
         '
-    $Notification_ActiveAssignment_Approvers.Recipients | % {
+    $Notification_ActiveAssignment_Approver.Recipients | ForEach-Object {
         $rule += '"' + $_ + '",'
     }
 

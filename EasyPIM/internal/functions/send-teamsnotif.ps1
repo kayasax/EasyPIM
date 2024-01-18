@@ -1,4 +1,19 @@
-﻿function send-teamsnotif {
+﻿<# 
+      .Synopsis
+       Send message to Teams channel
+      .Description
+       The app "inbound webhook" must be configured for that channed and the url set in scripts/variables.ps1
+      .Parameter message 
+       message to display
+      .Parameter details
+       placeholder for more details
+      .Parameter stackTrace
+       place holder for stack trace
+      .Example
+       send-teamsnotif "Error occured" "The source file was not found" 
+     
+      .Notes
+#>function send-teamsnotif {
     [CmdletBinding()] #make script react as cmdlet (-verbose etc..)
     param(
         [Parameter(Mandatory = $true)]

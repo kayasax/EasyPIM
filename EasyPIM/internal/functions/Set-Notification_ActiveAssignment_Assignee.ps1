@@ -7,7 +7,7 @@
                 "notificationLevel": "'+ $Notification_ActiveAssignment_Assignee.notificationLevel + '",
                 "notificationRecipients": [
                 '
-    $Notification_ActiveAssignment_Assignee.Recipients | % {
+    $Notification_ActiveAssignment_Assignee.Recipients | ForEach-Object {
         $rule += '"' + $_ + '",'
     }
 

@@ -1,9 +1,9 @@
-﻿<# 
+﻿<#
       .Synopsis
-       Copy the setting of roles $copyfrom to the role $rolename 
+       Copy the setting of roles $copyfrom to the role $rolename
       .Description
        
-      .Parameter subscriptionID 
+      .Parameter subscriptionID
        subscription ID
       .Parameter rolename
        Array of the rolename to update
@@ -21,28 +21,35 @@ function Copy-PIMAzureResourcePolicy {
         [Parameter(Position = 0, Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         [System.String]
-        $subscriptionID,
+        # Tenant ID
+        $tenantID,
 
         [Parameter(Position = 1, Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [System.String]
+        $subscriptionID,
+
+        [Parameter(Position = 2, Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         [System.String[]]
         $rolename,
 
         [Parameter(Position = 2, Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
-        $copyFrom 
+        $copyFrom
     )
     try {
+        $script:tenantID = $tenantID
         Write-Verbose "Copy-PIMAzureResourcePolicy start with parameters: subscription => $subscriptionID, rolename=> $rolename, copyfrom => $copyFrom"
         Log "Copying settings from $copyFrom"
         $scope = "subscriptions/$subscriptionID"
         $config2 = get-config $scope $copyFrom $true
         
-        $rolename | % {
+        $rolename | ForEach-Object {
             $config = get-config $scope $_
             [string]$policyID = $config.policyID
             $policyID = $policyID.Trim()
-            Update-Policy $policyID $config2 
+            Update-Policy $policyID $config2
         }
     }
     catch {

@@ -9,7 +9,7 @@
         "notificationLevel": "'+ $Notification_EligibleAssignment_Alert.notificationLevel + '",
         "notificationRecipients": [
         '
-    $Notification_EligibleAssignment_Alert.Recipients | % {
+    $Notification_EligibleAssignment_Alert.Recipients | ForEach-Object {
         $rule += '"' + $_ + '",'
     }
     $rule = $rule -replace ".$"

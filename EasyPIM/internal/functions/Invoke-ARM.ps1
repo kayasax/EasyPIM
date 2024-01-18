@@ -2,7 +2,7 @@
       .Synopsis
        invoke ARM REST API 
       .Description
-       
+       wrapper function to get an access token and set authentication header for each ARM API call
       .Parameter RestURI 
        
       .Parameter Method
@@ -41,9 +41,8 @@ function Invoke-ARM {
         write-verbose "request URI : $restURI"
 
 
-        
-        if ( (get-azcontext) -eq $null) { 
-            Write-Verbose ">> Connecting to Azure with tenantID $tenantID"
+        if ( $null -eq (get-azcontext) -or ( (get-azcontext).Tenant.Id -ne $script:tenantID ) ) { 
+            Write-Verbose ">> Connecting to Azure with tenantID $script:tenantID"
             Connect-AzAccount -Tenant $script:tenantID 
         }
     

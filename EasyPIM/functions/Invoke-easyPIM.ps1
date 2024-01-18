@@ -174,7 +174,7 @@ param(
     [System.Collections.Hashtable]
     # Approver notification when eligible role is assigned
     # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-    $Notification_EligibleAssignment_Approvers, 
+    $Notification_EligibleAssignment_Approver, 
     
     [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
@@ -192,7 +192,7 @@ param(
     [System.Collections.Hashtable]
     # Approver Notification when an active role is assigned
     # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-    $Notification_ActiveAssignment_Approvers,
+    $Notification_ActiveAssignment_Approver,
 
     [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
@@ -210,7 +210,7 @@ param(
     [System.Collections.Hashtable]
     # Approvers Notification when a role is activated
     # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-    $Notification_Activation_Approvers
+    $Notification_Activation_Approver
 )
 
 
@@ -274,7 +274,7 @@ try {
 
     # importing from a csv
     if ($import) {
-        Import-Settings $import
+        import-setting $import
         Log "Success, exiting."
         return  
     }
@@ -381,8 +381,8 @@ try {
         }
 
         # Notif elligibility approver
-        if ($PSBoundParameters.Keys.Contains('Notification_EligibleAssignment_Approvers')) {
-            $rules += Set-Notification_EligibleAssignment_Approvers $Notification_EligibleAssignment_Approvers
+        if ($PSBoundParameters.Keys.Contains('Notification_EligibleAssignment_Approver')) {
+            $rules += Set-Notification_EligibleAssignment_Approver $Notification_EligibleAssignment_Approver
         }
 
         # Notif Active Assignment Alert
@@ -396,8 +396,8 @@ try {
         }
 
         # Notif Active Assignment Approvers
-        if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Approvers')) {
-            $rules += Set-Notification_ActiveAssignment_Approvers $Notification_ActiveAssignment_Approvers
+        if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Approver')) {
+            $rules += Set-Notification_ActiveAssignment_Approver $Notification_ActiveAssignment_Approver
         }
         
         # Notification Activation alert 
@@ -412,8 +412,8 @@ try {
         }
 
         # Notification Activation Approvers 
-        if ($PSBoundParameters.Keys.Contains('Notification_Activation_Approvers')) {
-            $rules += Set-Notification_Activation_Approvers $Notification_Activation_Approvers
+        if ($PSBoundParameters.Keys.Contains('Notification_Activation_Approver')) {
+            $rules += Set-Notification_Activation_Approver $Notification_Activation_Approver
         }
 
         # Bringing all the rules together and patch the policy

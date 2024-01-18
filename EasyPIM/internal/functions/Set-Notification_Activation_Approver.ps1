@@ -1,16 +1,16 @@
-﻿function Set-Notification_Activation_Approvers ($Notification_Activation_Approvers) {
+﻿function Set-Notification_Activation_Approver ($Notification_Activation_Approver) {
     $rule = '
         {
         "notificationType": "Email",
         "recipientType": "Approver",
-        "isDefaultRecipientsEnabled": '+ $Notification_Activation_Approvers.isDefaultRecipientEnabled.ToLower() + ',
-        "notificationLevel": "'+ $Notification_Activation_Approvers.notificationLevel + '",
+        "isDefaultRecipientsEnabled": '+ $Notification_Activation_Approver.isDefaultRecipientEnabled.ToLower() + ',
+        "notificationLevel": "'+ $Notification_Activation_Approver.notificationLevel + '",
         "notificationRecipients": [
         '
     <# 
             # Cant add backup recipient for this rule
 
-            $Notification_Activation_Approvers.Recipients | % {
+            $Notification_Activation_Approver.Recipients | % {
                 $rule += '"' + $_ + '",'
             }
         #>

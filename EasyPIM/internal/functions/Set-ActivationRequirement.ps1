@@ -9,7 +9,7 @@
         write-verbose "requirement is NOT nul"
         $formatedRules = '['
             
-        $ActivationRequirement | % {
+        $ActivationRequirement | ForEach-Object {
             $formatedRules += '"'
             $formatedRules += "$_"
             $formatedRules += '",'

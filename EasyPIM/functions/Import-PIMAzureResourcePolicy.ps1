@@ -25,6 +25,6 @@
     
     #load settings
     Write-Verbose "Importing settings from $path"
-    Import-Settings $Path
+    import-setting $Path
     Log "Success, exiting."
 }

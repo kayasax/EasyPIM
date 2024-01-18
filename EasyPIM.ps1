@@ -173,7 +173,7 @@ param(
     [System.Collections.Hashtable]
     # Approver notification when eligible role is assigned
     # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-    $Notification_EligibleAssignment_Approvers, 
+    $Notification_EligibleAssignment_Approver, 
     
     [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
@@ -191,7 +191,7 @@ param(
     [System.Collections.Hashtable]
     # Approver Notification when an active role is assigned
     # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-    $Notification_ActiveAssignment_Approvers,
+    $Notification_ActiveAssignment_Approver,
 
     [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
@@ -209,7 +209,7 @@ param(
     [System.Collections.Hashtable]
     # Approvers Notification when a role is activated
     # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-    $Notification_Activation_Approvers
+    $Notification_Activation_Approver
 )
 
 
@@ -503,7 +503,7 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
     # Notification Role Activation Assignee (Send notifications when eligible members activate this role: Notification to activated user (requestor))
     $_Notification_Activation_Assignee = $response.properties.rules | ? { $_.id -eq "Notification_Requestor_EndUser_Assignment" } 
     # Notification Role Activation Approvers (Send notifications when eligible members activate this role: Request to approve an activation)
-    $_Notification_Activation_Approvers = $response.properties.rules | ? { $_.id -eq "Notification_Approver_EndUser_Assignment" } 
+    $_Notification_Activation_Approver = $response.properties.rules | ? { $_.id -eq "Notification_Approver_EndUser_Assignment" } 
 
 
     $config = [PSCustomObject]@{
@@ -541,9 +541,9 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
         Notification_Activation_Assignee_isDefaultRecipientEnabled   = $($_Notification_Activation_Assignee.isDefaultRecipientsEnabled)
         Notification_Activation_Assignee_NotificationLevel           = $($_Notification_Activation_Assignee.NotificationLevel)
         Notification_Activation_Assignee_Recipients                  = $($_Notification_Activation_Assignee.NotificationRecipients -join ',')
-        Notification_Activation_Approvers_isDefaultRecipientEnabled  = $($_Notification_Activation_Approvers.isDefaultRecipientsEnabled)
-        Notification_Activation_Approvers_NotificationLevel          = $($_Notification_Activation_Approvers.NotificationLevel)
-        Notification_Activation_Approvers_Recipients                 = $($_Notification_Activation_Approvers.NotificationRecipients -join ',')
+        Notification_Activation_Approver_isDefaultRecipientEnabled  = $($_Notification_Activation_Approver.isDefaultRecipientsEnabled)
+        Notification_Activation_Approver_NotificationLevel          = $($_Notification_Activation_Approver.NotificationLevel)
+        Notification_Activation_Approver_Recipients                 = $($_Notification_Activation_Approver.NotificationRecipients -join ',')
     }
     return $config
 
@@ -947,18 +947,18 @@ function Set-Notification_EligibleAssignment_Assignee($Notification_EligibleAssi
     return $rule
 }# end function Set-Notification_EligibleAssignment_Assignee
 
-function Set-Notification_EligibleAssignment_Approvers($Notification_EligibleAssignment_Approvers) {
-    #write-verbose "function Set-Notification_EligibleAssignment_Approvers"
+function Set-Notification_EligibleAssignment_Approver($Notification_EligibleAssignment_Approver) {
+    #write-verbose "function Set-Notification_EligibleAssignment_Approver"
         
     $rule = '
         {
         "notificationType": "Email",
         "recipientType": "Approver",
-        "isDefaultRecipientsEnabled": '+ $Notification_EligibleAssignment_Approvers.isDefaultRecipientEnabled.ToLower() + ',
-        "notificationLevel": "'+ $Notification_EligibleAssignment_Approvers.notificationLevel + '",
+        "isDefaultRecipientsEnabled": '+ $Notification_EligibleAssignment_Approver.isDefaultRecipientEnabled.ToLower() + ',
+        "notificationLevel": "'+ $Notification_EligibleAssignment_Approver.notificationLevel + '",
         "notificationRecipients": [
         '
-    $Notification_EligibleAssignment_Approvers.recipients | % {
+    $Notification_EligibleAssignment_Approver.recipients | % {
         $rule += '"' + $_ + '",'
     }
 
@@ -978,7 +978,7 @@ function Set-Notification_EligibleAssignment_Approvers($Notification_EligibleAss
         }
         }'
     return $rule
-}# end function Set-Notification_EligibleAssignment_Approvers
+}# end function Set-Notification_EligibleAssignment_Approver
 
 function Set-Notification_ActiveAssignment_Alert($Notification_ActiveAssignment_Alert) {
     $rule = '
@@ -1044,16 +1044,16 @@ function Set-Notification_ActiveAssignment_Assignee($Notification_ActiveAssignme
     return $rule
 } #end function Set-Notification_ActiveAssignment_Assignee
 
-function  Set-Notification_ActiveAssignment_Approvers($Notification_ActiveAssignment_Approvers) {
+function  Set-Notification_ActiveAssignment_Approver($Notification_ActiveAssignment_Approver) {
     $rule = '
         {
         "notificationType": "Email",
         "recipientType": "Approver",
-        "isDefaultRecipientsEnabled": '+ $Notification_ActiveAssignment_Approvers.isDefaultRecipientEnabled.ToLower() + ',
-        "notificationLevel": "'+ $Notification_ActiveAssignment_Approvers.notificationLevel + '",
+        "isDefaultRecipientsEnabled": '+ $Notification_ActiveAssignment_Approver.isDefaultRecipientEnabled.ToLower() + ',
+        "notificationLevel": "'+ $Notification_ActiveAssignment_Approver.notificationLevel + '",
         "notificationRecipients": [
         '
-    $Notification_ActiveAssignment_Approvers.Recipients | % {
+    $Notification_ActiveAssignment_Approver.Recipients | % {
         $rule += '"' + $_ + '",'
     }
 
@@ -1140,19 +1140,19 @@ function set-Notification_Activation_Assignee($Notification_Activation_Assignee)
     return $rule
 }
 
-function Set-Notification_Activation_Approvers ($Notification_Activation_Approvers) {
+function Set-Notification_Activation_Approver ($Notification_Activation_Approver) {
     $rule = '
         {
         "notificationType": "Email",
         "recipientType": "Approver",
-        "isDefaultRecipientsEnabled": '+ $Notification_Activation_Approvers.isDefaultRecipientEnabled.ToLower() + ',
-        "notificationLevel": "'+ $Notification_Activation_Approvers.notificationLevel + '",
+        "isDefaultRecipientsEnabled": '+ $Notification_Activation_Approver.isDefaultRecipientEnabled.ToLower() + ',
+        "notificationLevel": "'+ $Notification_Activation_Approver.notificationLevel + '",
         "notificationRecipients": [
         '
     <# 
             # Cant add backup recipient for this rule
 
-            $Notification_Activation_Approvers.Recipients | % {
+            $Notification_Activation_Approver.Recipients | % {
                 $rule += '"' + $_ + '",'
             }
         #>
@@ -1194,7 +1194,7 @@ function Update-Policy ($policyID, $rules) {
     $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body -verbose:$false
 }
 
-function Import-Settings ($import) {
+function import-setting ($import) {
     log "Importing setting from $import"
     if (!(test-path $import)) {
         throw "Operation failed, file $import cannot be found"
@@ -1226,12 +1226,12 @@ function Import-Settings ($import) {
         }
         $rules += Set-Notification_EligibleAssignment_Assignee $Notification_EligibleAssignment_Assignee
             
-        $Notification_EligibleAssignment_Approvers = @{
+        $Notification_EligibleAssignment_Approver = @{
             "isDefaultRecipientEnabled" = $_.Notification_Eligibility_Approvers_isDefaultRecipientEnabled;
             "notificationLevel"         = $_.Notification_Eligibility_Approvers_notificationLevel;
             "Recipients"                = $_.Notification_Eligibility_Approvers_Recipients.split(',')
         }
-        $rules += Set-Notification_EligibleAssignment_Approvers $Notification_EligibleAssignment_Approvers
+        $rules += Set-Notification_EligibleAssignment_Approver $Notification_EligibleAssignment_Approver
 
         $Notification_Active_Alert = @{
             "isDefaultRecipientEnabled" = $_.Notification_Active_Alert_isDefaultRecipientEnabled;
@@ -1252,7 +1252,7 @@ function Import-Settings ($import) {
             "notificationLevel"         = $_.Notification_Active_Approvers_notificationLevel;
             "Recipients"                = $_.Notification_Active_Approvers_Recipients.split(',')
         }
-        $rules += Set-Notification_ActiveAssignment_Approvers $Notification_Active_Approvers
+        $rules += Set-Notification_ActiveAssignment_Approver $Notification_Active_Approvers
 
         $Notification_Activation_Alert = @{
             "isDefaultRecipientEnabled" = $_.Notification_Activation_Alert_isDefaultRecipientEnabled;
@@ -1268,12 +1268,12 @@ function Import-Settings ($import) {
         }
         $rules += Set-Notification_Activation_Assignee $Notification_Activation_Assignee
 
-        $Notification_Activation_Approvers = @{
-            "isDefaultRecipientEnabled" = $_.Notification_Activation_Approvers_isDefaultRecipientEnabled;
-            "notificationLevel"         = $_.Notification_Activation_Approvers_notificationLevel;
-            "Recipients"                = $_.Notification_Activation_Approvers_Recipients.split(',')
+        $Notification_Activation_Approver = @{
+            "isDefaultRecipientEnabled" = $_.Notification_Activation_Approver_isDefaultRecipientEnabled;
+            "notificationLevel"         = $_.Notification_Activation_Approver_notificationLevel;
+            "Recipients"                = $_.Notification_Activation_Approver_Recipients.split(',')
         }
-        $rules += Set-Notification_Activation_Approvers $Notification_Activation_Approvers
+        $rules += Set-Notification_Activation_Approver $Notification_Activation_Approver
             
         # patch the policy
         Update-Policy $_.policyID $($rules -join ',')
@@ -1328,7 +1328,7 @@ try {
 
     # importing from a csv
     if ($import) {
-        Import-Settings $import
+        import-setting $import
         Log "Success, exiting."
         return  
     }
@@ -1435,8 +1435,8 @@ try {
         }
 
         # Notif elligibility approver
-        if ($PSBoundParameters.Keys.Contains('Notification_EligibleAssignment_Approvers')) {
-            $rules += Set-Notification_EligibleAssignment_Approvers $Notification_EligibleAssignment_Approvers
+        if ($PSBoundParameters.Keys.Contains('Notification_EligibleAssignment_Approver')) {
+            $rules += Set-Notification_EligibleAssignment_Approver $Notification_EligibleAssignment_Approver
         }
 
         # Notif Active Assignment Alert
@@ -1450,8 +1450,8 @@ try {
         }
 
         # Notif Active Assignment Approvers
-        if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Approvers')) {
-            $rules += Set-Notification_ActiveAssignment_Approvers $Notification_ActiveAssignment_Approvers
+        if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Approver')) {
+            $rules += Set-Notification_ActiveAssignment_Approver $Notification_ActiveAssignment_Approver
         }
         
         # Notification Activation alert 
@@ -1466,8 +1466,8 @@ try {
         }
 
         # Notification Activation Approvers 
-        if ($PSBoundParameters.Keys.Contains('Notification_Activation_Approvers')) {
-            $rules += Set-Notification_Activation_Approvers $Notification_Activation_Approvers
+        if ($PSBoundParameters.Keys.Contains('Notification_Activation_Approver')) {
+            $rules += Set-Notification_Activation_Approver $Notification_Activation_Approver
         }
 
         # Bringing all the rules together and patch the policy

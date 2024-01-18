@@ -1,11 +1,11 @@
-﻿function Import-Settings ($import) {
+﻿function import-setting ($import) {
     log "Importing setting from $import"
     if (!(test-path $import)) {
         throw "Operation failed, file $import cannot be found"
     }
     $csv = Import-Csv $import
 
-    $csv | % {
+    $csv | ForEach-Object {
         $rules = @()
         $rules += Set-ActivationDuration $_.ActivationDuration
         $enablementRules = $_.EnablementRules.Split(',')
@@ -30,12 +30,12 @@
         }
         $rules += Set-Notification_EligibleAssignment_Assignee $Notification_EligibleAssignment_Assignee
             
-        $Notification_EligibleAssignment_Approvers = @{
+        $Notification_EligibleAssignment_Approver = @{
             "isDefaultRecipientEnabled" = $_.Notification_Eligibility_Approvers_isDefaultRecipientEnabled;
             "notificationLevel"         = $_.Notification_Eligibility_Approvers_notificationLevel;
             "Recipients"                = $_.Notification_Eligibility_Approvers_Recipients.split(',')
         }
-        $rules += Set-Notification_EligibleAssignment_Approvers $Notification_EligibleAssignment_Approvers
+        $rules += Set-Notification_EligibleAssignment_Approver $Notification_EligibleAssignment_Approver
 
         $Notification_Active_Alert = @{
             "isDefaultRecipientEnabled" = $_.Notification_Active_Alert_isDefaultRecipientEnabled;
@@ -56,7 +56,7 @@
             "notificationLevel"         = $_.Notification_Active_Approvers_notificationLevel;
             "Recipients"                = $_.Notification_Active_Approvers_Recipients.split(',')
         }
-        $rules += Set-Notification_ActiveAssignment_Approvers $Notification_Active_Approvers
+        $rules += Set-Notification_ActiveAssignment_Approver $Notification_Active_Approvers
 
         $Notification_Activation_Alert = @{
             "isDefaultRecipientEnabled" = $_.Notification_Activation_Alert_isDefaultRecipientEnabled;
@@ -72,12 +72,12 @@
         }
         $rules += Set-Notification_Activation_Assignee $Notification_Activation_Assignee
 
-        $Notification_Activation_Approvers = @{
-            "isDefaultRecipientEnabled" = $_.Notification_Activation_Approvers_isDefaultRecipientEnabled;
-            "notificationLevel"         = $_.Notification_Activation_Approvers_notificationLevel;
-            "Recipients"                = $_.Notification_Activation_Approvers_Recipients.split(',')
+        $Notification_Activation_Approver = @{
+            "isDefaultRecipientEnabled" = $_.Notification_Activation_Approver_isDefaultRecipientEnabled;
+            "notificationLevel"         = $_.Notification_Activation_Approver_notificationLevel;
+            "Recipients"                = $_.Notification_Activation_Approver_Recipients.split(',')
         }
-        $rules += Set-Notification_Activation_Approvers $Notification_Activation_Approvers
+        $rules += Set-Notification_Activation_Approver $Notification_Activation_Approver
             
         # patch the policy
         Update-Policy $_.policyID $($rules -join ',')

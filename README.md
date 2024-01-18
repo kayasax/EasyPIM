@@ -86,13 +86,13 @@ EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -backup
 |`$AllowPermanentActiveAssignment`| Allow permanent active assignement? ($true|$false)|
 |`$Notification_EligibleAssignment_Alert`| Admin Notification when eligible role is assigned, rule 9 see Notification Format|   
 |`$Notification_EligibleAssignment_Assignee`| End-user notification when eligible role is assigned, rule 10 see Notification Format|  
-|`$Notification_EligibleAssignment_Approvers`| Approver notification when eligible role is assigned, rule 11 see Notification Format|
+|`$Notification_EligibleAssignment_Approver`| Approver notification when eligible role is assigned, rule 11 see Notification Format|
 |`$Notification_ActiveAssignment_Alert`| Admin Notification when an active role is assigned, rule 12 see Notification Format|
 |`$Notification_ActiveAssignment_Assignee`| End user Notification when an active role is assigned, rule 13 see Notification Format|
-|`$Notification_ActiveAssignment_Approvers`| Approver Notification when an active role is assigned, rule 14see Notification Format|
+|`$Notification_ActiveAssignment_Approver`| Approver Notification when an active role is assigned, rule 14see Notification Format|
 |`$Notification_Activation_Alert`| Admin Notification when a role is activated, rule 15 see Notification Format|
 |`$Notification_Activation_Assignee`| End user Notification when a role is activated, rule 16 see Notification Format|
-|`$Notification_Activation_Approvers`| Approvers Notification when a role is activated, rule 17 see Notification Format|
+|`$Notification_Activation_Approver`| Approvers Notification when a role is activated, rule 17 see Notification Format|
 
 
 

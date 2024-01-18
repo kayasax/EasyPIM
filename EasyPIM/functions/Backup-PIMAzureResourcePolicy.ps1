@@ -1,9 +1,9 @@
-﻿<# 
+﻿<#
       .Synopsis
-       Export the settings of all roles  subscription scope where subscription = $subscriptionID 
+       Export the settings of all roles  subscription scope where subscription = $subscriptionID
       .Description
        Convert the policy rules to csv
-      .Parameter subscriptionID 
+      .Parameter subscriptionID
        subscription ID
       .Parameter rolename
        Array of the rolename to check
@@ -20,13 +20,20 @@
     param (
         [Parameter(Position = 0, Mandatory = $true)]
         [System.String]
+        # Tenant ID
+        $tenantID,
+
+        [Parameter(Position = 1, Mandatory = $true)]
+        [System.String]
+        # subscription id
         $subscriptionID,
         
-        [Parameter(Position = 1)]
+        [Parameter(Position = 2)]
         [System.String]
         $exportFilename
     )
     try {
+        $script:tenantID = $tenantID
         $exports = @()
         $scope = "subscriptions/$subscriptionID"
 
