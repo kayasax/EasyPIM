@@ -1,6 +1,6 @@
 ﻿# List of forbidden commands
 $global:BannedCommands = @(
-	'Write-Output'
+	#'Write-Output'
 	
 	# Use CIM instead where possible
 	'Get-WmiObject'

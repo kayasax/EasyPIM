@@ -2,10 +2,8 @@
 .Synopsis
 EASYPIM
 Powershell module to manage PIM Azure Resource Role settings with simplicity in mind
-
 Get-PIMAzureResourcePolicy will return the policy rules (like require MFA on activation) of the selected rolename at the subscription level
-
-* Support querrying multi roles at once
+Support querrying multi roles at once
 
 .Description
  

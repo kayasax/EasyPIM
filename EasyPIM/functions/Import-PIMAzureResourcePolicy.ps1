@@ -19,7 +19,7 @@
         Homepage: https://github.com/kayasax/EasyPIM
      #>
 function Import-PIMAzureResourcePolicy {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param (
         [Parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
@@ -39,12 +39,13 @@ function Import-PIMAzureResourcePolicy {
         $Path
     )
     
-    $scope = "subscriptions/$subscriptionID"
-    $ARMhost = "https://management.azure.com"
-    # $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
+    $script:tenantID = $TenantID
+    $script:scope="Subscriptions/$subscriptionID"
     
     #load settings
     Write-Verbose "Importing settings from $path"
+    if ($PSCmdlet.ShouldProcess($path, "Importing policy from")) {
     import-setting $Path
+    }
     Log "Success, exiting."
 }
