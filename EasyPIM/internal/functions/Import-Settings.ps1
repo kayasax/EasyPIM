@@ -1,9 +1,25 @@
-﻿function import-setting ($import) {
-    log "Importing setting from $import"
-    if (!(test-path $import)) {
-        throw "Operation failed, file $import cannot be found"
+﻿<#
+    .Synopsis
+        Import the settings from the csv file $path
+    .Description
+        Convert the csv back to policy rules
+    .Parameter Path
+        path to the csv file
+    .Example
+        PS> Import-Setting -path "c:\temp\myrole.csv"
+
+        Import settings from file c:\temp\myrole.csv
+     
+    .Notes
+        Author: Loïc MICHEL
+        Homepage: https://github.com/kayasax/EasyPIM
+     #>
+function Import-Setting ($path) {
+    log "Importing setting from $path"
+    if (!(test-path $path)) {
+        throw "Operation failed, file $path cannot be found"
     }
-    $csv = Import-Csv $import
+    $csv = Import-Csv $path
 
     $csv | ForEach-Object {
         $rules = @()
@@ -81,5 +97,5 @@
             
         # patch the policy
         Update-Policy $_.policyID $($rules -join ',')
-    }   
+    }
 }

@@ -1,4 +1,24 @@
-﻿function Import-PIMAzureResourcePolicy {
+﻿<#
+    .Synopsis
+        Import the settings from the csv file $path
+    .Description
+        Convert the csv back to policy rules
+    .Parameter tenantID
+        Entra ID Tenant ID
+    .Parameter subscriptionID
+        subscription ID
+    .Parameter Path
+        path to the csv file
+    .Example
+        PS> Import-PIMAzureResourcePolicy -tenantID $tenantID -subscriptionID $subscriptionID -path "c:\temp\myrole.csv"
+
+        Import settings from file c:\temp\myrole.csv
+     
+    .Notes
+        Author: Loïc MICHEL
+        Homepage: https://github.com/kayasax/EasyPIM
+     #>
+function Import-PIMAzureResourcePolicy {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
@@ -21,7 +41,7 @@
     
     $scope = "subscriptions/$subscriptionID"
     $ARMhost = "https://management.azure.com"
-    $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
+    # $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
     
     #load settings
     Write-Verbose "Importing settings from $path"

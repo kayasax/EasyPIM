@@ -1,4 +1,21 @@
-﻿function MyCatch($e){
+﻿<#
+      .Synopsis
+       wrapper for all caught exceptions
+      .Description
+       the exception will be parsed to get the details, it will be logged and eventualy sent to Teams if the notification is enabled
+      .Parameter e
+       The exception that was sent
+      .EXAMPLE
+        PS> MyCatch $e
+
+        Will log the details of the exception
+      
+      .Link
+     
+      .Notes
+      	
+#>
+     function MyCatch($e){
     $err = $($e.exception.message | out-string)
     $details =$e.errordetails# |fl -force
     $position = $e.InvocationInfo.positionMessage

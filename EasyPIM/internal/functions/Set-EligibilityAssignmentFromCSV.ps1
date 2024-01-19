@@ -1,4 +1,21 @@
-﻿function Set-EligibilityAssignmentFromCSV($MaximumEligibilityDuration, $AllowPermanentEligibility) {
+﻿<#
+      .Synopsis
+       definne the eligible assignment setting : max duration and if permanent eligibility is allowed
+      .Description
+       correspond to rule 5 here: https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview#assignment-rules
+      .Parameter MaximumEligibilityDuration
+       maximum duration of an eligibility
+      .Parameter AllowPermanentEligibility
+       Do we allow permanent eligibility
+      .EXAMPLE
+        PS> Set-EligibilityAssignment -MaximumEligibilityDuration "P30D" -AllowPermanentEligibility $false
+
+        define a maximum eligibility duration of 30 days
+      .Link
+     
+      .Notes
+#>
+function Set-EligibilityAssignmentFromCSV($MaximumEligibilityDuration, $AllowPermanentEligibility) {
     write-verbose "Set-EligibilityAssignmentFromCSV: $MaximumEligibilityDuration $AllowPermanentEligibility"
     $max = $MaximumEligibilityDuration
      

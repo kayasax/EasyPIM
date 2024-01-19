@@ -62,7 +62,7 @@ Description = 'Powershell module to manage PIM Azure Resource Role settings with
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
 FunctionsToExport = @(
-    "Invoke-EasyPIM","Import-PIMAzureResourcePolicy","Get-PIMAzureResourcePolicy","Set-PIMAzureResourcePolicy","Copy-PIMAzureResourcePolicy","Export-PIMAzureResourcePolicy","Backup-PIMAzureResourcePolicy"
+    "Import-PIMAzureResourcePolicy","Get-PIMAzureResourcePolicy","Set-PIMAzureResourcePolicy","Copy-PIMAzureResourcePolicy","Export-PIMAzureResourcePolicy","Backup-PIMAzureResourcePolicy"
 )
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.

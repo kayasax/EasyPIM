@@ -1,12 +1,14 @@
-﻿<# 
+﻿<#
       .Synopsis
-       Retrieve all roles policy
+       Retrieve all role policies
       .Description
        Get all roles then for each get the policy
-      .Parameter scope 
+      .Parameter scope
        Scope to look at
       .Example
-        Get-AllPoliciesy -scope "subscriptions/$subscriptionID"
+        PS> Get-AllPolicies -scope "subscriptions/$subscriptionID"
+
+        Get all roles then for each get the policy
       .Link
      
       .Notes
@@ -18,10 +20,9 @@ function Get-AllPolicies($scope) {
     $restUri = "$ARMendpoint/roleDefinitions?`$select=roleName&api-version=2022-04-01"
 
     write-verbose "Getting All Policies at $restUri"
-    #$response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
     $response = Invoke-ARM -restURI $restUri -Method 'GET' -Body $null
     Write-Verbose $response
-    $roles = $response | ForEach-Object { 
+    $roles = $response | ForEach-Object {
         $_.value.properties.roleName
     }
     return $roles

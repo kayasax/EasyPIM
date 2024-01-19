@@ -1,22 +1,27 @@
-﻿<# 
+﻿<#
       .Synopsis
        Set the setting of the role $rolename at the subscription scope where subscription = $subscription
       .Description
        Get the setting of the role $rolename at the subscription scope where subscription = $subscription
-      .Parameter subscriptionID 
-       subscription ID
-      .Parameter rolename
-       Array of the rolename to check
-      .Parameter copyfrom
-       We will copy the settings from this role to rolename
+ 
       .Example
-        Get-PIMAzureResourcePolicy -subscriptionID "eedcaa84-3756-4da9-bf87-40068c3dd2a2"  -rolename contributor,webmaster
+        PS> Set-PIMAzureResourcePolicy -tenantID $tenantID -subscriptionID $subscriptionID -rolename webmaster -ActivationDuration "PT8H"
+
+        Limit the maximum PIM activation duration to 8h
+      .EXAMPLE
+        PS> Set-PIMAzureResourcePolicy -TenantID $tenantID -SubscriptionId $subscriptionID -rolename "contributor" -Approvers  @(@{"Id"="00b34bb3-8a6b-45ce-a7bb-c7f7fb400507";"Name"="John";"Type"="user"}) -ApprovalRequired $true
+
+        Require activation approval and set John as an approver
+
+
       .Link
      
       .Notes
+        Author: Loïc MICHEL
+        Homepage: https://github.com/kayasax/EasyPIM
      #>
 function Set-PIMAzureResourcePolicy {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param (
         [Parameter(Position = 0, Mandatory = $true)]
         [System.String]
@@ -24,17 +29,19 @@ function Set-PIMAzureResourcePolicy {
         $tenantID,
         [Parameter(Position = 1, Mandatory = $true)]
         [System.String]
+        #subscriptionID
         $subscriptionID,
 
         [Parameter(Position = 2, Mandatory = $true)]
         [System.String[]]
+        #list of role to update
         $rolename,
 
         [System.String]
         # Maximum activation duration
         $ActivationDuration = $null,
        
-        [Parameter(ParameterSetName = 'Default', HelpMessage = "Accepted values: 'None' or any combination of these options (Case SENSITIVE):  'Justification, 'MultiFactorAuthentication', 'Ticketing'", ValueFromPipeline = $true)]
+        [Parameter(HelpMessage = "Accepted values: 'None' or any combination of these options (Case SENSITIVE):  'Justification, 'MultiFactorAuthentication', 'Ticketing'")]
         [ValidateScript({
                 # accepted values: "None","Justification", "MultiFactorAuthentication", "Ticketing"
                 # WARNING: options are CASE SENSITIVE
@@ -44,93 +51,93 @@ function Set-PIMAzureResourcePolicy {
                 return $valid
             })]
         [System.String[]]
-        $ActivationRequirement, 
+        $ActivationRequirement,
         
-        [Parameter(ParameterSetName = 'Default')]
+        [Parameter()]
         [Bool]
         # Is approval required to activate a role? ($true|$false)
         $ApprovalRequired,
     
-        [Parameter(ParameterSetName = 'Default')]
-        # Array of approvers in the format: @(@{"Id"="XXXXXX";"Name"="John":"Type"="user|group"}, .... )
-        $Approvers, 
+        [Parameter()]
+        # Array of approvers in the format: @(@{"Id"=<ObjectID>;"Name"="John":"Type"="user|group"}, .... )
+        $Approvers,
         
-        [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
+        [Parameter()]
         [System.String]
         # Maximum Eligility Duration
         $MaximumEligibilityDuration = $null,
         
-        [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
+        [Parameter()]
         [Bool]
         # Allow permanent eligibility? ($true|$false)
         $AllowPermanentEligibility,
     
-        [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
+        [Parameter()]
         [System.String]
         # Maximum active assignment duration # Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
-        $MaximumActiveAssignmentDuration = $null, 
+        $MaximumActiveAssignmentDuration = $null,
     
-        [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
+        [Parameter()]
         [Bool]
         # Allow permanent active assignement? ($true|$false)
         $AllowPermanentActiveAssignment,
     
-        [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
+        [Parameter()]
         [System.Collections.Hashtable]
         # Admin Notification when eligible role is assigned
-        # Format:  @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-        $Notification_EligibleAssignment_Alert, 
+        # Format:  @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
+        $Notification_EligibleAssignment_Alert,
         
-        [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
+        [Parameter()]
         [System.Collections.Hashtable]
         # End user notification when eligible role is assigned
-        # Format:  @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-        $Notification_EligibleAssignment_Assignee, 
+        # Format:  @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
+        $Notification_EligibleAssignment_Assignee,
         
-        [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
+        [Parameter()]
         [System.Collections.Hashtable]
         # Approver notification when eligible role is assigned
-        # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-        $Notification_EligibleAssignment_Approver, 
+        # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
+        $Notification_EligibleAssignment_Approver,
         
-        [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
+        [Parameter()]
         [System.Collections.Hashtable]
         # Admin Notification when an active role is assigned
-        # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+        # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
         $Notification_ActiveAssignment_Alert,
     
-        [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
+        [Parameter()]
         [System.Collections.Hashtable]
         # End user Notification when an active role is assigned
-        # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+        # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
         $Notification_ActiveAssignment_Assignee,
     
-        [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
+        [Parameter()]
         [System.Collections.Hashtable]
         # Approver Notification when an active role is assigned
-        # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+        # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
         $Notification_ActiveAssignment_Approver,
     
-        [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
+        [Parameter()]
         [System.Collections.Hashtable]
         # Admin Notification when a is activated
-        # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+        # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
         $Notification_Activation_Alert,
     
-        [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
+        [Parameter()]
         [System.Collections.Hashtable]
         # End user Notification when a role is activated
-        # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+        # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
         $Notification_Activation_Assignee,
     
-        [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
+        [Parameter()]
         [System.Collections.Hashtable]
         # Approvers Notification when a role is activated
-        # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+        # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
         $Notification_Activation_Approver
       
     )
-    try {  
+    try {
         $p = @()
         $PSBoundParameters.Keys | ForEach-Object {
             $p += "$_ =>" + $PSBoundParameters[$_]
@@ -151,13 +158,13 @@ function Set-PIMAzureResourcePolicy {
             $config = get-config $scope $_
             $rules = @()
 
-            if ($PSBoundParameters.Keys.Contains('ActivationDuration')) {  
+            if ($PSBoundParameters.Keys.Contains('ActivationDuration')) {
                 $rules += Set-ActivationDuration $ActivationDuration
             }
 
-            if ($PSBoundParameters.Keys.Contains('ActivationRequirement')) {  
+            if ($PSBoundParameters.Keys.Contains('ActivationRequirement')) {
                 $rules += Set-ActivationRequirement $ActivationRequirement
-            }          
+            }
 
             # Approval and approvers
             if ( ($PSBoundParameters.Keys.Contains('ApprovalRequired')) -or ($PSBoundParameters.Keys.Contains('Approvers'))) {
@@ -214,18 +221,18 @@ function Set-PIMAzureResourcePolicy {
                 $rules += Set-Notification_ActiveAssignment_Approver $Notification_ActiveAssignment_Approver
             }
         
-            # Notification Activation alert 
+            # Notification Activation alert
             if ($PSBoundParameters.Keys.Contains('Notification_Activation_Alert')) {
                 $rules += Set-Notification_Activation_Alert $Notification_Activation_Alert
             }
 
-            # Notification Activation Assignee 
+            # Notification Activation Assignee
             if ($PSBoundParameters.Keys.Contains('Notification_Activation_Assignee')) {
        
                 $rules += Set-Notification_Activation_Assignee $Notification_Activation_Assignee
             }
 
-            # Notification Activation Approvers 
+            # Notification Activation Approvers
             if ($PSBoundParameters.Keys.Contains('Notification_Activation_Approver')) {
                 $rules += Set-Notification_Activation_Approver $Notification_Activation_Approver
             }
@@ -235,7 +242,10 @@ function Set-PIMAzureResourcePolicy {
             #Write-Verbose "All rules: $allrules"
 
             #Patching the policy
-            $null=Update-Policy $config.policyID $allrules
+            if ($PSCmdlet.ShouldProcess($_, "Udpdating policy")) {
+                $null=Update-Policy $config.policyID $allrules
+            }
+            
         }
         log "Success, policy updated"
         return

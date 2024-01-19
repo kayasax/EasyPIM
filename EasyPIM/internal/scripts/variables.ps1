@@ -11,7 +11,7 @@ $script:_logPath = "$env:appdata\powershell\easyPIM"
 # set to $true if you want to send fatal error on a Teams channel using Webhook see doc to setup
 $script:TeamsNotif = $true
 #The description will be used as the notification subject
-$script:description = "EasyPIM module to manage Azure role setting" 
+$script:description = "EasyPIM module to manage Azure role setting"
 # your Teams Inbound WebHook URL
 $script:teamsWebhookURL = "https://microsoft.webhook.office.com/webhookb2/0b9bf9c2-fc4b-42b2-aa56-c58c805068af@72f988bf-86f1-41af-91ab-2d7cd011db47/IncomingWebhook/40db225a69854e49b617eb3427bcded8/8dd39776-145b-4f26-8ac4-41c5415307c7"
 

@@ -1,19 +1,23 @@
-﻿<# 
+﻿<#
       .Synopsis
-       invoke ARM REST API 
+       invoke ARM REST API
       .Description
        wrapper function to get an access token and set authentication header for each ARM API call
-      .Parameter RestURI 
-       
+      .Parameter RestURI
+       the URI
       .Parameter Method
-       
+       http method to use
       .Parameter Body
-       
+       an optional body
       .Example
-        Copy-PIMAzureResourcePolicy -subscriptionID "eedcaa84-3756-4da9-bf87-40068c3dd2a2"  -rolename contributor,webmaster -copyFrom role1
+        PS> invoke-ARM -restURI $restURI -method "GET"
+
+        will send an GET query to $restURI and return the response
       .Link
      
       .Notes
+        Author: Loïc MICHEL
+        Homepage: https://github.com/kayasax/EasyPIM
 #>
 function Invoke-ARM {
     [CmdletBinding()]
@@ -41,9 +45,9 @@ function Invoke-ARM {
         write-verbose "request URI : $restURI"
 
 
-        if ( $null -eq (get-azcontext) -or ( (get-azcontext).Tenant.Id -ne $script:tenantID ) ) { 
+        if ( $null -eq (get-azcontext) -or ( (get-azcontext).Tenant.Id -ne $script:tenantID ) ) {
             Write-Verbose ">> Connecting to Azure with tenantID $script:tenantID"
-            Connect-AzAccount -Tenant $script:tenantID 
+            Connect-AzAccount -Tenant $script:tenantID
         }
     
         # Get access Token

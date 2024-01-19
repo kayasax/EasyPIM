@@ -1,19 +1,23 @@
 ﻿<#
       .Synopsis
-       Copy the setting of roles $copyfrom to the role $rolename
+        Copy the setting of roles $copyfrom to the role $rolename
       .Description
-       
+        Copy the setting of roles $copyfrom to the role $rolename
       .Parameter subscriptionID
-       subscription ID
+        subscription ID
       .Parameter rolename
-       Array of the rolename to update
+        Array of the rolename to update
       .Parameter copyFrom
-       We will copy the settings from this role to rolename
+        We will copy the settings from this role to rolename
       .Example
-        Copy-PIMAzureResourcePolicy -subscriptionID "eedcaa84-3756-4da9-bf87-40068c3dd2a2"  -rolename contributor,webmaster -copyFrom role1
+        PS> Copy-PIMAzureResourcePolicy -subscriptionID "eedcaa84-3756-4da9-bf87-40068c3dd2a2"  -rolename contributor,webmaster -copyFrom role1
+
+        Copy settings from role role1 to the contributor and webmaster roles
       .Link
      
       .Notes
+        Author: Loïc MICHEL
+        Homepage: https://github.com/kayasax/EasyPIM
 #>
 function Copy-PIMAzureResourcePolicy {
     [CmdletBinding()]

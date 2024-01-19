@@ -1,16 +1,18 @@
-﻿<# 
+﻿<#
       .Synopsis
        Send message to Teams channel
       .Description
        The app "inbound webhook" must be configured for that channed and the url set in scripts/variables.ps1
-      .Parameter message 
+      .Parameter message
        message to display
       .Parameter details
        placeholder for more details
       .Parameter myStackTrace
        place holder for stack trace
       .Example
-       send-teamsnotif "Error occured" "The source file was not found" 
+       PS> send-teamsnotif "Error occured" "The source file was not found"
+
+       Send a notification to teams webhook url
      
       .Notes
 #>function send-teamsnotif {

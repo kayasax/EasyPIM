@@ -1,9 +1,9 @@
-﻿<# 
+﻿<#
       .Synopsis
-       definne the eligible assognment setting : max duration and if permanent eligibility is allowed
+       definne the eligible assignment setting : max duration and if permanent eligibility is allowed
       .Description
        correspond to rule 5 here: https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview#assignment-rules
-      .Parameter MaximumEligibilityDuration 
+      .Parameter MaximumEligibilityDuration
        maximum duration of an eligibility
       .Parameter AllowPermanentEligibility
        Do we allow permanent eligibility

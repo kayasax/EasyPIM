@@ -1,21 +1,23 @@
 ﻿<#
-      .Synopsis
-       Export the settings of all roles  subscription scope where subscription = $subscriptionID
-      .Description
-       Convert the policy rules to csv
-      .Parameter subscriptionID
-       subscription ID
-      .Parameter rolename
-       Array of the rolename to check
-      .Parameter exportFilename
-       Filename of the csv
-      .Example
-        Export-PIMAzureResourcePolicy -subscriptionID "eedcaa84-3756-4da9-bf87-40068c3dd2a2"  -rolename contributor,webmaster -filename "c:\temp\myrole.csv"
-      .Link
-     
-      .Notes
-     #>
-     function Backup-PIMAzureResourcePolicy {
+    .Synopsis
+    Export PIM settings of all roles at the subscription scope to a csv file.
+    Use the exportFilename parameter to specify the csv file, if not specified default filename
+    will be %appdata%\powershell\EasyPIM\Exports
+      
+    .Description
+    Convert the policy rules to a csv file
+    
+    .Example
+    PS> Export-PIMAzureResourcePolicy -tennantID $tenantID -subscriptionID $subscriptionID -filename "c:\temp\myrole.csv"
+
+    Export settings of all roles to file c:\temp\myrole.csv
+
+    .Notes
+    Author: Loïc MICHEL
+    Homepage: https://github.com/kayasax/EasyPIM
+    
+#>
+function Backup-PIMAzureResourcePolicy {
     [CmdletBinding()]
     param (
         [Parameter(Position = 0, Mandatory = $true)]
@@ -30,6 +32,7 @@
         
         [Parameter(Position = 2)]
         [System.String]
+        # Filename of the csv to generate
         $exportFilename
     )
     try {

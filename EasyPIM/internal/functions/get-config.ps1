@@ -1,4 +1,24 @@
-﻿function get-config ($scope, $rolename, $copyFrom = $null) {
+﻿<#
+    .Synopsis
+        Get rules for the role $rolename at the specified scope
+    .Description
+        will convert the json rules to a PSCustomObject
+    .Parameter scope
+        scope
+    .Parameter rolename
+        list of the role to check
+    .Parameter copyfrom
+        $true if this function is invoked for the Copy-PIMAzureReourcePolicy, we will parse the rules differently
+    .Example
+        PS> get-config -scope $scop -rolename role1
+
+        Get the policy of the role role1 at the specified scope
+     
+    .Notes
+        Author: Loïc MICHEL
+        Homepage: https://github.com/kayasax/EasyPIM
+     #>
+function get-config ($scope, $rolename, $copyFrom = $null) {
 
     $ARMhost = "https://management.azure.com"
     $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
@@ -25,15 +45,15 @@
         $restUri = "$ARMendpoint/roleManagementPolicyAssignments?api-version=2020-10-01&`$filter=roleDefinitionId eq '$roleID'"
         write-verbose " #2 Get the Assignment for $rolename at $restUri"
         #$response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
-        $response = Invoke-ARM -restURI $restUri -Method Get 
-        $policyId = $response.value.properties.policyId #.split('/')[-1] 
+        $response = Invoke-ARM -restURI $restUri -Method Get
+        $policyId = $response.value.properties.policyId #.split('/')[-1]
         Write-Verbose ">> policy ID = $policyId"
 
         # 3 get the role policy for the policyID found in #2
         $restUri = "$ARMhost/$policyId/?api-version=2020-10-01"
         write-verbose " #3 get role policy at $restUri"
         #$response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
-        $response = Invoke-ARM -restURI $restUri -Method Get 
+        $response = Invoke-ARM -restURI $restUri -Method Get
 
         #Write-Verbose "copy from = $copyFrom"
         if ($null -ne $copyFrom) {
@@ -41,7 +61,7 @@
             $response = Get-Content "$_scriptPath\temp.json"
             $response = $response -replace '^.*"rules":\['
             $response = $response -replace '\],"effectiveRules":.*$'
-            Remove-Item "$_scriptPath\temp.json" 
+            Remove-Item "$_scriptPath\temp.json"
             return $response
         }
       
@@ -52,9 +72,9 @@
         $_activationDuration = $response.properties.rules | Where-Object { $_.id -eq "Expiration_EndUser_Assignment" } | Select-Object -ExpandProperty maximumduration
         # End user enablement rule (MultiFactorAuthentication, Justification, Ticketing)
         $_enablementRules = $response.properties.rules | Where-Object { $_.id -eq "Enablement_EndUser_Assignment" } | Select-Object -expand enabledRules
-        # approval required 
+        # approval required
         $_approvalrequired = $($response.properties.rules | Where-Object { $_.id -eq "Approval_EndUser_Assignment" }).setting.isapprovalrequired
-        # approvers 
+        # approvers
         $approvers = $($response.properties.rules | Where-Object { $_.id -eq "Approval_EndUser_Assignment" }).setting.approvalStages.primaryApprovers
         $approvers | ForEach-Object {
             $_approvers += '@{"id"="' + $_.id + '";"description"="' + $_.description + '";"userType"="' + $_.userType + '"},'
@@ -62,10 +82,10 @@
 
         # permanent assignmnent eligibility
         $_eligibilityExpirationRequired = $response.properties.rules | Where-Object { $_.id -eq "Expiration_Admin_Eligibility" } | Select-Object -expand isExpirationRequired
-        if ($_eligibilityExpirationRequired -eq "true") { 
+        if ($_eligibilityExpirationRequired -eq "true") {
             $_permanantEligibility = "false"
         }
-        else { 
+        else {
             $_permanantEligibility = "true"
         }
         # maximum assignment eligibility duration
@@ -73,10 +93,10 @@
         
         # pemanent activation
         $_activeExpirationRequired = $response.properties.rules | Where-Object { $_.id -eq "Expiration_Admin_Assignment" } | Select-Object -expand isExpirationRequired
-        if ($_activeExpirationRequired -eq "true") { 
+        if ($_activeExpirationRequired -eq "true") {
             $_permanantActiveAssignment = "false"
         }
-        else { 
+        else {
             $_permanantActiveAssignment = "true"
         }
         # maximum activation duration
@@ -87,25 +107,25 @@
         #################
 
         # Notification Eligibility Alert (Send notifications when members are assigned as eligible to this role)
-        $_Notification_Admin_Admin_Eligibility = $response.properties.rules | Where-Object { $_.id -eq "Notification_Admin_Admin_Eligibility" } 
+        $_Notification_Admin_Admin_Eligibility = $response.properties.rules | Where-Object { $_.id -eq "Notification_Admin_Admin_Eligibility" }
         # Notification Eligibility Assignee (Send notifications when members are assigned as eligible to this role: Notification to the assigned user (assignee))
-        $_Notification_Eligibility_Assignee = $response.properties.rules | Where-Object { $_.id -eq "Notification_Requestor_Admin_Eligibility" } 
+        $_Notification_Eligibility_Assignee = $response.properties.rules | Where-Object { $_.id -eq "Notification_Requestor_Admin_Eligibility" }
         # Notification Eligibility Approvers (Send notifications when members are assigned as eligible to this role: request to approve a role assignment renewal/extension)
         $_Notification_Eligibility_Approvers = $response.properties.rules | Where-Object { $_.id -eq "Notification_Approver_Admin_Eligibility" }
 
         # Notification Active Assignment Alert (Send notifications when members are assigned as active to this role)
-        $_Notification_Active_Alert = $response.properties.rules | Where-Object { $_.id -eq "Notification_Admin_Admin_Assignment" } 
+        $_Notification_Active_Alert = $response.properties.rules | Where-Object { $_.id -eq "Notification_Admin_Admin_Assignment" }
         # Notification Active Assignment Assignee (Send notifications when members are assigned as active to this role: Notification to the assigned user (assignee))
-        $_Notification_Active_Assignee = $response.properties.rules | Where-Object { $_.id -eq "Notification_Requestor_Admin_Assignment" } 
+        $_Notification_Active_Assignee = $response.properties.rules | Where-Object { $_.id -eq "Notification_Requestor_Admin_Assignment" }
         # Notification Active Assignment Approvers (Send notifications when members are assigned as active to this role: Request to approve a role assignment renewal/extension)
-        $_Notification_Active_Approvers = $response.properties.rules | Where-Object { $_.id -eq "Notification_Approver_Admin_Assignment" } 
+        $_Notification_Active_Approvers = $response.properties.rules | Where-Object { $_.id -eq "Notification_Approver_Admin_Assignment" }
         
         # Notification Role Activation Alert (Send notifications when eligible members activate this role: Role activation alert)
-        $_Notification_Activation_Alert = $response.properties.rules | Where-Object { $_.id -eq "Notification_Admin_EndUser_Assignment" } 
+        $_Notification_Activation_Alert = $response.properties.rules | Where-Object { $_.id -eq "Notification_Admin_EndUser_Assignment" }
         # Notification Role Activation Assignee (Send notifications when eligible members activate this role: Notification to activated user (requestor))
-        $_Notification_Activation_Assignee = $response.properties.rules | Where-Object { $_.id -eq "Notification_Requestor_EndUser_Assignment" } 
+        $_Notification_Activation_Assignee = $response.properties.rules | Where-Object { $_.id -eq "Notification_Requestor_EndUser_Assignment" }
         # Notification Role Activation Approvers (Send notifications when eligible members activate this role: Request to approve an activation)
-        $_Notification_Activation_Approver = $response.properties.rules | Where-Object { $_.id -eq "Notification_Approver_EndUser_Assignment" } 
+        $_Notification_Activation_Approver = $response.properties.rules | Where-Object { $_.id -eq "Notification_Approver_EndUser_Assignment" }
 
 
         $config = [PSCustomObject]@{

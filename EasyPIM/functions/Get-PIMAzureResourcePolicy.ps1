@@ -1,4 +1,4 @@
-﻿<# 
+﻿<#
 .Synopsis
 EASYPIM
 Powershell module to manage PIM Azure Resource Role settings with simplicity in mind
@@ -22,17 +22,18 @@ Name of the role to check
 
 .Example
        PS> Get-PIMAzureResourcePolicy -subscription $subscriptionID -rolename "contributor","webmaster"
+
        show curent config for the roles contributor and webmaster at the subscriptionID scope :
     
 .Link
-    https://learn.microsoft.com/en-us/azure/governance/resource-graph/first-query-rest-api 
+    https://learn.microsoft.com/en-us/azure/governance/resource-graph/first-query-rest-api
     https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview
     Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
 .Notes
     Homepage: https://github.com/kayasax/easyPIM
-    Author: MICHEL, Loic <loic.michel@yespapa.eu>
+    Author: MICHEL, Loic
     Changelog:
-    Todo: 
+    Todo:
     * allow other scopes
 #>
 function Get-PIMAzureResourcePolicy {
@@ -55,7 +56,7 @@ function Get-PIMAzureResourcePolicy {
     )
     try {
         $script:tenantID = $tenantID
-        
+
         Write-Verbose "Get-PIMAzureResourcePolicy start with parameters: subscription => $subscriptionID, rolename=> $rolename"
         $scope = "subscriptions/$subscriptionID"
         $out = @()

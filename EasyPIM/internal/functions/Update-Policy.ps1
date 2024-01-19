@@ -1,14 +1,16 @@
-﻿<# 
+﻿<#
       .Synopsis
        Update policy with new rules
       .Description
        Patch $policyID with the rules $rules
-      .Parameter PolicyID 
-       
+      .Parameter PolicyID
+       policy ID
       .Parameter rules
-                   
+        rules
       .Example
-        Update-Policy -policyID $id -rules $rules
+        PS> Update-Policy -policyID $id -rules $rules
+
+        Update $policyID with rules $rules
       .Link
      
       .Notes
@@ -16,10 +18,10 @@
 function Update-Policy  {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
-        $policyID, 
+        $policyID,
         $rules
     )
-    Log "Updating Policy $policyID"
+    Log "Updating Policy $policyID" -noEcho
     #write-verbose "rules: $rules"
     $scope = "subscriptions/$script:subscriptionID"
     $ARMhost = "https://management.azure.com"
@@ -28,7 +30,7 @@ function Update-Policy  {
     $body = '
         {
             "properties": {
-            "scope": "'+ $scope + '",  
+            "scope": "'+ $scope + '",
             "rules": [
         '+ $rules +
     '],
