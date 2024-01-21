@@ -3,6 +3,8 @@
         Export the settings of the role $rolename at the subscription scope where subscription = $subscriptionID to $exportFilename, if not set file will be saved in %appdata%\powershell\EasyPIM\exports\
       .Description
         Convert the policy rules to csv
+      .Parameter tenantID
+        EntraID tenant ID
       .Parameter subscriptionID
         subscription ID
       .Parameter rolename
@@ -24,16 +26,20 @@
     param (
         [Parameter(Position = 0, Mandatory = $true)]
         [System.String]
-        $subscriptionID,
+        $tenantID,
         [Parameter(Position = 1, Mandatory = $true)]
+        [System.String]
+        $subscriptionID,
+        [Parameter(Position = 2, Mandatory = $true)]
         [System.String[]]
         $rolename,
-        [Parameter(Position = 2)]
+        [Parameter(Position = 3)]
         [System.String]
         $exportFilename
     )
     try {
 
+        $script:tenantID = $tenantID      
    
         Write-Verbose "Export-PIMAzureResourcePolicy start with parameters: subscription => $subscriptionID, rolename=> $rolename, exportFilname => $exportFilename"
         $scope = "subscriptions/$subscriptionID"

@@ -94,11 +94,11 @@ foreach ($command in $commands) {
         
         Context "Test parameter help for $commandName" {
             
-            $common = 'Debug', 'ErrorAction', 'ErrorVariable', 'InformationAction', 'InformationVariable', 'OutBuffer', 'OutVariable', 'PipelineVariable', 'Verbose', 'WarningAction', 'WarningVariable'
+            $common = 'Debug', 'ErrorAction', 'ErrorVariable', 'InformationAction', 'InformationVariable', 'OutBuffer', 'OutVariable', 'PipelineVariable', 'Verbose', 'WarningAction', 'WarningVariable', 'ProgressAction','Confirm','WhatIf'
             
             $parameters = $command.ParameterSets.Parameters | Sort-Object -Property Name -Unique | Where-Object Name -notin $common
             $parameterNames = $parameters.Name
-            $HelpParameterNames = $Help.Parameters.Parameter.Name | Sort-Object -Unique
+            $HelpParameterNames = $Help.Parameters.Parameter.Name | Where-Object Name -notin $common | Sort-Object -Unique
             foreach ($parameter in $parameters) {
                 $parameterName = $parameter.Name
                 $parameterHelp = $Help.parameters.parameter | Where-Object Name -EQ $parameterName
@@ -144,7 +144,10 @@ foreach ($command in $commands) {
             foreach ($helpParm in $HelpParameterNames) {
 				# Shouldn't find extra parameters in help.
 				It "finds help parameter in code: $helpParm" -TestCases @{ helpParm = $helpParm; parameterNames = $parameterNames } {
-					$helpParm -in $parameterNames | Should -Be $true
+					if($helpParm -ne "Confirm" -and $helpParm -ne "WhatIf"){
+						$helpParm -in $parameterNames | Should -Be $true
+					}
+					
 				}
             }
         }

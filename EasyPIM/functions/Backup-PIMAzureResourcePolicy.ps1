@@ -2,7 +2,7 @@
     .Synopsis
     Export PIM settings of all roles at the subscription scope to a csv file.
     Use the exportFilename parameter to specify the csv file, if not specified default filename
-    will be %appdata%\powershell\EasyPIM\Exports
+    will be %appdata%\powershell\EasyPIM\Exports\backup_<date>.csv
       
     .Description
     Convert the policy rules to a csv file
@@ -34,6 +34,7 @@ function Backup-PIMAzureResourcePolicy {
         [System.String]
         # Filename of the csv to generate
         $exportFilename
+        
     )
     try {
         $script:tenantID = $tenantID
@@ -52,7 +53,7 @@ function Backup-PIMAzureResourcePolicy {
         log "exporting to $exportFilename"
         $exportPath = Split-Path $exportFilename -Parent
         #create export folder if no exist
-        if ( !(test-path  $exportFilename) ) {
+        if ( !(test-path  $exportPath) ) {
             $null = New-Item -ItemType Directory -Path $exportPath -Force
         }
         

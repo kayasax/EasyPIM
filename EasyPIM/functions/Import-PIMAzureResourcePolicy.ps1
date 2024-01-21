@@ -24,18 +24,15 @@ function Import-PIMAzureResourcePolicy {
         [Parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         [System.String]
-        # Entra ID TenantID
         $TenantID,
 
         [Parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         [System.String]
-        # Subscription ID
         $SubscriptionId,
         
         [Parameter(Mandatory = $true)]
         [String]
-        # import settings from this csv file
         $Path
     )
     

@@ -36,6 +36,7 @@ Name of the role to check
 #>
 function Get-PIMAzureResourcePolicy {
     [CmdletBinding()]
+    [OutputType([PSCustomObject])]
     param (
         
         [Parameter(Position = 0, Mandatory = $true)]
@@ -64,7 +65,7 @@ function Get-PIMAzureResourcePolicy {
             $config = get-config $scope $_
             $out += $config
         }
-        return $out
+        Write-Output $out -NoEnumerate
     }
     catch {
         MyCatch $_

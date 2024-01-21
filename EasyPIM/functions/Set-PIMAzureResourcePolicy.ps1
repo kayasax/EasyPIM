@@ -2,7 +2,7 @@
       .Synopsis
        Set the setting of the role $rolename at the subscription scope where subscription = $subscription
       .Description
-       Get the setting of the role $rolename at the subscription scope where subscription = $subscription
+       Set the setting of the role $rolename at the subscription scope where subscription = $subscription
  
       .Example
         PS> Set-PIMAzureResourcePolicy -tenantID $tenantID -subscriptionID $subscriptionID -rolename webmaster -ActivationDuration "PT8H"
@@ -13,7 +13,6 @@
 
         Require activation approval and set John as an approver
 
-
       .Link
      
       .Notes
@@ -22,6 +21,7 @@
      #>
 function Set-PIMAzureResourcePolicy {
     [CmdletBinding(SupportsShouldProcess = $true)]
+    [OutputType([bool])]
     param (
         [Parameter(Position = 0, Mandatory = $true)]
         [System.String]
@@ -45,12 +45,13 @@ function Set-PIMAzureResourcePolicy {
         [ValidateScript({
                 # accepted values: "None","Justification", "MultiFactorAuthentication", "Ticketing"
                 # WARNING: options are CASE SENSITIVE
-                $valid = $true
+                $script:valid = $true
                 $acceptedValues = @("None", "Justification", "MultiFactorAuthentication", "Ticketing")
-                $_ | ForEach-Object { if (!( $acceptedValues -Ccontains $_)) { $valid = $false } }
-                return $valid
+                $_ | ForEach-Object { if (!( $acceptedValues -Ccontains $_)) { $script:valid = $false } }
+                return $script:valid
             })]
         [System.String[]]
+        # Activation requirement
         $ActivationRequirement,
         
         [Parameter()]
@@ -243,12 +244,12 @@ function Set-PIMAzureResourcePolicy {
 
             #Patching the policy
             if ($PSCmdlet.ShouldProcess($_, "Udpdating policy")) {
-                $null=Update-Policy $config.policyID $allrules
+               $null = Update-Policy $config.policyID $allrules
             }
             
         }
         log "Success, policy updated"
-        return
+        return 
     }
     catch {
         MyCatch $_

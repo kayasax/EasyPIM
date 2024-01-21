@@ -1,21 +1,15 @@
 ﻿<#
-      .Synopsis
-       Admin notification when a role is activated
+.Synopsis
+Admin notification when a role is activated
+.Description
+notification setting corresponding to rule 15 here https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview#notification-rules
+.Parameter Notification_Activation_Alert
+hashtable for the settings like: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical";"Recipients" = @("email1@domain.com","email2@domain.com")}
+.Example
+PS> Set-Notification_Activation_Alert -Notification_Activation_Alert @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical";"Recipients" = @("email1@domain.com","email2@domain.com")}
 
-      .description
-       notification setting corresponding to rule 15 here:
-       https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview#notification-rules/
-
-      .Parameter Notification_Activation_Alert
-       hashtable for the settings like: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical";"Recipients" = @("email1@domain.com","email2@domain.com")}
-
-      .Example
-      PS>Set-Notification_Activation_Alert -Notification_Activation_Alert @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical";"Recipients" = @("email1@domain.com","email2@domain.com")}
-
-      set the notification sent to Admins when a role is activated
+set the notification sent to Admins when a role is activated
 #>
-
-
 function Set-Notification_Activation_Alert($Notification_Activation_Alert) {
     $rule = '
         {

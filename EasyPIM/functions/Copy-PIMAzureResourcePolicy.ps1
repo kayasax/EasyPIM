@@ -3,6 +3,8 @@
         Copy the setting of roles $copyfrom to the role $rolename
       .Description
         Copy the setting of roles $copyfrom to the role $rolename
+      .Parameter tenantID
+        EntraID tenant ID
       .Parameter subscriptionID
         subscription ID
       .Parameter rolename
@@ -44,13 +46,13 @@ function Copy-PIMAzureResourcePolicy {
     )
     try {
         $script:tenantID = $tenantID
-        Write-Verbose "Copy-PIMAzureResourcePolicy start with parameters: subscription => $subscriptionID, rolename=> $rolename, copyfrom => $copyFrom"
-        Log "Copying settings from $copyFrom"
+        Write-Verbose "Copy-PIMAzureResourcePolicy start with parameters: tenantID => $tenantID subscription => $subscriptionID, rolename=> $rolename, copyfrom => $copyFrom"
         $scope = "subscriptions/$subscriptionID"
         $config2 = get-config $scope $copyFrom $true
         
         $rolename | ForEach-Object {
             $config = get-config $scope $_
+            Log "Copying settings from $copyFrom to $_"
             [string]$policyID = $config.policyID
             $policyID = $policyID.Trim()
             Update-Policy $policyID $config2

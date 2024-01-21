@@ -4,6 +4,7 @@ assignee notification when an active assignment is created
 .Description
 correspond to rule 13 here: https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview#notification-rules
 .Parameter Notification_ActiveAssignment_Alert
+
 hashtable for the settings like: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical";"Recipients" = @("email1@domain.com","email2@domain.com")}
 
 .Example

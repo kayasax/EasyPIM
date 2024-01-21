@@ -7,9 +7,10 @@
        maximum duration of an eligibility
       .Parameter AllowPermanentEligibility
        Do we allow permanent eligibility
-      
       .Example
-        Set-EligibilityAssignment -MaximumEligibilityDuration "P30D" -AllowPermanentEligibility $false
+       PS> Set-EligibilityAssignment -MaximumEligibilityDuration "P30D" -AllowPermanentEligibility $false
+
+       set Max eligibility duration to 30 days
       .Link
      
       .Notes

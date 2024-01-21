@@ -1,9 +1,9 @@
-﻿<# 
+﻿<#
 .Synopsis
 EASYPIM
 Powershell function to manage PIM Azure Resource Role settings with simplicity in mind
 
-Easily manage settings at the subscription level : enter a tenant ID, a subscription ID, a role name  
+Easily manage settings at the subscription level : enter a tenant ID, a subscription ID, a role name
 then the options you want to set for example require justification on activation
 
 * Support editing multi roles at once
@@ -16,33 +16,33 @@ Sample usage
 EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -ActivationRequirement "Justification","MultiFactorAuthentication"
 
 .Description
- 
+
 EasyPIM will manage the MS Graph APIs calls to implement the settings you want. You can set these settings individualy, copying them from another role or by importing a csv file.
 EasyPIM will create the rules and use a PATCH request to update  the settings.
- 
+
 .Example
        *  show curent config :
        wip_PIMAzureResourceRoleSettings.ps1 -TenantID $tenant -SubscriptionId $subscripyion -rolename $rolename -show
-    
+
        *  Set Activation duration to 14h
        wip_PIMAzureResourceRoleSettings.ps1 -TenantID $tenant -SubscriptionId $subscripyion -rolename $rolename -ActivationDuration "PT14H"
-    
+
        *  Require approval on activation and define approvers
         wip_PIMAzureResourceRoleSettings.ps1 -TenantID $tenant -SubscriptionId $subscripyion -rolename $rolename -ApprovalRequired $true -Approvers @( @{"id"="00b34bb3-8a6b-45ce-a7bb-c7f7fb400507";"name"="Bob";"type"="User"} , @{"id"="cf0a2f3e-1223-49d4-b10b-01f2538dd5d7";"name"="TestDL";"type"="Group"} )
-    
+
        *  Disable approval
-        wip_PIMAzureResourceRoleSettings.ps1 -TenantID $tenant -SubscriptionId $subscripyion -rolename $rolename -ApprovalRequired $false 
+        wip_PIMAzureResourceRoleSettings.ps1 -TenantID $tenant -SubscriptionId $subscripyion -rolename $rolename -ApprovalRequired $false
 
 
         .Link
-    https://learn.microsoft.com/en-us/azure/governance/resource-graph/first-query-rest-api 
+    https://learn.microsoft.com/en-us/azure/governance/resource-graph/first-query-rest-api
     https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview
     Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
 .Notes
     Homepage: https://github.com/kayasax/easyPIM
     Author: MICHEL, Loic <loic.michel@yespapa.eu>
     Changelog:
-    Todo: 
+    Todo:
     * configure paramet sets
     * allow other scopes
 #>
@@ -83,12 +83,12 @@ param(
     [Parameter(ParameterSetName = 'Show')]
     [Switch]
     # show current config only, no change made
-    $show, 
+    $show,
 
     [Parameter(ParameterSetName = 'Export', Mandatory = $true)]
     [Switch]
     # export role config to csv
-    $export, 
+    $export,
 
     [Parameter(ParameterSetName = 'Export')]
     [String]
@@ -102,12 +102,12 @@ param(
 
     [Parameter(ParameterSetName = 'Copy', Mandatory = $true)]
     [String]
-    # copy settings from this role name 
+    # copy settings from this role name
     $copyFrom = "",
-    
+
     [Parameter(Position = 0, ParameterSetName = 'Backup')]
     [Switch]
-    # backup all roles to csv 
+    # backup all roles to csv
     $backup,
 
     [Parameter(ParameterSetName = 'Default')]
@@ -115,7 +115,7 @@ param(
     # Maximum activation duration
     $ActivationDuration = $null,
 
-   
+
     [Parameter(ParameterSetName = 'Default', HelpMessage = "Accepted values: 'None' or any combination of these options (Case SENSITIVE):  'Justification, 'MultiFactorAuthentication', 'Ticketing'", ValueFromPipeline = $true)]
     [ValidateScript({
             # accepted values: "None","Justification", "MultiFactorAuthentication", "Ticketing"
@@ -126,8 +126,8 @@ param(
             $valid
         })]
     [System.String[]]
-    $ActivationRequirement, 
-    
+    $ActivationRequirement,
+
     [Parameter(ParameterSetName = 'Default')]
     [Bool]
     # Is approval required to activate a role? ($true|$false)
@@ -135,13 +135,13 @@ param(
 
     [Parameter(ParameterSetName = 'Default')]
     # Array of approvers in the format: @(@{"Id"="XXXXXX";"Name"="John":"Type"="user|group"}, .... )
-    $Approvers, 
-    
+    $Approvers,
+
     [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
     [System.String]
     # Maximum Eligility Duration
     $MaximumEligibilityDuration = $null,
-    
+
     [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
     [Bool]
     # Allow permanent eligibility? ($true|$false)
@@ -150,7 +150,7 @@ param(
     [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
     [System.String]
     # Maximum active assignment duration # Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
-    $MaximumActiveAssignmentDuration = $null, 
+    $MaximumActiveAssignmentDuration = $null,
 
     [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
     [Bool]
@@ -160,55 +160,55 @@ param(
     [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
     # Admin Notification when eligible role is assigned
-    # Format:  @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-    $Notification_EligibleAssignment_Alert, 
-    
+    # Format:  @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
+    $Notification_EligibleAssignment_Alert,
+
     [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
     # End user notification when eligible role is assigned
-    # Format:  @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-    $Notification_EligibleAssignment_Assignee, 
-    
+    # Format:  @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
+    $Notification_EligibleAssignment_Assignee,
+
     [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
     # Approver notification when eligible role is assigned
-    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
-    $Notification_EligibleAssignment_Approver, 
-    
+    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
+    $Notification_EligibleAssignment_Approver,
+
     [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
     # Admin Notification when an active role is assigned
-    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
     $Notification_ActiveAssignment_Alert,
 
     [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
     # End user Notification when an active role is assigned
-    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
     $Notification_ActiveAssignment_Assignee,
 
     [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
     # Approver Notification when an active role is assigned
-    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
     $Notification_ActiveAssignment_Approver,
 
     [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
     # Admin Notification when a is activated
-    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
     $Notification_Activation_Alert,
 
     [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
     # End user Notification when a role is activated
-    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
     $Notification_Activation_Assignee,
 
     [Parameter(ValueFromPipeline = $true, ParameterSetName = 'Default')]
     [System.Collections.Hashtable]
     # Approvers Notification when a role is activated
-    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")} 
+    # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
     $Notification_Activation_Approver
 )
 
@@ -226,7 +226,7 @@ $TeamsNotif = $true
 # your Teams Inbound WebHook URL
 $teamsWebhookURL = "https://microsoft.webhook.office.com/webhookb2/0b9bf9c2-fc4b-42b2-aa56-c58c805068af@72f988bf-86f1-41af-91ab-2d7cd011db47/IncomingWebhook/40db225a69854e49b617eb3427bcded8/8dd39776-145b-4f26-8ac4-41c5415307c7"
 #The description will be used as the notification subject
-$description = "PIM Azure role setting" 
+$description = "PIM Azure role setting"
 
 #***************************************
 #* PRIVATE VARIABLES DON'T TOUCH !!
@@ -241,24 +241,24 @@ $ErrorActionPreference = "STOP" # make all errors terminating ones so they can b
 
 #from now every error will be treated as exception and terminate the script
 
-    
-<# 
+
+<#
       .Synopsis
        Log message to file and display it on screen with basic colour hilighting.
        The function include a log rotate feature.
       .Description
-       Write $msg to screen and file with additional inforamtions : date and time, 
+       Write $msg to screen and file with additional inforamtions : date and time,
        name of the script from where the function was called, line number and user who ran the script.
        If logfile path isn't specified it will default to C:\UPF\LOGS\<scriptname.ps1.log>
        You can use $Maxsize and $MaxFile to specified the size and number of logfiles to keep (default is 3MB, and 3files)
        Use the switch $noEcho if you dont want the message be displayed on screen
-      .Parameter msg 
+      .Parameter msg
        The message to log
       .Parameter logfile
        Name of the logfile to use (default = <scriptname>.ps1.log)
       .Parameter logdir
        Path to the logfile's directory (defaut = <scriptpath>\LOGS)
-       .Parameter noEcho 
+       .Parameter noEcho
        Don't print message on screen
       .Parameter maxSize
        Maximum size (in bytes) before logfile is rotate (default is 3MB)
@@ -269,12 +269,12 @@ $ErrorActionPreference = "STOP" # make all errors terminating ones so they can b
       .Example
         log "this message will not appear on screen" -noEcho
       .Link
-     
+
       .Notes
       	Changelog :
-         * 27/08/2017 version initiale	
+         * 27/08/2017 version initiale
          * 21/09/2017 correction of rotating step
-      	Todo : 
+      	Todo :
      #>
 function log {
     [CmdletBinding()]
@@ -290,46 +290,46 @@ function log {
 
     #do nothing if logging is disabled
     if ($true -eq $logToFile ) {
-     
-        # When no logfile is specified we append .log to the scriptname 
-        if ( $logfile -eq $null ) { 
+
+        # When no logfile is specified we append .log to the scriptname
+        if ( $logfile -eq $null ) {
             $logfile = $(Split-Path -Leaf $MyInvocation.ScriptName) + ".log"
         }
-       
+
         # Create folder if needed
         if ( !(test-path  $logdir) ) {
             $null = New-Item -ItemType Directory -Path $logdir  -Force
         }
-         
+
         # Ensure logfile will be save in logdir
         if ( $logfile -notmatch [regex]::escape($logdir)) {
             $logfile = "$logdir\$logfile"
         }
-         
+
         # Create file
         if ( !(Test-Path $logfile) ) {
             write-verbose "$logfile not found, creating it"
-            $null = New-Item -ItemType file $logfile -Force  
+            $null = New-Item -ItemType file $logfile -Force
         }
         else {
             # file exists, do size exceeds limit ?
             if ( (get-childitem $logfile | select -expand length) -gt $Maxsize) {
-                echo "$(Get-Date -Format yyy-MM-dd-HHmm) - $(whoami) - $($MyInvocation.ScriptName) (L $($MyInvocation.ScriptLineNumber)) : Log size exceed $MaxSize, creating a new file." >> $logfile 
-                 
+                echo "$(Get-Date -Format yyy-MM-dd-HHmm) - $(whoami) - $($MyInvocation.ScriptName) (L $($MyInvocation.ScriptLineNumber)) : Log size exceed $MaxSize, creating a new file." >> $logfile
+
                 # rename current logfile
                 $LogFileName = $($($LogFile -split "\\")[-1])
                 $basename = ls $LogFile | select -expand basename
                 $dirname = ls $LogFile | select -expand directoryname
-     
+
                 Write-Verbose "Rename-Item $LogFile ""$($LogFileName.substring(0,$LogFileName.length-4))-$(Get-Date -format yyyddMM-HHmmss).log"""
                 Rename-Item $LogFile "$($LogFileName.substring(0,$LogFileName.length-4))-$(Get-Date -format yyyddMM-HHmmss).log"
-     
+
                 # keep $Maxfile  logfiles and delete the older ones
-                $filesToDelete = ls  "$dirname\$basename*.log" | sort LastWriteTime -desc | select -Skip $Maxfile 
+                $filesToDelete = ls  "$dirname\$basename*.log" | sort LastWriteTime -desc | select -Skip $Maxfile
                 $filesToDelete | remove-item  -force
             }
         }
-     
+
         echo "$(Get-Date -Format yyy-MM-dd-HHmm) - $(whoami) - $($MyInvocation.ScriptName) (L $($MyInvocation.ScriptLineNumber)) : $msg" >> $logfile
     }# end logging to file
 
@@ -344,12 +344,12 @@ function log {
         }
         elseif ($msg -match "info|information") {
             write-host $msg -ForegroundColor cyan
-        }    
+        }
         elseif ($msg -match "succès|succes|success|OK") {
             write-host $msg -ForegroundColor green
         }
         else {
-            write-host $msg 
+            write-host $msg
         }
     }
 } #end function log
@@ -379,7 +379,7 @@ function send-teamsnotif {
                 "activityTitle" = " Script path "
                 "activityText"  = "$_scriptFullName"
             },
-            
+
             @{
                 "activityTitle" = "myStackTrace"
                 "activityText"  = "$myStackTrace"
@@ -388,7 +388,7 @@ function send-teamsnotif {
     }
 
     $TeamMessageBody = ConvertTo-Json $JSONBody -Depth 100
-        
+
     $parameters = @{
         "URI"         = $teamsWebhookURL
         "Method"      = 'POST'
@@ -404,7 +404,7 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
     $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
     try {
 
-        
+
         # 1 Get ID of the role $rolename assignable at the provided scope
         $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$rolename'"
 
@@ -418,7 +418,7 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
         $restUri = "$ARMendpoint/roleManagementPolicyAssignments?api-version=2020-10-01&`$filter=roleDefinitionId eq '$roleID'"
         write-verbose " #2 Get the Assignment for $rolename at $restUri"
         $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
-        $policyId = $response.value.properties.policyId #.split('/')[-1] 
+        $policyId = $response.value.properties.policyId #.split('/')[-1]
         Write-Verbose ">> policy ID = $policyId"
 
         # 3 get the role policy for the policyID found in #2
@@ -432,17 +432,17 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
             $response = Get-Content "$_scriptPath\temp.json"
             $response = $response -replace '^.*"rules":\['
             $response = $response -replace '\],"effectiveRules":.*$'
-            Remove-Item "$_scriptPath\temp.json" 
+            Remove-Item "$_scriptPath\temp.json"
 
             return $response
         }
-      
+
     }
     catch {
         log "An Error occured while trying to get the setting of role $rolename"
     }
-      
-        
+
+
     #$response
     # Get config values in a new object:
 
@@ -450,9 +450,9 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
     $_activationDuration = $response.properties.rules | ? { $_.id -eq "Expiration_EndUser_Assignment" } | select -ExpandProperty maximumduration
     # End user enablement rule (MultiFactorAuthentication, Justification, Ticketing)
     $_enablementRules = $response.properties.rules | ? { $_.id -eq "Enablement_EndUser_Assignment" } | select -expand enabledRules
-    # approval required 
+    # approval required
     $_approvalrequired = $($response.properties.rules | ? { $_.id -eq "Approval_EndUser_Assignment" }).setting.isapprovalrequired
-    # approvers 
+    # approvers
     $approvers = $($response.properties.rules | ? { $_.id -eq "Approval_EndUser_Assignment" }).setting.approvalStages.primaryApprovers
     $approvers | % {
         $_approvers += '@{"id"="' + $_.id + '";"description"="' + $_.description + '";"userType"="' + $_.userType + '"},'
@@ -460,21 +460,21 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
 
     # permanent assignmnent eligibility
     $_eligibilityExpirationRequired = $response.properties.rules | ? { $_.id -eq "Expiration_Admin_Eligibility" } | Select-Object -expand isExpirationRequired
-    if ($_eligibilityExpirationRequired -eq "true") { 
+    if ($_eligibilityExpirationRequired -eq "true") {
         $_permanantEligibility = "false"
     }
-    else { 
+    else {
         $_permanantEligibility = "true"
     }
     # maximum assignment eligibility duration
     $_maxAssignmentDuration = $response.properties.rules | ? { $_.id -eq "Expiration_Admin_Eligibility" } | Select-Object -expand maximumDuration
-        
+
     # pemanent activation
     $_activeExpirationRequired = $response.properties.rules | ? { $_.id -eq "Expiration_Admin_Assignment" } | Select-Object -expand isExpirationRequired
-    if ($_activeExpirationRequired -eq "true") { 
+    if ($_activeExpirationRequired -eq "true") {
         $_permanantActiveAssignment = "false"
     }
-    else { 
+    else {
         $_permanantActiveAssignment = "true"
     }
     # maximum activation duration
@@ -485,25 +485,25 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
     #################
 
     # Notification Eligibility Alert (Send notifications when members are assigned as eligible to this role)
-    $_Notification_Admin_Admin_Eligibility = $response.properties.rules | ? { $_.id -eq "Notification_Admin_Admin_Eligibility" } 
+    $_Notification_Admin_Admin_Eligibility = $response.properties.rules | ? { $_.id -eq "Notification_Admin_Admin_Eligibility" }
     # Notification Eligibility Assignee (Send notifications when members are assigned as eligible to this role: Notification to the assigned user (assignee))
-    $_Notification_Eligibility_Assignee = $response.properties.rules | ? { $_.id -eq "Notification_Requestor_Admin_Eligibility" } 
+    $_Notification_Eligibility_Assignee = $response.properties.rules | ? { $_.id -eq "Notification_Requestor_Admin_Eligibility" }
     # Notification Eligibility Approvers (Send notifications when members are assigned as eligible to this role: request to approve a role assignment renewal/extension)
     $_Notification_Eligibility_Approvers = $response.properties.rules | ? { $_.id -eq "Notification_Approver_Admin_Eligibility" }
 
     # Notification Active Assignment Alert (Send notifications when members are assigned as active to this role)
-    $_Notification_Active_Alert = $response.properties.rules | ? { $_.id -eq "Notification_Admin_Admin_Assignment" } 
+    $_Notification_Active_Alert = $response.properties.rules | ? { $_.id -eq "Notification_Admin_Admin_Assignment" }
     # Notification Active Assignment Assignee (Send notifications when members are assigned as active to this role: Notification to the assigned user (assignee))
-    $_Notification_Active_Assignee = $response.properties.rules | ? { $_.id -eq "Notification_Requestor_Admin_Assignment" } 
+    $_Notification_Active_Assignee = $response.properties.rules | ? { $_.id -eq "Notification_Requestor_Admin_Assignment" }
     # Notification Active Assignment Approvers (Send notifications when members are assigned as active to this role: Request to approve a role assignment renewal/extension)
-    $_Notification_Active_Approvers = $response.properties.rules | ? { $_.id -eq "Notification_Approver_Admin_Assignment" } 
-        
+    $_Notification_Active_Approvers = $response.properties.rules | ? { $_.id -eq "Notification_Approver_Admin_Assignment" }
+
     # Notification Role Activation Alert (Send notifications when eligible members activate this role: Role activation alert)
-    $_Notification_Activation_Alert = $response.properties.rules | ? { $_.id -eq "Notification_Admin_EndUser_Assignment" } 
+    $_Notification_Activation_Alert = $response.properties.rules | ? { $_.id -eq "Notification_Admin_EndUser_Assignment" }
     # Notification Role Activation Assignee (Send notifications when eligible members activate this role: Notification to activated user (requestor))
-    $_Notification_Activation_Assignee = $response.properties.rules | ? { $_.id -eq "Notification_Requestor_EndUser_Assignment" } 
+    $_Notification_Activation_Assignee = $response.properties.rules | ? { $_.id -eq "Notification_Requestor_EndUser_Assignment" }
     # Notification Role Activation Approvers (Send notifications when eligible members activate this role: Request to approve an activation)
-    $_Notification_Activation_Approver = $response.properties.rules | ? { $_.id -eq "Notification_Approver_EndUser_Assignment" } 
+    $_Notification_Activation_Approver = $response.properties.rules | ? { $_.id -eq "Notification_Approver_EndUser_Assignment" }
 
 
     $config = [PSCustomObject]@{
@@ -563,7 +563,7 @@ function Set-ActivationDuration ($ActivationDuration) {
                 "operations" = @("All")
             };
             "level"                = "Assignment"
-        }       
+        }
         $rule = $properties | ConvertTo-Json
         #update rules if required
         return $rule
@@ -580,7 +580,7 @@ function Set-ActivationRequirement($ActivationRequirement) {
     else {
         write-verbose "requirement is NOT nul"
         $formatedRules = '['
-            
+
         $ActivationRequirement | % {
             $formatedRules += '"'
             $formatedRules += "$_"
@@ -593,7 +593,7 @@ function Set-ActivationRequirement($ActivationRequirement) {
         $enabledRules = $formatedRules
         #Write-Verbose "************* $enabledRules "
     }
-            
+
     $properties = '{
                 "enabledRules": '+ $enabledRules + '
                 "id": "Enablement_EndUser_Assignment",
@@ -614,10 +614,10 @@ function Set-ActivationRequirement($ActivationRequirement) {
 } #end function set-ActivationRequirement
 
 function Set-Approval ($ApprovalRequired, $Approvers) {
-    Write-Verbose "Set-Approval"       
+    Write-Verbose "Set-Approval"
     if ($null -eq $Approvers) { $Approvers = $config.Approvers }
     if ($ApprovalRequired -eq $false) { $req = "false" }else { $req = "true" }
-        
+
     $rule = '
         {
         "setting": {'
@@ -640,7 +640,7 @@ function Set-Approval ($ApprovalRequired, $Approvers) {
         $rule += '
             "primaryApprovers": [
             '
-        $cpt = 0    
+        $cpt = 0
         $Approvers | ForEach-Object {
             #write-host $_
             $id = $_.Id
@@ -665,7 +665,7 @@ function Set-Approval ($ApprovalRequired, $Approvers) {
             ],'
     }
 
-    $rule += ' 
+    $rule += '
         "isEscalationEnabled": false,
             "escalationApprovers": null
                     }]
@@ -681,7 +681,7 @@ function Set-Approval ($ApprovalRequired, $Approvers) {
             "targetObjects": null,
             "inheritableSettings": null,
             "enforcedSettings": null
-        
+
         }}'
     return $rule
 }#end function Set-Approval
@@ -691,14 +691,14 @@ function Set-ApprovalFromCSV ($ApprovalRequired, $Approvers) {
     write-verbose "Set-ApprovalFromCSV"
     if ($null -eq $Approvers) { $Approvers = $config.Approvers }
     if ($ApprovalRequired -eq $false) { $req = "false" }else { $req = "true" }
-        
+
     $rule = '
         {
         "setting": {'
     if ($null -ne $ApprovalRequired) {
         $rule += '"isApprovalRequired":' + $req + ','
     }
-       
+
     $rule += '
         "isApprovalRequiredForExtension": false,
         "isRequestorJustificationRequired": true,
@@ -724,9 +724,9 @@ function Set-ApprovalFromCSV ($ApprovalRequired, $Approvers) {
 
     $rule += '
             ],'
-        
 
-    $rule += ' 
+
+    $rule += '
         "isEscalationEnabled": false,
             "escalationApprovers": null
                     }]
@@ -742,7 +742,7 @@ function Set-ApprovalFromCSV ($ApprovalRequired, $Approvers) {
             "targetObjects": null,
             "inheritableSettings": null,
             "enforcedSettings": null
-        
+
         }}'
     return $rule
 }#end function Set-ApprovalFromCSV
@@ -750,17 +750,17 @@ function Set-ApprovalFromCSV ($ApprovalRequired, $Approvers) {
 function Set-EligibilityAssignment($MaximumEligibilityDuration, $AllowPermanentEligibility) {
     write-verbose "Set-EligibilityAssignment: $MaximumEligibilityDuration $AllowPermanentEligibility"
     $max = $MaximumEligibilityDuration
-     
+
     if ( ($true -eq $AllowPermanentEligibility) -or ("true" -eq $AllowPermanentEligibility) -and ("false" -ne $AllowPermanentEligibility)) {
         $expire = "false"
         write-verbose "1 setting expire to : $expire"
     }
     else {
-            
+
         $expire = "true"
         write-verbose "2 setting expire to : $expire"
     }
-      
+
     $rule = '
         {
         "isExpirationRequired": '+ $expire + ',
@@ -786,17 +786,17 @@ function Set-EligibilityAssignment($MaximumEligibilityDuration, $AllowPermanentE
 function Set-EligibilityAssignmentFromCSV($MaximumEligibilityDuration, $AllowPermanentEligibility) {
     write-verbose "Set-EligibilityAssignmentFromCSV: $MaximumEligibilityDuration $AllowPermanentEligibility"
     $max = $MaximumEligibilityDuration
-     
+
     if ( "true" -eq $AllowPermanentEligibility) {
         $expire = "false"
         write-verbose "1 setting expire to : $expire"
     }
     else {
-            
+
         $expire = "true"
         write-verbose "2 setting expire to : $expire"
     }
-      
+
     $rule = '
         {
         "isExpirationRequired": '+ $expire + ',
@@ -818,7 +818,7 @@ function Set-EligibilityAssignmentFromCSV($MaximumEligibilityDuration, $AllowPer
     # update rule only if a change was requested
     return $rule
 }# end function Set-EligibilityAssignmentFromCSV
-   
+
 function Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment) {
     write-verbose "Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment)"
     if ( $true -eq 'AllowPermanentActiveAssignment') {
@@ -827,7 +827,7 @@ function Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentA
     else {
         $expire2 = "true"
     }
-            
+
     $rule = '
         {
         "isExpirationRequired": '+ $expire2 + ',
@@ -847,7 +847,7 @@ function Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentA
         }
     '
     return $rule
-        
+
 } #end function set-activeAssignment
 
 function Set-ActiveAssignmentFromCSV($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment) {
@@ -858,7 +858,7 @@ function Set-ActiveAssignmentFromCSV($MaximumActiveAssignmentDuration, $AllowPer
     else {
         $expire2 = "true"
     }
-            
+
     $rule = '
         {
         "isExpirationRequired": '+ $expire2 + ',
@@ -878,7 +878,7 @@ function Set-ActiveAssignmentFromCSV($MaximumActiveAssignmentDuration, $AllowPer
         }
     '
     return $rule
-        
+
 } #end function set-activeAssignmentFromCSV
 function Set-Notification_EligibleAssignment_Alert($Notification_EligibleAssignment_Alert) {
     write-verbose "Set-Notification_EligibleAssignment_Alert($Notification_EligibleAssignment_Alert)"
@@ -927,7 +927,7 @@ function Set-Notification_EligibleAssignment_Assignee($Notification_EligibleAssi
     $Notification_EligibleAssignment_Assignee.Recipients | % {
         $rule += '"' + $_ + '",'
     }
-        
+
     $rule += '
         ],
         "id": "Notification_Requestor_Admin_Eligibility",
@@ -949,7 +949,7 @@ function Set-Notification_EligibleAssignment_Assignee($Notification_EligibleAssi
 
 function Set-Notification_EligibleAssignment_Approver($Notification_EligibleAssignment_Approver) {
     #write-verbose "function Set-Notification_EligibleAssignment_Approver"
-        
+
     $rule = '
         {
         "notificationType": "Email",
@@ -992,7 +992,7 @@ function Set-Notification_ActiveAssignment_Alert($Notification_ActiveAssignment_
     $Notification_ActiveAssignment_Alert.Recipients | % {
         $rule += '"' + $_ + '",'
     }
-    
+
     $rule += '
     ],
     "id": "Notification_Admin_Admin_Assignment",
@@ -1120,7 +1120,7 @@ function set-Notification_Activation_Assignee($Notification_Activation_Assignee)
     $Notification_Activation_Assignee.Recipients | % {
         $rule += '"' + $_ + '",'
     }
- 
+
     $rule += '
          ],
          "id": "Notification_Requestor_EndUser_Assignment",
@@ -1149,7 +1149,7 @@ function Set-Notification_Activation_Approver ($Notification_Activation_Approver
         "notificationLevel": "'+ $Notification_Activation_Approver.notificationLevel + '",
         "notificationRecipients": [
         '
-    <# 
+    <#
             # Cant add backup recipient for this rule
 
             $Notification_Activation_Approver.Recipients | % {
@@ -1181,7 +1181,7 @@ function Update-Policy ($policyID, $rules) {
     $body = '
         {
             "properties": {
-            "scope": "'+ $scope + '",  
+            "scope": "'+ $scope + '",
             "rules": [
         '+ $rules +
     '],
@@ -1211,7 +1211,7 @@ function import-setting ($import) {
         $rules += Set-ApprovalFromCSV $_.ApprovalRequired $Approvers
         $rules += Set-EligibilityAssignmentFromCSV $_.MaximumEligibleAssignmentDuration $_.AllowPermanentEligibleAssignment
         $rules += Set-ActiveAssignmentFromCSV $_.MaximumActiveAssignmentDuration $_.AllowPermanentActiveAssignment
-            
+
         $Notification_EligibleAssignment_Alert = @{
             "isDefaultRecipientEnabled" = $_.Notification_Eligibility_Alert_isDefaultRecipientEnabled;
             "notificationLevel"         = $_.Notification_Eligibility_Alert_notificationLevel;
@@ -1225,7 +1225,7 @@ function import-setting ($import) {
             "Recipients"                = $_.Notification_Eligibility_Assignee_Recipients.split(',')
         }
         $rules += Set-Notification_EligibleAssignment_Assignee $Notification_EligibleAssignment_Assignee
-            
+
         $Notification_EligibleAssignment_Approver = @{
             "isDefaultRecipientEnabled" = $_.Notification_Eligibility_Approvers_isDefaultRecipientEnabled;
             "notificationLevel"         = $_.Notification_Eligibility_Approvers_notificationLevel;
@@ -1239,14 +1239,14 @@ function import-setting ($import) {
             "Recipients"                = $_.Notification_Active_Alert_Recipients.split(',')
         }
         $rules += Set-Notification_ActiveAssignment_Alert $Notification_Active_Alert
-            
+
         $Notification_Active_Assignee = @{
             "isDefaultRecipientEnabled" = $_.Notification_Active_Assignee_isDefaultRecipientEnabled;
             "notificationLevel"         = $_.Notification_Active_Assignee_notificationLevel;
             "Recipients"                = $_.Notification_Active_Assignee_Recipients.split(',')
         }
         $rules += Set-Notification_ActiveAssignment_Assignee $Notification_Active_Assignee
-            
+
         $Notification_Active_Approvers = @{
             "isDefaultRecipientEnabled" = $_.Notification_Active_Approvers_isDefaultRecipientEnabled;
             "notificationLevel"         = $_.Notification_Active_Approvers_notificationLevel;
@@ -1274,26 +1274,26 @@ function import-setting ($import) {
             "Recipients"                = $_.Notification_Activation_Approver_Recipients.split(',')
         }
         $rules += Set-Notification_Activation_Approver $Notification_Activation_Approver
-            
+
         # patch the policy
         Update-Policy $_.policyID $($rules -join ',')
-    }   
+    }
 }
 function Get-AllPolicies() {
     $restUri = "$ARMendpoint/roleDefinitions?`$select=roleName&api-version=2022-04-01"
     write-verbose "Getting All Policies at $restUri"
     $response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
-    $roles = $response | % { 
+    $roles = $response | % {
         $_.value.properties.roleName
     }
     return $roles
 }
-    
+
 try {
     # ******************************************
     # * Script is starting
     # ******************************************
-    
+
     $p = @()
     $PSBoundParameters.Keys | % {
         $p += "$_ =>" + $PSBoundParameters[$_]
@@ -1306,11 +1306,11 @@ try {
     #at least one approver required if approval is enable
     # todo chech if a parameterset would be better
     if ($ApprovalRequired -eq $true -and $Approvers -eq $null) { throw "`n /!\ At least one approver is required if approval is enable, please set -Approvers parameter`n`n" }
-    
+
     $scope = "subscriptions/$subscriptionID"
     $ARMhost = "https://management.azure.com"
     $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
-    
+
     # Log in first with Connect-AzAccount if not using Cloud Shell
     Write-Verbose ">> Connecting to Azure with tenantID $tenantID"
     if ( (get-azcontext) -eq $null) { Connect-AzAccount -Tenant $tenantID }
@@ -1319,7 +1319,7 @@ try {
     Write-Verbose ">> Getting access token"
     $token = Get-AzAccessToken
     #Write-Verbose ">> token=$($token.Token)"
-    
+
     # setting the authentication headers for MSGraph calls
     $authHeader = @{
         'Content-Type'  = 'application/json'
@@ -1330,19 +1330,19 @@ try {
     if ($import) {
         import-setting $import
         Log "Success, exiting."
-        return  
+        return
     }
 
     # copy from another role
     elseif ("" -ne $copyFrom) {
         Log "Copying settings from $copyFrom"
         $config2 = get-config $scope $copyFrom $true
-        
+
         $rolename | % {
             $config = get-config $scope $_
             [string]$policyID = $config.policyID
             $policyID = $policyID.Trim()
-            Update-Policy $policyID $config2 
+            Update-Policy $policyID $config2
         }
         exit
     }
@@ -1351,7 +1351,7 @@ try {
     if ($backup) {
         $exports = @()
         $policies = Get-AllPolicies
-        
+
         $policies | % {
             log "exporting $_ role settings"
             write-verbose  $_
@@ -1365,39 +1365,39 @@ try {
         if ( !(test-path  $exportFilename) ) {
             $null = New-Item -ItemType Directory -Path $exportPath -Force
         }
-        
+
         $exports | select * | ConvertTo-Csv | out-file $exportFilename
         exit
     }
 
-    # Array to contain the settings of each selected roles 
+    # Array to contain the settings of each selected roles
     $exports = @()
 
     # run the flow for each role name.
     $rolename | ForEach-Object {
-        
+
         #get curent config
         $config = get-config $scope $_
 
         if ($show) {
             #show curent config and quit
-            return $config # $response 
+            return $config # $response
         }
 
         if ( $export ) {
-            $exports += $config     
+            $exports += $config
         }
-        
+
         # Build our rules to patch the policy based on parameter used
         $rules = @()
 
-        if ($PSBoundParameters.Keys.Contains('ActivationDuration')) {  
+        if ($PSBoundParameters.Keys.Contains('ActivationDuration')) {
             $rules += Set-ActivationDuration $ActivationDuration
         }
 
-        if ($PSBoundParameters.Keys.Contains('ActivationRequirement')) {  
+        if ($PSBoundParameters.Keys.Contains('ActivationRequirement')) {
             $rules += Set-ActivationRequirement $ActivationRequirement
-        }          
+        }
 
         # Approval and approvers
         if ( ($PSBoundParameters.Keys.Contains('ApprovalRequired')) -or ($PSBoundParameters.Keys.Contains('Approvers'))) {
@@ -1411,7 +1411,7 @@ try {
             if (!( $PSBoundParameters.ContainsKey('AllowPermanentEligibility'))) { $AllowPermanentEligibility = $config.AllowPermanentEligibleAssignment }
             $rules += Set-EligibilityAssignment $MaximumEligibilityDuration $AllowPermanentEligibility
         }
-     
+
         #active assignement limits
         if ( $PSBoundParameters.ContainsKey('MaximumActiveAssignmentDuration') -or ( $PSBoundParameters.ContainsKey('AllowPermanentActiveAssignment'))) {
             #if values are not set, use the ones from the curent config
@@ -1443,7 +1443,7 @@ try {
         if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Alert')) {
             $rules += Set-Notification_ActiveAssignment_Alert $Notification_ActiveAssignment_Alert
         }
-      
+
         # Notif Active Assignment Assignee
         if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Assignee')) {
             $rules += Set-Notification_ActiveAssignment_Assignee $Notification_ActiveAssignment_Assignee
@@ -1453,19 +1453,19 @@ try {
         if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Approver')) {
             $rules += Set-Notification_ActiveAssignment_Approver $Notification_ActiveAssignment_Approver
         }
-        
-        # Notification Activation alert 
+
+        # Notification Activation alert
         if ($PSBoundParameters.Keys.Contains('Notification_Activation_Alert')) {
             $rules += Set-Notification_Activation_Alert $Notification_Activation_Alert
         }
 
-        # Notification Activation Assignee 
+        # Notification Activation Assignee
         if ($PSBoundParameters.Keys.Contains('Notification_Activation_Assignee')) {
-       
+
             $rules += Set-Notification_Activation_Assignee $Notification_Activation_Assignee
         }
 
-        # Notification Activation Approvers 
+        # Notification Activation Approvers
         if ($PSBoundParameters.Keys.Contains('Notification_Activation_Approver')) {
             $rules += Set-Notification_Activation_Approver $Notification_Activation_Approver
         }
@@ -1477,7 +1477,7 @@ try {
         #Patching the policy
         Update-Policy $config.policyID $allrules
     }
-    
+
     # finalize export
     if ($export) {
         $date = get-date -Format FileDateTime
@@ -1494,12 +1494,12 @@ try {
 
 catch {
     $_ # echo the exception
-    $err = $($_.exception.message | out-string) 
-    $errorRecord = $Error[0] 
+    $err = $($_.exception.message | out-string)
+    $errorRecord = $Error[0]
     $details = $errorRecord.errordetails # |fl -force
     $position = $errorRecord.InvocationInfo.positionMessage
     $Exception = $ErrorRecord.Exception
-    
+
     if ($TeamsNotif) { send-teamsnotif "$err" "$details<BR/> TIPS: try to check the scope and the role name" "$position" }
     Log "An exception occured: $err `nDetails: $details `nPosition: $position"
     Log "Error, script did not terminate normaly"
