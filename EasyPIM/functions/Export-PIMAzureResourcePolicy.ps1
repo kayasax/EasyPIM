@@ -39,7 +39,7 @@
     )
     try {
 
-        $script:tenantID = $tenantID      
+        $script:tenantID = $tenantID
    
         Write-Verbose "Export-PIMAzureResourcePolicy start with parameters: subscription => $subscriptionID, rolename=> $rolename, exportFilname => $exportFilename"
         $scope = "subscriptions/$subscriptionID"

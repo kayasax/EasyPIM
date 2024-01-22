@@ -15,6 +15,7 @@ set the notification sent to assignee when elligible assignment is created
 .Notes
 #>
 function Set-Notification_EligibleAssignment_Assignee {
+    [outputType([string])]
     [CmdletBinding(SupportsShouldProcess = $true)]
     param
     (

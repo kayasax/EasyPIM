@@ -38,6 +38,7 @@
       	Todo :
      #>
 function log {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
     [CmdletBinding()]
     param(
         [string]$msg,

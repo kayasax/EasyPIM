@@ -249,7 +249,7 @@ function Set-PIMAzureResourcePolicy {
             
         }
         log "Success, policy updated"
-        return 
+        return
     }
     catch {
         MyCatch $_

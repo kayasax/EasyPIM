@@ -13,7 +13,14 @@
      
       .Notes
 #>
-function Get-AllPolicies($scope) {
+function Get-AllPolicies {
+  [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "")]
+  [CmdletBinding()]
+  param (
+      [Parameter()]
+      [string]
+      $scope
+  )
     
     $ARMhost = "https://management.azure.com"
     $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
