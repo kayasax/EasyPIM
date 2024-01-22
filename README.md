@@ -13,6 +13,8 @@ With the export function you can edit your PIM settings in Excel then import you
 :boom: Import role settings from csv  
 :boom: Backup all roles  
 
+![image](https://github.com/kayasax/EasyPIM/assets/1241767/79086c31-19fa-4321-a5ac-6767b8d7ace3)
+
 ## Sample usage
 :large_blue_diamond: Require justification, ticketing and MFA when activating the role "Webmaster"  
  ```pwsh
