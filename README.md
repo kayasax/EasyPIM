@@ -18,43 +18,43 @@ With the export function you can edit your PIM settings in Excel then import you
 ## Sample usage
 :large_blue_diamond: Require justification, ticketing and MFA when activating the role "Webmaster"  
  ```pwsh
- EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -ActivationRequirement "Justification","Ticketing","MultiFactorAuthentication"
+ Set-PIMAzureResourcePolicy -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -ActivationRequirement "Justification","Ticketing","MultiFactorAuthentication"
  ```
 
 
 :large_blue_diamond: Require approval and set approvers for roles webmaster and contributor  
 ```pwsh
-EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster","contributor" -Approvers  @(@{"Id"="00b34bb3-8a6b-45ce-a7bb-c7f7fb400507";"Name"="John";"Type"="user"}) -ApprovalRequired $true
+Set-PIMAzureResourcePolicy -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster","contributor" -Approvers  @(@{"Id"="00b34bb3-8a6b-45ce-a7bb-c7f7fb400507";"Name"="John";"Type"="user"}) -ApprovalRequired $true
 ```
 
 
 :large_blue_diamond: Set maximum activation duration to 12h  
 ```pwsh
-EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -ActivationDuration "PT12H"
+Set-PIMAzureResourcePolicy -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -ActivationDuration "PT12H"
 ```
 
 
 :large_blue_diamond: Copy settings from the role Contributor to the roles webmaster and role1  
 ```pwsh
-EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster", "role1" -copyFrom "contributor"
+Copy-PIMAzureResourcePolicy -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster", "role1" -copyFrom "contributor"
 ```
 
 
 :large_blue_diamond: Export role settings to CSV  
 ```pwsh
-EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster","contributor" -export -exportFilename .\EXPORTS\roles.csv
+Export-PIMAzureResourcePolicy -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster","contributor" -export -exportFilename .\EXPORTS\roles.csv
 ```
 
 
 :large_blue_diamond: Import role settings from CSV  
 ```pwsh
-EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -import "c:\temp\roles.csv"
+Import-PIMAzureResourcePolicy -TenantID <tenantID> -SubscriptionId <subscriptionID> -import "c:\temp\roles.csv"
 ```
 
 
 :large_blue_diamond: Backup (export all roles)  
 ```pwsh
-EasyPIM.PS1 -TenantID <tenantID> -SubscriptionId <subscriptionID> -backup
+Backup-PIMAzureResourcePolicy -TenantID <tenantID> -SubscriptionId <subscriptionID> 
 ```
 
 ## Requirement
