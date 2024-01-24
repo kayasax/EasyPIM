@@ -1,4 +1,4 @@
-# EasyPIM V0.8 
+# EasyPIM V1.0.1 
 Powershell module to manage PIM Azure Resource Role settings with simplicity in mind.
 
 Easily manage settings at the subscription level : enter a tenant ID, a subscription ID, a role name 
@@ -15,7 +15,19 @@ With the export function you can edit your PIM settings in Excel then import you
 
 ![image](https://github.com/kayasax/EasyPIM/assets/1241767/79086c31-19fa-4321-a5ac-6767b8d7ace3)
 
+## Installation
+This module is available in the PowerShell gallery: [https://www.powershellgallery.com/packages/EasyPIM/](https://www.powershellgallery.com/packages/EasyPIM/), install it with:
+```pwsh
+Install-Module -Name EasyPIM -Scope CurrentUser
+``` 
+
+
 ## Sample usage
+:large_blue_diamond: Get configuration of the role "Webmaster"  
+ ```pwsh
+ Get-PIMAzureResourcePolicy -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster"
+ ```
+
 :large_blue_diamond: Require justification, ticketing and MFA when activating the role "Webmaster"  
  ```pwsh
  Set-PIMAzureResourcePolicy -TenantID <tenantID> -SubscriptionId <subscriptionID> -rolename "webmaster" -ActivationRequirement "Justification","Ticketing","MultiFactorAuthentication"
