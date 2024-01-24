@@ -70,10 +70,11 @@ Backup-PIMAzureResourcePolicy -TenantID <tenantID> -SubscriptionId <subscription
 ```
 
 ## Requirement
-* Graph permissions: RoleManagementPolicy.ReadWrite.Directory, RoleManagement.ReadWrite.Directory
-* Azure PowerShell: https://learn.microsoft.com/en-us/powershell/azure/install-azure-powershell?view=azps-11.1.0
+* Az.Accounts module
+* Permission:
+The PIM API for Azure resource roles is developed on top of the Azure Resource Manager framework. You will need to give consent to Azure Resource Management but won’t need any Microsoft Graph API permission. You will also need to make sure the user or the service principal calling the API has at least the Owner or User Access Administrator role on the resource you are trying to administer.
 
-## Configuration
+## Optional configuration (at the bottom of easypim.psm1 file)
 * Enable file logging : set **$logToFile** to **$true**
 * You can receive fatal error in a Teams channel: set **$TeamsNotif** to **$true** and configure  your Teams Inbound WebHook URL in **$teamsWebhookURL**
 
@@ -113,7 +114,7 @@ Backup-PIMAzureResourcePolicy -TenantID <tenantID> -SubscriptionId <subscription
 ### Notification format
 All Notifications accept value with the following format:
 ```pwsh
-EasyPIM.ps1 -Notification_Activation_Alert @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical";"Recipients" = @("email1@domain.com","email2@domain.com")} 
+Set-PIMAzureResourcePolicy -tenantID $tid -subscriptionId $sid -Notification_Activation_Alert @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical";"Recipients" = @("email1@domain.com","email2@domain.com")} 
 ```
 ![image](https://github.com/kayasax/EasyPIM/assets/1241767/5da187a5-a51b-48d0-ba80-dad0fc73bfaf)
 
