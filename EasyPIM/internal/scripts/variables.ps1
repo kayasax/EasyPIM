@@ -3,7 +3,7 @@
 #***************************************
 
 # LOG TO FILE ( if enable by default it will create a LOGS subfolder in the script folder, and create a logfile with the name of the script )
-$script:logToFile = $true
+$script:logToFile = $false
 # Where logs are written to
 $script:_logPath = "$env:appdata\powershell\easyPIM"
 
