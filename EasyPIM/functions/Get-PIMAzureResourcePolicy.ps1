@@ -50,14 +50,20 @@ function Get-PIMAzureResourcePolicy {
         [Parameter(Position = 2, Mandatory = $true)]
         [System.String[]]
         # Array of role name
-        $rolename
+        $rolename,
+        [System.String]
+        $scope=""
         
     )
     try {
         $script:tenantID = $tenantID
 
         Write-Verbose "Get-PIMAzureResourcePolicy start with parameters: subscription => $subscriptionID, rolename=> $rolename"
-        $scope = "subscriptions/$subscriptionID"
+        #defaut scope = subscription
+        if($scope -eq ""){
+            $scope = "subscriptions/$subscriptionID"
+        }
+        
         $out = @()
         $rolename | ForEach-Object {
             

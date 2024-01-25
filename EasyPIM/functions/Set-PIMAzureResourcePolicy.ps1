@@ -38,6 +38,10 @@ function Set-PIMAzureResourcePolicy {
         $rolename,
 
         [System.String]
+        #scope
+        $scope="",
+
+        [System.String]
         # Maximum activation duration
         $ActivationDuration = $null,
        
@@ -148,7 +152,10 @@ function Set-PIMAzureResourcePolicy {
         log "Function Set-PIMAzureResourcePolicy is starting with parameters: $p" -noEcho
 
         $script:subscriptionID = $subscriptionID
-        $scope = "subscriptions/$script:subscriptionID"
+        if ($scope -eq ""){
+            $scope = "subscriptions/$script:subscriptionID"
+        }
+        
         $script:tenantID=$tenantID
 
         #at least one approver required if approval is enable

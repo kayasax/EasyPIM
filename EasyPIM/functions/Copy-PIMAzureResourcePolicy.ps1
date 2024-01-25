@@ -42,12 +42,18 @@ function Copy-PIMAzureResourcePolicy {
 
         [Parameter(Position = 2, Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
-        $copyFrom
+        $copyFrom,
+
+        [System.String[]]
+        $scope=""
     )
     try {
         $script:tenantID = $tenantID
         Write-Verbose "Copy-PIMAzureResourcePolicy start with parameters: tenantID => $tenantID subscription => $subscriptionID, rolename=> $rolename, copyfrom => $copyFrom"
-        $scope = "subscriptions/$subscriptionID"
+        if($scope -eq ""){
+          $scope = "subscriptions/$subscriptionID"
+        }
+       
         $config2 = get-config $scope $copyFrom $true
         
         $rolename | ForEach-Object {

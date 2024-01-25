@@ -30,6 +30,9 @@ function Import-PIMAzureResourcePolicy {
         [ValidateNotNullOrEmpty()]
         [System.String]
         $SubscriptionId,
+
+        [System.String[]]
+        $scope="",
         
         [Parameter(Mandatory = $true)]
         [String]
@@ -37,7 +40,10 @@ function Import-PIMAzureResourcePolicy {
     )
     
     $script:tenantID = $TenantID
-    $script:scope="Subscriptions/$subscriptionID"
+    if($scope -eq ""){
+        $script:scope="Subscriptions/$subscriptionID"
+    }
+    
     
     #load settings
     Write-Verbose "Importing settings from $path"

@@ -33,6 +33,8 @@
         [Parameter(Position = 2, Mandatory = $true)]
         [System.String[]]
         $rolename,
+        [System.String[]]
+        $scope="",
         [Parameter(Position = 3)]
         [System.String]
         $exportFilename
@@ -42,7 +44,10 @@
         $script:tenantID = $tenantID
    
         Write-Verbose "Export-PIMAzureResourcePolicy start with parameters: subscription => $subscriptionID, rolename=> $rolename, exportFilname => $exportFilename"
-        $scope = "subscriptions/$subscriptionID"
+        if ($scope -eq ""){
+          $scope = "subscriptions/$subscriptionID"
+        }
+        
         # Array to contain the settings of each selected roles
         $exports = @()
 
