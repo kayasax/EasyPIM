@@ -22,7 +22,7 @@ Install-Module -Name EasyPIM -Scope CurrentUser
 ``` 
 ## Changelog
 V1.1.0
-* You can now use the scopee paramater to get/set role policy on a management group, a resource group or a resource
+* You can now use the scopee paramater to get/set role policy on a management group, a resource group or a resource.
 
 ## Sample usage
 :large_blue_diamond: Get configuration of the role "Webmaster"  
