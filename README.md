@@ -1,4 +1,4 @@
-# EasyPIM V1.0.1 
+# EasyPIM V1.1.0 
 Powershell module to manage PIM Azure Resource Role settings with simplicity in mind.
 
 Easily manage settings at the subscription level : enter a tenant ID, a subscription ID, a role name 
@@ -20,7 +20,9 @@ This module is available in the PowerShell gallery: [https://www.powershellgalle
 ```pwsh
 Install-Module -Name EasyPIM -Scope CurrentUser
 ``` 
-
+## Changelog
+V1.1.0
+* You can now use the scopee paramater to get/set role policy on a management group, a resource group or a resource
 
 ## Sample usage
 :large_blue_diamond: Get configuration of the role "Webmaster"  
