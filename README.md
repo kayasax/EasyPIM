@@ -22,8 +22,8 @@ This module is available in the PowerShell gallery: [https://www.powershellgalle
 Install-Module -Name EasyPIM -Scope CurrentUser
 ``` 
 
-## Sample usage
-[Get-PIMAzureResourcePolicy](https://github.com/kayasax/EasyPIM/wiki/Documentation#get-pimazureresourcepolicy)
+## Documentation
+[Get-PIMAzureResourcePolicy](https://github.com/kayasax/EasyPIM/wiki/Get%E2%80%90PIMAzureResourcePolicy)
 
 :large_blue_diamond: Get configuration of the role "Webmaster"  
  ```pwsh
