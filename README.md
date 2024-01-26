@@ -5,7 +5,8 @@ Easily manage PIM Azure Resource settings **at the subscription level by default
 then the options you want to set, for example require justification on activation.  
 If you want to manage the role at another level (Management Group, Resource Group or Resource) please use the `scope` parameter instead of the `subscriptionID`.
 
-With the export function you can now edit your PIM settings in Excel then import back your changes :wink:
+![image](https://github.com/kayasax/EasyPIM/assets/1241767/79086c31-19fa-4321-a5ac-6767b8d7ace3)
+
 
 ## Key features
 :boom: Support editing multiple roles at once  
@@ -14,7 +15,7 @@ With the export function you can now edit your PIM settings in Excel then import
 :boom: Import role settings from csv  
 :boom: Backup all roles  
 
-![image](https://github.com/kayasax/EasyPIM/assets/1241767/79086c31-19fa-4321-a5ac-6767b8d7ace3)
+With the export function you can now edit your PIM settings in Excel then import back your changes :wink:
 
 ## Installation
 This module is available in the PowerShell gallery: [https://www.powershellgallery.com/packages/EasyPIM/](https://www.powershellgallery.com/packages/EasyPIM/), install it with:
