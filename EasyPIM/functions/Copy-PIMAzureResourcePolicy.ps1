@@ -22,7 +22,7 @@
         Homepage: https://github.com/kayasax/EasyPIM
 #>
 function Copy-PIMAzureResourcePolicy {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='Default')]
     param (
         [Parameter(Position = 0, Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
@@ -30,10 +30,14 @@ function Copy-PIMAzureResourcePolicy {
         # Tenant ID
         $tenantID,
 
-        [Parameter(Position = 1, Mandatory = $true)]
+        [Parameter(ParameterSetName = 'Default',Position = 1, Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         [System.String]
         $subscriptionID,
+        
+        [Parameter(ParameterSetName = 'Scope',Position = 1, Mandatory = $true)]
+        [System.String]
+        $scope,
 
         [Parameter(Position = 2, Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
@@ -47,7 +51,10 @@ function Copy-PIMAzureResourcePolicy {
     try {
         $script:tenantID = $tenantID
         Write-Verbose "Copy-PIMAzureResourcePolicy start with parameters: tenantID => $tenantID subscription => $subscriptionID, rolename=> $rolename, copyfrom => $copyFrom"
-        $scope = "subscriptions/$subscriptionID"
+        if (!($PSBoundParameters.Keys.Contains('scope'))) {
+          $scope = "subscriptions/$subscriptionID"
+        }
+       
         $config2 = get-config $scope $copyFrom $true
         
         $rolename | ForEach-Object {

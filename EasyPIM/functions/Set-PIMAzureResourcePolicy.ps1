@@ -20,17 +20,23 @@
         Homepage: https://github.com/kayasax/EasyPIM
      #>
 function Set-PIMAzureResourcePolicy {
-    [CmdletBinding(SupportsShouldProcess = $true)]
+    [CmdletBinding(DefaultParameterSetName='Default',SupportsShouldProcess = $true)]
     [OutputType([bool])]
     param (
         [Parameter(Position = 0, Mandatory = $true)]
         [System.String]
         # Tenant ID
         $tenantID,
-        [Parameter(Position = 1, Mandatory = $true)]
+
+        [Parameter(ParameterSetName = 'Default',Position = 1, Mandatory = $true)]
         [System.String]
         #subscriptionID
         $subscriptionID,
+ 
+        [Parameter(ParameterSetName = 'Scope',Position = 1, Mandatory = $true)]
+        [System.String]
+        #scope
+        $scope,
 
         [Parameter(Position = 2, Mandatory = $true)]
         [System.String[]]
@@ -148,7 +154,10 @@ function Set-PIMAzureResourcePolicy {
         log "Function Set-PIMAzureResourcePolicy is starting with parameters: $p" -noEcho
 
         $script:subscriptionID = $subscriptionID
-        $scope = "subscriptions/$script:subscriptionID"
+        if (!($PSBoundParameters.Keys.Contains('scope'))) {
+            $scope = "subscriptions/$script:subscriptionID"
+        }
+        
         $script:tenantID=$tenantID
 
         #at least one approver required if approval is enable
