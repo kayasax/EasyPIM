@@ -35,7 +35,7 @@ Name of the role to check
     * allow other scopes
 #>
 function Get-PIMAzureResourcePolicy {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='Default')]
     [OutputType([PSCustomObject])]
     param (
         
@@ -43,16 +43,20 @@ function Get-PIMAzureResourcePolicy {
         [System.String]
         # Tenant ID
         $tenantID,
-        [Parameter(Position = 1, Mandatory = $true)]
+        
+        [Parameter(ParameterSetName = 'Default',Position = 1, Mandatory = $true)]
         [System.String]
         # Subscription ID
         $subscriptionID,
+        
+        [Parameter(ParameterSetName = 'Scope',Position = 1, Mandatory = $true)]
+        [System.String]
+        $scope,
+
         [Parameter(Position = 2, Mandatory = $true)]
         [System.String[]]
         # Array of role name
-        $rolename,
-        [System.String]
-        $scope=""
+        $rolename
         
     )
     try {
@@ -60,7 +64,7 @@ function Get-PIMAzureResourcePolicy {
 
         Write-Verbose "Get-PIMAzureResourcePolicy start with parameters: subscription => $subscriptionID, rolename=> $rolename"
         #defaut scope = subscription
-        if($scope -eq ""){
+        if (!($PSBoundParameters.Keys.Contains('scope'))) {
             $scope = "subscriptions/$subscriptionID"
         }
         

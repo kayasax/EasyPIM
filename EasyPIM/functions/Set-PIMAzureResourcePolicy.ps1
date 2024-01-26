@@ -20,26 +20,28 @@
         Homepage: https://github.com/kayasax/EasyPIM
      #>
 function Set-PIMAzureResourcePolicy {
-    [CmdletBinding(SupportsShouldProcess = $true)]
+    [CmdletBinding(DefaultParameterSetName='Default',SupportsShouldProcess = $true)]
     [OutputType([bool])]
     param (
         [Parameter(Position = 0, Mandatory = $true)]
         [System.String]
         # Tenant ID
         $tenantID,
-        [Parameter(Position = 1, Mandatory = $true)]
+
+        [Parameter(ParameterSetName = 'Default',Position = 1, Mandatory = $true)]
         [System.String]
         #subscriptionID
         $subscriptionID,
+ 
+        [Parameter(ParameterSetName = 'Scope',Position = 1, Mandatory = $true)]
+        [System.String]
+        #scope
+        $scope,
 
         [Parameter(Position = 2, Mandatory = $true)]
         [System.String[]]
         #list of role to update
         $rolename,
-
-        [System.String]
-        #scope
-        $scope="",
 
         [System.String]
         # Maximum activation duration
@@ -152,7 +154,7 @@ function Set-PIMAzureResourcePolicy {
         log "Function Set-PIMAzureResourcePolicy is starting with parameters: $p" -noEcho
 
         $script:subscriptionID = $subscriptionID
-        if ($scope -eq ""){
+        if (!($PSBoundParameters.Keys.Contains('scope'))) {
             $scope = "subscriptions/$script:subscriptionID"
         }
         

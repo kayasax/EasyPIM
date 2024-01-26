@@ -22,19 +22,24 @@
         Homepage: https://github.com/kayasax/EasyPIM
      #>
      function Export-PIMAzureResourcePolicy {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='Default')]
     param (
         [Parameter(Position = 0, Mandatory = $true)]
         [System.String]
         $tenantID,
-        [Parameter(Position = 1, Mandatory = $true)]
+
+        [Parameter(ParameterSetName = 'Default',Position = 1, Mandatory = $true)]
         [System.String]
         $subscriptionID,
+
+        [Parameter(ParameterSetName = 'Scope',Position = 1, Mandatory = $true)]
+        [System.String[]]
+        $scope,
+
         [Parameter(Position = 2, Mandatory = $true)]
         [System.String[]]
         $rolename,
-        [System.String[]]
-        $scope="",
+        
         [Parameter(Position = 3)]
         [System.String]
         $exportFilename
@@ -44,7 +49,7 @@
         $script:tenantID = $tenantID
    
         Write-Verbose "Export-PIMAzureResourcePolicy start with parameters: subscription => $subscriptionID, rolename=> $rolename, exportFilname => $exportFilename"
-        if ($scope -eq ""){
+        if (!($PSBoundParameters.Keys.Contains('scope'))) {
           $scope = "subscriptions/$subscriptionID"
         }
         

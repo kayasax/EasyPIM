@@ -18,17 +18,22 @@
     
 #>
 function Backup-PIMAzureResourcePolicy {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='Default')]
     param (
         [Parameter(Position = 0, Mandatory = $true)]
         [System.String]
         # Tenant ID
         $tenantID,
 
-        [Parameter(Position = 1, Mandatory = $true)]
+        [Parameter(ParameterSetName = 'Default',Position = 1, Mandatory = $true)]
         [System.String]
         # subscription id
         $subscriptionID,
+
+        [Parameter(ParameterSetName = 'Scope',Position = 1, Mandatory = $true)]
+        [System.String]
+        # scope
+        $scope,
         
         [Parameter(Position = 2)]
         [System.String]
@@ -39,7 +44,9 @@ function Backup-PIMAzureResourcePolicy {
     try {
         $script:tenantID = $tenantID
         $exports = @()
-        $scope = "subscriptions/$subscriptionID"
+        if (!($PSBoundParameters.Keys.Contains('scope'))) {
+            $scope = "subscriptions/$subscriptionID"
+        }
 
         $policies = Get-AllPolicies $scope
         

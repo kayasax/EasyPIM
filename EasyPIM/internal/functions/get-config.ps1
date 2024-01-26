@@ -35,10 +35,10 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
         #if ($null -eq $roleID) { throw "An exception occured : can't find a roleID for $rolename at scope $scope" }
         Write-Verbose ">> RodeId = $roleID"
 
-        if( ($roleID -eq "") -or ($null -eq $roleID)){
+        if ( ($roleID -eq "") -or ($null -eq $roleID)) {
             Log "Error getting config of $rolename"
             #continue with other roles
-             return
+            return
         }
 
         # 2  get the role assignment for the roleID found at #1
@@ -57,7 +57,18 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
 
         #Write-Verbose "copy from = $copyFrom"
         if ($null -ne $copyFrom) {
+            # Get access Token
+            Write-Verbose ">> Getting access token"
+            $token = Get-AzAccessToken
+                
+            # setting the authentication headers for MSGraph calls
+            $authHeader = @{
+                'Content-Type'  = 'application/json'
+                'Authorization' = 'Bearer ' + $token.Token
+            }
+
             Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false -OutFile "$_scriptPath\temp.json"
+
             $response = Get-Content "$_scriptPath\temp.json"
             $response = $response -replace '^.*"rules":\['
             $response = $response -replace '\],"effectiveRules":.*$'
@@ -163,9 +174,9 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
             Notification_Activation_Assignee_isDefaultRecipientEnabled   = $($_Notification_Activation_Assignee.isDefaultRecipientsEnabled)
             Notification_Activation_Assignee_NotificationLevel           = $($_Notification_Activation_Assignee.NotificationLevel)
             Notification_Activation_Assignee_Recipients                  = $($_Notification_Activation_Assignee.NotificationRecipients -join ',')
-            Notification_Activation_Approver_isDefaultRecipientEnabled  = $($_Notification_Activation_Approver.isDefaultRecipientsEnabled)
-            Notification_Activation_Approver_NotificationLevel          = $($_Notification_Activation_Approver.NotificationLevel)
-            Notification_Activation_Approver_Recipients                 = $($_Notification_Activation_Approver.NotificationRecipients -join ',')
+            Notification_Activation_Approver_isDefaultRecipientEnabled   = $($_Notification_Activation_Approver.isDefaultRecipientsEnabled)
+            Notification_Activation_Approver_NotificationLevel           = $($_Notification_Activation_Approver.NotificationLevel)
+            Notification_Activation_Approver_Recipients                  = $($_Notification_Activation_Approver.NotificationRecipients -join ',')
         }
         return $config
     }

@@ -27,24 +27,12 @@ function Import-PIMAzureResourcePolicy {
         $TenantID,
 
         [Parameter(Mandatory = $true)]
-        [ValidateNotNullOrEmpty()]
-        [System.String]
-        $SubscriptionId,
-
-        [System.String[]]
-        $scope="",
-        
-        [Parameter(Mandatory = $true)]
         [String]
         $Path
     )
     
     $script:tenantID = $TenantID
-    if($scope -eq ""){
-        $script:scope="Subscriptions/$subscriptionID"
-    }
-    
-    
+       
     #load settings
     Write-Verbose "Importing settings from $path"
     if ($PSCmdlet.ShouldProcess($path, "Importing policy from")) {
