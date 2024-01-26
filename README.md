@@ -2,7 +2,8 @@
 Powershell module to manage PIM Azure Resource Role settings with simplicity in mind.
 
 Easily manage PIM Azure Resource settings (at the subscription level by default) : enter a tenant ID, a subscription ID, a role name 
-then the options you want to set, for example require justification on activation.
+then the options you want to set, for example require justification on activation.  
+
 If you want to manage the role at another level (Management Group, Resource Group or Resource) please use the `scope` parameter instead of the `subscriptionID`.
 
 With the export function you can now edit your PIM settings in Excel then import back your changes :wink:
@@ -23,7 +24,7 @@ Install-Module -Name EasyPIM -Scope CurrentUser
 ``` 
 
 ## Sample usage
-[Get-PIMAzureResourcePolicy](/wiki/Documentation)
+[Get-PIMAzureResourcePolicy](https://github.com/kayasax/EasyPIM/wiki/Documentation)
 
 :large_blue_diamond: Get configuration of the role "Webmaster"  
  ```pwsh
