@@ -5,9 +5,6 @@ Easily manage PIM Azure Resource settings **at the subscription level by default
 then the options you want to set, for example require justification on activation.  
 If you want to manage the role at another level (Management Group, Resource Group or Resource) please use the `scope` parameter instead of the `subscriptionID`.
 
-![image](https://github.com/kayasax/EasyPIM/assets/1241767/79086c31-19fa-4321-a5ac-6767b8d7ace3)
-
-
 ## Key features
 :boom: Support editing multiple roles at once  
 :boom: Copy settings from another role  
@@ -22,10 +19,9 @@ This module is available in the PowerShell gallery: [https://www.powershellgalle
 ```pwsh
 Install-Module -Name EasyPIM -Scope CurrentUser
 ``` 
+![image](https://github.com/kayasax/EasyPIM/assets/1241767/79086c31-19fa-4321-a5ac-6767b8d7ace3)
 
-## Documentation
-[Backup-PIMAzureResourcePolicy](https://github.com/kayasax/EasyPIM/wiki/Backup%E2%80%90PIMAzureResourcePolicy)  
-[Get-PIMAzureResourcePolicy](https://github.com/kayasax/EasyPIM/wiki/Get%E2%80%90PIMAzureResourcePolicy)
+## Sample usage
 
 :large_blue_diamond: Get configuration of the role "Webmaster"  
  ```pwsh
@@ -78,9 +74,11 @@ Backup-PIMAzureResourcePolicy -TenantID <tenantID> -SubscriptionId <subscription
 * Permission:
 The PIM API for Azure resource roles is developed on top of the Azure Resource Manager framework. You will need to give consent to Azure Resource Management but won’t need any Microsoft Graph API permission. You will also need to make sure the user or the service principal calling the API has at least the Owner or User Access Administrator role on the resource you are trying to administer.
 
-## Optional configuration (at the bottom of easypim.psm1 file)
-* Enable file logging : set **$logToFile** to **$true**
-* You can receive fatal error in a Teams channel: set **$TeamsNotif** to **$true** and configure  your Teams Inbound WebHook URL in **$teamsWebhookURL**
+## Documentation
+[Backup-PIMAzureResourcePolicy](https://github.com/kayasax/EasyPIM/wiki/Backup%E2%80%90PIMAzureResourcePolicy)  
+[Get-PIMAzureResourcePolicy](https://github.com/kayasax/EasyPIM/wiki/Get%E2%80%90PIMAzureResourcePolicy)
+
+
 
 ## Parameters
 
