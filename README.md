@@ -24,6 +24,7 @@ Install-Module -Name EasyPIM -Scope CurrentUser
 ``` 
 
 ## Documentation
+[Backup-PIMAzureResourcePolicy](https://github.com/kayasax/EasyPIM/wiki/Backup%E2%80%90PIMAzureResourcePolicy)  
 [Get-PIMAzureResourcePolicy](https://github.com/kayasax/EasyPIM/wiki/Get%E2%80%90PIMAzureResourcePolicy)
 
 :large_blue_diamond: Get configuration of the role "Webmaster"  
