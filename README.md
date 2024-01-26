@@ -3,7 +3,7 @@ Powershell module to manage PIM Azure Resource Role settings with simplicity in 
 
 Easily manage PIM Azure Resource settings **at the subscription level by default** : enter a tenant ID, a subscription ID, a role name 
 then the options you want to set, for example require justification on activation.  
-If you want to manage the role at another level (Management Group, Resource Group or Resource) please use the `scope` parameter instead of the `subscriptionID`.
+:new: If you want to manage the role at another level (Management Group, Resource Group or Resource) please use the `scope` parameter instead of the `subscriptionID`.
 
 ## Key features
 :boom: Support editing multiple roles at once  
