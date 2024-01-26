@@ -1,4 +1,4 @@
-# EasyPIM V1.1.0 
+# EasyPIM V1.1.0
 Powershell module to manage PIM Azure Resource Role settings with simplicity in mind.
 
 Easily manage settings at the subscription level : enter a tenant ID, a subscription ID, a role name 
