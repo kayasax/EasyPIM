@@ -1,6 +1,6 @@
-<#
+﻿<#
     .Synopsis
-    Create an active assignement at the provided scope 
+    Create an active assignement at the provided scope
     .Description
     Active assignment does not require users to activate their role. https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
     .Parameter tenantID
@@ -24,15 +24,13 @@
 
 
     .Example
-    PS> New-PIMAzureResourceActiveAssigment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "AcrPush" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092  -startDateTime "2/2/2024 18:20" 
+    PS> New-PIMAzureResourceActiveAssigment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "AcrPush" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092  -startDateTime "2/2/2024 18:20"
 
     Create an active assignment fot the role Arcpush, starting at a specific date and using default duration
 
     PS> New-PIMAzureResourceActiveAssigment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "webmaster" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -justification 'TEST' -permanent
     
     Create a permanent active assignement for the role webmaster
-
-    PS> set-pimazureresourcepolicy -tenantID $tenantID -subscriptionID $subscriptionId -rolename "webmaster" -MaximumActiveAssignmentDuration "P30D"
 
     .Link
     https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
@@ -41,7 +39,7 @@
     Homepage: https://github.com/kayasax/EasyPIM
 #>
 function New-PIMAzureResourceActiveAssignment {
-   
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
     [CmdletBinding()]
     param (
         [Parameter(Position = 0, Mandatory = $true)]
@@ -125,11 +123,11 @@ function New-PIMAzureResourceActiveAssignment {
         }
     }
 
-    # if Duration is not provided we will take the maxium value from the role setting  
+    # if Duration is not provided we will take the maxium value from the role setting
     if(!($PSBoundParameters.Keys.Contains('duration'))){
         $duration = $config.MaximumActiveAssignmentDuration
     }
-    write-verbose "assignement duration will be : $duration" 
+    write-verbose "assignement duration will be : $duration"
 
     if (!($PSBoundParameters.Keys.Contains('justification'))) {
         $justification = "Approved from EasyPIM module by  $($(get-azcontext).account)"
@@ -154,7 +152,7 @@ function New-PIMAzureResourceActiveAssignment {
                 "endDateTime": null,
                 "duration": "'+ $duration + '"
             }
-        } 
+        }
 }
 '
     $guid = New-Guid
