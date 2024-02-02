@@ -1,8 +1,8 @@
 ﻿<#
     .Synopsis
-    List of active assignement defined at the provided scope or bellow
+    List of eligible assignement defined at the provided scope or bellow
     .Description
-    Active assignment does not require to activate their role. https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
+     https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
     .Parameter tenantID
     EntraID tenant ID
     .Parameter subscriptionID
@@ -15,7 +15,7 @@
     Will return only the assignment defined at lower scopes
     
     .Example
-    PS> Get-PIMAzureResourceActiveAssignment -tenantID $tid -subscriptionID -subscription $subscription
+    PS> Get-PIMAzureResourceEligibleAssignment -tenantID $tid -subscriptionID -subscription $subscription
 
     List active assignement at the subscription scope.
 
