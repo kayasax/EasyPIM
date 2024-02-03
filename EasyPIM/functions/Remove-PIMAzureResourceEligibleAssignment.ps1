@@ -59,9 +59,7 @@ function Remove-PIMAzureResourceEligibleAssignment {
 
         [string]
         # justification (will be auto generated if not provided)
-        $justification
-
-     
+        $justification  
 
     )
     
