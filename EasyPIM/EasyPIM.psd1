@@ -71,7 +71,9 @@ FunctionsToExport = @(
     "Get-PIMAzureResourceActiveAssignment",
     "Get-PIMAzureResourceEligibleAssignment",
     "New-PIMAzureResourceActiveAssignment",
-    "New-PIMAzureResourceEligibleAssignment"
+    "New-PIMAzureResourceEligibleAssignment",
+    "Remove-PIMAzureResourceEligibleAssignment",
+    "Remove-PIMAzureResourceActiveAssignment"
 )
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
