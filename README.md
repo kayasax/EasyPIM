@@ -1,10 +1,10 @@
-# EasyPIM V1.1.0
+# EasyPIM V1.2.0
 
 Powershell module to manage PIM Azure Resource Role settings with simplicity in mind.
 
 Easily manage PIM Azure Resource settings **at the subscription level by default** : enter a tenant ID, a subscription ID, a role name 
 then the options you want to set, for example require justification on activation.  
-:new: If you want to manage the role at another level (Management Group, Resource Group or Resource) please use the `scope` parameter instead of the `subscriptionID`.
+If you want to manage the role at another level (Management Group, Resource Group or Resource) please use the `scope` parameter instead of the `subscriptionID`.
 
 ## Key features
 :boom: Support editing multiple roles at once  
@@ -13,16 +13,23 @@ then the options you want to set, for example require justification on activatio
 :boom: Import role settings from csv  
 :boom: Backup all roles  
 
+New feature from V1.2.0  
+You can now audit,  create  or remove PIM Azure Resource assignments whether they are active or eligible  
+
+![image](https://github.com/kayasax/EasyPIM/assets/1241767/0eae1036-0415-4616-a38f-edbafaf157cb)
+
+
 With the export function you can now edit your PIM settings in Excel then import back your changes :wink:
 
 ## Installation
 This module is available in the PowerShell gallery: [https://www.powershellgallery.com/packages/EasyPIM/](https://www.powershellgallery.com/packages/EasyPIM/), install it with:
 ```pwsh
-Install-Module -Name EasyPIM -Scope CurrentUser
+Install-Module -Name EasyPIM 
 ``` 
-
-![image](https://github.com/kayasax/EasyPIM/assets/1241767/79086c31-19fa-4321-a5ac-6767b8d7ace3)
-
+Updating from an older version:  
+```pwsh
+Update-Module -Name EasyPIM 
+``` 
 
 ## Sample usage
 
