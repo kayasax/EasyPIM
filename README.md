@@ -13,13 +13,13 @@ If you want to manage the role at another level (Management Group, Resource Grou
 :boom: Import role settings from csv  
 :boom: Backup all roles  
 
+With the export function you can now edit your PIM settings in Excel then import back your changes :wink:
+
 **New feature from V1.2.0**  
 You can now audit,  create  or remove PIM Azure Resource assignments whether they are active or eligible  
 
 ![image](https://github.com/kayasax/EasyPIM/assets/1241767/0eae1036-0415-4616-a38f-edbafaf157cb)
 
-
-With the export function you can now edit your PIM settings in Excel then import back your changes :wink:
 
 ## Installation
 This module is available in the PowerShell gallery: [https://www.powershellgallery.com/packages/EasyPIM/](https://www.powershellgallery.com/packages/EasyPIM/), install it with:
