@@ -60,7 +60,12 @@ function Invoke-ARM {
             'Authorization' = 'Bearer ' + $token.Token
         }
 
-        $response = Invoke-RestMethod -Uri $restUri -Method $method -Headers $authHeader -Body $body -verbose:$false
+        if($body -ne ""){
+            $response = Invoke-RestMethod -Uri $restUri -Method $method -Headers $authHeader -Body $body -verbose:$false
+        }
+        else{
+            $response = Invoke-RestMethod -Uri $restUri -Method $method -Headers $authHeader -verbose:$false
+        }
         return $response
 
     }

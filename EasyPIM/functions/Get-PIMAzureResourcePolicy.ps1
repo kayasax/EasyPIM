@@ -19,7 +19,7 @@ Subscription ID
 Name of the role to check
 
 .Example
-       PS> Get-PIMAzureResourcePolicy -subscription $subscriptionID -rolename "contributor","webmaster"
+       PS> Get-PIMAzureResourcePolicy -tenantID $tenantID -subscriptionID $subscriptionID -rolename "contributor","webmaster"
 
        show curent config for the roles contributor and webmaster at the subscriptionID scope :
     

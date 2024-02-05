@@ -4,7 +4,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.1.0'
+ModuleVersion = '1.2.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -62,7 +62,18 @@ Description = 'Powershell module to manage PIM Azure Resource Role settings with
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
 FunctionsToExport = @(
-    "Import-PIMAzureResourcePolicy","Get-PIMAzureResourcePolicy","Set-PIMAzureResourcePolicy","Copy-PIMAzureResourcePolicy","Export-PIMAzureResourcePolicy","Backup-PIMAzureResourcePolicy"
+    "Import-PIMAzureResourcePolicy",
+    "Get-PIMAzureResourcePolicy",
+    "Set-PIMAzureResourcePolicy",
+    "Copy-PIMAzureResourcePolicy",
+    "Export-PIMAzureResourcePolicy",
+    "Backup-PIMAzureResourcePolicy",
+    "Get-PIMAzureResourceActiveAssignment",
+    "Get-PIMAzureResourceEligibleAssignment",
+    "New-PIMAzureResourceActiveAssignment",
+    "New-PIMAzureResourceEligibleAssignment",
+    "Remove-PIMAzureResourceEligibleAssignment",
+    "Remove-PIMAzureResourceActiveAssignment"
 )
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
