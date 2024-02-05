@@ -13,7 +13,7 @@ If you want to manage the role at another level (Management Group, Resource Grou
 :boom: Import role settings from csv  
 :boom: Backup all roles  
 
-New feature from V1.2.0  
+**New feature from V1.2.0**  
 You can now audit,  create  or remove PIM Azure Resource assignments whether they are active or eligible  
 
 ![image](https://github.com/kayasax/EasyPIM/assets/1241767/0eae1036-0415-4616-a38f-edbafaf157cb)
