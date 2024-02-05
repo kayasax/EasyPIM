@@ -21,7 +21,7 @@ $script:teamsWebhookURL = "https://microsoft.webhook.office.com/webhookb2/xxxxxx
 
 #from now every error will be treated as exception and terminate the script
 $script:_scriptFullName = $MyInvocation.scriptName
-$script:_scriptName = Split-Path -Leaf $_scriptFullName
+$script:_scriptName = "EasyPIM" #Split-Path -Leaf $_scriptFullName
 $script:HostFQDN = $env:computername + "." + $env:USERDNSDOMAIN
 # ERROR HANDLING
 $ErrorActionPreference = "STOP" # make all errors terminating ones so they can be catched
