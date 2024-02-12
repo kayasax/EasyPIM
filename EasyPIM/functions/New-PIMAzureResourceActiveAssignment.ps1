@@ -105,10 +105,10 @@ function New-PIMAzureResourceActiveAssignment {
     
 
     if ($PSBoundParameters.Keys.Contains('startDateTime')) {
-        $startDateTime = [datetime]::Parse($startDateTime) | get-date -AsUTC -f "yyyy-MM-ddTHH:mm:ssZ"
+        $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ"
     }
     else {
-        $startDateTime = get-date -AsUTC -f "yyyy-MM-ddTHH:mm:ssZ" #we get the date as UTC (remember to add a Z at the end or it will be translated to US timezone on import)
+        $startDateTime = get-date (get-date).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ" #we get the date as UTC (remember to add a Z at the end or it will be translated to US timezone on import)
     }
     write-verbose "Calculated date time start is $startDateTime"
     
