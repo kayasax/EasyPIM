@@ -19,7 +19,7 @@
 #>
 function Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment) {
     write-verbose "Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment)"
-    if ( $true -eq 'AllowPermanentActiveAssignment') {
+    if ( ($true -eq $AllowPermanentActiveAssignment) -or ("true" -eq $AllowPermanentActiveAssignment) -and ("false" -ne $AllowPermanentActiveAssignment)) {
         $expire2 = "false"
     }
     else {
