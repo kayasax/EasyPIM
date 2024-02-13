@@ -113,7 +113,7 @@ function New-PIMAzureResourceActiveAssignment {
     write-verbose "Calculated date time start is $startDateTime"
     
     # get role settings:
-    $config = Get-PIMAzureResourcePolicy -tenantID $tenantID -subscriptionID $subscriptionId -rolename $rolename
+    $config = Get-PIMAzureResourcePolicy -tenantID $tenantID -scope $scope -rolename $rolename
 
     # if permanent assignement is requested check this is allowed in the rule
     if($permanent){
