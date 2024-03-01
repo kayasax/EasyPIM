@@ -39,7 +39,7 @@ function Get-PIMEntraRolePolicy {
         [Parameter(Position = 0, Mandatory = $true)]
         [System.String]
         # Tenant ID
-        $tenantID, 
+        $tenantID,
         
         [Parameter(Position = 1, Mandatory = $true)]
         [System.String[]]

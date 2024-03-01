@@ -7,6 +7,8 @@
        maximum duration of an eligibility
       .Parameter AllowPermanentEligibility
        Do we allow permanent eligibility
+       .PARAMETER entraRole
+        set to true if configuration is for an entra role
       .EXAMPLE
         PS> Set-EligibilityAssignment -MaximumEligibilityDuration "P30D" -AllowPermanentEligibility $false
 
@@ -15,7 +17,7 @@
      
       .Notes
 #>
-function Set-EligibilityAssignmentFromCSV($MaximumEligibilityDuration, $AllowPermanentEligibility) {
+function Set-EligibilityAssignmentFromCSV($MaximumEligibilityDuration, $AllowPermanentEligibility, [switch]$entraRole) {
     write-verbose "Set-EligibilityAssignmentFromCSV: $MaximumEligibilityDuration $AllowPermanentEligibility"
     $max = $MaximumEligibilityDuration
      
@@ -47,6 +49,24 @@ function Set-EligibilityAssignmentFromCSV($MaximumEligibilityDuration, $AllowPer
         }
     }
     '
+
+    if($entraRole){
+      $rule='{
+        "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyExpirationRule",
+        "id": "Expiration_Admin_Eligibility",
+        "isExpirationRequired": '+ $expire + ',
+        "maximumDuration": "'+ $max + '",
+        "target": {
+            "caller": "Admin",
+            "operations": [
+                "all"
+            ],
+            "level": "Eligibility",
+            "inheritableSettings": [],
+            "enforcedSettings": []
+        }
+      }'
+    }
     # update rule only if a change was requested
     return $rule
 }

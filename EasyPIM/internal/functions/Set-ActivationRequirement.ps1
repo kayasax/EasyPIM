@@ -16,7 +16,7 @@
       .Notes
       	
 #>
-function Set-ActivationRequirement($ActivationRequirement) {
+function Set-ActivationRequirement($ActivationRequirement, [switch]$entraRole) {
     write-verbose "Set-ActivationRequirement : $($ActivationRequirement.length)"
     if (($ActivationRequirement -eq "None") -or ($ActivationRequirement[0].length -eq 0 )) {
         #if none or a null array
@@ -55,6 +55,22 @@ function Set-ActivationRequirement($ActivationRequirement) {
                     "enforcedSettings": []
                 }
             }'
-
+    if ($entraRole) {
+                $properties = '
+               {
+                "@odata.type" : "#microsoft.graph.unifiedRoleManagementPolicyEnablementRule",
+                "enabledRules": '+ $enabledRules + '
+                "id": "Enablement_EndUser_Assignment",
+                "target": {
+                    "caller": "EndUser",
+                    "operations": [
+                        "All"
+                    ],
+                    "level": "Assignment",
+                    "inheritableSettings": [],
+                    "enforcedSettings": []
+                }
+            }'
+            }
     return $properties
 }

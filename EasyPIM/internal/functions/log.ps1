@@ -50,7 +50,6 @@ function log {
         $Maxfile = 3 # how many files to keep
     )
 
-    write-verbose "noecho? $noecho"
     #do nothing if logging is disabled
     if ($true -eq $script:logToFile ) {
      

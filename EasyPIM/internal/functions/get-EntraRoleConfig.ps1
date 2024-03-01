@@ -1,6 +1,6 @@
 ﻿<#
     .Synopsis
-        Get rules for the role $rolename 
+        Get rules for the role $rolename
     .Description
         will convert the json rules to a PSCustomObject
     .Parameter rolename
@@ -18,9 +18,9 @@ function Get-EntraRoleConfig ($rolename) {
     try {
         
         # 1 Get roleID for $rolename
-        $endpoint = "directoryRoles?`$filter=displayname eq '$rolename'"
+        $endpoint = "roleManagement/directory/roleDefinitions?`$filter=displayname eq '$rolename'"
         $response = invoke-graph -Endpoint $endpoint
-        $roleID = $response.value.roleTemplateId
+        $roleID = $response.value.Id
         Write-Verbose "roleID = $roleID"
 
         # 2 Get PIM policyID for that role
@@ -46,9 +46,21 @@ function Get-EntraRoleConfig ($rolename) {
         $_approvalrequired = $($response.value | Where-Object { $_.id -eq "Approval_EndUser_Assignment" }).setting.isapprovalrequired
         # approvers
         $approvers = $($response.value | Where-Object { $_.id -eq "Approval_EndUser_Assignment" }).setting.approvalStages.primaryApprovers
-        $approvers | ForEach-Object {
-            $_approvers += '@{"id"="' + $_.id + '";"description"="' + $_.description + '";"userType"="' + $_.userType + '"},'
+        if(( $approvers | Measure-Object | Select-Object -ExpandProperty Count) -gt 0){
+            $approvers | ForEach-Object {
+                if($_."@odata.type" -eq "#microsoft.graph.groupMembers"){
+                    $_.userType = "group"
+                    $_.id=$_.groupID
+                }
+                else{ #"@odata.type": "#microsoft.graph.singleUser",
+                    $_.userType = "user"
+                    $_.id=$_.userID
+                }
+    
+                $_approvers += '@{"id"="' + $_.id + '";"description"="' + $_.description + '";"userType"="' + $_.userType + '"},'
+            }
         }
+        
 
         # permanent assignmnent eligibility
         $_eligibilityExpirationRequired = $response.value | Where-Object { $_.id -eq "Expiration_Admin_Eligibility" } | Select-Object -expand isExpirationRequired
