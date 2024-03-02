@@ -131,7 +131,7 @@ if($entraRole){
                                 #write-host $_
                                 $id = $_.Id
                                 $name = $_.Name
-                                $type = $_.Type
+                                ##$type = $_.Type
                     
                                 if ($cpt -gt 0) {
                                     $rule += ","

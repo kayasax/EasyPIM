@@ -1,6 +1,6 @@
 ﻿<#
       .Synopsis
-       Retrieve all role 
+       Retrieve all role
       .Description
        Get all roles then for each get the policy
       .Parameter tenantID
@@ -8,7 +8,7 @@
       .Example
         PS> Get-Entrarole -tenantID $tenantID
 
-        Get all roles 
+        Get all roles
       .Link
      
       .Notes
@@ -24,7 +24,7 @@ function Get-Entrarole {
     $endpoint="roleManagement/directory/roleDefinitions?`$select=displayname"
 
     write-verbose "Getting All Policies at $endpoint"
-    $response = invoke-graph -Endpoint $endpoint 
+    $response = invoke-graph -Endpoint $endpoint
     
     $roles = $response | ForEach-Object {
         $_.value.displayname

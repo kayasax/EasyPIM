@@ -52,7 +52,7 @@ function Set-Notification_Activation_Alert($Notification_Activation_Alert, [swit
             "notificationLevel": "'+ $Notification_Activation_Alert.notificationLevel + '",
             "notificationRecipients": ['
             #write-verbose "recipient : $($Notification_ActiveAssignment_Assignee.Recipients)"
-            If ( ($Notification_Activation_Alert.Recipients |measure |select -expand count) -gt 0 ){
+            If ( ($Notification_Activation_Alert.Recipients |Measure-Object |Select-Object -expand count) -gt 0 ){
     
                 $Notification_Activation_Alert.Recipients | ForEach-Object {
                 $rule += '"' + $_ + '",'

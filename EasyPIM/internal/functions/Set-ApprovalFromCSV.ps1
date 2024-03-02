@@ -19,7 +19,17 @@
       .Notes
       	
 #>
-function Set-ApprovalFromCSV ( $ApprovalRequired, [string[]]$Approvers, [switch]$entrarole ) {
+function Set-ApprovalFromCSV  {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingInvokeExpression", "")]
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$false)]
+        [bool]$ApprovalRequired,
+        [Parameter(Mandatory=$false)]
+        [string[]]$Approvers,
+        [Parameter(Mandatory=$false)]
+        [switch]$entraRole
+    )
     write-verbose "Set-ApprovalFromCSV"
     if ($null -eq $Approvers) { $Approvers = $script:config.Approvers }
     if ($ApprovalRequired -eq $false) { $req = "false" }else { $req = "true" }
@@ -116,19 +126,11 @@ function Set-ApprovalFromCSV ( $ApprovalRequired, [string[]]$Approvers, [switch]
             $Approvers = $Approvers -replace ",$" # remove the last comma
             #then turn the sting into an array of hash table
             $list = Invoke-Expression $($c.Approvers -replace ",$")
-            $list | % {
+            $list | ForEach-Object {
                 $id = $_.id
                 $name = $_.description
-                $type = $_.userType
-         
-        
-                <#$approvers | ForEach-Object {
-            
-                write-verbose "approvers: $_ ///"
-                $id = $_.split('=')[1].split(';')[0]
-                $name = $_.split('=')[2].split(';')[0]
-                $type = $_.split('=')[3].split(';')[0].split('}')[0]
-                    #>        
+                #$type = $_.userType
+                        
                 if ($cpt -gt 0) {
                     $rule += ","
                 }
@@ -143,7 +145,7 @@ function Set-ApprovalFromCSV ( $ApprovalRequired, [string[]]$Approvers, [switch]
             '
                 $cpt++
             }
-        }                
+        }
         $rule += '
                                         
                                 

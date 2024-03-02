@@ -52,7 +52,7 @@ function Set-Notification_EligibleAssignment_Assignee {
         }
         }'
     
-    if($EntraRole){ 
+    if($EntraRole){
         $rule = '
         {
             "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
@@ -62,7 +62,7 @@ function Set-Notification_EligibleAssignment_Assignee {
             "isDefaultRecipientsEnabled": '+ $Notification_EligibleAssignment_Assignee.isDefaultRecipientEnabled.ToLower() + ',
             "notificationLevel": "'+ $Notification_EligibleAssignment_Assignee.notificationLevel + '",
             "notificationRecipients": ['
-            If ( ($Notification_EligibleAssignment_Assignee.Recipients |measure |select -expand count) -gt 0 ){
+            If ( ($Notification_EligibleAssignment_Assignee.Recipients |Measure-Object |Select-Object -expand count) -gt 0 ){
     
             $Notification_EligibleAssignment_Assignee.Recipients | ForEach-Object {
                 $rule += '"' + $_ + '",'

@@ -67,6 +67,6 @@ function Set-Notification_Activation_Approver ($Notification_Activation_Approver
             }
         }
         '
-    }    
+    }
     return $rule
 }

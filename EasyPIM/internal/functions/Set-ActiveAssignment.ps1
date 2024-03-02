@@ -8,7 +8,7 @@
     .Parameter AllowPermanentActiveAssignment
     Allow permanent active assignement ?
     .Parameter EntraRole
-    set to true if the rule is for an Entra role 
+    set to true if the rule is for an Entra role
     .EXAMPLE
     PS> Set-ActiveAssignment -MaximumActiveAssignmentDuration "P30D" -AllowPermanentActiveAssignment $false
 

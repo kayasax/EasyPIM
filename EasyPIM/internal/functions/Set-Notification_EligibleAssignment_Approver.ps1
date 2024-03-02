@@ -56,7 +56,7 @@ function Set-Notification_EligibleAssignment_Approver($Notification_EligibleAssi
             "isDefaultRecipientsEnabled": '+ $Notification_EligibleAssignment_Approver.isDefaultRecipientEnabled.ToLower() + ',
             "notificationLevel": "'+ $Notification_EligibleAssignment_Approver.notificationLevel + '",
             "notificationRecipients": ['
-            if( ( $Notification_EligibleAssignment_Approver.recipients |measure |select -ExpandProperty count) -gt 0){
+            if( ( $Notification_EligibleAssignment_Approver.recipients |Measure-Object |Select-Object -ExpandProperty count) -gt 0){
                 $Notification_EligibleAssignment_Approver.recipients | ForEach-Object {
                     $rule += '"' + $_ + '",'
                 }
@@ -74,6 +74,6 @@ function Set-Notification_EligibleAssignment_Approver($Notification_EligibleAssi
             }
         }
         '
-    }   
+    }
     return $rule
 }

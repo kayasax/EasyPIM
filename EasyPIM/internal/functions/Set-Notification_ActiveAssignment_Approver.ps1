@@ -55,7 +55,7 @@ function  Set-Notification_ActiveAssignment_Approver($Notification_ActiveAssignm
         "notificationLevel": "'+ $Notification_ActiveAssignment_Approver.notificationLevel + '",
         "notificationRecipients": ['
         #write-verbose "recipient : $($Notification_ActiveAssignment_Assignee.Recipients)"
-        If ( ($Notification_ActiveAssignment_Approver.Recipients |measure |select -expand count) -gt 0 ){
+        If ( ($Notification_ActiveAssignment_Approver.Recipients |Measure-Object |Select-Object -expand count) -gt 0 ){
 
             $Notification_ActiveAssignment_Approver.Recipients | ForEach-Object {
             $rule += '"' + $_ + '",'
@@ -74,6 +74,6 @@ function  Set-Notification_ActiveAssignment_Approver($Notification_ActiveAssignm
                 "enforcedSettings": []
             }
         }'
-    }    
+    }
     return $rule
 }

@@ -110,7 +110,7 @@ function Import-EntraRoleSettings  {
             "Recipients"                = $_.Notification_Activation_Approver_Recipients.split(',')
         }
         $rules += Set-Notification_Activation_Approver $Notification_Activation_Approver -entraRole
-          <#   
+        <#
         #>
 
         # patch the policy

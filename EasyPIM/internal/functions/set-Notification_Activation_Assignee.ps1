@@ -56,7 +56,7 @@ function set-Notification_Activation_Assignee($Notification_Activation_Assignee,
          "notificationLevel": "'+ $Notification_Activation_Assignee.notificationLevel + '",
             "notificationRecipients": ['
             #write-verbose "recipient : $($Notification_ActiveAssignment_Assignee.Recipients)"
-            If ( ($Notification_Activation_Assignee.Recipients |measure |select -expand count) -gt 0 ){
+            If ( ($Notification_Activation_Assignee.Recipients |Measure-Object |Select-Object -expand count) -gt 0 ){
     
                 $Notification_Activation_Assignee.Recipients | ForEach-Object {
                 $rule += '"' + $_ + '",'

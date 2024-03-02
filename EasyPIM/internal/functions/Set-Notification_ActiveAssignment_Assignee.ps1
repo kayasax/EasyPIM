@@ -55,7 +55,7 @@ set the notification sent to assignee when active assignment is created
         "notificationLevel": "'+ $Notification_ActiveAssignment_Assignee.notificationLevel + '",
         "notificationRecipients": ['
         write-verbose "recipient : $($Notification_ActiveAssignment_Assignee.Recipients)"
-        If ( ($Notification_ActiveAssignment_Assignee.Recipients |measure |select -expand count) -gt 0 ){
+        If ( ($Notification_ActiveAssignment_Assignee.Recipients |Measure-Object |Select-Object -expand count) -gt 0 ){
 
             $Notification_ActiveAssignment_Assignee.Recipients | ForEach-Object {
             $rule += '"' + $_ + '",'

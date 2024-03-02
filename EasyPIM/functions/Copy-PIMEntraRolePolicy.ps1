@@ -46,7 +46,7 @@ function Copy-PIMEntraRolePolicy {
         $c=import-csv "$env:TEMP\role.csv"
         
         $rolename | ForEach-Object {
-          #get policy id and replace it in the csv before importing it
+          #get policy id for current role and replace it in the csv before importing it
             $config = get-EntraRoleconfig  $_
             write-verbose "ID= $($config.PolicyID)"
             Log "Copying settings from $copyFrom to $_"
@@ -54,7 +54,7 @@ function Copy-PIMEntraRolePolicy {
             $policyID = $policyID.Trim()
             write-verbose "before:$($c.policyID)"
             $c.PolicyID = $policyID
-            $newconf = $c |export-csv -Path "$env:TEMP\newrole.csv" -NoTypeInformation
+            $c |export-csv -Path "$env:TEMP\newrole.csv" -NoTypeInformation
 
             import-PIMEntraRolepolicy -tenantid $tenantID  -path "$env:TEMP\newrole.csv"
 

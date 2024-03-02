@@ -55,7 +55,7 @@ function Set-Notification_ActiveAssignment_Alert($Notification_ActiveAssignment_
             "notificationLevel": "'+ $Notification_ActiveAssignment_Alert.notificationLevel + '",
             "notificationRecipients": [
                 '
-            if( ($Notification_ActiveAssignment_Alert.Recipients |measure |select -expand count) -gt 0 ){
+            if( ($Notification_ActiveAssignment_Alert.Recipients |Measure-Object |Select-Object -expand count) -gt 0 ){
                 $Notification_ActiveAssignment_Alert.Recipients | ForEach-Object {
                     $rule += '"' + $_ + '",'
                 }
