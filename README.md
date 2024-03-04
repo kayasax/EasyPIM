@@ -15,12 +15,12 @@ If you want to manage the role at another level (Management Group, Resource Grou
 
 With the export function you can now edit your PIM settings in Excel then import back your changes :wink:
 
-**New feature from V1.2.0**  
+## **New feature from V1.2**  
 You can now audit,  create  or remove PIM Azure Resource assignments whether they are active or eligible  
 
 ![image](https://github.com/kayasax/EasyPIM/assets/1241767/0eae1036-0415-4616-a38f-edbafaf157cb)
 
-**New feature from V1.2.0**  
+## **New feature from V1.3**  
 EasyPIM now lets you manage PIM Entra Roles!
 
 ## Installation
