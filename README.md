@@ -23,6 +23,8 @@ You can now audit,  create  or remove PIM Azure Resource assignments whether the
 ## **New feature from V1.3**  
 EasyPIM now lets you manage PIM Entra Roles!
 
+![image](https://github.com/kayasax/EasyPIM/assets/1241767/e2569559-57f6-41f2-adb1-d7c4aad7cb6e)
+
 ## Installation
 This module is available in the PowerShell gallery: [https://www.powershellgallery.com/packages/EasyPIM/](https://www.powershellgallery.com/packages/EasyPIM/), install it with:
 ```pwsh
