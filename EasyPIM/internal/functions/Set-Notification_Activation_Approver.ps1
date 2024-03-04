@@ -5,7 +5,8 @@
        correspond to rule 1 here: https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview#notification-rules
       .Parameter Notification_Activation_Approver
       hashtable for the settings like: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical";"Recipients" = @("email1@domain.com","email2@domain.com")}
-      
+      .PARAMETER entrarole
+        set to true if configuration is for an entra role
       .Example
        PS> Set-Notification_Activation_Alert -Notification_Activation_Alert @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical";"Recipients" = @("email1@domain.com","email2@domain.com")}
 
@@ -14,7 +15,7 @@
      
       .Notes
 #>
-function Set-Notification_Activation_Approver ($Notification_Activation_Approver) {
+function Set-Notification_Activation_Approver ($Notification_Activation_Approver, [switch]$entrarole) {
     $rule = '
         {
         "notificationType": "Email",
@@ -46,5 +47,26 @@ function Set-Notification_Activation_Approver ($Notification_Activation_Approver
         }
         }
         '
+    if($entrarole){ #cant add additional recipients for this rule
+        $rule='{
+            "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+            "id": "Notification_Approver_EndUser_Assignment",
+            "notificationType": "Email",
+            "recipientType": "Approver",
+            "isDefaultRecipientsEnabled": '+ $Notification_Activation_Approver.isDefaultRecipientEnabled.ToLower() + ',
+            "notificationLevel": "'+ $Notification_Activation_Approver.notificationLevel + '",
+            "notificationRecipients": [],
+            "target": {
+                "caller": "EndUser",
+                "operations": [
+                    "all"
+                ],
+                "level": "Assignment",
+                "inheritableSettings": [],
+                "enforcedSettings": []
+            }
+        }
+        '
+    }
     return $rule
 }

@@ -123,7 +123,7 @@ function Remove-PIMAzureResourceActiveAssignment {
     write-verbose "sending PUT request at $restUri with body :`n $body"
     
     $response = Invoke-ARM -restURI $restUri -method PUT -body $body -Verbose:$false
-    Write-Host "SUCCESS : Assignment created!"
+    Write-Host "SUCCESS : Assignment removed!"
     return $response
     
 }

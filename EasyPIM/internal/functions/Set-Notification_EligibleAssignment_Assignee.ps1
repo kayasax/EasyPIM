@@ -5,7 +5,8 @@ assignee notification when an elligible assignment is created
 correspond to rule 10 here: https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview#notification-rules
 .Parameter Notification_EligibleAssignment_Assignee
 hashtable for the settings like: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical";"Recipients" = @("email1@domain.com","email2@domain.com")}
-
+.PARAMETER EntraRole
+set to true if the rule is for an Entra role
 .Example
 PS> Set-Notification_EligibleAssignment_Assignee -Notification_EligibleAssignment_Assignee @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical";"Recipients" = @("email1@domain.com","email2@domain.com")}
 
@@ -19,7 +20,8 @@ function Set-Notification_EligibleAssignment_Assignee {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param
     (
-        $Notification_EligibleAssignment_Assignee
+        $Notification_EligibleAssignment_Assignee,
+        [switch]$EntraRole
     )
 
     $rule = '
@@ -49,6 +51,35 @@ function Set-Notification_EligibleAssignment_Assignee {
         "enforcedSettings": null
         }
         }'
+    
+    if($EntraRole){
+        $rule = '
+        {
+            "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+            "id": "Notification_Requestor_Admin_Eligibility",
+            "notificationType": "Email",
+            "recipientType": "Requestor",
+            "isDefaultRecipientsEnabled": '+ $Notification_EligibleAssignment_Assignee.isDefaultRecipientEnabled.ToLower() + ',
+            "notificationLevel": "'+ $Notification_EligibleAssignment_Assignee.notificationLevel + '",
+            "notificationRecipients": ['
+            If ( ($Notification_EligibleAssignment_Assignee.Recipients |Measure-Object |Select-Object -expand count) -gt 0 ){
+    
+            $Notification_EligibleAssignment_Assignee.Recipients | ForEach-Object {
+                $rule += '"' + $_ + '",'
+            }
+            $rule = $rule -replace ".$" #remove the last comma
+        }
+            $rule += '],
+            "target": {
+                "caller": "Admin",
+                "operations": [
+                    "all"
+                ],
+                "level": "Eligibility",
+                "inheritableSettings": [],
+                "enforcedSettings": []
+            }}'
+        }
 
     return $rule
 }
