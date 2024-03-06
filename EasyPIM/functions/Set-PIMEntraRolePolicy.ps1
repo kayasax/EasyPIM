@@ -1,15 +1,14 @@
 ﻿<#
       .Synopsis
-       Set the setting of the role $rolename at the subscription scope where subscription = $subscription
+       Set the setting of the role $rolename
       .Description
-       Set the setting of the role $rolename at the subscription scope where subscription = $subscription
- 
+       Set the setting of the role $rolename
       .Example
-        PS> Set-PIMEntraRolePolicy -tenantID $tenantID -subscriptionID $subscriptionID -rolename webmaster -ActivationDuration "PT8H"
+        PS> Set-PIMEntraRolePolicy -tenantID $tenantID -rolename webmaster -ActivationDuration "PT8H"
 
         Limit the maximum PIM activation duration to 8h
       .EXAMPLE
-        PS> Set-PIMEntraRolePolicy -TenantID $tenantID -SubscriptionId $subscriptionID -rolename "contributor" -Approvers  @(@{"Id"="00b34bb3-8a6b-45ce-a7bb-c7f7fb400507";"Name"="John";"Type"="user"}) -ApprovalRequired $true
+        PS> Set-PIMEntraRolePolicy -TenantID $tenantID -rolename "contributor" -Approvers  @(@{"Id"="00b34bb3-8a6b-45ce-a7bb-c7f7fb400507";"Name"="John";"Type"="user"}) -ApprovalRequired $true
 
         Require activation approval and set John as an approver
 
