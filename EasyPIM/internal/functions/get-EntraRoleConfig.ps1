@@ -112,6 +112,7 @@ function Get-EntraRoleConfig ($rolename) {
 
         $config = [PSCustomObject]@{
             RoleName                                                     = $_
+        roleID = $roleID
             PolicyID                                                     = $policyId
             ActivationDuration                                           = $_activationDuration
             EnablementRules                                              = $_enablementRules -join ','
