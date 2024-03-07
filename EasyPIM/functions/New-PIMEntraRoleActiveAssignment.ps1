@@ -75,10 +75,10 @@ function New-PIMEntraRoleActiveAssignment {
 
     )
     
-    try {    
+    try {
         $script:tenantID = $tenantID
 
-        #1 check if the principal ID is a group, if yes confirm it is role-assignable    
+        #1 check if the principal ID is a group, if yes confirm it is role-assignable
         $endpoint = "directoryObjects/$principalID"
         $response = invoke-graph -Endpoint $endpoint
         #$response

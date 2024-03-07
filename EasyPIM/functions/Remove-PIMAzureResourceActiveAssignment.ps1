@@ -129,5 +129,5 @@ function Remove-PIMAzureResourceActiveAssignment {
     }
     catch {
         Mycatch $_
-    }    
+    }
 }

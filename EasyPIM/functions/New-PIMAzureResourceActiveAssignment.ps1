@@ -163,5 +163,5 @@ function New-PIMAzureResourceActiveAssignment {
     Write-Host "SUCCESS : Assignment created!"
     return $response
     }
-    catch{Mycatch $_}    
+    catch{Mycatch $_}
 }

@@ -38,7 +38,7 @@
     Author: Loïc MICHEL
     Homepage: https://github.com/kayasax/EasyPIM
 #>
-function Remove-PIMEntraRoleActiveeAssignment {
+function Remove-PIMEntraRoleActiveAssignment {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
     [CmdletBinding()]
     param (
@@ -132,7 +132,7 @@ function Remove-PIMEntraRoleActiveeAssignment {
 }
 
 '
-        $endpoint = "/roleManagement/directory/roleEligibilityScheduleRequests"
+        $endpoint = "/roleManagement/directory/roleAssignmentScheduleRequests"
         write-verbose "patch body : $body"
         $null = invoke-graph -Endpoint $endpoint -Method "POST" -body $body
         Write-Host "SUCCESS : Assignment removed!"

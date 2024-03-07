@@ -125,5 +125,5 @@ function Remove-PIMAzureResourceEligibleAssignment {
         Write-Host "SUCCESS : Assignment removed!"
         return $response
     }
-    catch { MyCatch $_ }    
+    catch { MyCatch $_ }
 }

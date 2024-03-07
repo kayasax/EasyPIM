@@ -166,5 +166,5 @@ function New-PIMAzureResourceEligibleAssignment {
     }
     catch {
         Mycatch $_
-    }    
+    }
 }

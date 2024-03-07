@@ -4,7 +4,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.3.0'
+ModuleVersion = '1.4.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -83,7 +83,9 @@ FunctionsToExport = @(
     "Get-PIMEntraRoleActiveAssignment",
     "Get-PIMEntraRoleEligibleAssignment",
     "New-PIMEntraRoleActiveAssignment",
-    "New-PIMEntraRoleEligibleAssignment"
+    "New-PIMEntraRoleEligibleAssignment",
+    'Remove-PIMEntraRoleActiveAssignment',
+    'Remove-PIMEntraRoleEligibleAssignment'
 )
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.

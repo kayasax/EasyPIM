@@ -1,17 +1,23 @@
 ﻿<#
     .Synopsis
-    List of PIM Entra Role active assignement 
+    List of PIM Entra Role active assignement
     .Description
     Active assignment does not require to activate their role. https://learn.microsoft.com/en-us/graph/api/rbacapplication-list-roleeligibilityscheduleinstances?view=graph-rest-1.0&tabs=http
     .Parameter tenantID
     EntraID tenant ID
     .Parameter summary
     When enabled will return the most useful information only
-    
-    .Example
-    PS> Get-PIMEntraRoleActiveAssignment -tenantID $tid 
+    .PARAMETER rolename
+    Filter by rolename
+    .PARAMETER principalid
+    Filter by principalid
+    .PARAMETER principalName
+    Filter by principalName
 
-    List active assignement 
+    .Example
+    PS> Get-PIMEntraRoleActiveAssignment -tenantID $tid
+
+    List active assignement
 
 
     .Link
@@ -27,7 +33,10 @@ function Get-PIMEntraRoleActiveAssignment {
         [String]
         $tenantID,
         # select the most usefull info only
-        [switch]$summary
+        [switch]$summary,
+        [string]$principalid,
+        [string]$rolename,
+        [string]$principalName
     )
 
     try {
@@ -36,7 +45,7 @@ function Get-PIMEntraRoleActiveAssignment {
         $endpoint = "roleManagement/directory/roleAssignmentScheduleInstances?`$expand=roleDefinition,principal"
         $response = invoke-graph -Endpoint $endpoint
         $resu = @()
-        $response.value | % {
+        $response.value | ForEach-Object {
     
             $r = @{
                 "rolename"         = $_.roledefinition.displayName
@@ -61,6 +70,18 @@ function Get-PIMEntraRoleActiveAssignment {
         if ($PSBoundParameters.Keys.Contains('summary')) {
             $resu = $resu | Select-Object rolename, roleid, principalid, principalName, principalEmail, PrincipalType, startDateTime, endDateTime, directoryScopeId
         }
+
+        if ($PSBoundParameters.Keys.Contains('principalid')) {
+            $resu = $resu | Where-Object { $_.principalid -eq $principalid }
+        }
+
+        if ($PSBoundParameters.Keys.Contains('rolename')) {
+            $resu = $resu | Where-Object { $_.rolename -eq $rolename }
+        }
+        if($PSBoundParameters.Keys.Contains('principalName')){
+            $resu = $resu | Where-Object { $_.principalName -match $principalName }
+        }
+
         return $resu
     }
     catch {
