@@ -30,35 +30,40 @@ function Get-PIMEntraRoleActiveAssignment {
         [switch]$summary
     )
 
-    $script:tenantID = $tenantID
+    try {
+        $script:tenantID = $tenantID
 
-    $endpoint = "roleManagement/directory/roleAssignmentScheduleInstances?`$expand=roleDefinition,principal"
-    $response = invoke-graph -Endpoint $endpoint
-    $resu = @()
-    $response.value | % {
+        $endpoint = "roleManagement/directory/roleAssignmentScheduleInstances?`$expand=roleDefinition,principal"
+        $response = invoke-graph -Endpoint $endpoint
+        $resu = @()
+        $response.value | % {
     
-        $r = @{
-            "rolename"         = $_.roledefinition.displayName
-            "roleid"           = $_.roledefinition.id
-            "principalname"    = $_.principal.displayName
-            "principalid"      = $_.principal.id
-            "principalEmail"   = $_.principal.mail
-            "startDateTime"    = $_.startDateTime
-            "endDateTime"      = $_.endDateTime
-            "directoryScopeId" = $_.directoryScopeId
-            "memberType"       = $_.memberType
-            "assignmentType"   = $_.assignmentType
-            #"activatedUsing"=$_.activatedUsing
-            "principaltype"    = $_.principal."@odata.type"
-            "id"               = $_.id
-        }
-        $resu += New-Object PSObject -Property $r
+            $r = @{
+                "rolename"         = $_.roledefinition.displayName
+                "roleid"           = $_.roledefinition.id
+                "principalname"    = $_.principal.displayName
+                "principalid"      = $_.principal.id
+                "principalEmail"   = $_.principal.mail
+                "startDateTime"    = $_.startDateTime
+                "endDateTime"      = $_.endDateTime
+                "directoryScopeId" = $_.directoryScopeId
+                "memberType"       = $_.memberType
+                "assignmentType"   = $_.assignmentType
+                #"activatedUsing"=$_.activatedUsing
+                "principaltype"    = $_.principal."@odata.type"
+                "id"               = $_.id
+            }
+            $resu += New-Object PSObject -Property $r
     
   
-    }
+        }
 
-    if ($PSBoundParameters.Keys.Contains('summary')) {
-        $resu = $resu | Select-Object rolename, roleid, principalid, principalName, principalEmail, PrincipalType, startDateTime, endDateTime,directoryScopeId
+        if ($PSBoundParameters.Keys.Contains('summary')) {
+            $resu = $resu | Select-Object rolename, roleid, principalid, principalName, principalEmail, PrincipalType, startDateTime, endDateTime, directoryScopeId
+        }
+        return $resu
     }
-    return $resu
+    catch {
+        MyCatch $_
+    }
 }

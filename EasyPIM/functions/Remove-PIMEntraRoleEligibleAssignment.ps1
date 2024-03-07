@@ -24,11 +24,11 @@
 
 
     .Example
-    PS> New-PIMEntraRoleActiveAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "AcrPush" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092  -startDateTime "2/2/2024 18:20"
+    PS> New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "AcrPush" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092  -startDateTime "2/2/2024 18:20"
 
     Create an active assignment fot the role Arcpush, starting at a specific date and using default duration
 
-    PS> New-PIMEntraRoleActiveAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "webmaster" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -justification 'TEST' -permanent
+    PS> New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "webmaster" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -justification 'TEST' -permanent
     
     Create a permanent active assignement for the role webmaster
 
@@ -38,7 +38,7 @@
     Author: Loïc MICHEL
     Homepage: https://github.com/kayasax/EasyPIM
 #>
-function New-PIMEntraRoleActiveAssignment {
+function Remove-PIMEntraRoleEligibleAssignment {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
     [CmdletBinding()]
     param (
@@ -75,54 +75,48 @@ function New-PIMEntraRoleActiveAssignment {
 
     )
     
-    try {    
+    try {
         $script:tenantID = $tenantID
 
-        #1 check if the principal ID is a group, if yes confirm it is role-assignable    
-        $endpoint = "directoryObjects/$principalID"
-        $response = invoke-graph -Endpoint $endpoint
-        #$response
-
-        if ($response."@odata.type" -eq "#microsoft.graph.group" -and $response.isAssignableToRole -ne "True") {
-       
-            throw "ERROR : The group $principalID is not role-assignable, exiting"
-       
-        }
+    
         if ($PSBoundParameters.Keys.Contains('startDateTime')) {
-            $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ"
+            $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime().addseconds(30) -f "yyyy-MM-ddTHH:mm:ssZ"
         }
         else {
-            $startDateTime = get-date (get-date).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ" #we get the date as UTC (remember to add a Z at the end or it will be translated to US timezone on import)
+            $startDateTime = get-date (get-date).touniversaltime().addseconds(30) -f "yyyy-MM-ddTHH:mm:ssZ" #we get the date as UTC (remember to add a Z at the end or it will be translated to US timezone on import)
         }
+    
         write-verbose "Calculated date time start is $startDateTime"
         # 2 get role settings:
         $config = Get-PIMEntraRolePolicy -tenantID $tenantID -rolename $rolename
 
         #if permanent assignement is requested check this is allowed in the rule
         if ($permanent) {
-            if ( $config.AllowPermanentActiveAssignment -eq "false") {
-                throw "ERROR : The role $rolename does not allow permanent active assignement, exiting"
+            if ( $config.AllowPermanentEligibleAssignment -eq "false") {
+                throw "ERROR : The role $rolename does not allow permanent eligible assignement, exiting"
             }
         }
 
         # if Duration is not provided we will take the maxium value from the role setting
         if (!($PSBoundParameters.Keys.Contains('duration'))) {
-            $duration = $config.MaximumActiveAssignmentDuration
+            $duration = $config.MaximumEligibleAssignmentDuration
         }
         write-verbose "assignement duration will be : $duration"
 
         if (!($PSBoundParameters.Keys.Contains('justification'))) {
             $justification = "Approved from EasyPIM module by  $($(get-azcontext).account)"
         }
+    
 
         $type = "AfterDuration"
+        #$type="afterDateTime"
         if ($permanent) {
             $type = "NoExpiration"
         }
 
         $body = '
 {
-    "action": "adminAssign",
+    "action": "adminRemove",
     "justification": "'+ $justification + '",
     "roleDefinitionId": "'+ $config.roleID + '",
     "directoryScopeId": "/",
@@ -134,19 +128,14 @@ function New-PIMEntraRoleActiveAssignment {
             "endDateTime": null,
             "duration": "'+ $duration + '"
         }
-    },
-    "ticketInfo": {
-        "ticketNumber": "CONTOSO:Normal-67890",
-        "ticketSystem": "MS Project"
     }
 }
 
 '
-        $endpoint = "roleManagement/directory/roleAssignmentScheduleRequests/"
-        invoke-graph -Endpoint $endpoint -Method "POST" -body $body
-
+        $endpoint = "/roleManagement/directory/roleEligibilityScheduleRequests"
+        write-verbose "patch body : $body"
+        $null = invoke-graph -Endpoint $endpoint -Method "POST" -body $body
+        Write-Host "SUCCESS : Assignment removed!"
     }
-    catch {
-        Mycatch $_
-    }
+    catch { Mycatch $_ }
 }

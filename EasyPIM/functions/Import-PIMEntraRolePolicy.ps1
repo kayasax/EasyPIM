@@ -28,6 +28,7 @@ function Import-PIMEntraRolePolicy {
         [String]
         $Path
     )
+    try{
     
     $script:tenantID = $TenantID
        
@@ -37,4 +38,8 @@ function Import-PIMEntraRolePolicy {
         Import-EntraRoleSettings $Path
     }
     Log "Success, exiting."
+    }
+    catch {
+        Mycatch $_
+    }
 }

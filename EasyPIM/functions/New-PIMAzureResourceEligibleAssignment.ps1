@@ -86,59 +86,60 @@ function New-PIMAzureResourceEligibleAssignment {
 
     )
     
-    if (!($PSBoundParameters.Keys.Contains('scope'))) {
-        if (!($PSBoundParameters.Keys.Contains('subscriptionID'))) {
-            throw "ERROR : You must provide a subsciption ID or a scope, exiting."
+    try {
+        if (!($PSBoundParameters.Keys.Contains('scope'))) {
+            if (!($PSBoundParameters.Keys.Contains('subscriptionID'))) {
+                throw "ERROR : You must provide a subsciption ID or a scope, exiting."
+            }
+            $scope = "/subscriptions/$subscriptionID"
         }
-        $scope = "/subscriptions/$subscriptionID"
-    }
-    $script:tenantID = $tenantID
+        $script:tenantID = $tenantID
 
-    $ARMhost = "https://management.azure.com"
-    $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
-    #1 get role id
-    $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$rolename'"
-    $response = Invoke-ARM -restURI $restUri -method "get" -body $null
-    $roleID = $response.value.id
-    write-verbose "Getting role ID for $rolename at $restURI"
-    write-verbose "role ID = $roleid"
+        $ARMhost = "https://management.azure.com"
+        $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
+        #1 get role id
+        $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$rolename'"
+        $response = Invoke-ARM -restURI $restUri -method "get" -body $null
+        $roleID = $response.value.id
+        write-verbose "Getting role ID for $rolename at $restURI"
+        write-verbose "role ID = $roleid"
 
     
 
-    if ($PSBoundParameters.Keys.Contains('startDateTime')) {
-        $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ"
-    }
-    else {
-        $startDateTime = get-date (get-date).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ" #we get the date as UTC (remember to add a Z at the end or it will be translated to US timezone on import)
-    }
-    write-verbose "Calculated date time start is $startDateTime"
-    
-    # get role settings:
-    $config = Get-PIMAzureResourcePolicy -tenantID $tenantID -scope $scope -rolename $rolename
-
-    # if permanent assignement is requested check this is allowed in the rule
-    if($permanent){
-        if( $config.AllowPermanentActiveAssignment -eq "false"){
-            throw "ERROR : The role $rolename does not allow permanent active assignement, exiting"
+        if ($PSBoundParameters.Keys.Contains('startDateTime')) {
+            $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ"
         }
-    }
+        else {
+            $startDateTime = get-date (get-date).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ" #we get the date as UTC (remember to add a Z at the end or it will be translated to US timezone on import)
+        }
+        write-verbose "Calculated date time start is $startDateTime"
+    
+        # get role settings:
+        $config = Get-PIMAzureResourcePolicy -tenantID $tenantID -scope $scope -rolename $rolename
 
-    # if Duration is not provided we will take the maxium value from the role setting
-    if(!($PSBoundParameters.Keys.Contains('duration'))){
-        $duration = $config.MaximumActiveAssignmentDuration
-    }
-    write-verbose "assignement duration will be : $duration"
+        # if permanent assignement is requested check this is allowed in the rule
+        if ($permanent) {
+            if ( $config.AllowPermanentActiveAssignment -eq "false") {
+                throw "ERROR : The role $rolename does not allow permanent active assignement, exiting"
+            }
+        }
 
-    if (!($PSBoundParameters.Keys.Contains('justification'))) {
-        $justification = "Approved from EasyPIM module by  $($(get-azcontext).account)"
-    }
+        # if Duration is not provided we will take the maxium value from the role setting
+        if (!($PSBoundParameters.Keys.Contains('duration'))) {
+            $duration = $config.MaximumActiveAssignmentDuration
+        }
+        write-verbose "assignement duration will be : $duration"
 
-    $type = "AfterDuration"
-    if ($permanent) {
-        $type = "NoExpiration"
-    }
+        if (!($PSBoundParameters.Keys.Contains('justification'))) {
+            $justification = "Approved from EasyPIM module by  $($(get-azcontext).account)"
+        }
 
-    $body = '
+        $type = "AfterDuration"
+        if ($permanent) {
+            $type = "NoExpiration"
+        }
+
+        $body = '
 {
     "properties": {
         "principalId": "'+ $principalID + '",
@@ -155,12 +156,15 @@ function New-PIMAzureResourceEligibleAssignment {
         }
 }
 '
-    $guid = New-Guid
-    $restURI = "$armendpoint/roleEligibilityScheduleRequests/$($guid)?api-version=2020-10-01"
-    write-verbose "sending PUT request at $restUri with body :`n $body"
+        $guid = New-Guid
+        $restURI = "$armendpoint/roleEligibilityScheduleRequests/$($guid)?api-version=2020-10-01"
+        write-verbose "sending PUT request at $restUri with body :`n $body"
     
-    $response = Invoke-ARM -restURI $restUri -method PUT -body $body -Verbose:$false
-    Write-Host "SUCCESS : Assignment created!"
-    return $response
-    
+        $response = Invoke-ARM -restURI $restUri -method PUT -body $body -Verbose:$false
+        Write-Host "SUCCESS : Assignment created!"
+        return $response
+    }
+    catch {
+        Mycatch $_
+    }    
 }
