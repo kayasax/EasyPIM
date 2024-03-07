@@ -85,6 +85,7 @@ function New-PIMAzureResourceActiveAssignment {
 
     )
     
+    try{
     if (!($PSBoundParameters.Keys.Contains('scope'))) {
         if (!($PSBoundParameters.Keys.Contains('subscriptionID'))) {
             throw "ERROR : You must provide a subsciption ID or a scope, exiting."
@@ -161,5 +162,6 @@ function New-PIMAzureResourceActiveAssignment {
     $response = Invoke-ARM -restURI $restUri -method PUT -body $body -Verbose:$false
     Write-Host "SUCCESS : Assignment created!"
     return $response
-    
+    }
+    catch{Mycatch $_}
 }

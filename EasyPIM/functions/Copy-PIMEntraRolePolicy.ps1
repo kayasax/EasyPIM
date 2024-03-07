@@ -11,7 +11,7 @@
       .Parameter copyFrom
         We will copy the settings from this role to rolename
       .Example
-        PS> Copy-PIMEntraRolePolicy -subscriptionID "eedcaa84-3756-4da9-bf87-40068c3dd2a2"  -rolename contributor,webmaster -copyFrom role1
+        PS> Copy-PIMEntraRolePolicy -tenantID $tenantID -rolename contributor,webmaster -copyFrom role1
 
         Copy settings from role role1 to the contributor and webmaster roles
       .Link

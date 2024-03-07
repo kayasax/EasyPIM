@@ -47,57 +47,62 @@ function Get-PIMAzureResourceActiveAssignment {
         $atBellowScope
     )
 
-    if (!($PSBoundParameters.Keys.Contains('scope'))) {
-        $scope = "/subscriptions/$subscriptionID"
-    }
-    $restURI = "https://management.azure.com/$scope/providers/Microsoft.Authorization/roleAssignmentSchedules?api-version=2020-10-01"
+    try {
+        if (!($PSBoundParameters.Keys.Contains('scope'))) {
+            $scope = "/subscriptions/$subscriptionID"
+        }
+        $restURI = "https://management.azure.com/$scope/providers/Microsoft.Authorization/roleAssignmentSchedules?api-version=2020-10-01"
 
-    $script:tenantID=$tenantID
+        $script:tenantID = $tenantID
 
-    $response = Invoke-ARM -restURI $restURI -method get
-    #$response|select -first 1
+        $response = Invoke-ARM -restURI $restURI -method get
+        #$response|select -first 1
 
-    $return = @()
-    #$id=$response.value.id
-    #$response.value.properties |get-member
+        $return = @()
+        #$id=$response.value.id
+        #$response.value.properties |get-member
     
-    $response.value | ForEach-Object {
-        $id = $_.id
-        #echo "ID: $id"
-        $_.properties | ForEach-Object {
-            #$_
-            if ($null -eq $_.endDateTime ) { $end = "permanent" }else { $end = $_.endDateTime }
-            $properties = @{
-                "PrincipalName"  = $_.expandedproperties.principal.displayName
-                "PrincipalEmail" = $_.expandedproperties.principal.email;
-                "PrincipalType"  = $_.expandedproperties.principal.type;
-                "PrincipalId"    = $_.expandedproperties.principal.id;
-                "RoleName"       = $_.expandedproperties.roleDefinition.displayName;
-                "RoleType"       = $_.expandedproperties.roleDefinition.type;
-                "RoleId"         = $_.expandedproperties.roleDefinition.id;
-                "ScopeId"        = $_.expandedproperties.scope.id;
-                "ScopeName"      = $_.expandedproperties.scope.displayName;
-                "ScopeType"      = $_.expandedproperties.scope.type;
-                "Status"         = $_.Status;
-                "createdOn"      = $_.createdOn
-                "startDateTime"  = $_.startDateTime
-                "endDateTime"    = $end
-                "updatedOn"      = $_.updatedOn
-                "memberType"     = $_.memberType
-                "id"             = $id
-            }
+        $response.value | ForEach-Object {
+            $id = $_.id
+            #echo "ID: $id"
+            $_.properties | ForEach-Object {
+                #$_
+                if ($null -eq $_.endDateTime ) { $end = "permanent" }else { $end = $_.endDateTime }
+                $properties = @{
+                    "PrincipalName"  = $_.expandedproperties.principal.displayName
+                    "PrincipalEmail" = $_.expandedproperties.principal.email;
+                    "PrincipalType"  = $_.expandedproperties.principal.type;
+                    "PrincipalId"    = $_.expandedproperties.principal.id;
+                    "RoleName"       = $_.expandedproperties.roleDefinition.displayName;
+                    "RoleType"       = $_.expandedproperties.roleDefinition.type;
+                    "RoleId"         = $_.expandedproperties.roleDefinition.id;
+                    "ScopeId"        = $_.expandedproperties.scope.id;
+                    "ScopeName"      = $_.expandedproperties.scope.displayName;
+                    "ScopeType"      = $_.expandedproperties.scope.type;
+                    "Status"         = $_.Status;
+                    "createdOn"      = $_.createdOn
+                    "startDateTime"  = $_.startDateTime
+                    "endDateTime"    = $end
+                    "updatedOn"      = $_.updatedOn
+                    "memberType"     = $_.memberType
+                    "id"             = $id
+                }
             
     
-            $obj = New-Object pscustomobject -Property $properties
-            $return += $obj
+                $obj = New-Object pscustomobject -Property $properties
+                $return += $obj
+            }
         }
-    }
 
-    if ($PSBoundParameters.Keys.Contains('summary')) {
-        $return = $return | Select-Object scopeid, rolename, roletype, principalid, principalName, principalEmail, PrincipalType, status, startDateTime, endDateTime
+        if ($PSBoundParameters.Keys.Contains('summary')) {
+            $return = $return | Select-Object scopeid, rolename, roletype, principalid, principalName, principalEmail, PrincipalType, status, startDateTime, endDateTime
+        }
+        if ($PSBoundParameters.Keys.Contains('atBellowScope')) {
+            $return = $return | Where-Object { $($_.scopeid).Length -gt $scope.Length }
+        }
+        return $return
     }
-    if ($PSBoundParameters.Keys.Contains('atBellowScope')) {
-        $return = $return | Where-Object { $($_.scopeid).Length -gt $scope.Length }
+    catch {
+        Mycatch $_
     }
-    return $return
 }

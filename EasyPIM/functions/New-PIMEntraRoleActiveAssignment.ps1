@@ -1,8 +1,8 @@
 ﻿<#
     .Synopsis
-    Create an eligible assignement at the provided scope
+    Create an active assignement at the provided scope
     .Description
-    Eligible assignment require users to activate their role before using it. https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
+    Active assignment does not require users to activate their role. https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
     .Parameter tenantID
     EntraID tenant ID
     .Parameter subscriptionID
@@ -24,14 +24,13 @@
 
 
     .Example
-    PS> New-PIMAzureResourceEligibleAssigment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "AcrPush" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092  -startDateTime "2/2/2024 18:20"
+    PS> New-PIMEntraRoleActiveAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "AcrPush" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092  -startDateTime "2/2/2024 18:20"
 
-    Create an eligible assignment fot the role Arcpush, starting at a specific date and using default duration
+    Create an active assignment fot the role Arcpush, starting at a specific date and using default duration
 
-    PS> New-PIMAzureResourceEligibleAssigment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "webmaster" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -justification 'TEST' -permanent
+    PS> New-PIMEntraRoleActiveAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "webmaster" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -justification 'TEST' -permanent
     
-    Create a permanent eligible assignement for the role webmaster
-
+    Create a permanent active assignement for the role webmaster
 
     .Link
     https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
@@ -39,7 +38,7 @@
     Author: Loïc MICHEL
     Homepage: https://github.com/kayasax/EasyPIM
 #>
-function New-PIMAzureResourceEligibleAssignment {
+function New-PIMEntraRoleActiveAssignment {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
     [CmdletBinding()]
     param (
@@ -47,17 +46,7 @@ function New-PIMAzureResourceEligibleAssignment {
         [String]
         # Entra ID tenantID
         $tenantID,
-
-        [Parameter(Position = 1)]
-        [String]
-        # subscription ID
-        $subscriptionID,
-
-        [Parameter()]
-        [String]
-        # scope if not at the subscription level
-        $scope,
-
+        
         [Parameter(Mandatory = $true)]
         [String]
         # Principal ID
@@ -87,25 +76,18 @@ function New-PIMAzureResourceEligibleAssignment {
     )
     
     try {
-        if (!($PSBoundParameters.Keys.Contains('scope'))) {
-            if (!($PSBoundParameters.Keys.Contains('subscriptionID'))) {
-                throw "ERROR : You must provide a subsciption ID or a scope, exiting."
-            }
-            $scope = "/subscriptions/$subscriptionID"
-        }
         $script:tenantID = $tenantID
 
-        $ARMhost = "https://management.azure.com"
-        $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
-        #1 get role id
-        $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$rolename'"
-        $response = Invoke-ARM -restURI $restUri -method "get" -body $null
-        $roleID = $response.value.id
-        write-verbose "Getting role ID for $rolename at $restURI"
-        write-verbose "role ID = $roleid"
+        #1 check if the principal ID is a group, if yes confirm it is role-assignable
+        $endpoint = "directoryObjects/$principalID"
+        $response = invoke-graph -Endpoint $endpoint
+        #$response
 
-    
-
+        if ($response."@odata.type" -eq "#microsoft.graph.group" -and $response.isAssignableToRole -ne "True") {
+       
+            throw "ERROR : The group $principalID is not role-assignable, exiting"
+       
+        }
         if ($PSBoundParameters.Keys.Contains('startDateTime')) {
             $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ"
         }
@@ -113,11 +95,10 @@ function New-PIMAzureResourceEligibleAssignment {
             $startDateTime = get-date (get-date).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ" #we get the date as UTC (remember to add a Z at the end or it will be translated to US timezone on import)
         }
         write-verbose "Calculated date time start is $startDateTime"
-    
-        # get role settings:
-        $config = Get-PIMAzureResourcePolicy -tenantID $tenantID -scope $scope -rolename $rolename
+        # 2 get role settings:
+        $config = Get-PIMEntraRolePolicy -tenantID $tenantID -rolename $rolename
 
-        # if permanent assignement is requested check this is allowed in the rule
+        #if permanent assignement is requested check this is allowed in the rule
         if ($permanent) {
             if ( $config.AllowPermanentActiveAssignment -eq "false") {
                 throw "ERROR : The role $rolename does not allow permanent active assignement, exiting"
@@ -141,28 +122,29 @@ function New-PIMAzureResourceEligibleAssignment {
 
         $body = '
 {
-    "properties": {
-        "principalId": "'+ $principalID + '",
-        "roleDefinitionId": "'+ $roleID + '",
-        "requestType": "AdminAssign",
-        "justification": "'+ $justification + '",
-        "scheduleInfo": {
-            "startDateTime": "'+ $startDateTime + '",
-            "expiration": {
-                "type": "'+ $type + '",
-                "endDateTime": null,
-                "duration": "'+ $duration + '"
-            }
+    "action": "adminAssign",
+    "justification": "'+ $justification + '",
+    "roleDefinitionId": "'+ $config.roleID + '",
+    "directoryScopeId": "/",
+    "principalId": "'+ $principalID + '",
+    "scheduleInfo": {
+        "startDateTime": "'+ $startDateTime + '",
+        "expiration": {
+            "type": "'+ $type + '",
+            "endDateTime": null,
+            "duration": "'+ $duration + '"
         }
+    },
+    "ticketInfo": {
+        "ticketNumber": "CONTOSO:Normal-67890",
+        "ticketSystem": "MS Project"
+    }
 }
+
 '
-        $guid = New-Guid
-        $restURI = "$armendpoint/roleEligibilityScheduleRequests/$($guid)?api-version=2020-10-01"
-        write-verbose "sending PUT request at $restUri with body :`n $body"
-    
-        $response = Invoke-ARM -restURI $restUri -method PUT -body $body -Verbose:$false
-        Write-Host "SUCCESS : Assignment created!"
-        return $response
+        $endpoint = "roleManagement/directory/roleAssignmentScheduleRequests/"
+        invoke-graph -Endpoint $endpoint -Method "POST" -body $body
+
     }
     catch {
         Mycatch $_

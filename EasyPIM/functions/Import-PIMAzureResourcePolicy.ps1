@@ -30,13 +30,17 @@ function Import-PIMAzureResourcePolicy {
         [String]
         $Path
     )
-    
-    $script:tenantID = $TenantID
+    try {
+        $script:tenantID = $TenantID
        
-    #load settings
-    Write-Verbose "Importing settings from $path"
-    if ($PSCmdlet.ShouldProcess($path, "Importing policy from")) {
-    import-setting $Path
+        #load settings
+        Write-Verbose "Importing settings from $path"
+        if ($PSCmdlet.ShouldProcess($path, "Importing policy from")) {
+            import-setting $Path
+        }
+        Log "Success, exiting."
     }
-    Log "Success, exiting."
+    catch {
+        Mycatch $_
+    }
 }
