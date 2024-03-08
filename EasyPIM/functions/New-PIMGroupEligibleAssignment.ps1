@@ -24,11 +24,11 @@
 
 
     .Example
-    PS> New-PIMEntraRoleActiveAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "AcrPush" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092  -startDateTime "2/2/2024 18:20"
+    PS> New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "AcrPush" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092  -startDateTime "2/2/2024 18:20"
 
     Create an active assignment fot the role Arcpush, starting at a specific date and using default duration
 
-    PS> New-PIMEntraRoleActiveAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "webmaster" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -justification 'TEST' -permanent
+    PS> New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "webmaster" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -justification 'TEST' -permanent
     
     Create a permanent active assignement for the role webmaster
 
@@ -38,7 +38,7 @@
     Author: Loïc MICHEL
     Homepage: https://github.com/kayasax/EasyPIM
 #>
-function New-PIMEntraRoleActiveAssignment {
+function New-PIMGroupEligibleAssignment {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
     [CmdletBinding()]
     param (
@@ -46,6 +46,11 @@ function New-PIMEntraRoleActiveAssignment {
         [String]
         # Entra ID tenantID
         $tenantID,
+
+        [Parameter(Position = 1, Mandatory = $true)]
+        [String]
+        # Entra ID tenantID
+        $groupID,
         
         [Parameter(Mandatory = $true)]
         [String]
@@ -55,7 +60,7 @@ function New-PIMEntraRoleActiveAssignment {
         [Parameter(Mandatory = $true)]
         [string]
         # the rolename for which we want to create an assigment
-        $rolename,
+        $type,
 
         [string]
         # duration of the assignment, if not set we will use the maximum allowed value from the role policy
@@ -78,75 +83,66 @@ function New-PIMEntraRoleActiveAssignment {
     try {
         $script:tenantID = $tenantID
 
-        #1 check if the principal ID is a group, if yes confirm it is role-assignable
-        $endpoint = "directoryObjects/$principalID"
-        $response = invoke-graph -Endpoint $endpoint
-        #$response
-
-        if ($response."@odata.type" -eq "#microsoft.graph.group" -and $response.isAssignableToRole -ne "True") {
        
-            throw "ERROR : The group $principalID is not role-assignable, exiting"
-       
-        }
         if ($PSBoundParameters.Keys.Contains('startDateTime')) {
-            $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ"
+            $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime().addseconds(30) -f "yyyy-MM-ddTHH:mm:ssZ"
         }
         else {
-            $startDateTime = get-date (get-date).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ" #we get the date as UTC (remember to add a Z at the end or it will be translated to US timezone on import)
+            $startDateTime = get-date (get-date).touniversaltime().addseconds(30) -f "yyyy-MM-ddTHH:mm:ssZ" #we get the date as UTC (remember to add a Z at the end or it will be translated to US timezone on import)
         }
+    
         write-verbose "Calculated date time start is $startDateTime"
         # 2 get role settings:
-        $config = Get-PIMEntraRolePolicy -tenantID $tenantID -rolename $rolename
+        $config = Get-PIMgroupPolicy -tenantID $tenantID -groupID $groupID -type $type
 
         #if permanent assignement is requested check this is allowed in the rule
         if ($permanent) {
             if ( $config.AllowPermanentActiveAssignment -eq "false") {
-                throw "ERROR : The role $rolename does not allow permanent active assignement, exiting"
+                throw "ERROR : The role $rolename does not allow permanent actove assignement, exiting"
             }
         }
 
         # if Duration is not provided we will take the maxium value from the role setting
         if (!($PSBoundParameters.Keys.Contains('duration'))) {
-            $duration = $config.MaximumActiveAssignmentDuration
+            $duration = $config.MaximumEligibleAssignmentDuration
         }
         write-verbose "assignement duration will be : $duration"
 
         if (!($PSBoundParameters.Keys.Contains('justification'))) {
             $justification = "Approved from EasyPIM module by  $($(get-azcontext).account)"
         }
+    
 
-        $type = "AfterDuration"
+        $exptype = "AfterDuration"
+        #$type="afterDateTime"
         if ($permanent) {
-            $type = "NoExpiration"
+            $exptype = "NoExpiration"
         }
 
         $body = '
 {
     "action": "adminAssign",
+    "accessID":"'+$type+'",
+    "groupID":"'+$groupID+'",
     "justification": "'+ $justification + '",
-    "roleDefinitionId": "'+ $config.roleID + '",
-    "directoryScopeId": "/",
     "principalId": "'+ $principalID + '",
     "scheduleInfo": {
         "startDateTime": "'+ $startDateTime + '",
         "expiration": {
-            "type": "'+ $type + '",
+            "type": "'+ $exptype + '",
             "endDateTime": null,
             "duration": "'+ $duration + '"
         }
-    },
-    "ticketInfo": {
-        "ticketNumber": "EasyPIM",
-        "ticketSystem": "EasyPIM"
     }
 }
 
 '
-        $endpoint = "roleManagement/directory/roleAssignmentScheduleRequests/"
-        invoke-graph -Endpoint $endpoint -Method "POST" -body $body
-
+        $endpoint = "/identityGovernance/privilegedAccess/group/EligibilityScheduleRequests"
+        write-verbose "patch body : $body"
+        $null = invoke-graph -Endpoint $endpoint -Method "POST" -body $body
     }
     catch {
-        Mycatch $_
+        MyCatch $_
     }
+
 }
