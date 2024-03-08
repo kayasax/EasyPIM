@@ -1,6 +1,6 @@
-# EasyPIM V1.4
+# EasyPIM V1.5
 
-Powershell module to manage PIM Azure Resource and Entra Role settings and assignments with simplicity in mind.
+Powershell module to manage PIM Azure Resources, Entra Roles and groups settings and assignments with simplicity in mind.
 
 Easily manage PIM Azure Resource settings **at the subscription level by default** : enter a tenant ID, a subscription ID, a role name 
 then the options you want to set, for example require justification on activation.  
