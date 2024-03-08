@@ -38,7 +38,7 @@
     Author: Loïc MICHEL
     Homepage: https://github.com/kayasax/EasyPIM
 #>
-function New-PIMGroupActiveAssignment {
+function New-PIMGroupEligibleAssignment {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
     [CmdletBinding()]
     param (
@@ -137,7 +137,7 @@ function New-PIMGroupActiveAssignment {
 }
 
 '
-        $endpoint = "/identityGovernance/privilegedAccess/group/AssignmentScheduleRequests"
+        $endpoint = "/identityGovernance/privilegedAccess/group/EligibilityScheduleRequests"
         write-verbose "patch body : $body"
         $null = invoke-graph -Endpoint $endpoint -Method "POST" -body $body
     }
