@@ -5,6 +5,8 @@
         will convert the json rules to a PSCustomObject
     .Parameter id
         Id of the group to check
+    .Parameter type
+        type of role (owner or member)
     .Example
         PS> get-config -scope $scop -rolename role1
 
@@ -21,7 +23,7 @@ function get-Groupconfig ( $id, $type) {
         $endpoint = "policies/roleManagementPolicyAssignments?`$filter=scopeId eq '$id' and scopeType eq 'Group' and roleDefinitionId eq '$type'&`$expand=policy(`$expand=rules)"
         $response = invoke-graph -Endpoint $endpoint
 
-        $policyId=$response.value.id   
+        $policyId=$response.value.policyid
         #$response
         # Get config values in a new object:
 
