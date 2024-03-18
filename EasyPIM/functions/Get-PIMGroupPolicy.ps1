@@ -1,13 +1,9 @@
 ﻿<#
 .Synopsis
-EASYPIM
-Powershell module to manage PIM Azure Resource Role settings with simplicity in mind
-Get-PIMGroupPolicy will return the policy rules (like require MFA on activation) of the selected rolename at the subscription level
-Support querrying multi roles at once
+Get member or owner PIM settings for a group
 
 .Description
- 
-Get-PIMGroupPolicy will use the Microsoft Graph APIs to retrieve the PIM settings of the role $rolename
+Get member or owner PIM settings for a group
 
 .PARAMETER tenantID
 Tenant ID
@@ -18,10 +14,17 @@ Id of the group to check
 .PARAMETER GroupName
 Search for the group by name
 
-.Example
-       PS> Get-PIMGroupPolicy -tenantID $tenantID -rolename "Global Administrator","Global Reader"
+.PARAMETER type
+owner or member
 
-       show curent config for the roles global administrator and global reader
+.Example
+PS> Get-PIMGroupPolicy -tenantID $tenantID -groupID $gID -type member
+
+show curent config for the member role of the group $gID
+.Example
+PS> Get-PIMGroupPolicy -tenantID $tenantID -groupname "Mygroup" -type owner
+
+show curent config for the owner role of the group "Mygroup"
     
 .Link
     https://learn.microsoft.com/en-us/azure/governance/resource-graph/first-query-rest-api
@@ -31,8 +34,6 @@ Search for the group by name
     Homepage: https://github.com/kayasax/easyPIM
     Author: MICHEL, Loic
     Changelog:
-    Todo:
-    * allow other scopes
 #>
 function Get-PIMGroupPolicy {
     [CmdletBinding()]

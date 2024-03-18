@@ -1,20 +1,18 @@
 ﻿<#
     .Synopsis
-    Create an active assignement at the provided scope
+    Create an active assignement for the group $groupID and for the principal $principalID
     .Description
     Active assignment does not require users to activate their role. https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
     .Parameter tenantID
     EntraID tenant ID
-    .Parameter subscriptionID
-    subscription ID
-    .Parameter scope
-    use scope parameter if you want to work at other scope than a subscription
+    .Parameter groupID
+    objectID of the group
     .Parameter principalID
     objectID of the principal (user, group or service principal)
-    .Parameter rolename
-    name of the role to assign
+    .Parameter type
+    member type (owner or member)
     .Parameter duration
-    duration of the assignment, if not set we will use the maximum allowed value from the role policy
+    duration of the assignment, if not set we will use the maximum allowed value from the policy
     .Parameter startDateTime
     When the assignment wil begin, if not set we will use current time
     .Parameter permanent
@@ -24,14 +22,13 @@
 
 
     .Example
-    PS> New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "AcrPush" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092  -startDateTime "2/2/2024 18:20"
+    PS> New-PIMGroupActiveAssignment -tenantID $tenantID -groupID $gID -principalID $userID -type member -duration "P7D"
 
-    Create an active assignment fot the role Arcpush, starting at a specific date and using default duration
+    Create an active assignment for the membership role of the group $gID and principal $userID starting now and using a duration of 7 days
 
-    PS> New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "webmaster" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -justification 'TEST' -permanent
+    PS> New-PIMGroupActiveAssignment -tenantID $tenantID -groupID $gID -principalID $userID -type owner -permanent
     
-    Create a permanent active assignement for the role webmaster
-
+    Create a permanent active assignement for the ownership role of the group $gID and principal $userID starting now
     .Link
     https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
     .Notes

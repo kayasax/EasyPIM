@@ -15,9 +15,9 @@
     Filter by principalName
 
     .Example
-    PS> Get-PIMEntraRoleActiveAssignment -tenantID $tid
+    PS> Get-PIMEntraRoleActiveAssignment -tenantID $tid -rolename "testrole" -principalName "loic"
 
-    List active assignement
+    List active assignement for role "testrole" and user name "loic"
 
 
     .Link

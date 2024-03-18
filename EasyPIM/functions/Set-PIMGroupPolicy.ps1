@@ -1,16 +1,16 @@
 ﻿<#
       .Synopsis
-       Set the setting of the role $rolename
+       Set the setting for the owner and member roles of a group
       .Description
-       Set the setting of the role $rolename
+       set the setting for the owner and member roles of a group
       .Example
-        PS> Set-PIMEntraRolePolicy -tenantID $tenantID -rolename webmaster -ActivationDuration "PT8H"
+        PS> Set-PIMGroupPolicy -tenantID $tenantID -groupID $gID -ActivationDuration "PT8H" -type "owner"
 
-        Limit the maximum PIM activation duration to 8h
+        Limit the maximum activation duration to 8h for owner role of the group $gID
       .EXAMPLE
-        PS>  Set-PIMGroupPolicy -tenantID $tenantID -groupID "ba6af9bf-6b28-4799-976e-ff71aed3a1bd" -type owner -ActivationDuration "P1D" -ApprovalRequired $true -Approvers @(@{"Id"="25f3deb5-1c8d-4035-942d-b3cbbad98b8e";"Name"="God";"Type"="user"}) -Notification_EligibleAssignment_Alert @{"isDefaultRecipientEnabled"="true"; "notificationLevel"="All";"Recipients" = @("email1@domain.com","email2@domain.com")}
+        PS>  Set-PIMGroupPolicy -tenantID $tenantID -groupID $gID -type member -ActivationDuration "P1D" -ApprovalRequired $true -Approvers @(@{"Id"="25f3deb5-1c8d-4035-942d-b3cbbad98b8e";"Name"="John";"Type"="user"}) -Notification_EligibleAssignment_Alert @{"isDefaultRecipientEnabled"="true"; "notificationLevel"="All";"Recipients" = @("email1@domain.com","email2@domain.com")}
 
-        Require activation approval and set John as an approver
+        Require  approval on activation and set John as an approver, configure some notifications for the member role of the group $gIDs
 
       .Link
      

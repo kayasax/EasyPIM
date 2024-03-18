@@ -257,7 +257,7 @@ function Set-PIMAzureResourcePolicy {
 
             # Bringing all the rules together and patch the policy
             $allrules = $rules -join ','
-            #Write-Verbose "All rules: $allrules"
+            Write-Verbose "All rules: $allrules"
 
             #Patching the policy
             if ($PSCmdlet.ShouldProcess($_, "Udpdating policy")) {

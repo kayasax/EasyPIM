@@ -24,7 +24,7 @@ function Set-ApprovalFromCSV  {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$false)]
-        [bool]$ApprovalRequired,
+        [string]$ApprovalRequired,
         [Parameter(Mandatory=$false)]
         [string[]]$Approvers,
         [Parameter(Mandatory=$false)]
@@ -32,7 +32,7 @@ function Set-ApprovalFromCSV  {
     )
     write-verbose "Set-ApprovalFromCSV"
     if ($null -eq $Approvers) { $Approvers = $script:config.Approvers }
-    if ($ApprovalRequired -eq $false) { $req = "false" }else { $req = "true" }
+if ($ApprovalRequired -eq "FALSE") { $req = "false" }else { $req = "true" }
     
     if (!$entraRole) {
         $rule = '

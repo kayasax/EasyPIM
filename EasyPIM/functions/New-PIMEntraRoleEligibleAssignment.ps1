@@ -1,14 +1,10 @@
 ﻿<#
     .Synopsis
-    Create an active assignement at the provided scope
+    Create an eligible assignement for $rolename and for the principal $principalID
     .Description
-    Active assignment does not require users to activate their role. https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
+    Eligible assignment require users to activate their role. https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
     .Parameter tenantID
     EntraID tenant ID
-    .Parameter subscriptionID
-    subscription ID
-    .Parameter scope
-    use scope parameter if you want to work at other scope than a subscription
     .Parameter principalID
     objectID of the principal (user, group or service principal)
     .Parameter rolename
@@ -24,11 +20,11 @@
 
 
     .Example
-    PS> New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "AcrPush" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092  -startDateTime "2/2/2024 18:20"
+    PS> New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -rolename "AcrPush" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092  -startDateTime "2/2/2024 18:20"
 
     Create an active assignment fot the role Arcpush, starting at a specific date and using default duration
 
-    PS> New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "webmaster" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -justification 'TEST' -permanent
+    PS> New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -rolename "webmaster" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -justification 'TEST' -permanent
     
     Create a permanent active assignement for the role webmaster
 

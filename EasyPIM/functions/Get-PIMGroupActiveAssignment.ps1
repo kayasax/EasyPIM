@@ -1,24 +1,26 @@
 ﻿<#
     .Synopsis
-    List of PIM Entra Role active assignement
+    List active assignements for a group
     .Description
     Active assignment does not require to activate their role. https://learn.microsoft.com/en-us/graph/api/rbacapplication-list-roleeligibilityscheduleinstances?view=graph-rest-1.0&tabs=http
     .Parameter tenantID
     EntraID tenant ID
+    .PARAMETER groupID
+    The group id to check
+    .PARAMETER memberType 
+    Filter results by memberType (owner or member)
+    .PARAMETER principalName
+    Filter results by principalName starting with the given value
     .Parameter summary
     When enabled will return the most useful information only
-    .PARAMETER rolename
-    Filter by rolename
-    .PARAMETER principalid
-    Filter by principalid
-    .PARAMETER principalName
-    Filter by principalName
-
     .Example
-    PS> Get-PIMEntraRoleActiveAssignment -tenantID $tid
+    PS> Get-PIMGroupActiveAssignment -tenantID $tid -groupID $gID 
 
-    List active assignement
+    List active assignement for the group $gID
+    .Example
+    PS> Get-PIMGroupActiveAssignment -tenantID $tid -groupID $gID -memberType owner -principalName "loic" -summary
 
+    Get a summary of the active assignement for the group $gID, for the owner role and for the user "loic"
 
     .Link
     .Notes
@@ -32,11 +34,10 @@ function Get-PIMGroupActiveAssignment {
         [Parameter(Position = 0, Mandatory = $true)]
         [String]
         $tenantID,
-        # select the most usefull info only
-        [switch]$summary,
         [string]$groupID,
-        [string]$rolename,
-        [string]$principalName
+        [string]$memberType,
+        [string]$principalName,
+        [switch]$summary
     )
 
     try {
@@ -49,17 +50,13 @@ function Get-PIMGroupActiveAssignment {
         $response.value | ForEach-Object {
     
             $r = @{
-                #"rolename"         = $_.roledefinition.displayName
-                #"roleid"           = $_.roledefinition.id
                 "principalname"    = $_.principal.displayName
                 "principalid"      = $_.principal.id
                 "principalEmail"   = $_.principal.mail
                 "startDateTime"    = $_.scheduleInfo.startDateTime
                 "endDateTime"      = $_.scheduleInfo.expiration.endDateTime
-                #"directoryScopeId" = $_.directoryScopeId
                 "memberType"       = $_.accessId
                 "assignmentType"   = $_.memberType
-                #"activatedUsing"=$_.activatedUsing
                 "principaltype"    = $_.principal."@odata.type"
                 "id"               = $_.id
             }
@@ -76,8 +73,8 @@ function Get-PIMGroupActiveAssignment {
             $resu = $resu | Where-Object { $_.principalid -eq $principalid }
         }
 
-        if ($PSBoundParameters.Keys.Contains('rolename')) {
-            $resu = $resu | Where-Object { $_.rolename -eq $rolename }
+        if ($PSBoundParameters.Keys.Contains('memberType')) {
+            $resu = $resu | Where-Object { $_.memberType -eq $memberType }
         }
         if($PSBoundParameters.Keys.Contains('principalName')){
             $resu = $resu | Where-Object { $_.principalName -match $principalName }
