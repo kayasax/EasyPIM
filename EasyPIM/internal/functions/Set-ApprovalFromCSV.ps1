@@ -59,10 +59,10 @@ if ($ApprovalRequired -eq "FALSE") { $req = "false" }else { $req = "true" }
             # turn approvers list to an array
             $Approvers= $Approvers -replace "^","@("
             $Approvers= $Approvers -replace "$",")"
-            write-verbose "APPROVERS: $Approvers"
+            #write-verbose "APPROVERS: $Approvers"
             #then turn the sting into an array of hash table
 
-            $Appr = Invoke-Expression $Approvers    
+            $Appr = Invoke-Expression $Approvers
 
             $rule += '
             "primaryApprovers": [
@@ -73,7 +73,6 @@ if ($ApprovalRequired -eq "FALSE") { $req = "false" }else { $req = "true" }
                 $id = $_.id
                 $name = $_.description
                 $type = $_.userType
-                write-host "ID => $($_.id)"
     
                 if ($cpt -gt 0) {
                     $rule += ","

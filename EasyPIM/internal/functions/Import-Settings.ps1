@@ -97,7 +97,7 @@ function Import-Setting ($path) {
             "Recipients"                = $_.Notification_Activation_Approver_Recipients.split(',')
         }
         $rules += Set-Notification_Activation_Approver $Notification_Activation_Approver
-        #>    
+        #>
         # patch the policy
         Update-Policy $_.policyID $($rules -join ',')
     }

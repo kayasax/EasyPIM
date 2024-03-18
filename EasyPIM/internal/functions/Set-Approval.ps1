@@ -40,7 +40,7 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
 ],
 "escalationApprovers":[]
 }]}}]}
-    #>  
+    #>
     
         $rule = '{
     "id":"Approval_EndUser_Assignment",
@@ -93,7 +93,7 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
             "escalationApprovers":[]
         }]
     }
-}'  
+}'
 
 
         <#    $rule = '

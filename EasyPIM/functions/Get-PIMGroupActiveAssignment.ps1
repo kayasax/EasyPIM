@@ -7,14 +7,14 @@
     EntraID tenant ID
     .PARAMETER groupID
     The group id to check
-    .PARAMETER memberType 
+    .PARAMETER memberType
     Filter results by memberType (owner or member)
     .PARAMETER principalName
     Filter results by principalName starting with the given value
     .Parameter summary
     When enabled will return the most useful information only
     .Example
-    PS> Get-PIMGroupActiveAssignment -tenantID $tid -groupID $gID 
+    PS> Get-PIMGroupActiveAssignment -tenantID $tid -groupID $gID
 
     List active assignement for the group $gID
     .Example
