@@ -147,7 +147,7 @@ if ($ApprovalRequired -eq "FALSE") { $req = "false" }else { $req = "true" }
             # write-verbose "approvers: $approvers"
             $Approvers = $Approvers -replace ",$" # remove the last comma
             #then turn the sting into an array of hash table
-            $list = Invoke-Expression $($c.Approvers -replace ",$")
+            $list = Invoke-Expression $Approvers
             $list | ForEach-Object {
                 $id = $_.id
                 $name = $_.description
