@@ -1,14 +1,10 @@
 ﻿<#
     .Synopsis
-    Create an active assignement at the provided scope
+    Create an active assignement for the role $rolename and for the principal $principalID
     .Description
     Active assignment does not require users to activate their role. https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
     .Parameter tenantID
     EntraID tenant ID
-    .Parameter subscriptionID
-    subscription ID
-    .Parameter scope
-    use scope parameter if you want to work at other scope than a subscription
     .Parameter principalID
     objectID of the principal (user, group or service principal)
     .Parameter rolename

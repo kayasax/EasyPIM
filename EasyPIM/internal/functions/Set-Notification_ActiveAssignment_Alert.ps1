@@ -17,6 +17,7 @@ set the notification sent to admin when active assignment is created
 #>
 function Set-Notification_ActiveAssignment_Alert($Notification_ActiveAssignment_Alert, [switch]$EntraRole) {
     $rule = '
+    {
     "notificationType": "Email",
     "recipientType": "Admin",
     "isDefaultRecipientsEnabled": '+ $Notification_ActiveAssignment_Alert.isDefaultRecipientEnabled.ToLower() + ',
@@ -26,7 +27,7 @@ function Set-Notification_ActiveAssignment_Alert($Notification_ActiveAssignment_
     $Notification_ActiveAssignment_Alert.Recipients | ForEach-Object {
         $rule += '"' + $_ + '",'
     }
-    
+    $rule = $rule -replace ",$" # remove the last comma
     $rule += '
     ],
     "id": "Notification_Admin_Admin_Assignment",

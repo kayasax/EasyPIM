@@ -1,6 +1,6 @@
 ﻿<#
     .Synopsis
-    Create an active assignement at the provided scope
+    Remove an active assignement for $rolename and for the principal $principalID
     .Description
     Active assignment does not require users to activate their role. https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
     .Parameter tenantID
@@ -24,13 +24,13 @@
 
 
     .Example
-    PS> New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "AcrPush" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092  -startDateTime "2/2/2024 18:20"
+    PS> Remove-PIMEntraRoleActiveAssignment -tenantID $tenantID -rolename "AcrPush" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092  -startDateTime "2/2/2024 18:20"
 
-    Create an active assignment fot the role Arcpush, starting at a specific date and using default duration
+    Remove the active assignment for the role Arcpush and principal $principalID, at a specific date
 
-    PS> New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "webmaster" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -justification 'TEST' -permanent
+    PS> Remove-PIMEntraRoleActiveAssignment -tenantID $tenantID -rolename "webmaster" -principalname "loic" -justification 'TEST'
     
-    Create a permanent active assignement for the role webmaster
+    Remove the active assignement for the role webmaster and username "loic"
 
     .Link
     https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
@@ -58,20 +58,12 @@ function Remove-PIMEntraRoleActiveAssignment {
         $rolename,
 
         [string]
-        # duration of the assignment, if not set we will use the maximum allowed value from the role policy
-        $duration,
-
-        [string]
         # stat date of assignment if not provided we will use curent time
         $startDateTime,
 
         [string]
         # justification (will be auto generated if not provided)
-        $justification,
-
-        [switch]
-        # the assignment will not expire
-        $permanent
+        $justification
 
     )
     

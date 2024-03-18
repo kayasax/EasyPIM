@@ -38,10 +38,10 @@ function Import-EntraRoleSettings  {
         $enablementRules = $_.EnablementRules.Split(',')
         $rules += Set-ActivationRequirement $enablementRules -entraRole
         
-        $approvers = @()
-        $approvers += $_.approvers
+       # $approvers = @()
+       # $approvers += $_.approvers
        
-        $rules += Set-ApprovalFromCSV $_.ApprovalRequired $Approvers -entraRole
+        $rules += Set-ApprovalFromCSV $_.ApprovalRequired $_.Approvers -entraRole
         
         
         $rules += Set-EligibilityAssignmentFromCSV $_.MaximumEligibleAssignmentDuration $_.AllowPermanentEligibleAssignment -entraRole

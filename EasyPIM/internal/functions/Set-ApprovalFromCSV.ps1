@@ -24,15 +24,15 @@ function Set-ApprovalFromCSV  {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$false)]
-        [bool]$ApprovalRequired,
+        [string]$ApprovalRequired,
         [Parameter(Mandatory=$false)]
-        [string[]]$Approvers,
+        [string]$Approvers,
         [Parameter(Mandatory=$false)]
         [switch]$entraRole
     )
     write-verbose "Set-ApprovalFromCSV"
     if ($null -eq $Approvers) { $Approvers = $script:config.Approvers }
-    if ($ApprovalRequired -eq $false) { $req = "false" }else { $req = "true" }
+if ($ApprovalRequired -eq "FALSE") { $req = "false" }else { $req = "true" }
     
     if (!$entraRole) {
         $rule = '
@@ -55,21 +55,42 @@ function Set-ApprovalFromCSV  {
 
         if ($null -ne $Approvers) {
             #at least one approver required if approval is enable
+            $Approvers = $Approvers -replace ",$" # remove the last comma
+            # turn approvers list to an array
+            $Approvers= $Approvers -replace "^","@("
+            $Approvers= $Approvers -replace "$",")"
+            #write-verbose "APPROVERS: $Approvers"
+            #then turn the sting into an array of hash table
 
-            $Approvers = $Approvers -replace "@"
-            $Approvers = $Approvers -replace ";", ","
-            $Approvers = $Approvers -replace "=", ":"
+            $Appr = Invoke-Expression $Approvers
 
             $rule += '
             "primaryApprovers": [
-            '+ $Approvers
+            '
+            $cpt = 0
+            $Appr| ForEach-Object {
+                
+                $id = $_.id
+                $name = $_.description
+                $type = $_.userType
+    
+                if ($cpt -gt 0) {
+                    $rule += ","
+                }
+                $rule += '
+                {
+                    "id": "'+ $id + '",
+                    "description": "'+ $name + '",
+                    "isBackup": false,
+                    "userType": "'+ $type + '"
+                }
+                '
+                $cpt++
+            }
         }
 
         $rule += '
-            ],'
-        
-
-        $rule += '
+            ],
         "isEscalationEnabled": false,
             "escalationApprovers": null
                     }]
@@ -125,7 +146,7 @@ function Set-ApprovalFromCSV  {
             # write-verbose "approvers: $approvers"
             $Approvers = $Approvers -replace ",$" # remove the last comma
             #then turn the sting into an array of hash table
-            $list = Invoke-Expression $($c.Approvers -replace ",$")
+            $list = Invoke-Expression $Approvers
             $list | ForEach-Object {
                 $id = $_.id
                 $name = $_.description

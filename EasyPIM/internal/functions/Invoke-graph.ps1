@@ -43,17 +43,7 @@ function invoke-graph {
             Write-Verbose ">> Connecting to Azure with tenantID $script:tenantID"
             Connect-MgGraph -Tenant $script:tenantID -Scopes RoleManagementPolicy.ReadWrite.Directory, RoleManagement.ReadWrite.Directory, RoleManagementPolicy.ReadWrite.AzureADGroup
         }
-        <#
-    # Authenticate and get the access token
-    $token = Get-AzAccessToken -ResourceTypeName MSGraph
-    
-    if( $body -ne ""){
-        Invoke-RestMethod -Uri $uri -Headers @{Authorization = "Bearer $($token.Token)"} -Method $Method  -Body $body
-    }
-    else{
-        Invoke-RestMethod -Uri $uri -Headers @{Authorization = "Bearer $($token.Token)"} -Method $Method
-    }
-    #>
+      
         if ( $body -ne "") {
             Invoke-MgGraphRequest -Uri $uri -Method $Method -Body $body
         }
