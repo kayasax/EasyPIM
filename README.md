@@ -1,4 +1,4 @@
-# EasyPIM V1.5
+# EasyPIM V1.5.1
 
 Powershell module to manage PIM Azure Resources, Entra Roles and groups settings and assignments with simplicity in mind.
 
