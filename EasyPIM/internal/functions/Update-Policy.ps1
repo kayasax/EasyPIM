@@ -23,7 +23,7 @@ function Update-Policy  {
     )
     Log "Updating Policy $policyID" -noEcho
     #write-verbose "rules: $rules"
-    #$scope = "subscriptions/$script:subscriptionID"
+    $scope = $script:scope
     $ARMhost = "https://management.azure.com"
     #$ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
 

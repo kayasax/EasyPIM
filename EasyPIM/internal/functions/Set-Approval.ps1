@@ -40,8 +40,63 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
 ],
 "escalationApprovers":[]
 }]}}]}
-    #>    
-        $rule = '
+    #>  
+    
+        $rule = '{
+    "id":"Approval_EndUser_Assignment",
+    "ruleType":"RoleManagementPolicyApprovalRule",
+    "target":{
+        "caller":"EndUser",
+        "operations":["All"],
+        "level":"Assignment"
+    },
+    "setting":{
+        "isApprovalRequired":"'+ $req + '",
+        "isApprovalRequiredForExtension":false,
+        "isRequestorJustificationRequired":true,
+        "approvalMode":"SingleStage",
+        "approvalStages":[{
+            "approvalStageTimeOutInDays":1,
+            "isApproverJustificationRequired":true,
+            "escalationTimeInMinutes":0,
+            "isEscalationEnabled":false,
+            "primaryApprovers":[
+                '
+        $cpt = 0
+        $Approvers | ForEach-Object {
+            #write-host $_
+            $id = $_.Id
+            $name = $_.Name
+            $type = $_.Type
+
+            if ($cpt -gt 0) {
+                $rule += ","
+            }
+            $rule += '
+            {
+                "id": "'+ $id + '",
+                "description": "'+ $name + '",
+                "isBackup": false,
+                "userType": "'+ $type + '"
+            }
+            '
+            $cpt++
+        }
+        $rule=$rule -replace ",$" #remove last comma
+
+        <#{"id":"5dba24e0-00ef-4c21-9702-7c093a0775eb","userType":"Group","description":"0Ext_Partners","isBackup":false},
+                {"id":"00b34bb3-8a6b-45ce-a7bb-c7f7fb400507","userType":"User","description":"Bob MARLEY","isBackup":false},
+                {"id":"25f3deb5-1c8d-4035-942d-b3cbbad98b8e","userType":"User","description":"Loïc","isBackup":false},
+                {"id":"39014f60-8bf7-4d58-88e3-4d6f04f7c279","userType":"User","description":"Loic MICHEL","isBackup":false}#>
+        $rule += '
+            ],
+            "escalationApprovers":[]
+        }]
+    }
+}'  
+
+
+        <#    $rule = '
     {
         "setting": {'
         if ($null -ne $ApprovalRequired) {
@@ -110,7 +165,7 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
             "enforcedSettings": null
         
         }}'
-
+#>
 
         if ($entraRole) {
             $rule = '

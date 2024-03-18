@@ -23,13 +23,16 @@ function Import-Setting ($path) {
 
     $csv | ForEach-Object {
         $rules = @()
+        $script:scope=$_.policyID -replace "/providers.*"
+        
         $rules += Set-ActivationDuration $_.ActivationDuration
         $enablementRules = $_.EnablementRules.Split(',')
         $rules += Set-ActivationRequirement $enablementRules
-        $approvers = @()
-        $approvers += $_.approvers
-        $rules += Set-ApprovalFromCSV $_.ApprovalRequired $Approvers
+        #$approvers = @()
+        #$approvers += $_.approvers
+        $rules += Set-ApprovalFromCSV $_.ApprovalRequired $_.Approvers
         $rules += Set-EligibilityAssignmentFromCSV $_.MaximumEligibleAssignmentDuration $_.AllowPermanentEligibleAssignment
+       
         $rules += Set-ActiveAssignmentFromCSV $_.MaximumActiveAssignmentDuration $_.AllowPermanentActiveAssignment
             
         $Notification_EligibleAssignment_Alert = @{
@@ -94,7 +97,7 @@ function Import-Setting ($path) {
             "Recipients"                = $_.Notification_Activation_Approver_Recipients.split(',')
         }
         $rules += Set-Notification_Activation_Approver $Notification_Activation_Approver
-            
+        #>    
         # patch the policy
         Update-Policy $_.policyID $($rules -join ',')
     }

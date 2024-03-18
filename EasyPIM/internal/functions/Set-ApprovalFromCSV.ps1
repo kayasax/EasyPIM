@@ -26,7 +26,7 @@ function Set-ApprovalFromCSV  {
         [Parameter(Mandatory=$false)]
         [string]$ApprovalRequired,
         [Parameter(Mandatory=$false)]
-        [string[]]$Approvers,
+        [string]$Approvers,
         [Parameter(Mandatory=$false)]
         [switch]$entraRole
     )
@@ -55,21 +55,43 @@ if ($ApprovalRequired -eq "FALSE") { $req = "false" }else { $req = "true" }
 
         if ($null -ne $Approvers) {
             #at least one approver required if approval is enable
+            $Approvers = $Approvers -replace ",$" # remove the last comma
+            # turn approvers list to an array
+            $Approvers= $Approvers -replace "^","@("
+            $Approvers= $Approvers -replace "$",")"
+            write-verbose "APPROVERS: $Approvers"
+            #then turn the sting into an array of hash table
 
-            $Approvers = $Approvers -replace "@"
-            $Approvers = $Approvers -replace ";", ","
-            $Approvers = $Approvers -replace "=", ":"
+            $Appr = Invoke-Expression $Approvers    
 
             $rule += '
             "primaryApprovers": [
-            '+ $Approvers
+            '
+            $cpt = 0
+            $Appr| ForEach-Object {
+                
+                $id = $_.id
+                $name = $_.description
+                $type = $_.userType
+                write-host "ID => $($_.id)"
+    
+                if ($cpt -gt 0) {
+                    $rule += ","
+                }
+                $rule += '
+                {
+                    "id": "'+ $id + '",
+                    "description": "'+ $name + '",
+                    "isBackup": false,
+                    "userType": "'+ $type + '"
+                }
+                '
+                $cpt++
+            }
         }
 
         $rule += '
-            ],'
-        
-
-        $rule += '
+            ],
         "isEscalationEnabled": false,
             "escalationApprovers": null
                     }]
