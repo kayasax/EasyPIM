@@ -32,7 +32,7 @@ You can now audit,  create  or remove PIM Entra Role assignments whether they ar
 
 
 ## Installation
-This module is available in the PowerShell gallery: [https://www.powershellgallery.com/packages/EasyPIM/](https://www.powershellgallery.com/packages/EasyPIM/), install it with:
+This module is available in the PowerShell gallery: [https://www.powershellgallery.com/packages/EasyPIM/](https://www.powershellgallery.com/packages/EasyPIM), install it with:
 ```pwsh
 Install-Module -Name EasyPIM 
 ``` 
