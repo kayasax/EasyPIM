@@ -151,7 +151,7 @@ function Set-PIMAzureResourcePolicy {
         }
         $p = $p -join ', '
        
-        Write-Verbose "Function Set-PIMAzureResourcePolicy is starting with parameters: $p" 
+        Write-Verbose "Function Set-PIMAzureResourcePolicy is starting with parameters: $p"
 
         $script:subscriptionID = $subscriptionID
         if (!($PSBoundParameters.Keys.Contains('scope'))) {
