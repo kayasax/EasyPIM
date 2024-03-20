@@ -21,7 +21,8 @@ function Update-Policy  {
         $policyID,
         $rules
     )
-    Log "Updating Policy $policyID" -noEcho
+    Write-Verbose "Updating Policy $policyID"
+    write-Verbose "script:scope = $script:scope"
     #write-verbose "rules: $rules"
     $scope = $script:scope
     $ARMhost = "https://management.azure.com"
