@@ -151,13 +151,13 @@ function Set-PIMAzureResourcePolicy {
         }
         $p = $p -join ', '
        
-        log "Function Set-PIMAzureResourcePolicy is starting with parameters: $p" -noEcho
+        Write-Verbose "Function Set-PIMAzureResourcePolicy is starting with parameters: $p" 
 
         $script:subscriptionID = $subscriptionID
         if (!($PSBoundParameters.Keys.Contains('scope'))) {
-            $scope = "subscriptions/$script:subscriptionID"
+            $script:scope = "subscriptions/$script:subscriptionID"
         }
-        
+        write-verbose "scope: $script:scope"
         $script:tenantID=$tenantID
 
         #at least one approver required if approval is enable
@@ -165,7 +165,7 @@ function Set-PIMAzureResourcePolicy {
         if ($ApprovalRequired -eq $true -and $null -eq $Approvers ) { throw "`n /!\ At least one approver is required if approval is enable, please set -Approvers parameter`n`n" }
 
         $rolename | ForEach-Object {
-            $config = get-config $scope $_
+            $config = get-config $script:scope $_
             $rules = @()
 
             if ($PSBoundParameters.Keys.Contains('ActivationDuration')) {
