@@ -51,7 +51,10 @@ function Get-PIMAzureResourceEligibleAssignment {
         if (!($PSBoundParameters.Keys.Contains('scope'))) {
             $scope = "/subscriptions/$subscriptionID"
         }
-        $restURI = "https://management.azure.com/$scope/providers/Microsoft.Authorization/roleEligibilitySchedules?api-version=2020-10-01"
+        # issue #23: due to a bug with the API regarding the membertype, we will use RoleEligibilitySchedulesInstance instead of RoleEligibilitySchedule
+        # the downside is we will not get assignment with a future start date
+        #$restURI = "https://management.azure.com/$scope/providers/Microsoft.Authorization/roleEligibilitySchedules?api-version=2020-10-01"
+        $restURI = "https://management.azure.com/$scope/providers/Microsoft.Authorization/roleEligibilityScheduleInstances?api-version=2020-10-01"
 
         $script:tenantID = $tenantID
 

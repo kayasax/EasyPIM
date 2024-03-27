@@ -67,7 +67,7 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
             #write-host $_
             $id = $_.Id
             $name = $_.Name
-            $type = $_.Type
+            $type =  ( Get-Culture ).TextInfo.ToTitleCase( $_.Type.ToLower() ) #capitalize first letter fix issue #30
 
             if ($cpt -gt 0) {
                 $rule += ","
