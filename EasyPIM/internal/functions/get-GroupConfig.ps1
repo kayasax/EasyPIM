@@ -26,11 +26,12 @@ function get-Groupconfig ( $id, $type) {
         $policyId=$response.value.policyid
         #$response
         # Get config values in a new object:
+    
 
         # Maximum end user activation duration in Hour (PT24H) // Max 24H in portal but can be greater
-        $_activationDuration = $response.value.policy.rules | Where-Object { $_.id -eq "Expiration_EndUser_Assignment" } | Select-Object -ExpandProperty maximumduration
+        $_activationDuration = ($response.value.policy.rules | Where-Object { $_.id -eq "Expiration_EndUser_Assignment" }).maximumDuration
         # End user enablement rule (MultiFactorAuthentication, Justification, Ticketing)
-        $_enablementRules = $response.value.policy.rules | Where-Object { $_.id -eq "Enablement_EndUser_Assignment" } | Select-Object -expand enabledRules
+        $_enablementRules = ($response.value.policy.rules | Where-Object { $_.id -eq "Enablement_EndUser_Assignment" }).enabledRules
         # approval required
         $_approvalrequired = $($response.value.policy.rules | Where-Object { $_.id -eq "Approval_EndUser_Assignment" }).setting.isapprovalrequired
         # approvers
@@ -51,7 +52,7 @@ function get-Groupconfig ( $id, $type) {
         }
 
         # permanent assignmnent eligibility
-        $_eligibilityExpirationRequired = $response.value.policy.rules | Where-Object { $_.id -eq "Expiration_Admin_Eligibility" } | Select-Object -expand isExpirationRequired
+        $_eligibilityExpirationRequired = ($response.value.policy.rules | Where-Object { $_.id -eq "Expiration_Admin_Eligibility" }).isExpirationRequired
         if ($_eligibilityExpirationRequired -eq "true") {
             $_permanantEligibility = "false"
         }
@@ -59,10 +60,10 @@ function get-Groupconfig ( $id, $type) {
             $_permanantEligibility = "true"
         }
         # maximum assignment eligibility duration
-        $_maxAssignmentDuration = $response.value.policy.rules | Where-Object { $_.id -eq "Expiration_Admin_Eligibility" } | Select-Object -expand maximumDuration
+        $_maxAssignmentDuration = ($response.value.policy.rules | Where-Object { $_.id -eq "Expiration_Admin_Eligibility" }).maximumDuration
         
         # pemanent activation
-        $_activeExpirationRequired = $response.value.policy.rules | Where-Object { $_.id -eq "Expiration_Admin_Assignment" } | Select-Object -expand isExpirationRequired
+        $_activeExpirationRequired = ($response.value.policy.rules | Where-Object { $_.id -eq "Expiration_Admin_Assignment" }).isExpirationRequired
         if ($_activeExpirationRequired -eq "true") {
             $_permanantActiveAssignment = "false"
         }
@@ -70,7 +71,7 @@ function get-Groupconfig ( $id, $type) {
             $_permanantActiveAssignment = "true"
         }
         # maximum activation duration
-        $_maxActiveAssignmentDuration = $response.value.policy.rules | Where-Object { $_.id -eq "Expiration_Admin_Assignment" } | Select-Object -expand maximumDuration
+        $_maxActiveAssignmentDuration = ($response.value.policy.rules | Where-Object { $_.id -eq "Expiration_Admin_Assignment" }).maximumDuration
 
         #################
         # Notifications #
