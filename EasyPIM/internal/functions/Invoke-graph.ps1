@@ -41,7 +41,15 @@ function invoke-graph {
 
         if ( $null -eq (get-mgcontext) -or ( (get-mgcontext).TenantId -ne $script:tenantID ) ) {
             Write-Verbose ">> Connecting to Azure with tenantID $script:tenantID"
-            Connect-MgGraph -Tenant $script:tenantID -Scopes RoleManagementPolicy.ReadWrite.Directory, RoleManagement.ReadWrite.Directory, RoleManagementPolicy.ReadWrite.AzureADGroup
+            $scopes = @(
+                "RoleManagementPolicy.ReadWrite.Directory",
+                "RoleManagement.ReadWrite.Directory",
+                "RoleManagementPolicy.ReadWrite.AzureADGroup",
+                "PrivilegedEligibilitySchedule.ReadWrite.AzureADGroup",
+                "PrivilegedAssignmentSchedule.ReadWrite.AzureADGroup",
+                "PrivilegedAccess.ReadWrite.AzureADGroup")
+
+            Connect-MgGraph -Tenant $script:tenantID -Scopes $scopes
         }
       
         if ( $body -ne "") {
