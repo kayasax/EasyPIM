@@ -1,7 +1,7 @@
 ﻿#***************************************
 #* CONFIGURATION
 #***************************************
-
+write-verbose "variables.ps1 called"
 # LOG TO FILE ( if enable by default it will create a LOGS subfolder in the script folder, and create a logfile with the name of the script )
 $script:logToFile = $false
 # Where logs are written to
@@ -26,3 +26,19 @@ $script:HostFQDN = $env:computername + "." + $env:USERDNSDOMAIN
 # ERROR HANDLING
 $ErrorActionPreference = "STOP" # make all errors terminating ones so they can be catched
 
+
+#checking new version of easyPIM
+try {
+    $currentVersion = ((Get-Module -Name EasyPIM).Version | Select-Object -Last 1).ToString()
+    Write-Verbose $currentVersion
+    $latestVersion = (Find-Module -Name EasyPIM).Version
+    write-verbose $latestVersion
+
+    if ($currentVersion -lt $latestVersion) {
+        Write-Host "🔥 FYI: A newer version of EasyPIM is available! Run the commands below to update to the latest version."
+        Write-Host "💥 Installed version: $currentVersion → Latest version: $latestVersion" -ForegroundColor DarkGray
+        Write-Host "✨ Update-Module EasyPIM" -NoNewline -ForegroundColor Green
+        Write-Host " → Install the latest version of EasyPIM." -ForegroundColor Yellow
+        return $true
+    }
+} catch { Write-Verbose -Message $_}
