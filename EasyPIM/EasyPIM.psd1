@@ -4,7 +4,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.5.6'
+ModuleVersion = '1.5.7'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -22,7 +22,7 @@ Author = 'Loïc MICHEL'
 Copyright = '(c) loicmichel. All rights reserved.'
 
 # Description of the functionality provided by this module
-Description = 'Powershell module to manage PIM Azure Resource, PIM Entra role and PIM for Group settings and assignments with simplicity in mind'
+Description = 'Manage PIM Azure Resource, PIM Entra role and PIM for Group settings and assignments with simplicity in mind'
 
 # Minimum version of the PowerShell engine required by this module
 # PowerShellVersion = ''

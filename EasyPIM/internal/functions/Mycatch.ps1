@@ -16,6 +16,7 @@
       	
 #>
      function MyCatch($e){
+      write-verbose "MyCatch function called"
     $err = $($e.exception.message | out-string)
     $details =$e.errordetails# |fl -force
     $position = $e.InvocationInfo.positionMessage
@@ -23,6 +24,5 @@
     
     if ($TeamsNotif) { send-teamsnotif "$err" "$details<BR/> TIPS: try to check the scope and the role name" "$position" }
     Log "An exception occured: $err `nDetails: $details `nPosition: $position"
-    Log "Error, script did not terminate normaly"
-    break
+    throw "Error, script did not terminate gracefuly" #fix issue #40
 }
