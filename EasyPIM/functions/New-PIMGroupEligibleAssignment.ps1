@@ -97,8 +97,8 @@ function New-PIMGroupEligibleAssignment {
 
         #if permanent assignement is requested check this is allowed in the rule
         if ($permanent) {
-            if ( $config.AllowPermanentActiveAssignment -eq "false") {
-                throw "ERROR : The role $rolename does not allow permanent actove assignement, exiting"
+            if ( $config.AllowPermanentEligibleAssignment -eq "false") {
+                throw "ERROR : The role $rolename does not allow permanent eligble assignement, exiting"
             }
         }
 
