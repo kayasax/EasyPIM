@@ -1,4 +1,4 @@
-# Import the module that contains the function to test
+﻿# Import the module that contains the function to test
 #Import-Module ../Easypim
 
 Describe 'get-EntraRoleConfig' {
