@@ -1,4 +1,4 @@
-<#
+﻿<#
     .Synopsis
     Visualize PIM activities
       
@@ -6,7 +6,7 @@
     Visualire PIM activities
     
     .Example
-    PS> Get-PIMReport -tennantID $tenantID 
+    PS> Get-PIMReport -tennantID $tenantID
 
     
 

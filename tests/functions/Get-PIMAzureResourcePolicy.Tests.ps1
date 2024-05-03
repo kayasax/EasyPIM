@@ -1,4 +1,4 @@
-Describe 'Get-PIMAzureResourcePolicy' {
+﻿Describe 'Get-PIMAzureResourcePolicy' {
     It 'returns the correct policy' {
         # Arrange
         $tenantID = '8d4fd732-58aa-4643-8cae-974854a66a2d'
