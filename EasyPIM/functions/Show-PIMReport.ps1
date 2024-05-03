@@ -44,7 +44,7 @@ function Show-PIMReport {
         }
 
         #filter activities from the PIM service
-        $allresults = $allresults |?{$_.initiatedby.values.userprincipalname -ne $null}
+        $allresults = $allresults |Where-Object{$_.initiatedby.values.userprincipalname -ne $null}
 
 
         $props=@{}
