@@ -15,7 +15,7 @@
     Homepage: https://github.com/kayasax/EasyPIM
     
 #>
-function Get-PIMReport {
+function Show-PIMReport {
     [CmdletBinding(DefaultParameterSetName='Default')]
     param (
         [Parameter(Position = 0, Mandatory = $true)]
@@ -48,7 +48,7 @@ function Get-PIMReport {
 
 
         $props=@{}
-        $props["activities"]=$allresults
+        
 
         $stats_category = @{}
         $categories = $allresults | Group-Object -Property category
@@ -58,7 +58,7 @@ function Get-PIMReport {
         $props["category"]=$stats_category
 
         $stats_requestor = @{}
-        $requestors = $allresults.initiatedBy.values | Group-Object -Property userprincipalName
+        $requestors = $allresults.initiatedBy.values | Group-Object -Property userprincipalName | Sort-Object -Property Count -Descending -top 10
         $requestors | ForEach-Object {
             $stats_requestor[$_.Name] = $_.Count
         }
@@ -70,6 +70,18 @@ function Get-PIMReport {
             $stats_result[$_.Name] = $_.Count
         }
         $props["result"] =$stats_result
+
+        $stats_activity=@{}
+        $activities = $allresults | Group-Object -Property activityDisplayName
+        $activities | ForEach-Object {
+            if ($_.Name -notmatch "completed"){
+                $stats_activity[$_.Name] = $_.Count
+            }
+            
+        }
+        $props["activity"]=$stats_activity
+
+        $props["allresults"]=$allresults
 
         $output=New-Object PSObject -Property $props
         $output
