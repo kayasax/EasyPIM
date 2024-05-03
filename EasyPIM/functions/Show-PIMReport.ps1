@@ -24,6 +24,8 @@ function Show-PIMReport {
         $tenantID
     )
     try {
+        $Script:tenantID = $tenantID
+
         $allresults = @()
 
         $top=100
@@ -44,7 +46,7 @@ function Show-PIMReport {
         }
 
         #filter activities from the PIM service
-        $allresults = $allresults |Where-Object{$_.initiatedby.values.userprincipalname -ne $null}
+        $allresults = $allresults |Where-Object{ $null -ne $_.initiatedby.values.userprincipalname }
 
 
         $props=@{}
