@@ -17,7 +17,7 @@
 #>
 function Show-PIMReport {
     [CmdletBinding(DefaultParameterSetName = 'Default')]
-    [OutputType([PSCustomObject])]
+    [OutputType([System.Object[]])]
     param (
         [Parameter(Position = 0, Mandatory = $true)]
         [System.String]
