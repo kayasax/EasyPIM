@@ -29,8 +29,8 @@ function Show-PIMReport {
 
         $allresults = @()
 
-        $top = 100
-        $endpoint = "auditlogs/directoryAudits?`$filter=loggedByService eq 'PIM'&`$top=$top"
+        #$top = 100
+        $endpoint = "auditlogs/directoryAudits?`$filter=loggedByService eq 'PIM'" #&`$top=$top"
         $result = invoke-graph -Endpoint $endpoint -Method "GET"
         
         $allresults += $result.value
@@ -89,7 +89,7 @@ function Show-PIMReport {
         $props["category"] = $stats_category
     
         $stats_requestor = @{}
-        $requestors = $Myoutput | Group-Object -Property initiatedBy | Sort-Object -Property Count -Descending -top 10
+        $requestors = $Myoutput | Group-Object -Property initiatedBy | Sort-Object -Property Count -Descending | select-object -first 10
         $requestors | ForEach-Object {
             $stats_requestor[$_.Name] = $_.Count
         }
@@ -112,54 +112,60 @@ function Show-PIMReport {
         }
         $props["activity"] = $stats_activity
 
-        $stats_group=@{}
-        $targetgroup= $Myoutput | Where-Object {$_.category -match "group"}|Group-Object -Property targetresources |Sort-Object -Property Count -Descending -top 10
+        $stats_group = @{}
+        $targetgroup = $Myoutput | Where-Object { $_.category -match "group" } | Group-Object -Property targetresources | Sort-Object -Property Count -Descending | select-object -first 10
         $targetgroup | ForEach-Object {
             $stats_group[$_.Name] = $_.Count
         }
         $props["targetgroup"] = $stats_group
 
-        $stats_resource=@{}
-        $targetresource= $Myoutput | Where-Object {$_.category -match "resource"}|Group-Object -Property role |Sort-Object -Property Count -Descending -top 10
+        $stats_resource = @{}
+        $targetresource = $Myoutput | Where-Object { $_.category -match "resource" } | Group-Object -Property role | Sort-Object -Property Count -Descending | select-object -first 10
         $targetresource | ForEach-Object {
             $stats_resource[$_.Name] = $_.Count
         }
         $props["targetresource"] = $stats_resource
     
-        $stats_role=@{}
-        $targetrole= $Myoutput | Where-Object {$_.category -match "role"}|Group-Object -Property role |Sort-Object -Property Count -Descending -top 10
+        $stats_role = @{}
+        $targetrole = $Myoutput | Where-Object { $_.category -match "role" } | Group-Object -Property role | Sort-Object -Property Count -Descending | select-object -first 10
         $targetrole | ForEach-Object {
             $stats_role[$_.Name] = $_.Count
         }
         $props["targetrole"] = $stats_role
+        $props["startdate"]=($Myoutput | Sort-Object -Property activityDateTime | Select-Object -First 1).activityDateTime
+        $props["enddate"]=($Myoutput | Sort-Object -Property activityDateTime -Descending | Select-Object -First 1).activityDateTime
 
         #$props
 
 
 
         #building the dynamic part of the report
-        $myscript="
+        $myscript = "
         
             <script>
-                Chart.defaults.plugins.title.font.size = 18;
+            Chart.defaults.plugins.title.font.size = 18;
+            Chart.defaults.plugins.title.color='#DDDDDD';
+            Chart.defaults.plugins.legend.labels.color='#ffff99';
+            Chart.defaults.scale.ticks.color = '#ffff99';
+            
                 const ctx = document.getElementById('myChart');
                 new Chart(ctx, {
                     type: 'pie',
                     data: {
                         labels: ["
-                        $props.category.Keys | ForEach-Object {
-                            $myscript+="'"+$_+"',"
-                        }
-                        $myscript=$myscript.Replace(",$","") #remove the last comma
-                        $myscript+="],
+        $props.category.Keys | ForEach-Object {
+            $myscript += "'" + $_ + "',"
+        }
+        $myscript = $myscript.Replace(",$", "") #remove the last comma
+        $myscript += "],
                         datasets: [{
                             label: '# of activities',
                             data: ["
-                            $props.category.Keys | ForEach-Object {
-                                $myscript+="'"+$props.category[$_]+"',"
-                            }
-                            $myscript=$myscript.Replace(",$","") #remove the last comma
-                            $myscript+="],
+        $props.category.Keys | ForEach-Object {
+            $myscript += "'" + $props.category[$_] + "',"
+        }
+        $myscript = $myscript.Replace(",$", "") #remove the last comma
+        $myscript += "],
                             hoverOffset: 10
                         }]
                     },
@@ -195,21 +201,21 @@ function Show-PIMReport {
                     type: 'pie',
                     data: {
                         labels: ["
-                            $props.activity.Keys | ForEach-Object {
-                                $myscript+="'"+$_+"',"
-                            }
-                            $myscript=$myscript.Replace(",$","") #remove the last comma
+        $props.activity.Keys | ForEach-Object {
+            $myscript += "'" + $_ + "',"
+        }
+        $myscript = $myscript.Replace(",$", "") #remove the last comma
                             
-                        $myscript+="],
+        $myscript += "],
         
                         datasets: [{
                             label: '# of activities',
                             data: ["
-                            $props.activity.Keys | ForEach-Object {
-                                $myscript+="'"+$props.activity[$_]+"',"
-                            }
-                            $myscript=$myscript.Replace(",$","") #remove the last comma
-                            $myscript+="],
+        $props.activity.Keys | ForEach-Object {
+            $myscript += "'" + $props.activity[$_] + "',"
+        }
+        $myscript = $myscript.Replace(",$", "") #remove the last comma
+        $myscript += "],
                             hoverOffset: 10
                         }]
                     },
@@ -244,20 +250,17 @@ function Show-PIMReport {
                 new Chart(ctx2, {
                     type: 'pie',
                     data: {
-                        labels: ["
-                        $props.result.Keys | ForEach-Object {
-                            $myscript+="'"+$_+"',"
-                        }
-                        $myscript=$myscript.Replace(",$","") #remove the last comma
-                        $myscript+="],
+                        labels: ['Success', 'Failure'],
                         datasets: [{
                             label: 'result',
-                            data: ["
-                            $props.result.Keys | ForEach-Object {
-                                $myscript+="'"+$props.result[$_]+"',"
-                            }
-                            $myscript=$myscript.Replace(",$","") #remove the last comma
-                            $myscript+="],
+                            data: ['"
+        $myscript += $props.result['success']
+        $myscript += "','"
+        $myscript += $props.result['failure']
+        $myscript += "'"
+        
+        
+        $myscript += "],
                             backgroundColor: [
                                 'rgb(0, 255, 0)',
                                 'rgb(255, 0, 0)'
@@ -301,19 +304,19 @@ function Show-PIMReport {
                     type: 'bar',
                     data: {
                         labels: ["
-                        $props.requestor.Keys | ForEach-Object {
-                            $myscript+="'"+$_+"',"
-                        }
-                        $myscript=$myscript.Replace(",$","") #remove the last comma
-                        $myscript+="],
+        $props.requestor.Keys | ForEach-Object {
+            $myscript += "'" + $_ + "',"
+        }
+        $myscript = $myscript.Replace(",$", "") #remove the last comma
+        $myscript += "],
                         datasets: [{
                             label: 'Number of requests',
                             data: ["
-                            $props.requestor.Keys | ForEach-Object {
-                                $myscript+="'"+$props.requestor[$_]+"',"
-                            }
-                            $myscript=$myscript.Replace(",$","") #remove the last comma
-                            $myscript+="],
+        $props.requestor.Keys | ForEach-Object {
+            $myscript += "'" + $props.requestor[$_] + "',"
+        }
+        $myscript = $myscript.Replace(",$", "") #remove the last comma
+        $myscript += "],
         
                             hoverOffset: 10
                         }]
@@ -350,19 +353,19 @@ function Show-PIMReport {
                     type: 'bar',
                     data: {
                         labels: ["
-                        $props.targetGroup.Keys | ForEach-Object {
-                            $myscript+="'"+$_+"',"
-                        }
-                        $myscript=$myscript.Replace(",$","") #remove the last comma
-                        $myscript+="],
+        $props.targetGroup.Keys | ForEach-Object {
+            $myscript += "'" + $_ + "',"
+        }
+        $myscript = $myscript.Replace(",$", "") #remove the last comma
+        $myscript += "],
                         datasets: [{
                             label: 'Number of requests',
                             data: ["
-                            $props.targetGroup.Keys | ForEach-Object {
-                                $myscript+="'"+$props.targetGroup[$_]+"',"
-                            }
-                            $myscript=$myscript.Replace(",$","") #remove the last comma
-                            $myscript+="],
+        $props.targetGroup.Keys | ForEach-Object {
+            $myscript += "'" + $props.targetGroup[$_] + "',"
+        }
+        $myscript = $myscript.Replace(",$", "") #remove the last comma
+        $myscript += "],
         
                             hoverOffset: 10
                         }]
@@ -399,19 +402,19 @@ function Show-PIMReport {
                     type: 'bar',
                     data: {
                         labels: ["
-                        $props.targetResource.Keys | ForEach-Object {
-                            $myscript+="'"+$_+"',"
-                        }
-                        $myscript=$myscript.Replace(",$","") #remove the last comma
-                        $myscript+="],
+        $props.targetResource.Keys | ForEach-Object {
+            $myscript += "'" + $_ + "',"
+        }
+        $myscript = $myscript.Replace(",$", "") #remove the last comma
+        $myscript += "],
                         datasets: [{
                             label: 'Number of requests',
                             data: ["
-                            $props.targetresource.Keys | ForEach-Object {
-                                $myscript+="'"+$props.targetresource[$_]+"',"
-                            }
-                            $myscript=$myscript.Replace(",$","") #remove the last comma
-                            $myscript+="],
+        $props.targetresource.Keys | ForEach-Object {
+            $myscript += "'" + $props.targetresource[$_] + "',"
+        }
+        $myscript = $myscript.Replace(",$", "") #remove the last comma
+        $myscript += "],
         
                             hoverOffset: 10
                         }]
@@ -448,19 +451,19 @@ function Show-PIMReport {
                     type: 'bar',
                     data: {
                         labels: ["
-                        $props.targetrole.Keys | ForEach-Object {
-                            $myscript+="'"+$_+"',"
-                        }
-                        $myscript=$myscript.Replace(",$","") #remove the last comma
-                        $myscript+="],
+        $props.targetrole.Keys | ForEach-Object {
+            $myscript += "'" + $_ + "',"
+        }
+        $myscript = $myscript.Replace(",$", "") #remove the last comma
+        $myscript += "],
                         datasets: [{
                             label: 'Number of requests',
                             data: ["
-                            $props.targetrole.Keys | ForEach-Object {
-                                $myscript+="'"+$props.targetrole[$_]+"',"
-                            }
-                            $myscript=$myscript.Replace(",$","") #remove the last comma
-                            $myscript+="],
+        $props.targetrole.Keys | ForEach-Object {
+            $myscript += "'" + $props.targetrole[$_] + "',"
+        }
+        $myscript = $myscript.Replace(",$", "") #remove the last comma
+        $myscript += "],
         
                             hoverOffset: 10
                         }]
@@ -493,6 +496,7 @@ function Show-PIMReport {
                 });
         
             </script>
+           
         </body>
         
         </html>"
@@ -509,7 +513,13 @@ function Show-PIMReport {
 
 </head>
 <style>
+    body {
+        background-color: #2b2b2b;
+        color: #f5f5f5;
+    }
+
     #container {
+        background-color: #3c3c3c;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
@@ -519,6 +529,7 @@ function Show-PIMReport {
     .row {
         display: flex;
         padding: 10px;
+        border-bottom: 1px solid #444;
     }
 
     .chart {
@@ -530,26 +541,51 @@ function Show-PIMReport {
         flex: 1;
         /* Optional: Each div will take up an equal amount of space */
         vertical-align: middle;
+        color:#a7a7a7;
     }
 
     code {
         font-family: Consolas, "Courier New", monospace;
-        background-color: #f6f8fa;
+        background-color: #203048;
+        color: #f5f5f5;
         padding: 0.2em 0.4em;
         font-size: 85%;
         border-radius: 6px;
+        line-height: 1.5;
     }
+
     #fixedDiv {
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 200px; /* Adjust as needed */
-    height: 200px; /* Adjust as needed */
-    background-color: #f6f8fa; /* Adjust as needed */
-    padding: 10px; /* Adjust as needed */
-    z-index: 1000; /* Ensure the div stays on top of other elements */
-}
+        background-color: #3c3c3c;
+        color: #f5f5f5;
+        position: fixed;
+        top: 10;
+        left: 980;
+        width: 200px;
+        /* Adjust as needed */
+        height: 200px;
+       
+        /* Adjust as needed */
+        padding: 10px;
+        /* Adjust as needed */
+        z-index: 1000;
+        /* Ensure the div stays on top of other elements */
+    }
+
+    a {
+        color: #1cd031;
+    }
+    H1,H2{
+        text-align: center;
+    }
+    .header{
+        border-bottom: #444 1px solid;
+    }
+    .footer{
+        text-align: center;
+        color: #a7a7a7;
+    }
 </style>
+
 
 <body>
     <div id="fixedDiv">Navigation
@@ -564,43 +600,50 @@ function Show-PIMReport {
         </ul>
     </div>
     <div id="container" style="width: 950px">
+    <div class="header">
+        <h1>PIM activity summary</h1>
+    <h2>from
+'@
+
+$html+= $props['startdate'].ToString() + " to " + $props['enddate'].ToString() + "</h2></div>"
+$html += @'
         <div class="row">
             <div class="chart">
-                <canvas id="myChart" width="900" height="180"></canvas>
+                <canvas id="myChart" width="900" height="200"></canvas>
             </div>
         </div>
         <div class="row">
             <div class="description">
                 Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-                consult the details:<br>
-                <code>$r | where-object {$_.category -eq "GroupManagement"}</code>
+                filter the activity for a specific category:<br>
+                <pre><code>$r | where-object { $_.category -eq "GroupManagement" }</code></pre>
             </div>
         </div>
 
         <div class="row">
             <div class="chart">
-                <canvas id="result" width="900" height="300"></canvas>
+                <canvas id="result" width="900" height="200"></canvas>
             </div>
         </div>
         <div class="row">
             <div class="description">
                 Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-                consult the details:<br>
+                consult the failed operations:<br>
                 <code>$r | where-object {$_.result -eq "Failure"}</code>
             </div>
         </div>
-    </div>
+    
 
     <div class="row">
         <div class="chart">
-            <canvas id="activities" width="900" height="300"></canvas>
+            <canvas id="activities" width="900" height="400"></canvas>
         </div>
 
     </div>
     <div class="row">
         <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
             consult the details:<br>
-            <code>$r | where-object {$_.activity -eq "Add member to role in PIM requested (timebound)"}</code>
+            <code>$r | where-object {$_.activityDisplayName -eq "Add member to role in PIM requested (timebound)"}</code>
         </div>
     </div>
 
@@ -611,8 +654,8 @@ function Show-PIMReport {
     </div>
     <div class="row">
         <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-            consult the details:<br>
-            <code>$r | where-object {$_.Initiatedby -match "basic"}</code>
+            filter the activity requested by User1:<br>
+            <code>$r | where-object {$_.Initiatedby -match "user1"}</code>
         </div>
 </div>
         <div class="row">
@@ -622,7 +665,7 @@ function Show-PIMReport {
     </div>
     <div class="row">
         <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-            consult the details:<br>
+            get the details for a group:<br>
             <code>$r | where-object {$_.category -match "group" -and $_.targetresources -eq "PIM_GuestAdmins"}</code>
         </div>
         </div>
@@ -633,7 +676,7 @@ function Show-PIMReport {
     </div>
     <div class="row">
         <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-            consult the details:<br>
+            consult the details for a specific Azure role:<br>
             <code>$r | where-object {$_.category -match "resource" -and $_.role -eq "Reader"}</code>
         </div>
         </div>
@@ -645,11 +688,13 @@ function Show-PIMReport {
     </div>
     <div class="row">
         <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-            consult the details:<br>
+            consult the details for a specific Enntra role:<br>
             <code>$r | where-object {$_.category -match "role" -and $_.role -eq "Global Administrator"}</code>
         </div>
         </div>
-
+        <div class='footer'>
+        <p>Generated with <a href='https://powershellgallery.com/packages/EasyPIM'>EasyPIM</a></p>
+    </div>
     </div> <!-- container -->
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
