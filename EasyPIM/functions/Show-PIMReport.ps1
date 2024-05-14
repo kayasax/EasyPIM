@@ -606,7 +606,7 @@ function Show-PIMReport {
 
     <div class="row">
         <div class="chart">
-            <canvas id="requestor" width="900" height="300"></canvas>
+            <canvas id="requestor" width="900" height="500"></canvas>
         </div>
     </div>
     <div class="row">
@@ -617,7 +617,7 @@ function Show-PIMReport {
 </div>
         <div class="row">
         <div class="chart">
-            <canvas id="Groups" width="900" height="300"></canvas>
+            <canvas id="Groups" width="900" height="500"></canvas>
         </div>
     </div>
     <div class="row">
@@ -628,7 +628,7 @@ function Show-PIMReport {
         </div>
         <div class="row">
         <div class="chart">
-            <canvas id="Resources" width="900" height="300"></canvas>
+            <canvas id="Resources" width="900" height="500"></canvas>
         </div>
     </div>
     <div class="row">
@@ -640,7 +640,7 @@ function Show-PIMReport {
 
         <div class="row">
         <div class="chart">
-            <canvas id="Roles" width="900" height="300"></canvas>
+            <canvas id="Roles" width="900" height="500"></canvas>
         </div>
     </div>
     <div class="row">
