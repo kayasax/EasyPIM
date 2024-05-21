@@ -3,6 +3,9 @@
 EasyPIM is a PowerShell module created to help you manage Microsof Entra Privileged Identity Management (PIM).  
 Packed with more than 30 cmdlets, EasyPIM leverages the ARM and Graph APIs to let you configure PIM **Azure Resources**, **Entra Roles** and **groups** settings and assignments in a simple way .  
 
+[![PSGallery Version](https://img.shields.io/powershellgallery/v/easypim.svg?style=flat&logo=powershell&label=PSGallery%20Version)](https://www.powershellgallery.com/packages/easypim) [![PSGallery Downloads](https://img.shields.io/powershellgallery/dt/easypim.svg?style=flat&logo=powershell&label=PSGallery%20Downloads)](https://www.powershellgallery.com/packages/easypim)
+
+
 ## Key features
 :boom: Support editing multiple roles at once  
 :boom: Copy settings from one role to another   
