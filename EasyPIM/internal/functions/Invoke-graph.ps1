@@ -47,7 +47,9 @@ function invoke-graph {
                 "RoleManagementPolicy.ReadWrite.AzureADGroup",
                 "PrivilegedEligibilitySchedule.ReadWrite.AzureADGroup",
                 "PrivilegedAssignmentSchedule.ReadWrite.AzureADGroup",
-                "PrivilegedAccess.ReadWrite.AzureADGroup")
+                "PrivilegedAccess.ReadWrite.AzureADGroup",
+                "AuditLog.Read.All",
+                "Directory.Read.All")
 
             Connect-MgGraph -Tenant $script:tenantID -Scopes $scopes
         }
