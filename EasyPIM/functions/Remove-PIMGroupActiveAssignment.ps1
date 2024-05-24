@@ -1,20 +1,16 @@
 ﻿<#
     .Synopsis
-    Create an active assignement at the provided scope
+    Remove an active assignement at the provided scope
     .Description
     Active assignment does not require users to activate their role. https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
     .Parameter tenantID
     EntraID tenant ID
-    .Parameter subscriptionID
-    subscription ID
-    .Parameter scope
-    use scope parameter if you want to work at other scope than a subscription
     .Parameter principalID
     objectID of the principal (user, group or service principal)
-    .Parameter rolename
-    name of the role to assign
-    .Parameter duration
-    duration of the assignment, if not set we will use the maximum allowed value from the role policy
+    .Parameter groupID
+    ID of the group
+    .Parameter type
+    member or owner
     .Parameter startDateTime
     When the assignment wil begin, if not set we will use current time
     .Parameter permanent
