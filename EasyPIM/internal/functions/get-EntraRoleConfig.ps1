@@ -22,6 +22,10 @@ function Get-EntraRoleConfig ($rolename) {
         $response = invoke-graph -Endpoint $endpoint
         $roleID = $response.value.Id
         Write-Verbose "roleID = $roleID"
+        if($null -eq $roleID){
+            Throw "ERROR: Role $rolename not found"
+            return
+        }
 
         # 2 Get PIM policyID for that role
         $endpoint = "policies/roleManagementPolicyAssignments?`$filter=scopeId eq '/' and scopeType eq 'DirectoryRole' and roleDefinitionId eq '$roleID'"

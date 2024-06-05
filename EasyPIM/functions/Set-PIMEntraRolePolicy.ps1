@@ -140,7 +140,7 @@ function Set-PIMEntraRolePolicy {
         }
         $p = $p -join ', '
        
-        log "Function Set-PIMEntraRolePolicy is starting with parameters: $p" -noEcho
+        write-verbose "Function Set-PIMEntraRolePolicy is starting with parameters: $p"
 
         $script:tenantID=$tenantID
 
