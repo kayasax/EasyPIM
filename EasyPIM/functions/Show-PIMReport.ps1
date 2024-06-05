@@ -22,7 +22,12 @@ function Show-PIMReport {
         [Parameter(Position = 0, Mandatory = $true)]
         [System.String]
         # Tenant ID
-        $tenantID
+        $tenantID,
+        [Parameter(Position = 1, Mandatory = $false)]
+        [System.String]
+        # upn of the user
+        $upn
+
     )
     try {
         $Script:tenantID = $tenantID
@@ -32,7 +37,6 @@ function Show-PIMReport {
         #$top = 100
         $endpoint = "auditlogs/directoryAudits?`$filter=loggedByService eq 'PIM'" #&`$top=$top"
         $result = invoke-graph -Endpoint $endpoint -Method "GET"
-        
         $allresults += $result.value
 
         if ($result."@odata.nextLink") {
@@ -48,6 +52,17 @@ function Show-PIMReport {
 
         #filter activities from the PIM service and completed activities
         $allresults = $allresults | Where-Object { $null -ne $_.initiatedby.values.userprincipalname } | Where-Object { $_.activityDisplayName -notmatch "completed" }
+        
+        #check if upn parameter is set using psboundparameters
+        if ($PSBoundParameters.ContainsKey('upn')) {
+            Write-Verbose "Filtering activities for $upn"
+            $allresults = $allresults | Where-Object {$_.initiatedby.values.userprincipalname -eq $upn}
+            if ($allresults.count -eq 0) {
+                Write-Warning "No activity found for $upn"
+                return
+            }
+        }
+        
         $Myoutput = @()
 
         $allresults | ForEach-Object {
