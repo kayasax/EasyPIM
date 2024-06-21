@@ -59,6 +59,19 @@ function Set-PIMAzureResourcePolicy {
         [System.String[]]
         # Activation requirement
         $ActivationRequirement,
+
+        [Parameter(HelpMessage = "Accepted values: 'None' or any combination of these options (Case SENSITIVE):  'Justification, 'MultiFactorAuthentication'")]
+        [ValidateScript({
+                # accepted values: "None","Justification", "MultiFactorAuthentication"
+                # WARNING: options are CASE SENSITIVE
+                $script:valid = $true
+                $acceptedValues = @("None", "Justification", "MultiFactorAuthentication")
+                $_ | ForEach-Object { if (!( $acceptedValues -Ccontains $_)) { $script:valid = $false } }
+                return $script:valid
+            })]
+        [System.String[]]
+        # Active Assignation requirement
+        $ActiveAssignationRequirement,
         
         [Parameter()]
         [Bool]
@@ -174,6 +187,9 @@ function Set-PIMAzureResourcePolicy {
 
             if ($PSBoundParameters.Keys.Contains('ActivationRequirement')) {
                 $rules += Set-ActivationRequirement $ActivationRequirement
+            }
+            if ($PSBoundParameters.Keys.Contains('ActiveAssignationRequirement')) {
+                $rules += Set-ActiveAssignmentRequirement $ActiveAssignationRequirement
             }
 
             # Approval and approvers
