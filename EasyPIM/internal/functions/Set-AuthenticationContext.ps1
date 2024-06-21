@@ -19,6 +19,11 @@
 #>
 function Set-AuthenticationContext($authenticationContext_Enabled, $authenticationContext_Value) {
     write-verbose "Set-AuthenticationContext : $($authenticationContext_Enabled), $($authenticationContext_Value)"
+
+    if( ([regex]::match($authenticationContext_Value,"c[0-9]{1,2}$").success -eq $false)) {
+        Throw "AuthenticationContext_Value must be in the format c1 - c99"
+    }
+
     if($authenticationContext_Enabled){
         $enabled="true"
     if($authenticationContext_Value -eq "None" -or $authenticationContext_Value.length -eq 0) {
