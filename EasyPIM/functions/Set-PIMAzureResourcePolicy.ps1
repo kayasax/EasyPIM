@@ -75,6 +75,16 @@ function Set-PIMAzureResourcePolicy {
         
         [Parameter()]
         [Bool]
+        # Is authentication context required? ($true|$false)
+        $AuthenticationContext_Enabled,
+
+        [Parameter()]
+        [String]
+        # Authentication context value? (ex c1)
+        $AuthenticationContext_Value,
+
+        [Parameter()]
+        [Bool]
         # Is approval required to activate a role? ($true|$false)
         $ApprovalRequired,
     
@@ -191,6 +201,14 @@ function Set-PIMAzureResourcePolicy {
             if ($PSBoundParameters.Keys.Contains('ActiveAssignationRequirement')) {
                 $rules += Set-ActiveAssignmentRequirement $ActiveAssignationRequirement
             }
+
+            if ($PSBoundParameters.Keys.Contains('AuthenticationContext_Enabled')) {
+                if (!($PSBoundParameters.Keys.Contains('AuthenticationContext_Value'))) {
+                    $AuthenticationContext_Value = $null
+                }
+                $rules += Set-AuthenticationContext $AuthenticationContext_Enabled $AuthenticationContext_Value
+            }
+
 
             # Approval and approvers
             if ( ($PSBoundParameters.Keys.Contains('ApprovalRequired')) -or ($PSBoundParameters.Keys.Contains('Approvers'))) {

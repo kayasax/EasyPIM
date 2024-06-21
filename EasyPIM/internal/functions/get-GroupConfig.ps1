@@ -1,4 +1,4 @@
-﻿<#Get-PIMGroupPolicyGet-PIMGroupPolicy
+﻿<#
     .Synopsis
         Get rules for the group $groupID
     .Description

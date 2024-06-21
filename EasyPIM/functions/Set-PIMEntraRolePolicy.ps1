@@ -49,6 +49,29 @@ function Set-PIMEntraRolePolicy {
         # Activation requirement
         $ActivationRequirement,
         
+        [Parameter(HelpMessage = "Accepted values: 'None' or any combination of these options (Case SENSITIVE):  'Justification, 'MultiFactorAuthentication'")]
+        [ValidateScript({
+                # accepted values: "None","Justification", "MultiFactorAuthentication"
+                # WARNING: options are CASE SENSITIVE
+                $script:valid = $true
+                $acceptedValues = @("None", "Justification", "MultiFactorAuthentication")
+                $_ | ForEach-Object { if (!( $acceptedValues -Ccontains $_)) { $script:valid = $false } }
+                return $script:valid
+            })]
+        [System.String[]]
+        # Active assignment requirement
+        $ActiveAssignmentRequirement,
+
+        [Parameter()]
+        [Bool]
+        # Is authentication context required? ($true|$false)
+        $AuthenticationContext_Enabled,
+
+        [Parameter()]
+        [String]
+        # Authentication context value? (ex c1)
+        $AuthenticationContext_Value,
+
         [Parameter()]
         [Bool]
         # Is approval required to activate a role? ($true|$false)
