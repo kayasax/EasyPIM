@@ -34,7 +34,7 @@ function Set-AuthenticationContext($authenticationContext_Enabled, $authenticati
             Throw "AuthenticationContext_Value must be in the format c1 - c99"
         }
     }
-    else { $enabled = "false" }   
+    else { $enabled = "false" }
             
     $properties = '{
 	"id": "AuthenticationContext_EndUser_Assignment",
