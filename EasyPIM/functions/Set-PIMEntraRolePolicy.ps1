@@ -183,6 +183,16 @@ function Set-PIMEntraRolePolicy {
                 $rules += Set-ActivationRequirement $ActivationRequirement -EntraRole
             }
 
+            if ($PSBoundParameters.Keys.Contains('ActiveAssignmentRequirement')) {
+                $rules += Set-ActiveAssignmentRequirement $ActiveAssignmentRequirement -EntraRole
+            }
+            if ($PSBoundParameters.Keys.Contains('AuthenticationContext_Enabled')) {
+                if (!($PSBoundParameters.Keys.Contains('AuthenticationContext_Value'))) {
+                    $AuthenticationContext_Value = $null
+                }
+                $rules += Set-AuthenticationContext $AuthenticationContext_Enabled $AuthenticationContext_Value -entraRole
+            }
+
             # Approval and approvers
             if ( ($PSBoundParameters.Keys.Contains('ApprovalRequired')) -or ($PSBoundParameters.Keys.Contains('Approvers'))) {
                 $rules += Set-Approval $ApprovalRequired $Approvers -EntraRole
