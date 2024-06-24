@@ -19,7 +19,7 @@
         Homepage: https://github.com/kayasax/EasyPIM
      #>
 function Set-PIMGroupPolicy {
-    [CmdletBinding(DefaultParameterSetName='Default',SupportsShouldProcess = $true)]
+    [CmdletBinding(DefaultParameterSetName = 'Default', SupportsShouldProcess = $true)]
     [OutputType([bool])]
     param (
         [Parameter(Position = 0, Mandatory = $true)]
@@ -53,7 +53,29 @@ function Set-PIMGroupPolicy {
         [System.String[]]
         # Activation requirement
         $ActivationRequirement,
-        
+        [Parameter(HelpMessage = "Accepted values: 'None' or any combination of these options (Case SENSITIVE):  'Justification, 'MultiFactorAuthentication'")]
+        [ValidateScript({
+                # accepted values: "None","Justification", "MultiFactorAuthentication"
+                # WARNING: options are CASE SENSITIVE
+                $script:valid = $true
+                $acceptedValues = @("None", "Justification", "MultiFactorAuthentication")
+                $_ | ForEach-Object { if (!( $acceptedValues -Ccontains $_)) { $script:valid = $false } }
+                return $script:valid
+            })]
+        [System.String[]]
+        # Active assignment requirement
+        $ActiveAssignmentRequirement,
+
+        [Parameter()]
+        [Bool]
+        # Is authentication context required? ($true|$false)
+        $AuthenticationContext_Enabled,
+
+        [Parameter()]
+        [String]
+        # Authentication context value? (ex c1)
+        $AuthenticationContext_Value,
+
         [Parameter()]
         [Bool]
         # Is approval required to activate a role? ($true|$false)
@@ -147,7 +169,7 @@ function Set-PIMGroupPolicy {
        
         log "Function Set-PIMGroupPolicy is starting with parameters: $p" -noEcho
 
-        $script:tenantID=$tenantID
+        $script:tenantID = $tenantID
 
         #at least one approver required if approval is enable
         # todo chech if a parameterset would be better
@@ -164,6 +186,15 @@ function Set-PIMGroupPolicy {
             if ($PSBoundParameters.Keys.Contains('ActivationRequirement')) {
                 $rules += Set-ActivationRequirement $ActivationRequirement -EntraRole
             }
+            if ($PSBoundParameters.Keys.Contains('ActiveAssignmentRequirement')) {
+                $rules += Set-ActiveAssignmentRequirement $ActiveAssignmentRequirement -EntraRole
+            }
+            if ($PSBoundParameters.Keys.Contains('AuthenticationContext_Enabled')) {
+                if (!($PSBoundParameters.Keys.Contains('AuthenticationContext_Value'))) {
+                    $AuthenticationContext_Value = $null
+                }
+                $rules += Set-AuthenticationContext $AuthenticationContext_Enabled $AuthenticationContext_Value -entraRole
+            }
 
             # Approval and approvers
             if ( ($PSBoundParameters.Keys.Contains('ApprovalRequired')) -or ($PSBoundParameters.Keys.Contains('Approvers'))) {
@@ -176,7 +207,7 @@ function Set-PIMGroupPolicy {
                 write-verbose "Maximum Eligibiliy duration from curent config: $($script:config.MaximumEligibleAssignmentDuration)"
                 if (!( $PSBoundParameters.ContainsKey('MaximumEligibilityDuration'))) { $MaximumEligibilityDuration = $script:config.MaximumEligibleAssignmentDuration }
                 if (!( $PSBoundParameters.ContainsKey('AllowPermanentEligibility'))) { $AllowPermanentEligibility = $script:config.AllowPermanentEligibleAssignment }
-                if ( ($false -eq $AllowPermanentEligibility) -and ( ($MaximumEligibilityDuration -eq "") -or ($null -eq $MaximumEligibilityDuration) )){
+                if ( ($false -eq $AllowPermanentEligibility) -and ( ($MaximumEligibilityDuration -eq "") -or ($null -eq $MaximumEligibilityDuration) )) {
                     throw "ERROR: you requested the assignement to expire but the maximum duration is not defined, please use the MaximumEligibilityDuration parameter"
                 }
                 $rules += Set-EligibilityAssignment $MaximumEligibilityDuration $AllowPermanentEligibility -entraRole
@@ -188,7 +219,7 @@ function Set-PIMGroupPolicy {
                 write-verbose "Maximum Active duration from curent config: $($script:config.MaximumActiveAssignmentDuration)"
                 if (!( $PSBoundParameters.ContainsKey('MaximumActiveAssignmentDuration'))) { $MaximumActiveAssignmentDuration = $script:config.MaximumActiveAssignmentDuration }
                 if (!( $PSBoundParameters.ContainsKey('AllowPermanentActiveAssignment'))) { $AllowPermanentActiveAssignment = $script:config.AllowPermanentActiveAssignment }
-                if ( ($false -eq $AllowPermanentActiveAssignment) -and ( ($MaximumActiveAssignmentDuration -eq "") -or ($null -eq $MaximumActiveAssignmentDuration) )){
+                if ( ($false -eq $AllowPermanentActiveAssignment) -and ( ($MaximumActiveAssignmentDuration -eq "") -or ($null -eq $MaximumActiveAssignmentDuration) )) {
                     throw "ERROR: you requested the assignement to expire but the maximum duration is not defined, please use the MaximumActiveAssignmentDuration parameter"
                 }
                 $rules += Set-ActiveAssignment $MaximumActiveAssignmentDuration $AllowPermanentActiveAssignment -entraRole
@@ -226,7 +257,7 @@ function Set-PIMGroupPolicy {
             # Notif Active Assignment Approvers
             if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Approver')) {
                 $rules += Set-Notification_ActiveAssignment_Approver $Notification_ActiveAssignment_Approver -entraRole
-             }
+            }
         
             # Notification Activation alert
             if ($PSBoundParameters.Keys.Contains('Notification_Activation_Alert')) {
@@ -250,7 +281,7 @@ function Set-PIMGroupPolicy {
 
             #Patching the policy
             if ($PSCmdlet.ShouldProcess($_, "Udpdating policy")) {
-               $null = Update-EntraRolePolicy $script:config.policyID $allrules
+                $null = Update-EntraRolePolicy $script:config.policyID $allrules
             }
             
         }

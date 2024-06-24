@@ -1,4 +1,4 @@
-﻿<#Get-PIMGroupPolicyGet-PIMGroupPolicy
+﻿<#
     .Synopsis
         Get rules for the group $groupID
     .Description
@@ -8,7 +8,7 @@
     .Parameter type
         type of role (owner or member)
     .Example
-        PS> get-config -scope $scop -rolename role1
+        PS> get-config -scope $scope -rolename role1
 
         Get the policy of the role role1 at the specified scope
      
@@ -32,6 +32,11 @@ function get-Groupconfig ( $id, $type) {
         $_activationDuration = ($response.value.policy.rules | Where-Object { $_.id -eq "Expiration_EndUser_Assignment" }).maximumDuration
         # End user enablement rule (MultiFactorAuthentication, Justification, Ticketing)
         $_enablementRules = ($response.value.policy.rules | Where-Object { $_.id -eq "Enablement_EndUser_Assignment" }).enabledRules
+        # Active assignment requirement
+        $_activeAssignmentRequirement = $response.value.policy.rules | Where-Object { $_.id -eq "Enablement_Admin_Assignment" } | Select-Object -expand enabledRules
+        # Authentication context
+        $_authenticationContext_Enabled = $response.value.policy.rules | Where-Object { $_.id -eq "AuthenticationContext_EndUser_Assignment" } | Select-Object -expand isEnabled
+        $_authenticationContext_value = $response.value.policy.rules | Where-Object { $_.id -eq "AuthenticationContext_EndUser_Assignment" } | Select-Object -expand claimValue
         # approval required
         $_approvalrequired = $($response.value.policy.rules | Where-Object { $_.id -eq "Approval_EndUser_Assignment" }).setting.isapprovalrequired
         # approvers
@@ -104,6 +109,9 @@ function get-Groupconfig ( $id, $type) {
             PolicyID                                                     = $policyId
             ActivationDuration                                           = $_activationDuration
             EnablementRules                                              = $_enablementRules -join ','
+            ActiveAssignmentRequirement                                  = $_activeAssignmentRequirement -join ','
+            AuthenticationContext_Enabled                                = $_authenticationContext_Enabled
+            AuthenticationContext_Value                                  = $_authenticationContext_value
             ApprovalRequired                                             = $_approvalrequired
             Approvers                                                    = $_approvers -join ','
             AllowPermanentEligibleAssignment                             = $_permanantEligibility

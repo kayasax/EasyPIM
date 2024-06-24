@@ -46,6 +46,12 @@ function Get-EntraRoleConfig ($rolename) {
         $_activationDuration = $response.value | Where-Object { $_.id -eq "Expiration_EndUser_Assignment" } | Select-Object -ExpandProperty maximumduration
         # End user enablement rule (MultiFactorAuthentication, Justification, Ticketing)
         $_enablementRules = $response.value | Where-Object { $_.id -eq "Enablement_EndUser_Assignment" } | Select-Object -expand enabledRules
+        # Active assignment requirement
+        $_activeAssignmentRequirement = $response.value | Where-Object { $_.id -eq "Enablement_Admin_Assignment" } | Select-Object -expand enabledRules
+        # Authentication context
+        $_authenticationContext_Enabled = $response.value | Where-Object { $_.id -eq "AuthenticationContext_EndUser_Assignment" } | Select-Object -expand isEnabled
+        $_authenticationContext_value = $response.value | Where-Object { $_.id -eq "AuthenticationContext_EndUser_Assignment" } | Select-Object -expand claimValue
+
         # approval required
         $_approvalrequired = $($response.value | Where-Object { $_.id -eq "Approval_EndUser_Assignment" }).setting.isapprovalrequired
         # approvers
@@ -120,6 +126,9 @@ function Get-EntraRoleConfig ($rolename) {
             PolicyID                                                     = $policyId
             ActivationDuration                                           = $_activationDuration
             EnablementRules                                              = $_enablementRules -join ','
+            ActiveAssignmentRequirement                                  = $_activeAssignmentRequirement -join ','
+            AuthenticationContext_Enabled                                = $_authenticationContext_Enabled
+            AuthenticationContext_Value                                  = $_authenticationContext_value
             ApprovalRequired                                             = $_approvalrequired
             Approvers                                                    = $_approvers -join ','
             AllowPermanentEligibleAssignment                             = $_permanantEligibility

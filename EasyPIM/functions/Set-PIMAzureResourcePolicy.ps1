@@ -59,7 +59,30 @@ function Set-PIMAzureResourcePolicy {
         [System.String[]]
         # Activation requirement
         $ActivationRequirement,
+
+        [Parameter(HelpMessage = "Accepted values: 'None' or any combination of these options (Case SENSITIVE):  'Justification, 'MultiFactorAuthentication'")]
+        [ValidateScript({
+                # accepted values: "None","Justification", "MultiFactorAuthentication"
+                # WARNING: options are CASE SENSITIVE
+                $script:valid = $true
+                $acceptedValues = @("None", "Justification", "MultiFactorAuthentication")
+                $_ | ForEach-Object { if (!( $acceptedValues -Ccontains $_)) { $script:valid = $false } }
+                return $script:valid
+            })]
+        [System.String[]]
+        # Active Assignation requirement
+        $ActiveAssignationRequirement,
         
+        [Parameter()]
+        [Bool]
+        # Is authentication context required? ($true|$false)
+        $AuthenticationContext_Enabled,
+
+        [Parameter()]
+        [String]
+        # Authentication context value? (ex c1)
+        $AuthenticationContext_Value,
+
         [Parameter()]
         [Bool]
         # Is approval required to activate a role? ($true|$false)
@@ -175,6 +198,17 @@ function Set-PIMAzureResourcePolicy {
             if ($PSBoundParameters.Keys.Contains('ActivationRequirement')) {
                 $rules += Set-ActivationRequirement $ActivationRequirement
             }
+            if ($PSBoundParameters.Keys.Contains('ActiveAssignationRequirement')) {
+                $rules += Set-ActiveAssignmentRequirement $ActiveAssignationRequirement
+            }
+
+            if ($PSBoundParameters.Keys.Contains('AuthenticationContext_Enabled')) {
+                if (!($PSBoundParameters.Keys.Contains('AuthenticationContext_Value'))) {
+                    $AuthenticationContext_Value = $null
+                }
+                $rules += Set-AuthenticationContext $AuthenticationContext_Enabled $AuthenticationContext_Value
+            }
+
 
             # Approval and approvers
             if ( ($PSBoundParameters.Keys.Contains('ApprovalRequired')) -or ($PSBoundParameters.Keys.Contains('Approvers'))) {
