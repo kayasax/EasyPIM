@@ -180,8 +180,12 @@ function Set-PIMAzureResourcePolicy {
         if (!($PSBoundParameters.Keys.Contains('scope'))) {
             $script:scope = "subscriptions/$script:subscriptionID"
         }
+        else {
+            $script:scope = $scope
+        }
         write-verbose "scope: $script:scope"
         $script:tenantID=$tenantID
+        
 
         #at least one approver required if approval is enable
         # todo chech if a parameterset would be better

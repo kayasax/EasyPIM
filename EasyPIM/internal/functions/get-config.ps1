@@ -86,8 +86,15 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
         # active assignment rules
         $_activeAssignmentRules = $response.properties.rules | Where-Object { $_.id -eq "Enablement_Admin_Assignment" } | Select-Object -expand enabledRules
         #Authentication Context
+        Write-Verbose " >> Authentication Context response: \n $($response.properties.rules | Where-Object { $_.id -eq "AuthenticationContext_EndUser_Assignment" })"
         $_authenticationcontext_enabled = $response.properties.rules | Where-Object { $_.id -eq "AuthenticationContext_EndUser_Assignment" } | Select-Object -expand isEnabled
-        $_authenticationcontext_value = $response.properties.rules | Where-Object { $_.id -eq "AuthenticationContext_EndUser_Assignment" } |Select-Object -expand claimValue
+        if($false -eq $_authenticationcontext_enabled){
+            $_authenticationcontext_value = $null #fix issue #54
+        }
+        else{
+            $_authenticationcontext_value = $response.properties.rules | Where-Object { $_.id -eq "AuthenticationContext_EndUser_Assignment" } |Select-Object -expand claimValue
+        }
+        
 
         # approval required
         $_approvalrequired = $($response.properties.rules | Where-Object { $_.id -eq "Approval_EndUser_Assignment" }).setting.isapprovalrequired
