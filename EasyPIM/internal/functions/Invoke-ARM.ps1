@@ -42,7 +42,7 @@ function Invoke-ARM {
         $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"#>
 
         write-verbose "`n>> request body: $body"
-        write-verbose "request URI : $restURI"
+        write-verbose "requested URI : $restURI ; method : $method"
 
 
         if ( $null -eq (get-azcontext) -or ( (get-azcontext).Tenant.Id -ne $script:tenantID ) ) {
