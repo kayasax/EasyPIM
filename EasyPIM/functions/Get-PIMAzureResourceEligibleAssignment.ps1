@@ -40,6 +40,9 @@ function Get-PIMAzureResourceEligibleAssignment {
         [String]
         $scope,
         [switch]
+        # when enable we will use the roleEligibilitySchedules API which also list the future assignments
+        $includeFutureAssignments,
+        [switch]
         # select the most usefull info only
         $summary,
         [switch]
@@ -53,8 +56,15 @@ function Get-PIMAzureResourceEligibleAssignment {
         }
         # issue #23: due to a bug with the API regarding the membertype, we will use RoleEligibilitySchedulesInstance instead of RoleEligibilitySchedule
         # the downside is we will not get assignment with a future start date
-        #$restURI = "https://management.azure.com/$scope/providers/Microsoft.Authorization/roleEligibilitySchedules?api-version=2020-10-01"
-        $restURI = "https://management.azure.com/$scope/providers/Microsoft.Authorization/roleEligibilityScheduleInstances?api-version=2020-10-01"
+        if ($PSBoundParameters.Keys.Contains('includeFutureAssignments')) {
+            $restURI = "https://management.azure.com/$scope/providers/Microsoft.Authorization/roleEligibilitySchedules?api-version=2020-10-01"
+        }
+        else {
+            $restURI = "https://management.azure.com/$scope/providers/Microsoft.Authorization/roleEligibilityScheduleInstances?api-version=2020-10-01"
+        }
+
+
+        
 
         $script:tenantID = $tenantID
 

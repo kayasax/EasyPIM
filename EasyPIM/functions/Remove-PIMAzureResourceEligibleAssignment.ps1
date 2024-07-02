@@ -75,32 +75,43 @@ function Remove-PIMAzureResourceEligibleAssignment {
         $ARMhost = "https://management.azure.com"
         $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
     
-        #1 get role id
-        $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$rolename'"
-        $response = Invoke-ARM -restURI $restUri -method "get" -body $null
-        $roleID = $response.value.id
-        write-verbose "Getting role ID for $rolename at $restURI"
-        write-verbose "role ID = $roleid"
-    
-    
-
-        if ($PSBoundParameters.Keys.Contains('startDateTime')) {
-            $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ"
+        #1 check if there is a request for future assignment, in that case we need to cancel the request
+        write-verbose "Checking if there is a future assignment for $principalID and $rolename at $scope"
+        $response = get-pimazureResourceEligibleAssignment -tenantID $tenantID -scope $scope -includeFutureAssignments | Where-Object { $_.principalID -eq "$principalID" -and $_.rolename -eq "$rolename" }
+        if ( !($null -eq $response) ) {
+            Write-Verbose "Found a future assignment, we need to cancel it"
+            $restURI = "$ARMendpoint/roleEligibilityScheduleRequests/$( $response.id.Split('/')[-1] )/cancel?api-version=2020-10-01"
+            $response = invoke-arm -restURI $restURI -method POST -body $null
+            Write-Host "SUCCESS : Future assignment canceled!"
+            return $response
         }
         else {
-            $startDateTime = get-date (get-date).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ" #we get the date as UTC (remember to add a Z at the end or it will be translated to US timezone on import)
-        }
-        write-verbose "Calculated date time start is $startDateTime"
+            #1 get role id
+            $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$rolename'"
+            $response = Invoke-ARM -restURI $restUri -method "get" -body $null
+            $roleID = $response.value.id
+            write-verbose "Getting role ID for $rolename at $restURI"
+            write-verbose "role ID = $roleid"
+    
+    
+
+            if ($PSBoundParameters.Keys.Contains('startDateTime')) {
+                $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ"
+            }
+            else {
+                $startDateTime = get-date (get-date).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ" #we get the date as UTC (remember to add a Z at the end or it will be translated to US timezone on import)
+            }
+            write-verbose "Calculated date time start is $startDateTime"
     
    
-        if (!($PSBoundParameters.Keys.Contains('justification'))) {
-            $justification = "Removed from EasyPIM module by  $($(get-azcontext).account)"
-        }
+            if (!($PSBoundParameters.Keys.Contains('justification'))) {
+                $justification = "Removed from EasyPIM module by  $($(get-azcontext).account)"
+            }
 
-        $type = "null"
+            $type = "null"
     
 
-        $body = '
+            $body = '
 {
     "properties": {
         "principalId": "'+ $principalID + '",
@@ -117,13 +128,16 @@ function Remove-PIMAzureResourceEligibleAssignment {
         }
 }
 '
-        $guid = New-Guid
-        $restURI = "$armendpoint/roleEligibilityScheduleRequests/$($guid)?api-version=2020-10-01"
-        write-verbose "sending PUT request at $restUri with body :`n $body"
+            $guid = New-Guid
+            $restURI = "$armendpoint/roleEligibilityScheduleRequests/$($guid)?api-version=2020-10-01"
+            write-verbose "sending PUT request at $restUri with body :`n $body"
     
-        $response = Invoke-ARM -restURI $restUri -method PUT -body $body -Verbose:$false
-        Write-Host "SUCCESS : Assignment removed!"
-        return $response
+            $response = Invoke-ARM -restURI $restUri -method PUT -body $body -Verbose:$false
+            Write-Host "SUCCESS : Assignment removed!"
+            return $response
+        }
+
+
     }
     catch { MyCatch $_ }
 }
