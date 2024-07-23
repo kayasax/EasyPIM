@@ -33,10 +33,10 @@ function get-Groupconfig ( $id, $type) {
         # End user enablement rule (MultiFactorAuthentication, Justification, Ticketing)
         $_enablementRules = ($response.value.policy.rules | Where-Object { $_.id -eq "Enablement_EndUser_Assignment" }).enabledRules
         # Active assignment requirement
-        $_activeAssignmentRequirement = $response.value.policy.rules | Where-Object { $_.id -eq "Enablement_Admin_Assignment" } | Select-Object -expand enabledRules
+        $_activeAssignmentRequirement = ($response.value.policy.rules | Where-Object { $_.id -eq "Enablement_Admin_Assignment" }).enabledRules
         # Authentication context
-        $_authenticationContext_Enabled = $response.value.policy.rules | Where-Object { $_.id -eq "AuthenticationContext_EndUser_Assignment" } | Select-Object -expand isEnabled
-        $_authenticationContext_value = $response.value.policy.rules | Where-Object { $_.id -eq "AuthenticationContext_EndUser_Assignment" } | Select-Object -expand claimValue
+        $_authenticationContext_Enabled = ($response.value.policy.rules | Where-Object { $_.id -eq "AuthenticationContext_EndUser_Assignment" }).isEnabled
+        $_authenticationContext_value = ($response.value.policy.rules | Where-Object { $_.id -eq "AuthenticationContext_EndUser_Assignment" }).claimValue
         # approval required
         $_approvalrequired = $($response.value.policy.rules | Where-Object { $_.id -eq "Approval_EndUser_Assignment" }).setting.isapprovalrequired
         # approvers
