@@ -73,11 +73,11 @@ function Invoke-ARM {
         }
             #>
         if ($body -ne ""){
-            $response=Invoke-AZRestMethod -Method $method -Uri $restURI -payload $body 
+            $response=Invoke-AZRestMethod -Method $method -Uri $restURI -payload $body
         }
         else {
             $response=Invoke-AZRestMethod -Method $method -Uri $restURI
-        } 
+        }
         
         return $response.content | convertfrom-json
 
