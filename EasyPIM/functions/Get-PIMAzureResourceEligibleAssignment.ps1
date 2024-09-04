@@ -67,6 +67,7 @@ function Get-PIMAzureResourceEligibleAssignment {
         
 
         $script:tenantID = $tenantID
+        
 
         $response = Invoke-ARM -restURI $restURI -method get
         #$response|select -first 1

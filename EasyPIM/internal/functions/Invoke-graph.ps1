@@ -37,7 +37,8 @@ function invoke-graph {
     try {
         $graph = "https://graph.microsoft.com/$version/"
     
-        $uri = $graph + $endpoint
+        [string]$uri = $graph + $endpoint
+        Write-Verbose "uri = $uri"
 
         if ( $null -eq (get-mgcontext) -or ( (get-mgcontext).TenantId -ne $script:tenantID ) ) {
             Write-Verbose ">> Connecting to Azure with tenantID $script:tenantID"
@@ -55,10 +56,10 @@ function invoke-graph {
         }
       
         if ( $body -ne "") {
-            Invoke-MgGraphRequest -Uri $uri -Method $Method -Body $body
+            Invoke-MgGraphRequest -Uri "$uri" -Method $Method -Body $body
         }
         else {
-            Invoke-MgGraphRequest -Uri $uri -Method $Method
+            Invoke-MgGraphRequest -Uri "$uri" -Method $Method
         }
     }
 

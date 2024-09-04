@@ -28,7 +28,8 @@ function Get-EntraRoleConfig ($rolename) {
         }
 
         # 2 Get PIM policyID for that role
-        $endpoint = "policies/roleManagementPolicyAssignments?`$filter=scopeId eq '/' and scopeType eq 'DirectoryRole' and roleDefinitionId eq '$roleID'"
+        $endpoint = "policies/roleManagementPolicyAssignments?`$filter=scopeType eq 'DirectoryRole' and roleDefinitionId eq '$roleID' and scopeId eq '/' "
+        Write-Verbose "endpoint = $endpoint"
         $response = invoke-graph -Endpoint $endpoint
         $policyID = $response.value.policyID
         Write-Verbose "policyID = $policyID"
@@ -43,14 +44,14 @@ function Get-EntraRoleConfig ($rolename) {
         # Get config values in a new object:
 
         # Maximum end user activation duration in Hour (PT24H) // Max 24H in portal but can be greater
-        $_activationDuration = $response.value | Where-Object { $_.id -eq "Expiration_EndUser_Assignment" } | Select-Object -ExpandProperty maximumduration
+        $_activationDuration = $($response.value | Where-Object { $_.id -eq "Expiration_EndUser_Assignment" }).maximumDuration # | Select-Object -ExpandProperty maximumduration
         # End user enablement rule (MultiFactorAuthentication, Justification, Ticketing)
-        $_enablementRules = $response.value | Where-Object { $_.id -eq "Enablement_EndUser_Assignment" } | Select-Object -expand enabledRules
+        $_enablementRules = $($response.value | Where-Object { $_.id -eq "Enablement_EndUser_Assignment" }).enabledRules
         # Active assignment requirement
-        $_activeAssignmentRequirement = $response.value | Where-Object { $_.id -eq "Enablement_Admin_Assignment" } | Select-Object -expand enabledRules
+        $_activeAssignmentRequirement = $($response.value | Where-Object { $_.id -eq "Enablement_Admin_Assignment" }).enabledRules
         # Authentication context
-        $_authenticationContext_Enabled = $response.value | Where-Object { $_.id -eq "AuthenticationContext_EndUser_Assignment" } | Select-Object -expand isEnabled
-        $_authenticationContext_value = $response.value | Where-Object { $_.id -eq "AuthenticationContext_EndUser_Assignment" } | Select-Object -expand claimValue
+        $_authenticationContext_Enabled = $($response.value | Where-Object { $_.id -eq "AuthenticationContext_EndUser_Assignment" }).isEnabled
+        $_authenticationContext_value = $($response.value | Where-Object { $_.id -eq "AuthenticationContext_EndUser_Assignment" }).claimValue
 
         # approval required
         $_approvalrequired = $($response.value | Where-Object { $_.id -eq "Approval_EndUser_Assignment" }).setting.isapprovalrequired
@@ -73,7 +74,7 @@ function Get-EntraRoleConfig ($rolename) {
         
 
         # permanent assignmnent eligibility
-        $_eligibilityExpirationRequired = $response.value | Where-Object { $_.id -eq "Expiration_Admin_Eligibility" } | Select-Object -expand isExpirationRequired
+        $_eligibilityExpirationRequired = $($response.value | Where-Object { $_.id -eq "Expiration_Admin_Eligibility" }).isExpirationRequired
         if ($_eligibilityExpirationRequired -eq "true") {
             $_permanantEligibility = "false"
         }
@@ -81,10 +82,10 @@ function Get-EntraRoleConfig ($rolename) {
             $_permanantEligibility = "true"
         }
         # maximum assignment eligibility duration
-        $_maxAssignmentDuration = $response.value | Where-Object { $_.id -eq "Expiration_Admin_Eligibility" } | Select-Object -expand maximumDuration
+        $_maxAssignmentDuration = $($response.value | Where-Object { $_.id -eq "Expiration_Admin_Eligibility" }).maximumDuration
         
         # pemanent activation
-        $_activeExpirationRequired = $response.value | Where-Object { $_.id -eq "Expiration_Admin_Assignment" } | Select-Object -expand isExpirationRequired
+        $_activeExpirationRequired = $($response.value | Where-Object { $_.id -eq "Expiration_Admin_Assignment" }).isExpirationRequired
         if ($_activeExpirationRequired -eq "true") {
             $_permanantActiveAssignment = "false"
         }
@@ -92,7 +93,7 @@ function Get-EntraRoleConfig ($rolename) {
             $_permanantActiveAssignment = "true"
         }
         # maximum activation duration
-        $_maxActiveAssignmentDuration = $response.value | Where-Object { $_.id -eq "Expiration_Admin_Assignment" } | Select-Object -expand maximumDuration
+        $_maxActiveAssignmentDuration = $($response.value | Where-Object { $_.id -eq "Expiration_Admin_Assignment" }).maximumDuration
 
         #################
         # Notifications #

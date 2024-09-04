@@ -44,20 +44,25 @@ function Invoke-ARM {
         write-verbose "`n>> request body: $body"
         write-verbose "requested URI : $restURI ; method : $method"
 
+        $script:subscriptionID=[regex]::Matches($restURI,".*\/subscriptions\/(.*)\/providers.*$").groups[1].Value
+
 
         if ( $null -eq (get-azcontext) -or ( (get-azcontext).Tenant.Id -ne $script:tenantID ) ) {
             Write-Verbose ">> Connecting to Azure with tenantID $script:tenantID"
-            Connect-AzAccount -Tenant $script:tenantID
+            Connect-AzAccount -Tenantid $script:tenantID -Subscription $script:subscriptionID
         }
     
+        #todo replace with invoke-azrestmethod
+        <#
         # Get access Token
         Write-Verbose ">> Getting access token"
-        $token = Get-AzAccessToken
+        # now this will return a securestring https://learn.microsoft.com/en-us/powershell/azure/upcoming-breaking-changes?view=azps-12.2.0#get-azaccesstoken
+        $token = Get-AzAccessToken -AsSecureString
                 
         # setting the authentication headers for MSGraph calls
         $authHeader = @{
             'Content-Type'  = 'application/json'
-            'Authorization' = 'Bearer ' + $token.Token
+            'Authorization' = 'Bearer ' + $($token.Token | ConvertFrom-SecureString -AsPlainText)
         }
 
         if($body -ne ""){
@@ -66,7 +71,15 @@ function Invoke-ARM {
         else{
             $response = Invoke-RestMethod -Uri $restUri -Method $method -Headers $authHeader -verbose:$false
         }
-        return $response
+            #>
+        if ($body -ne ""){
+            $response=Invoke-AZRestMethod -Method $method -Uri $restURI -payload $body 
+        }
+        else {
+            $response=Invoke-AZRestMethod -Method $method -Uri $restURI
+        } 
+        
+        return $response.content | convertfrom-json
 
     }
     catch{
