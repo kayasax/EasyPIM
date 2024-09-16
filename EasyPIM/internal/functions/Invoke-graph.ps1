@@ -44,6 +44,7 @@ function invoke-graph {
             Write-Verbose ">> Connecting to Azure with tenantID $script:tenantID"
             $scopes = @(
                 "RoleManagementPolicy.ReadWrite.Directory",
+                "PrivilegedAccess.ReadWrite.AzureAD",
                 "RoleManagement.ReadWrite.Directory",
                 "RoleManagementPolicy.ReadWrite.AzureADGroup",
                 "PrivilegedEligibilitySchedule.ReadWrite.AzureADGroup",
@@ -52,7 +53,7 @@ function invoke-graph {
                 "AuditLog.Read.All",
                 "Directory.Read.All")
 
-            Connect-MgGraph -Tenant $script:tenantID -Scopes $scopes
+            Connect-MgGraph -Tenant $script:tenantID -Scopes $scopes -NoWelcome
         }
       
         if ( $body -ne "") {
