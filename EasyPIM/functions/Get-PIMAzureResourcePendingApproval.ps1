@@ -28,7 +28,7 @@ Tenant ID
 #>
 function Get-PIMAzureResourcePendingApproval {
     [CmdletBinding()]
-    [OutputType([PSCustomObject])]
+    [OutputType([PSCustomObject[]])]
     param (
         
         [Parameter(Position = 0, Mandatory = $true)]
