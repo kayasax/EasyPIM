@@ -13,6 +13,7 @@ Packed with more than 30 cmdlets, EasyPIM leverages the ARM and Graph APIs to le
 :boom: Import role settings from csv  
 :boom: Backup all roles  
 :boom: New in V1.6 get PIM activity reporting  
+:boom: New in V1.7 Approve/Deny pending requests 
 
 With the export function you can now edit your PIM settings in Excel then import back your changes :wink:
 
