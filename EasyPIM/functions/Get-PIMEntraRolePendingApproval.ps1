@@ -50,7 +50,7 @@ function Get-PIMEntraRolePendingApproval{
         $pendingApproval = $response.value
         
         if ($null -ne $pendingApproval) {
-            $pendingApproval | % {
+            $pendingApproval | ForEach-Object {
                 $role=invoke-mgGraphRequest $("https://graph.microsoft.com/v1.0/directoryRoles(roletemplateid ='"+$_.roledefinitionid+"')") -Method get
                 $principalDisplayName = invoke-mgGraphRequest $("https://graph.microsoft.com/v1.0/directoryobjects/"+$_.Principalid+"/") -Method get
                 $request = @{
@@ -72,7 +72,7 @@ function Get-PIMEntraRolePendingApproval{
             }
         }
         if ($out.length -eq 0) {
-            write-host "No pending approval"
+            #write-host "No pending approval"
             return $null
         }
         return $out

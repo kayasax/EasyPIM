@@ -31,7 +31,7 @@ justification for the deny
 #>
 function Deny-PIMAzureResourcePendingApproval {
     [CmdletBinding()]
-    [OutputType([PSCustomObject])]
+    [OutputType([String])]
     param (
         [Parameter(Position = 0, Mandatory = $true, ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]

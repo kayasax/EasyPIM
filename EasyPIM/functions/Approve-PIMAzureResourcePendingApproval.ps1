@@ -31,7 +31,7 @@ justification for the approval
 #>
 function Approve-PIMAzureResourcePendingApproval {
     [CmdletBinding()]
-    [OutputType([PSCustomObject])]
+    [OutputType([String])]
     param (
         
         [Parameter(Position = 0, Mandatory = $true,ValueFromPipeline = $true,

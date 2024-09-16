@@ -46,7 +46,7 @@ function Get-PIMAzureResourcePendingApproval {
         $response = invoke-AzRestMethod -Uri "https://management.azure.com/providers/Microsoft.Authorization/roleAssignmentScheduleRequests?api-version=2020-10-01&`$filter=asApprover()"
         $pendingApproval = $response.Content | convertfrom-json
         if ($null -ne $pendingApproval.value.properties) {
-            $pendingApproval.value.properties | % {
+            $pendingApproval.value.properties | ForEach-Object {
                 $request = @{
                     "principalType"        = $_.principalType;
                     "principalId"          = $_.expandedProperties.Principal.id;
@@ -67,7 +67,7 @@ function Get-PIMAzureResourcePendingApproval {
             }
         }
         if ($out.length -eq 0) {
-            write-host "No pending approval"
+            #write-host "No pending approval"
             return $null
         }
         return $out
