@@ -27,8 +27,8 @@ Tenant ID
     * allow other scopes
 #>
 function Get-PIMEntraRolePendingApproval{
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseOutputTypeCorrectly", "")]
     [CmdletBinding()]
-    [OutputType([System.Object[]])]
     param (
         
         [Parameter(Position = 0, Mandatory = $true)]
