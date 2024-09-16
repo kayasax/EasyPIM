@@ -46,6 +46,7 @@ function Approve-PIMAzureResourcePendingApproval {
         $justification
         
     )
+    process{
     try {
         $script:tenantID = $tenantID
 
@@ -69,5 +70,5 @@ function Approve-PIMAzureResourcePendingApproval {
     catch {
         MyCatch $_
     }
-    
+}
 }

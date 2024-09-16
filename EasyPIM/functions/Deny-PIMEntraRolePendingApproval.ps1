@@ -46,6 +46,7 @@ function Deny-PIMEntraRolePendingApproval {
         $justification
         
     )
+    process{
     try {
         #$script:tenantID = $tenantID
 
@@ -70,4 +71,4 @@ function Deny-PIMEntraRolePendingApproval {
         MyCatch $_
     }
     
-}
+}}

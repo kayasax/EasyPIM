@@ -34,8 +34,8 @@ function Approve-PIMEntraRolePendingApproval {
     [OutputType([PSCustomObject])]
     param (
         
-        [Parameter(Position = 0, Mandatory = $true,ValueFromPipeline = $true,
-        ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Position = 0, Mandatory = $true, ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true)]
         [System.String]
         # Approval ID
         $approvalID,
@@ -46,28 +46,29 @@ function Approve-PIMEntraRolePendingApproval {
         $justification
         
     )
-    try {
-        #$script:tenantID = $tenantID
+    process {
+        try {
+            #$script:tenantID = $tenantID
 
-        Write-Verbose "approve-PIMEntraRolePendingApproval start with parameters: approvalid => $approvalID, justification => $justification"
+            Write-Verbose "approve-PIMEntraRolePendingApproval start with parameters: approvalid => $approvalID, justification => $justification"
                
-        #Get the stages:
-        #Role Assignment Approval Steps - List - REST API (Azure Authorization) | Microsoft Learn
-        $stages=Invoke-graph -endpoint "roleManagement/directory/roleAssignmentApprovals/$approvalID/"  -Method GET -version "beta"
+            #Get the stages:
+            #Role Assignment Approval Steps - List - REST API (Azure Authorization) | Microsoft Learn
+            $stages = Invoke-graph -endpoint "roleManagement/directory/roleAssignmentApprovals/$approvalID/"  -Method GET -version "beta"
 
-        $stageid=$stages.id
+            $stageid = $stages.id
 
-        #approve the request
-        #Role Assignment Approval Step - Patch - REST API (Azure Authorization) | Microsoft Learn
+            #approve the request
+            #Role Assignment Approval Step - Patch - REST API (Azure Authorization) | Microsoft Learn
 
-        $body='{"justification":"'+$justification+'","reviewResult":"Approve"}'
+            $body = '{"justification":"' + $justification + '","reviewResult":"Approve"}'
 
-        Invoke-graph -endpoint "roleManagement/directory/roleAssignmentApprovals/$approvalID/steps/$stageID" -body $body -version "beta" -Method PATCH
-        return "Success, request approved"
+            Invoke-graph -endpoint "roleManagement/directory/roleAssignmentApprovals/$approvalID/steps/$stageID" -body $body -version "beta" -Method PATCH
+            return "Success, request approved"
 
+        }
+        catch {
+            MyCatch $_
+        }
     }
-    catch {
-        MyCatch $_
-    }
-    
 }

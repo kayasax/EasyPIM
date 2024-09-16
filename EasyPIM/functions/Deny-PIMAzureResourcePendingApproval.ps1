@@ -45,6 +45,7 @@ function Deny-PIMAzureResourcePendingApproval {
         $justification
         
     )
+    process{
     try {
         $script:tenantID = $tenantID
 
@@ -69,4 +70,4 @@ function Deny-PIMAzureResourcePendingApproval {
         MyCatch $_
     }
     
-}
+}}

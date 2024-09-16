@@ -27,18 +27,18 @@ Tenant ID
     * allow other scopes
 #>
 function Get-PIMEntraRolePendingApproval{
-    #[CmdletBinding()]
-    #[OutputType([PSCustomObject])]
-    <#param (
+    [CmdletBinding()]
+    [OutputType([PSCustomObject])]
+    param (
         
         [Parameter(Position = 0, Mandatory = $true)]
         [System.String]
         # Tenant ID
         $tenantID
         
-    )#>
+    )
     try {
-        #$script:tenantID = $tenantID
+        $script:tenantID = $tenantID
 
         Write-Verbose "Get-PIMAzureResourcePendingApproval start with parameters: tenantID => $tenantID"
         
