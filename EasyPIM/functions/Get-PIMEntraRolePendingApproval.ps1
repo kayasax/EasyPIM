@@ -28,6 +28,7 @@ Tenant ID
 #>
 function Get-PIMEntraRolePendingApproval{
     [CmdletBinding()]
+    [OutputType([System.Object[]])]
     param (
         
         [Parameter(Position = 0, Mandatory = $true)]
