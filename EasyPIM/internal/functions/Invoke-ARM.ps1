@@ -44,15 +44,19 @@ function Invoke-ARM {
         write-verbose "`n>> request body: $body"
         write-verbose "requested URI : $restURI ; method : $method"
 
-        $script:subscriptionID=[regex]::Matches($restURI,".*\/subscriptions\/(.*)\/providers.*$").groups[1].Value
+        #TODO need better way to handle mangement group scope!!
+        if($restURI -notmatch "managementgroups"){
+            $script:subscriptionID=[regex]::Matches($restURI,".*\/subscriptions\/(.*)\/providers.*$").groups[1].Value
 
 
-        if ( $null -eq (get-azcontext) -or ( (get-azcontext).Tenant.Id -ne $script:tenantID ) ) {
-            Write-Verbose ">> Connecting to Azure with tenantID $script:tenantID"
-            Connect-AzAccount -Tenantid $script:tenantID -Subscription $script:subscriptionID
+            if ( $null -eq (get-azcontext) -or ( (get-azcontext).Tenant.Id -ne $script:tenantID ) ) {
+                Write-Verbose ">> Connecting to Azure with tenantID $script:tenantID"
+                Connect-AzAccount -Tenantid $script:tenantID -Subscription $script:subscriptionID
+            }    
         }
+        
     
-        #todo replace with invoke-azrestmethod
+        #replaced with invoke-azrestmethod
         <#
         # Get access Token
         Write-Verbose ">> Getting access token"
