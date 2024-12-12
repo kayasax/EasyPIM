@@ -42,7 +42,7 @@ function Get-PIMEntraRolePendingApproval{
 
         Write-Verbose "Get-PIMAzureResourcePendingApproval start with parameters: tenantID => $tenantID"
         
-        $endpoint="/roleManagement/directory/roleAssignmentScheduleRequests/filterByCurrentUser(on='approver')?$filter=status eq 'PendingApproval'"
+        $endpoint="/roleManagement/directory/roleAssignmentScheduleRequests/filterByCurrentUser(on='approver')?`$filter=status eq 'PendingApproval'"
         $response = Invoke-Graph -Endpoint $endpoint -Method "GET"
 
         $out = @()
