@@ -52,7 +52,7 @@ function Invoke-ARM {
             if ( $null -eq (get-azcontext) -or ( (get-azcontext).Tenant.Id -ne $script:tenantID ) ) {
                 Write-Verbose ">> Connecting to Azure with tenantID $script:tenantID"
                 Connect-AzAccount -Tenantid $script:tenantID -Subscription $script:subscriptionID
-            }    
+            }
         }
         
     
