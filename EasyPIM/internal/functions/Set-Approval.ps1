@@ -21,7 +21,7 @@
 #>
 function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
     try {
-        Write-Verbose "Set-Approval"
+        Write-Verbose "Set-Approval started with ApprovalRequired=$ApprovalRequired and Approvers=$Approvers and entraRole=$entraRole"
         if ($null -eq $Approvers) { $Approvers = $script:config.Approvers }
         if ($ApprovalRequired -eq $false) { $req = "false" }else { $req = "true" }
         <#working sample
@@ -62,6 +62,7 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
             "isEscalationEnabled":false,
             "primaryApprovers":[
                 '
+        if ($PSBoundParameters.Keys.Contains('Approvers') -and ($null -ne $Approvers)) {
         $cpt = 0
         $Approvers | ForEach-Object {
             #write-host $_
@@ -83,6 +84,7 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
             $cpt++
         }
         $rule=$rule -replace ",$" #remove last comma
+    }
 
         <#{"id":"5dba24e0-00ef-4c21-9702-7c093a0775eb","userType":"Group","description":"0Ext_Partners","isBackup":false},
                 {"id":"00b34bb3-8a6b-45ce-a7bb-c7f7fb400507","userType":"User","description":"Bob MARLEY","isBackup":false},
