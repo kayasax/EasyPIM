@@ -19,9 +19,7 @@
 
     Copy eligible assignement from user1 to user2
 
-
     .Link
-    https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
     .Notes
     Author: Loïc MICHEL
     Homepage: https://github.com/kayasax/EasyPIM
@@ -95,7 +93,7 @@ function Copy-PIMAzureResourceEligibleAssignment {
             Write-Verbose "Copying assignment from $from to $to at scope $($_.scopeId) with role $($_.rolename)"
             New-PIMAzureResourceEligibleAssignment -tenantID $tenantID -subscriptionID $subscriptionID -scope $_.scopeId -rolename $_.rolename -principalID $to
         }
-        
+
     }
     catch {
         MyCatch $_
