@@ -9,6 +9,8 @@
     subscription ID
     .Parameter scope
     use scope parameter if you want to work at other scope than a subscription
+    .PARAMETER assignee
+    Filter assignment using userprincipalname or objectID
     .Parameter summary
     When enabled will return the most useful information only
     .Parameter atBellowScope
@@ -39,6 +41,8 @@ function Get-PIMAzureResourceEligibleAssignment {
         [Parameter()]
         [String]
         $scope,
+        [String]
+        $assignee,
         [switch]
         # when enable we will use the roleEligibilitySchedules API which also list the future assignments
         $includeFutureAssignments,
@@ -51,6 +55,9 @@ function Get-PIMAzureResourceEligibleAssignment {
     )
 
     try {
+        
+        $script:tenantID = $tenantID
+        
         if (!($PSBoundParameters.Keys.Contains('scope'))) {
             $scope = "/subscriptions/$subscriptionID"
         }
@@ -63,10 +70,24 @@ function Get-PIMAzureResourceEligibleAssignment {
             $restURI = "https://management.azure.com/$scope/providers/Microsoft.Authorization/roleEligibilityScheduleInstances?api-version=2020-10-01"
         }
 
-
+        #issue #70 filter assignment of a specific user
+        if ($PSBoundParameters.Keys.Contains('assignee')) {
+            if($assignee -match ".+@.*\..+") { #if this is a upn we will use graph to get the objectID
+                try{
+                    $resu=invoke-graph -endpoint "users/$assignee" -Method GET -version "beta"
+                    $assignee = $resu.id
+                }
+                catch {
+                    Write-Warning "User $assignee not found in the tenant"
+                    return
+                }
+                
+            }
+          
+            $restURI += "&`$filter=assignedto('"+$assignee+"')"
+        }
         
 
-        $script:tenantID = $tenantID
         
 
         $response = Invoke-ARM -restURI $restURI -method get
