@@ -34,6 +34,7 @@ function Get-PIMGroupEligibleAssignment {
         $tenantID,
         # select the most usefull info only
         [switch]$summary,
+        [Parameter(Mandatory = $true)]
         [string]$groupID,
         [string]$rolename,
         [string]$principalName
