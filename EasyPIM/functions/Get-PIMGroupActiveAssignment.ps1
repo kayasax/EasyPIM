@@ -34,6 +34,7 @@ function Get-PIMGroupActiveAssignment {
         [Parameter(Position = 0, Mandatory = $true)]
         [String]
         $tenantID,
+        [Parameter(Mandatory = $true)]
         [string]$groupID,
         [string]$memberType,
         [string]$principalName,

@@ -72,6 +72,10 @@ function Get-PIMGroupPolicy {
 
         }
         
+        #fix #77
+        elseif (!( $PSBoundParameters.ContainsKey('groupID'))) {
+            throw "You must provide a groupID or a groupName"
+        }
                        
         $out = @()
         $groupID | ForEach-Object {
