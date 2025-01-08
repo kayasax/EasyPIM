@@ -78,7 +78,7 @@ function Remove-PIMAzureResourceEligibleAssignment {
         #1 check if there is a request for future assignment, in that case we need to cancel the request
         write-verbose "Checking if there is a future assignment for $principalID and $rolename at $scope"
         $response = get-pimazureResourceEligibleAssignment -tenantID $tenantID -scope $scope -includeFutureAssignments | Where-Object { $_.principalID -eq "$principalID" -and $_.rolename -eq "$rolename" }
-        if ( !($null -eq $response) ) {
+        if ( !($null -eq $response) -and $response.status -ne "Provisioned" ) { #only non provisioned assignment can be canceled, else we need an admin remove
             Write-Verbose "Found a future assignment, we need to cancel it"
             $restURI = "$ARMendpoint/roleEligibilityScheduleRequests/$( $response.id.Split('/')[-1] )/cancel?api-version=2020-10-01"
             $response = invoke-arm -restURI $restURI -method POST -body $null
