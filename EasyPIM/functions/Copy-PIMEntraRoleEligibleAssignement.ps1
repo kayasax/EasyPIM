@@ -70,7 +70,7 @@ function Copy-PIMEntraRolEligibleAssignment {
 
     $script:tenantID = $tenantID
     Write-Verbose "Copy-PIMEntraRoleAssignment start with parameters: tenantID => $tenantID from => $from, to=> $to"
-    $assignements = Get-PIMEntraRoleEligibleAssignment  -tenantid $tenantID 
+    $assignements = Get-PIMEntraRoleEligibleAssignment  -tenantid $tenantID
     #$assignements
     $assignements | Where-Object {$_.principalID -eq "$from"} | ForEach-Object {
       Write-Verbose  ">>>New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -roleName $($_.roleName) -principalID $to"
