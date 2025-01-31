@@ -4,7 +4,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.7.6'
+ModuleVersion = '1.7.7'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -104,7 +104,8 @@ FunctionsToExport = @(
     'Get-PIMGroupPendingApproval',
     'Approve-PIMGroupPendingApproval',
     'Deny-PIMGroupPendingApproval',
-    'Copy-PIMAzureResourceEligibleAssignment'
+    'Copy-PIMAzureResourceEligibleAssignment',
+    'Copy-PIMAEntraRoleEligibleAssignment'
 )
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
