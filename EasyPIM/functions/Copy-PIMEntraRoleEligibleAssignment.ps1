@@ -20,7 +20,7 @@
         Author: Loïc MICHEL
         Homepage: https://github.com/kayasax/EasyPIM
 #>
-function Copy-PIMEntraRolEligibleAssignment {
+function Copy-PIMEntraRoleEligibleAssignment {
   [CmdletBinding(DefaultParameterSetName = 'Default')]
   param (
     [Parameter(Position = 0, Mandatory = $true)]
