@@ -12,6 +12,7 @@ Packed with more than 30 cmdlets, EasyPIM leverages the ARM and Graph APIs compl
 ## Key features
 :boom: Support editing multiple roles at once  
 :boom: Copy settings from one role to another   
+:boom: Copy eligible assignments from one user to another   
 :boom: Export role settings to csv  
 :boom: Import role settings from csv  
 :boom: Backup all roles  
