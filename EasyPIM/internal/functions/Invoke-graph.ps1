@@ -57,10 +57,10 @@ function invoke-graph {
         }
       
         if ( $body -ne "") {
-            Invoke-MgGraphRequest -Uri "$uri" -Method $Method -Body $body
+            Invoke-MgGraphRequest -Uri "$uri" -Method $Method -Body $body -SkipHttpErrorCheck
         }
         else {
-            Invoke-MgGraphRequest -Uri "$uri" -Method $Method
+            Invoke-MgGraphRequest -Uri "$uri" -Method $Method -SkipHttpErrorCheck
         }
     }
 
@@ -68,5 +68,5 @@ function invoke-graph {
         MyCatch $_
     }
 
-
+   
 }

@@ -1,0 +1,64 @@
+{
+    "AzureRoles": [
+      {
+      "PrincipalId": "a621fbf5-d750-4e68-b898-2e2b41cd45c6", // PIM5
+      "Rolename": "Owner",
+      "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a"
+      },
+      {
+      "PrincipalId": "8b22297b-d2b8-40b5-b387-74aa7368ec7d", // PIM_SG_EligibleToEntraRole 
+      "Rolename": "Reader",
+      "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a"
+      },
+      {
+      "PrincipalId": "a621fbf5-d750-4e68-b898-2e2b41cd45c6", // PIM5
+      "Rolename": "Reader",
+      "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a/resourceGroups/RG-HUB"
+      }
+    ],
+    "AzureRolesActive": [
+      {
+        "PrincipalId": "a621fbf5-d750-4e68-b898-2e2b41cd45c6",
+        "Rolename": "Reader",
+        "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a",
+        "Duration": "PT8H"
+      }
+    ],
+    "EntraIDRoles": [
+      {
+        "PrincipalId": "a621fbf5-d750-4e68-b898-2e2b41cd45c6",
+        "Rolename": "Security Reader"
+      }
+    ],
+    "EntraIDRolesActive": [
+      {
+      "PrincipalId": "00000000-0000-0000-0000-000000000007",
+      "Rolename": "Global Administrator",
+      "Duration": "P1D"
+      }
+    ],
+    "GroupRoles": [
+      {
+      "PrincipalId": "00000000-0000-0000-0000-000000000008",
+      "Rolename": "Owner",
+      "GroupId": "00000000-0000-0000-0000-000000000020"
+      },
+      {
+      "PrincipalId": "00000000-0000-0000-0000-000000000009",
+      "Rolename": "Member",
+      "GroupId": "00000000-0000-0000-0000-000000000021"
+      }
+    ],
+    "GroupRolesActive": [
+      {
+      "PrincipalId": "00000000-0000-0000-0000-000000000010",
+      "Rolename": "Owner",
+      "GroupId": "00000000-0000-0000-0000-000000000022",
+      "Duration": "PT4H"
+      }
+    ],
+    "ProtectedUsers": [
+      "7a55ec4d-028e-4ff1-8ee9-93da07b6d5d5", // BG
+      "9f2aacfc-8c80-41a7-ba07-121e0cb29757"  // Loic
+    ]
+}
