@@ -53,19 +53,21 @@
     .NOTES
         Configuration File Structure:
         {
-          "AzureRoles": [
+          "AzureRoles": [  // Eligible assignments
             {
               "PrincipalId": "00000000-0000-0000-0000-000000000001",
               "Role": "Reader",
-              "Scope": "/subscriptions/12345678-1234-1234-1234-123456789012"
+              "Scope": "/subscriptions/12345678-1234-1234-1234-123456789012",
+              "Permanent": true  // Set to true for permanent eligible assignments
             }
           ],
-          "AzureRolesActive": [
+          "AzureRolesActive": [  // Active assignments
             {
-              "PrincipalId": "00000000-0000-0000-0000-000000000002",
-              "Role": "Contributor",
+              "PrincipalId": "00000000-0000-0000-0000-000000000003",
+              "Role": "Reader",
               "Scope": "/subscriptions/12345678-1234-1234-1234-123456789012",
-              "Duration": "PT8H"
+              "Duration": "PT8H",  // Time-bound active assignment
+              "Permanent": true    // Can also be set to true for permanent active assignments
             }
           ],
           "EntraIDRoles": [...],
@@ -76,6 +78,17 @@
             "00000000-0000-0000-0000-000000000099"
           ]
         }
+        
+        For eligible assignments:
+        - Set "Permanent": true for permanent assignments that don't expire
+        - Set "Duration": "P90D" for time-bound assignments with specific duration
+        - If neither is specified, maximum allowed duration by policy will be used
+        - If both are specified, Permanent takes precedence
+        
+        For active assignments:
+        - Set "Duration": "PT8H" for time-bound active assignments
+        - Set "Permanent": true for permanent active assignments
+        - If both are specified, Permanent takes precedence
         
         Duration format follows ISO 8601 (e.g., "PT8H" for 8 hours, "P1D" for 1 day)
         
@@ -101,7 +114,12 @@ function Write-SubHeader {
 
 function Write-GroupHeader {
     param ([string]$Title)
-    Write-Output "`n┌─── $Title $("─" * (70 - $Title.Length))"
+    # Truncate title if it's too long
+    if ($Title.Length > 65) {
+        $Title = $Title.Substring(0, 62) + "..."
+    }
+    $remainingLength = [Math]::Max(0, (70 - $Title.Length))
+    Write-Output "`n┌─── $Title $("─" * $remainingLength)"
 }
 
 function Write-StatusSuccess {
@@ -145,6 +163,8 @@ function Write-Summary {
     Write-Output "└───────────────────────────────────────────────────────────────────────────────┘"
 }
 
+
+
 function Invoke-EasyPIMOrchestrator {
     [CmdletBinding(DefaultParameterSetName = 'Default', SupportsShouldProcess = $true)]
     param (
@@ -182,7 +202,8 @@ function Invoke-EasyPIMOrchestrator {
     try {
         # Import necessary modules
         Write-Output "Importing required modules..."
-        Import-Module Az.KeyVault, Az.Resources, EasyPIM
+        Import-Module Az.KeyVault, Az.Resources
+        
         
         # Retrieve the JSON config file
         Write-SectionHeader "Retrieving Configuration"
@@ -214,7 +235,126 @@ function Invoke-EasyPIMOrchestrator {
         $groupRoles = $config.GroupRoles
         $groupRolesActive = $config.GroupRolesActive
         
-        #region Process Eligible Assignments
+        # Load protected users from config
+        $protectedUsers = @()
+        if ($config.ProtectedUsers) {
+            $protectedUsers = $config.ProtectedUsers
+        }
+        
+        #region Cleanup Logic - MOVED THIS FIRST
+        Write-SectionHeader "Processing Cleanup"
+        
+        # Cleanup in delta mode
+        if ($Mode -eq "delta") {
+            Write-Output "=== Performing Delta Mode Cleanup ==="
+            
+            # Azure Role eligible delta cleanup
+            if ($azureRoles) {
+                $subscriptions = @($azureRoles.Scope | ForEach-Object { $_.Split("/")[2] } | Select-Object -Unique)
+                
+                $apiInfo = @{
+                    Subscriptions = $subscriptions
+                    TenantId = $TenantId
+                    RemoveCmd = "Remove-PIMAzureResourceEligibleAssignment"
+                }
+                
+                Invoke-DeltaCleanup -ResourceType "Azure Role eligible" -ConfigAssignments $azureRoles -ApiInfo $apiInfo -ProtectedUsers $protectedUsers
+            }
+            
+            # Azure Role active delta cleanup
+            if ($azureRolesActive) {
+                $subscriptions = @($azureRolesActive.Scope | ForEach-Object { $_.Split("/")[2] } | Select-Object -Unique)
+                
+                $apiInfo = @{
+                    Subscriptions = $subscriptions
+                    ApiEndpoint = "https://management.azure.com/subscriptions/$($subscriptions[0])/providers/Microsoft.Authorization/roleAssignmentScheduleRequests"
+                    TargetIdProperty = "targetRoleAssignmentScheduleId"
+                    RemoveCmd = "Remove-PIMAzureResourceActiveAssignment"
+                    TenantId = $TenantId
+                }
+                
+                Invoke-DeltaCleanup -ResourceType "Azure Role active" -ConfigAssignments $azureRolesActive -ApiInfo $apiInfo -ProtectedUsers $protectedUsers
+            }
+            
+            # Entra Role eligible delta cleanup
+            if ($entraRoles) {
+                $apiInfo = @{
+                    Subscriptions = @()  # Not needed for Entra roles
+                    RemoveCmd = "Remove-PIMEntraRoleEligibleAssignment"
+                    TenantId = $TenantId
+                }
+                
+                Invoke-DeltaCleanup -ResourceType "Entra Role eligible" -ConfigAssignments $entraRoles -ApiInfo $apiInfo -ProtectedUsers $protectedUsers
+            }
+
+            # Entra Role active delta cleanup
+            if ($entraRolesActive) {
+                $apiInfo = @{
+                    Subscriptions = @()  # Not needed for Entra roles
+                    RemoveCmd = "Remove-PIMEntraRoleActiveAssignment"
+                    TenantId = $TenantId
+                }
+                
+                Invoke-DeltaCleanup -ResourceType "Entra Role active" -ConfigAssignments $entraRolesActive -ApiInfo $apiInfo -ProtectedUsers $protectedUsers
+            }
+
+            # Group Role eligible delta cleanup
+            if ($groupRoles) {
+                Write-StatusInfo "Processing Group Role eligible delta cleanup"
+                
+                # Get all unique group IDs
+                $groupIds = $groupRoles | Select-Object -ExpandProperty GroupId -Unique
+                
+                # Create API info with list of all group IDs
+                $apiInfo = @{
+                    Subscriptions = @()  # Not needed for Group roles
+                    GroupIds = $groupIds # Pass all group IDs at once
+                    RemoveCmd = "Remove-PIMGroupEligibleAssignment"
+                    TenantId = $TenantId
+                }
+                
+                # Call cleanup once with all assignments
+                Invoke-DeltaCleanup -ResourceType "Group eligible" -ConfigAssignments $groupRoles -ApiInfo $apiInfo -ProtectedUsers $protectedUsers
+            }
+
+            # Group Role active delta cleanup
+            if ($groupRolesActive) {
+                Write-StatusInfo "Processing Group Role active delta cleanup"
+                
+                # Get all unique group IDs
+                $groupIds = $groupRolesActive | Select-Object -ExpandProperty GroupId -Unique
+                
+                # Create API info with list of all group IDs
+                $apiInfo = @{
+                    Subscriptions = @()  # Not needed for Group roles
+                    GroupIds = $groupIds # Pass all group IDs at once
+                    RemoveCmd = "Remove-PIMGroupActiveAssignment"
+                    TenantId = $TenantId
+                }
+                
+                # Call cleanup once with all assignments
+                Invoke-DeltaCleanup -ResourceType "Group active" -ConfigAssignments $groupRolesActive -ApiInfo $apiInfo -ProtectedUsers $protectedUsers
+            }
+            
+            # For Entra ID and Group roles, we'll continue to use the PIM cmdlets directly
+            # Add implementation here if needed
+        }
+        
+        # Cleanup in initial mode
+        if ($Mode -eq "initial") {
+            Invoke-InitialCleanup -Config $config `
+                                 -TenantId $TenantId `
+                                 -SubscriptionId $SubscriptionId `
+                                 -AzureRoles $azureRoles `
+                                 -AzureRolesActive $azureRolesActive `
+                                 -EntraRoles $entraRoles `
+                                 -EntraRolesActive $entraRolesActive `
+                                 -GroupRoles $groupRoles `
+                                 -GroupRolesActive $groupRolesActive
+        }
+        #endregion
+        
+        #region Process Eligible Assignments - MOVED THIS AFTER CLEANUP
         Write-SectionHeader "Processing Eligible Assignments"
         
         # Process Azure Role eligible assignments
@@ -254,104 +394,61 @@ function Invoke-EasyPIMOrchestrator {
         }
         
         # Process Group Role eligible assignments
-        if ($config.GroupRoles) {
-            Write-Output "Processing Group Role eligible assignments..."
-            Write-Output "Found $($config.GroupRoles.Count) Group Role eligible assignments in config"
+        if ($groupRoles) {
+            Write-SectionHeader "Processing Group Role Eligible Assignments"
             
             # Group roles by GroupId to minimize API calls
-            $groupedAssignments = $config.GroupRoles | Group-Object -Property GroupId
+            $groupedAssignments = $groupRoles | Group-Object -Property GroupId
             
-            $createCounter = 0
-            $skipCounter = 0
-            $errorCounter = 0
+            $totalCreateCounter = 0
+            $totalSkipCounter = 0
+            $totalErrorCounter = 0
             
             foreach ($groupSet in $groupedAssignments) {
                 $groupId = $groupSet.Name
                 $assignments = $groupSet.Group
                 
-                Write-Output "Processing group: $groupId with $($assignments.Count) assignments"
+                Write-GroupHeader "Processing group: $groupId with $($assignments.Count) assignments"
                 
-                # First check if group exists (this is still important)
-                try {
-                    # Basic check to verify group exists before attempting any operations
-                    if (-not (Test-PrincipalExists -PrincipalId $groupId)) {
-                        Write-Warning "⚠️ Group $groupId does not exist, skipping assignment"
-                        $errorCounter++
-                        continue
-                    }
-                    
-                    Write-Output "✓ Group $groupId exists: $($groupResponse.displayName)"
-                    
-                    # Try to get existing assignments (if any)
-                    try {
-                        $existingAssignments = Get-PIMGroupEligibleAssignment -tenantID $TenantId -groupId $groupId -ErrorAction SilentlyContinue
-                        Write-Verbose "Found $($existingAssignments.Count) existing assignments for group"
-                    }
-                    catch {
-                        # Group exists but not PIM-enabled yet, which is fine
-                        Write-Verbose "Group not yet PIM-enabled, will be enabled when first assignment is created"
-                        $existingAssignments = @()
-                    }
-                    
-                    # Process assignments for this group
-                    foreach ($assignment in $assignments) {
-                        Write-Output "Processing assignment for PrincipalId=$($assignment.PrincipalId), Role=$($assignment.Rolename), GroupId=$($assignment.GroupId)"
-                        
-                        # Check if principal exists
-                        if (-not (Test-PrincipalExists -PrincipalId $assignment.PrincipalId)) {
-                            Write-Warning "⚠️ Principal $($assignment.PrincipalId) does not exist, skipping assignment"
-                            $errorCounter++
-                            continue
-                        }
-                        
-                        # Check if assignment already exists
-                        $found = 0
-                        foreach ($existing in $existingAssignments) {
-                            if (($existing.PrincipalId -eq $assignment.PrincipalId) -and 
-                                ($existing.RoleName -eq $assignment.Rolename)) {
-                                $found = 1
-                                break
-                            }
-                        }
-                        
-                        if ($found -eq 0) {
-                            $actionDescription = "Create new Group Role eligible assignment for $($assignment.PrincipalId) with role $($assignment.Rolename) on group $($assignment.GroupId)"
-                            
-                            if ($PSCmdlet.ShouldProcess($actionDescription)) {
-                                try {
-                                    Write-Output "⚙️ $actionDescription"
-                                    New-PIMGroupEligibleAssignment -tenantID $TenantId -principalId $assignment.PrincipalId -roleName $assignment.Rolename -groupId $assignment.GroupId -justification $justification
-                                    Write-Output "✓ Successfully created assignment (and enabled PIM for group if needed)"
-                                    $createCounter++
-                                }
-                                catch {
-                                    Write-Error "Failed to create assignment: $_"
-                                    $errorCounter++
-                                }
-                            }
-                        }
-                        else {
-                            Write-Output "✓ Group Role eligible assignment already exists"
-                            $skipCounter++
-                        }
-                    }
-                }
-                catch {
-                    Write-Warning "⚠️ Cannot process group $groupId - Group doesn't exist"
-                    Write-Warning "Error details: $_"
-                    $errorCounter += $assignments.Count
-                    
-                    # Continue with next group rather than stopping entirely
+                # First check if group exists before trying to process assignments
+                if (-not (Test-PrincipalExists -PrincipalId $groupId)) {
+                    Write-StatusWarning "Group $groupId does not exist, skipping all assignments"
+                    $totalErrorCounter += $assignments.Count
                     continue
                 }
+                
+                # Mark this group as processed
+                $processedGroups[$groupId] = $true
+                
+                Write-StatusSuccess "Group $groupId exists"
+                
+                # Try to get existing assignments (if any)
+                try {
+                    $existingAssignments = Get-PIMGroupEligibleAssignment -tenantID $TenantId -groupId $groupId -ErrorAction SilentlyContinue
+                    Write-StatusInfo "Found $($existingAssignments.Count) existing assignments for group"
+                }
+                catch {
+                    # Group exists but not PIM-enabled yet, which is fine
+                    Write-StatusInfo "Group not yet PIM-enabled, will be enabled when first assignment is created"
+                    $existingAssignments = @()
+                }
+                
+                # Process assignments for this group using the same function
+                $result = Invoke-ResourceAssignments -ResourceType "Group Role eligible ($groupId)" -Assignments $assignments -CommandMap $commandMap
+                
+                # Accumulate counters
+                $totalCreateCounter += $result.Created
+                $totalSkipCounter += $result.Skipped
+                $totalErrorCounter += $result.Failed
             }
             
-            Write-Output "Group Role eligible assignments: $createCounter created, $skipCounter skipped, $errorCounter failed"
+            # Overall summary
+            Write-Summary -Category "Group Role Eligible Assignments (Total)" -Created $totalCreateCounter -Skipped $totalSkipCounter -Failed $totalErrorCounter
         }
         
         #endregion
         
-        #region Process Active Assignments
+        #region Process Active Assignments - KEPT THIS LAST
         Write-SectionHeader "Processing Active Assignments"
         
         # Process Azure Role active assignments
@@ -378,6 +475,21 @@ function Invoke-EasyPIMOrchestrator {
                 DirectFilter = $true
             }
             
+            # After getting assignments, add this debugging section
+            $allAssignments = & $commandMap.GetCmd -SubscriptionId $SubscriptionId -TenantId $commandMap.GetParams.tenantID
+            Write-Output "    ├─ Found $($allAssignments.Count) total current assignments"
+
+            # Debug invalid assignments
+            $invalidAssignments = $allAssignments | Where-Object { (-not $_.SubjectId) -or (-not $_.RoleName) }
+            if ($invalidAssignments.Count -gt 0) {
+                Write-Output "    ├─ Found $($invalidAssignments.Count) system/orphaned assignments (normal)"
+                Write-Verbose "Detailed invalid assignment properties:"
+                foreach ($invalid in $invalidAssignments) {
+                    $invalidJson = $invalid | ConvertTo-Json -Depth 1 -Compress
+                    Write-Verbose "System assignment: $invalidJson"
+                }
+            }
+
             Invoke-ResourceAssignments -ResourceType "Azure Role active" -Assignments $normalizedAssignments -CommandMap $commandMap
         }
         
@@ -419,164 +531,105 @@ function Invoke-EasyPIMOrchestrator {
         
         # Process Group Role active assignments
         if ($config.GroupRolesActive) {
-            Write-Output "Processing Group Role active assignments..."
-            Write-Output "Found $($config.GroupRolesActive.Count) Group Role active assignments in config"
+            Write-SectionHeader "Processing Group Role Active Assignments"
             
             # Group roles by GroupId to minimize API calls
             $groupedAssignments = $config.GroupRolesActive | Group-Object -Property GroupId
             
-            $createCounter = 0
-            $skipCounter = 0
-            $errorCounter = 0
+            $totalCreateCounter = 0
+            $totalSkipCounter = 0
+            $totalErrorCounter = 0
             
             foreach ($groupSet in $groupedAssignments) {
                 $groupId = $groupSet.Name
                 $assignments = $groupSet.Group
                 
-                Write-Output "Processing group: $groupId with $($assignments.Count) assignments"
+                Write-GroupHeader "Processing group: $groupId with $($assignments.Count) assignments"
                 
-                # First check if group exists (this is still important)
+                # First check if group exists before trying to process assignments
+                if (-not (Test-PrincipalExists -PrincipalId $groupId)) {
+                    Write-StatusWarning "Group $groupId does not exist, skipping all assignments"
+                    $totalErrorCounter += $assignments.Count
+                    continue
+                }
+                
+                Write-StatusSuccess "Group $groupId exists"
+                
+                # Try to get existing assignments (if any)
                 try {
-                    # Basic check to verify group exists before attempting any operations
-                    if (-not (Test-PrincipalExists -PrincipalId $groupId)) {
-                        Write-Warning "⚠️ Group $groupId does not exist, skipping assignment"
-                        $errorCounter++
+                    $existingAssignments = Get-PIMGroupActiveAssignment -tenantID $TenantId -groupId $groupId -ErrorAction SilentlyContinue
+                    Write-StatusInfo "Found $($existingAssignments.Count) existing assignments for group"
+                }
+                catch {
+                    # Group exists but not PIM-enabled yet, which is fine
+                    Write-StatusInfo "Group not yet PIM-enabled, will be enabled when first assignment is created"
+                    $existingAssignments = @()
+                }
+                
+                # Process assignments for this group
+                foreach ($assignment in $assignments) {
+                    Write-StatusInfo "Processing assignment for principal with role '$($assignment.Rolename)'"
+                    
+                    # Check if principal exists
+                    if (-not (Test-PrincipalExists -PrincipalId $assignment.PrincipalId)) {
+                        Write-StatusWarning "Principal $($assignment.PrincipalId) does not exist, skipping assignment"
+                        $totalErrorCounter++ 
                         continue
                     }
                     
-                    Write-Output "✓ Group $groupId exists: $($groupResponse.displayName)"
-                    
-                    # Try to get existing assignments (if any)
-                    try {
-                        $existingAssignments = Get-PIMGroupActiveAssignment -tenantID $TenantId -groupId $groupId -ErrorAction SilentlyContinue
-                        Write-Verbose "Found $($existingAssignments.Count) existing assignments for group"
-                    }
-                    catch {
-                        # Group exists but not PIM-enabled yet, which is fine
-                        Write-Verbose "Group not yet PIM-enabled, will be enabled when first assignment is created"
-                        $existingAssignments = @()
-                    }
-                    
-                    # Process assignments for this group
-                    foreach ($assignment in $assignments) {
-                        Write-Output "Processing assignment for PrincipalId=$($assignment.PrincipalId), Role=$($assignment.Rolename), GroupId=$($assignment.GroupId)"
-                        
-                        # Check if principal exists
-                        if (-not (Test-PrincipalExists -PrincipalId $assignment.PrincipalId)) {
-                            Write-Warning "⚠️ Principal $($assignment.PrincipalId) does not exist, skipping assignment"
-                            $errorCounter++
-                            continue
+                    # Check if assignment already exists
+                    $found = 0
+                    foreach ($existing in $existingAssignments) {
+                        if (($existing.PrincipalId -eq $assignment.PrincipalId) -and 
+                            ($existing.RoleName -eq $assignment.Rolename)) {
+                            $found = 1
+                            break
                         }
+                    }
+                    
+                    if ($found -eq 0) {
+                        $actionDescription = "Create new Group Role active assignment for $($assignment.PrincipalId) with role $($assignment.Rolename) on group $($assignment.GroupId)"
                         
-                        # Check if assignment already exists
-                        $found = 0
-                        foreach ($existing in $existingAssignments) {
-                            if (($existing.PrincipalId -eq $assignment.PrincipalId) -and 
-                                ($existing.RoleName -eq $assignment.Rolename)) {
-                                $found = 1
-                                break
+                        if ($PSCmdlet.ShouldProcess($actionDescription)) {
+                            try {
+                                Write-StatusProcessing "$actionDescription"
+                                $params = @{
+                                    tenantID = $TenantId
+                                    principalId = $assignment.PrincipalId
+                                    roleName = $assignment.Rolename
+                                    groupId = $assignment.GroupId
+                                    justification = $justification
+                                }
+                                
+                                # Handle both Permanent and Duration flags
+                                if ($assignment.Permanent -eq $true) {
+                                    $params['permanent'] = $true
+                                    Write-StatusInfo "Setting as permanent assignment"
+                                }
+                                elseif ($assignment.Duration) {
+                                    $params['duration'] = $assignment.Duration
+                                    Write-StatusInfo "Setting duration: $($assignment.Duration)"
+                                }
+                                
+                                New-PIMGroupActiveAssignment @params
+                                Write-StatusSuccess "Successfully created active assignment"
+                                $totalCreateCounter++
+                            }
+                            catch {
+                                Write-StatusError "Failed to create assignment: $_"
+                                $totalErrorCounter++ 
                             }
                         }
-                        
-                        if ($found -eq 0) {
-                            $actionDescription = "Create new Group Role active assignment for $($assignment.PrincipalId) with role $($assignment.Rolename) on group $($assignment.GroupId)"
-                            
-                            if ($PSCmdlet.ShouldProcess($actionDescription)) {
-                                try {
-                                    Write-Output "⚙️ $actionDescription"
-                                    $params = @{
-                                        tenantID = $TenantId
-                                        principalId = $assignment.PrincipalId
-                                        roleName = $assignment.Rolename
-                                        groupId = $assignment.GroupId
-                                        justification = $justification
-                                    }
-                                    
-                                    if ($assignment.Duration) {
-                                        $params['duration'] = $assignment.Duration
-                                    }
-                                    
-                                    New-PIMGroupActiveAssignment @params
-                                    Write-Output "✓ Successfully created active assignment"
-                                    $createCounter++
-                                }
-                                catch {
-                                    Write-Error "Failed to create assignment: $_"
-                                    $errorCounter++
-                                }
-                            }
-                        }
-                        else {
-                            Write-Output "✓ Group Role active assignment already exists"
-                            $skipCounter++
-                        }
+                    }
+                    else {
+                        Write-StatusSuccess "Group Role active assignment already exists"
+                        $totalSkipCounter++
                     }
                 }
-                catch {
-                    Write-Warning "⚠️ Cannot process group $groupId - Group doesn't exist"
-                    Write-Warning "Error details: $_"
-                    $errorCounter += $assignments.Count
-                    
-                    # Continue with next group rather than stopping entirely
-                    continue
-                }
             }
             
-            Write-Output "Group Role active assignments: $createCounter created, $skipCounter skipped, $errorCounter failed"
-        }
-        
-        #endregion
-        
-        #region Cleanup Logic
-        Write-SectionHeader "Processing Cleanup"
-        
-        # Cleanup in delta mode
-        if ($Mode -eq "delta") {
-            Write-Output "=== Performing Delta Mode Cleanup ==="
-            
-            # Azure Role eligible delta cleanup
-            if ($azureRoles) {
-                $subscriptions = @($azureRoles.Scope | ForEach-Object { $_.Split("/")[2] } | Select-Object -Unique)
-                
-                $apiInfo = @{
-                    Subscriptions = $subscriptions
-                    ApiEndpoint = "https://management.azure.com/subscriptions/$($subscriptions[0])/providers/Microsoft.Authorization/roleEligibilityScheduleRequests"
-                    TargetIdProperty = "targetRoleEligibilityScheduleId"
-                    RemoveCmd = "Remove-PIMAzureResourceEligibleAssignment"
-                }
-                
-                Invoke-DeltaCleanup -ResourceType "Azure Role eligible" -ConfigAssignments $azureRoles -ApiInfo $apiInfo
-            }
-            
-            # Azure Role active delta cleanup
-            if ($azureRolesActive) {
-                $subscriptions = @($azureRolesActive.Scope | ForEach-Object { $_.Split("/")[2] } | Select-Object -Unique)
-                
-                $apiInfo = @{
-                    Subscriptions = $subscriptions
-                    ApiEndpoint = "https://management.azure.com/subscriptions/$($subscriptions[0])/providers/Microsoft.Authorization/roleAssignmentScheduleRequests"
-                    TargetIdProperty = "targetRoleAssignmentScheduleId"
-                    RemoveCmd = "Remove-PIMAzureResourceActiveAssignment"
-                }
-                
-                Invoke-DeltaCleanup -ResourceType "Azure Role active" -ConfigAssignments $azureRolesActive -ApiInfo $apiInfo
-            }
-            
-            # For Entra ID and Group roles, we'll continue to use the PIM cmdlets directly
-            # Add implementation here if needed
-        }
-        
-        # Cleanup in initial mode
-        if ($Mode -eq "initial") {
-            Invoke-InitialCleanup -Config $config `
-                                 -TenantId $TenantId `
-                                 -SubscriptionId $SubscriptionId `
-                                 -AzureRoles $azureRoles `
-                                 -AzureRolesActive $azureRolesActive `
-                                 -EntraRoles $entraRoles `
-                                 -EntraRolesActive $entraRolesActive `
-                                 -GroupRoles $groupRoles `
-                                 -GroupRolesActive $groupRolesActive
+            # Overall summary
+            Write-Summary -Category "Group Role Active Assignments (Total)" -Created $totalCreateCounter -Skipped $totalSkipCounter -Failed $totalErrorCounter
         }
         
         #endregion

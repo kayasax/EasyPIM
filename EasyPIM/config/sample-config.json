@@ -27,7 +27,9 @@
     "EntraIDRoles": [
       {
         "PrincipalId": "a621fbf5-d750-4e68-b898-2e2b41cd45c6",
-        "Rolename": "Security Reader"
+        "Rolename": "Security Reader",
+        "Duration": "P90D"
+
       }
     ],
     "EntraIDRolesActive": [

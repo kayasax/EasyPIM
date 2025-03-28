@@ -46,7 +46,25 @@ function Invoke-ARM {
 
         #TODO need better way to handle mangement group scope!!
         if($restURI -notmatch "managementgroups"){
-            $script:subscriptionID=[regex]::Matches($restURI,".*\/subscriptions\/(.*)\/providers.*$").groups[1].Value
+            $subscriptionMatches = [regex]::Matches($restURI,".*\/subscriptions\/([^\/]*).*")
+            if ($subscriptionMatches.Count -gt 0 -and $subscriptionMatches.Groups.Count -gt 1) {
+                $script:subscriptionID = $subscriptionMatches.Groups[1].Value
+            } else {
+                # If we can't extract it from the URI, try to use the one passed to the function
+                if ($script:subscriptionID -eq $null -and $PSBoundParameters.ContainsKey('subscriptionID')) {
+                    $script:subscriptionID = $PSBoundParameters['subscriptionID']
+                }
+                
+                # Still null? Use the one from ApiInfo
+                if ($script:subscriptionID -eq $null -and $ApiInfo -and $ApiInfo.Subscriptions -and $ApiInfo.Subscriptions.Count -gt 0) {
+                    $script:subscriptionID = $ApiInfo.Subscriptions[0]
+                }
+                
+                # If we still don't have a subscription ID, we need to throw a better error
+                if ($script:subscriptionID -eq $null) {
+                    throw "Could not determine subscription ID. Please provide it explicitly."
+                }
+            }
 
 
             if ( $null -eq (get-azcontext) -or ( (get-azcontext).Tenant.Id -ne $script:tenantID ) ) {
