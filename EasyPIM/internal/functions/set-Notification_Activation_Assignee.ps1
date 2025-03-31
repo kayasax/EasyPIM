@@ -27,7 +27,7 @@ function set-Notification_Activation_Assignee($Notification_Activation_Assignee,
     $Notification_Activation_Assignee.Recipients | ForEach-Object {
         $rule += '"' + $_ + '",'
     }
- 
+
     $rule += '
          ],
          "id": "Notification_Requestor_EndUser_Assignment",
@@ -57,7 +57,7 @@ function set-Notification_Activation_Assignee($Notification_Activation_Assignee,
             "notificationRecipients": ['
             #write-verbose "recipient : $($Notification_ActiveAssignment_Assignee.Recipients)"
             If ( ($Notification_Activation_Assignee.Recipients |Measure-Object |Select-Object -expand count) -gt 0 ){
-    
+
                 $Notification_Activation_Assignee.Recipients | ForEach-Object {
                 $rule += '"' + $_ + '",'
             }

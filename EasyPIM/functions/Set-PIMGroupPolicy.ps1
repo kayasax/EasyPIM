@@ -13,7 +13,7 @@
         Require  approval on activation and set John as an approver, configure some notifications for the member role of the group $gIDs
 
       .Link
-     
+
       .Notes
         Author: Loïc MICHEL
         Homepage: https://github.com/kayasax/EasyPIM
@@ -80,85 +80,85 @@ function Set-PIMGroupPolicy {
         [Bool]
         # Is approval required to activate a role? ($true|$false)
         $ApprovalRequired,
-    
+
         [Parameter()]
         # Array of approvers in the format: @(@{"Id"=<ObjectID>;"Name"="John":"Type"="user|group"}, .... )
         $Approvers,
-        
+
         [Parameter()]
         [System.String]
         # Maximum Eligility Duration
         $MaximumEligibilityDuration = $null,
-        
+
         [Parameter()]
         [Bool]
         # Allow permanent eligibility? ($true|$false)
         $AllowPermanentEligibility,
-    
+
         [Parameter()]
         [System.String]
         # Maximum active assignment duration # Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
         $MaximumActiveAssignmentDuration = $null,
-    
+
         [Parameter()]
         [Bool]
         # Allow permanent active assignement? ($true|$false)
         $AllowPermanentActiveAssignment,
-    
+
         [Parameter()]
         [System.Collections.Hashtable]
         # Admin Notification when eligible role is assigned
         # Format:  @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
         $Notification_EligibleAssignment_Alert,
-        
+
         [Parameter()]
         [System.Collections.Hashtable]
         # End user notification when eligible role is assigned
         # Format:  @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
         $Notification_EligibleAssignment_Assignee,
-        
+
         [Parameter()]
         [System.Collections.Hashtable]
         # Approver notification when eligible role is assigned
         # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
         $Notification_EligibleAssignment_Approver,
-        
+
         [Parameter()]
         [System.Collections.Hashtable]
         # Admin Notification when an active role is assigned
         # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
         $Notification_ActiveAssignment_Alert,
-    
+
         [Parameter()]
         [System.Collections.Hashtable]
         # End user Notification when an active role is assigned
         # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
         $Notification_ActiveAssignment_Assignee,
-    
+
         [Parameter()]
         [System.Collections.Hashtable]
         # Approver Notification when an active role is assigned
         # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
         $Notification_ActiveAssignment_Approver,
-    
+
         [Parameter()]
         [System.Collections.Hashtable]
         # Admin Notification when a is activated
         # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
         $Notification_Activation_Alert,
-    
+
         [Parameter()]
         [System.Collections.Hashtable]
         # End user Notification when a role is activated
         # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
         $Notification_Activation_Assignee,
-    
+
         [Parameter()]
         [System.Collections.Hashtable]
         # Approvers Notification when a role is activated
         # Format: @{"isDefaultRecipientEnabled"="true|false"; "notificationLevel"="All|Critical"};"Recipients" = @("email1@domain.com","email2@domain.com")}
         $Notification_Activation_Approver
-      
+
     )
     try {
         $p = @()
@@ -166,7 +166,7 @@ function Set-PIMGroupPolicy {
             $p += "$_ =>" + $PSBoundParameters[$_]
         }
         $p = $p -join ', '
-       
+
         log "Function Set-PIMGroupPolicy is starting with parameters: $p" -noEcho
 
         $script:tenantID = $tenantID
@@ -212,7 +212,7 @@ function Set-PIMGroupPolicy {
                 }
                 $rules += Set-EligibilityAssignment $MaximumEligibilityDuration $AllowPermanentEligibility -entraRole
             }
-     
+
             #active assignement limits
             if ( $PSBoundParameters.ContainsKey('MaximumActiveAssignmentDuration') -or ( $PSBoundParameters.ContainsKey('AllowPermanentActiveAssignment'))) {
                 #if values are not set, use the ones from the curent config
@@ -248,7 +248,7 @@ function Set-PIMGroupPolicy {
             if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Alert')) {
                 $rules += Set-Notification_ActiveAssignment_Alert $Notification_ActiveAssignment_Alert -entraRole
             }
-      
+
             # Notif Active Assignment Assignee
             if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Assignee')) {
                 $rules += Set-Notification_ActiveAssignment_Assignee $Notification_ActiveAssignment_Assignee -entraRole
@@ -258,7 +258,7 @@ function Set-PIMGroupPolicy {
             if ($PSBoundParameters.Keys.Contains('Notification_ActiveAssignment_Approver')) {
                 $rules += Set-Notification_ActiveAssignment_Approver $Notification_ActiveAssignment_Approver -entraRole
             }
-        
+
             # Notification Activation alert
             if ($PSBoundParameters.Keys.Contains('Notification_Activation_Alert')) {
                 $rules += Set-Notification_Activation_Alert $Notification_Activation_Alert -entraRole
@@ -266,7 +266,7 @@ function Set-PIMGroupPolicy {
 
             # Notification Activation Assignee
             if ($PSBoundParameters.Keys.Contains('Notification_Activation_Assignee')) {
-       
+
                 $rules += Set-Notification_Activation_Assignee $Notification_Activation_Assignee -entraRole
             }
 
@@ -283,7 +283,7 @@ function Set-PIMGroupPolicy {
             if ($PSCmdlet.ShouldProcess($_, "Udpdating policy")) {
                 $null = Update-EntraRolePolicy $script:config.policyID $allrules
             }
-            
+
         }
         log "Success, policy updated"
         return
@@ -291,5 +291,5 @@ function Set-PIMGroupPolicy {
     catch {
         MyCatch $_
     }
-    
+
 }

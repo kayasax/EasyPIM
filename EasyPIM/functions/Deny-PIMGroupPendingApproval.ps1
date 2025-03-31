@@ -6,7 +6,7 @@ Get-PIMGroupPolicy will return the policy rules (like require MFA on activation)
 Support querrying multi roles at once
 
 .Description
- 
+
 Deny-PIMGroupPendingApprovall will use the Microsoft Graph APIs to retrieve the requests pending your approval
 
 .PARAMETER approvalID
@@ -19,9 +19,9 @@ justification for the approval
        PS> Deny-PIMAzureResourcePendingApproval -approvalID $approvalID -justification "I Deny this request"
 
        Deny a pending request
-    
+
 .Link
-   
+
 .Notes
     Homepage: https://github.com/kayasax/easyPIM
     Author: MICHEL, Loic
@@ -33,7 +33,7 @@ function Deny-PIMGroupPendingApproval {
     [CmdletBinding()]
     [OutputType([String])]
     param (
-        
+
         [Parameter(Position = 0, Mandatory = $true, ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
         [System.String]
@@ -44,18 +44,18 @@ function Deny-PIMGroupPendingApproval {
         [System.String]
         # justification
         $justification
-        
+
     )
     process {
         try {
             #$script:tenantID = $tenantID
 
             Write-Verbose "Deny-PIMGroupPendingApproval start with parameters: approvalid => $approvalID, justification => $justification"
-               
+
             #Get the stages:
             #in groups stageID is the same as the approvalID
 
-          
+
             #Deny the request
             #https://learn.microsoft.com/en-us/graph/api/approvalstage-update?view=graph-rest-1.0&tabs=http
 

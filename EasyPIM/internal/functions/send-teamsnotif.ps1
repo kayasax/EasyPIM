@@ -13,7 +13,7 @@
        PS> send-teamsnotif "Error occured" "The source file was not found"
 
        Send a notification to teams webhook url
-     
+
       .Notes
 #>function send-teamsnotif {
     [CmdletBinding()] #make script react as cmdlet (-verbose etc..)
@@ -41,7 +41,7 @@
                 "activityTitle" = " Script path "
                 "activityText"  = "$_scriptFullName"
             },
-            
+
             @{
                 "activityTitle" = "myStackTrace"
                 "activityText"  = "$myStackTrace"
@@ -50,7 +50,7 @@
     }
 
     $TeamMessageBody = ConvertTo-Json $JSONBody -Depth 100
-        
+
     $parameters = @{
         "URI"         = $teamsWebhookURL
         "Method"      = 'POST'

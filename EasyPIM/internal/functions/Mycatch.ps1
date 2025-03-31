@@ -9,11 +9,11 @@
         PS> MyCatch $e
 
         Will log the details of the exception
-      
+
       .Link
-     
+
       .Notes
-      	
+
 #>
      function MyCatch($e){
       write-verbose "MyCatch function called"
@@ -21,7 +21,7 @@
     $details =$e.errordetails# |fl -force
     $position = $e.InvocationInfo.positionMessage
     #$Exception = $e.Exception
-    
+
     if ($TeamsNotif) { send-teamsnotif "$err" "$details<BR/> TIPS: try to check the scope and the role name" "$position" }
     Log "An exception occured: $err `nDetails: $details `nPosition: $position"
     throw "Error, script did not terminate gracefuly" #fix issue #40

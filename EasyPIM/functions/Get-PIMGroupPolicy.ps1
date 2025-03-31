@@ -25,7 +25,7 @@ show curent config for the member role of the group $gID
 PS> Get-PIMGroupPolicy -tenantID $tenantID -groupname "Mygroup" -type owner
 
 show curent config for the owner role of the group "Mygroup"
-    
+
 .Link
     https://learn.microsoft.com/en-us/azure/governance/resource-graph/first-query-rest-api
     https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview
@@ -39,12 +39,12 @@ function Get-PIMGroupPolicy {
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
     param (
-        
+
         [Parameter(Position = 0, Mandatory = $true)]
         [System.String]
         # Tenant ID
         $tenantID,
-        
+
         [Parameter(Position = 1)]
         [System.String[]]
         # Array of role name
@@ -60,7 +60,7 @@ function Get-PIMGroupPolicy {
         #owner or member
         $type
 
-        
+
     )
     try {
         $script:tenantID = $tenantID
@@ -71,15 +71,15 @@ function Get-PIMGroupPolicy {
             $groupID+=$response.value.id
 
         }
-        
+
         #fix #77
         elseif (!( $PSBoundParameters.ContainsKey('groupID'))) {
             throw "You must provide a groupID or a groupName"
         }
-                       
+
         $out = @()
         $groupID | ForEach-Object {
-            
+
             #get curent config
             $config = get-GroupConfig $_ $type
             $out += $config
@@ -89,5 +89,5 @@ function Get-PIMGroupPolicy {
     catch {
         MyCatch $_
     }
-    
+
 }

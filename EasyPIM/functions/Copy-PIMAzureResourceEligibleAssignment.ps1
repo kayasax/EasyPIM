@@ -13,7 +13,7 @@
     userprincipalname or objectID of the source object
     .Parameter to
     userprincipalname or objectID of the destination object
-       
+
     .Example
     PS> Copy-PIMAzureResourceEligibleAssignment -tenantID $tid -subscriptionID -subscription $subscription -from user1@contoso.com -to user2@contoso.com
 
@@ -24,7 +24,7 @@
     Author: Loïc MICHEL
     Homepage: https://github.com/kayasax/EasyPIM
 #>
-     
+
 function Copy-PIMAzureResourceEligibleAssignment {
     [CmdletBinding()]
     param (
@@ -46,9 +46,9 @@ function Copy-PIMAzureResourceEligibleAssignment {
     )
 
     try {
-        
+
         $script:tenantID = $tenantID
-        
+
         if (!($PSBoundParameters.Keys.Contains('scope'))) {
             $scope = "/subscriptions/$subscriptionID"
         }
@@ -64,9 +64,9 @@ function Copy-PIMAzureResourceEligibleAssignment {
                 Write-Warning "User $from not found in the tenant"
                 return
             }
-                
+
         }
-         
+
         if ($to -match ".+@.*\..+") {
             #if this is a upn we will use graph to get the objectID
             try {
@@ -77,9 +77,9 @@ function Copy-PIMAzureResourceEligibleAssignment {
                 Write-Warning "User $to not found in the tenant"
                 return
             }
-                
+
         }
-            
+
         $assignments=get-PIMAzureResourceEligibleAssignment -tenantID $tenantID -scope $scope -assignee $from
         $assignments | ForEach-Object {
             Write-Verbose "Copying assignment from $from to $to at scope $($_.scopeId) with role $($_.rolename)"

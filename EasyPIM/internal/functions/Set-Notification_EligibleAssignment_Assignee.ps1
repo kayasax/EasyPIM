@@ -35,7 +35,7 @@ function Set-Notification_EligibleAssignment_Assignee {
     $Notification_EligibleAssignment_Assignee.Recipients | ForEach-Object {
         $rule += '"' + $_ + '",'
     }
-        
+
     $rule += '
         ],
         "id": "Notification_Requestor_Admin_Eligibility",
@@ -51,7 +51,7 @@ function Set-Notification_EligibleAssignment_Assignee {
         "enforcedSettings": null
         }
         }'
-    
+
     if($EntraRole){
         $rule = '
         {
@@ -63,7 +63,7 @@ function Set-Notification_EligibleAssignment_Assignee {
             "notificationLevel": "'+ $Notification_EligibleAssignment_Assignee.notificationLevel + '",
             "notificationRecipients": ['
             If ( ($Notification_EligibleAssignment_Assignee.Recipients |Measure-Object |Select-Object -expand count) -gt 0 ){
-    
+
             $Notification_EligibleAssignment_Assignee.Recipients | ForEach-Object {
                 $rule += '"' + $_ + '",'
             }

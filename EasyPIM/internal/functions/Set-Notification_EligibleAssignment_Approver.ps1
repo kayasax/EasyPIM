@@ -17,7 +17,7 @@ set the notification sent to approvers  when elligible assignment is created
 #>
 function Set-Notification_EligibleAssignment_Approver($Notification_EligibleAssignment_Approver, [switch]$EntraRole) {
     #write-verbose "function Set-Notification_EligibleAssignment_Approver"
-        
+
     $rule = '
         {
         "notificationType": "Email",

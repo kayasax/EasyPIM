@@ -61,7 +61,7 @@ function  Set-Notification_ActiveAssignment_Approver($Notification_ActiveAssignm
             $rule += '"' + $_ + '",'
         }
         $rule = $rule -replace ".$" #remove the last comma
-        
+
         }
         $rule += '],
             "target": {

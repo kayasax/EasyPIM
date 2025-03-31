@@ -1,10 +1,10 @@
-function Expand-AssignmentWithPrincipalIds {
+﻿function Expand-AssignmentWithPrincipalIds {
     param (
         [array]$Assignments
     )
-    
+
     $expandedAssignments = @()
-    
+
     foreach ($assignment in $Assignments) {
         # If using PrincipalIds array, expand to individual assignments
         if ($assignment.PrincipalIds) {
@@ -24,6 +24,6 @@ function Expand-AssignmentWithPrincipalIds {
             Write-Warning "Assignment missing both PrincipalId and PrincipalIds properties: $($assignment | ConvertTo-Json -Compress)"
         }
     }
-    
+
     return $expandedAssignments
 }

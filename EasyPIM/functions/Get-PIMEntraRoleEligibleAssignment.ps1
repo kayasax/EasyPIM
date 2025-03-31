@@ -24,7 +24,7 @@
     Author: Loïc MICHEL
     Homepage: https://github.com/kayasax/EasyPIM
 #>
-     
+
 function Get-PIMEntraRoleEligibleAssignment {
     [CmdletBinding()]
     param (
@@ -44,7 +44,7 @@ function Get-PIMEntraRoleEligibleAssignment {
         $response = invoke-graph -Endpoint $endpoint
         $resu = @()
         $response.value | ForEach-Object {
-            
+
             $r = @{
                 "rolename"         = $_.roledefinition.displayName
                 "roleid"           = $_.roledefinition.id
@@ -60,8 +60,8 @@ function Get-PIMEntraRoleEligibleAssignment {
                 "id"               = $_.id
             }
             $resu += New-Object PSObject -Property $r
-    
-  
+
+
         }
 
 

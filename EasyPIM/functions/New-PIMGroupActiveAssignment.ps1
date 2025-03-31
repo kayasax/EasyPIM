@@ -27,7 +27,7 @@
     Create an active assignment for the membership role of the group $gID and principal $userID starting now and using a duration of 7 days
 
     PS> New-PIMGroupActiveAssignment -tenantID $tenantID -groupID $gID -principalID $userID -type owner -permanent
-    
+
     Create a permanent active assignement for the ownership role of the group $gID and principal $userID starting now
     .Link
     https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
@@ -48,7 +48,7 @@ function New-PIMGroupActiveAssignment {
         [String]
         # Entra ID tenantID
         $groupID,
-        
+
         [Parameter(Mandatory = $true)]
         [String]
         # Principal ID
@@ -76,7 +76,7 @@ function New-PIMGroupActiveAssignment {
         $permanent
 
     )
-    
+
     try {
         $script:tenantID = $tenantID
 
@@ -86,7 +86,7 @@ function New-PIMGroupActiveAssignment {
         else {
             $startDateTime = get-date (get-date).touniversaltime().addseconds(30) -f "yyyy-MM-ddTHH:mm:ssZ" #we get the date as UTC (remember to add a Z at the end or it will be translated to US timezone on import)
         }
-    
+
         write-verbose "Calculated date time start is $startDateTime"
         # 2 get role settings:
         $config = Get-PIMgroupPolicy -tenantID $tenantID -groupID $groupID -type $type
@@ -107,7 +107,7 @@ function New-PIMGroupActiveAssignment {
         if (!($PSBoundParameters.Keys.Contains('justification'))) {
             $justification = "Approved from EasyPIM module by  $($(get-azcontext).account)"
         }
-    
+
 
         $exptype = "AfterDuration"
         #$type="afterDateTime"

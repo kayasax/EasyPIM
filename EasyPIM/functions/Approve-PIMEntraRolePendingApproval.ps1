@@ -6,7 +6,7 @@ Get-PIMEntraRolePolicy will return the policy rules (like require MFA on activat
 Support querrying multi roles at once
 
 .Description
- 
+
 Approve-PIMEntraRolePendingApprovall will use the Microsoft Graph APIs to retrieve the requests pending your approval
 
 .PARAMETER approvalID
@@ -19,9 +19,9 @@ justification for the approval
        PS> approve-PIMAzureResourcePendingApproval -approvalID $approvalID -justification "I approve this request"
 
        Approve a pending request
-    
+
 .Link
-   
+
 .Notes
     Homepage: https://github.com/kayasax/easyPIM
     Author: MICHEL, Loic
@@ -33,7 +33,7 @@ function Approve-PIMEntraRolePendingApproval {
     [CmdletBinding()]
     [OutputType([String])]
     param (
-        
+
         [Parameter(Position = 0, Mandatory = $true, ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
         [System.String]
@@ -44,14 +44,14 @@ function Approve-PIMEntraRolePendingApproval {
         [System.String]
         # justification
         $justification
-        
+
     )
     process {
         try {
             #$script:tenantID = $tenantID
 
             Write-Verbose "approve-PIMEntraRolePendingApproval start with parameters: approvalid => $approvalID, justification => $justification"
-               
+
             #Get the stages:
             #Role Assignment Approval Steps - List - REST API (Azure Authorization) | Microsoft Learn
             $stages = Invoke-graph -endpoint "roleManagement/directory/roleAssignmentApprovals/$approvalID/"  -Method GET -version "beta"

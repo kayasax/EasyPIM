@@ -6,7 +6,7 @@ Get-PIMEntraRolePolicy will return the policy rules (like require MFA on activat
 Support querrying multi roles at once
 
 .Description
- 
+
 Get-PIMAzureResourcePendingApproval will use the Microsoft Graph APIs to retrieve the requests pending your approval
 
 .PARAMETER tenantID
@@ -16,9 +16,9 @@ Tenant ID
        PS> Get-PIMAzureResourcePendingApproval -tenantID $tenantID
 
        show pending request you can approve
-    
+
 .Link
-   
+
 .Notes
     Homepage: https://github.com/kayasax/easyPIM
     Author: MICHEL, Loic
@@ -27,22 +27,22 @@ Tenant ID
     * allow other scopes
 #>
 function Get-PIMAzureResourcePendingApproval {
-    
+
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseOutputTypeCorrectly", "")]
     [CmdletBinding()]
     param (
-        
+
         [Parameter(Position = 0, Mandatory = $true)]
         [System.String]
         # Tenant ID
         $tenantID
-        
+
     )
     try {
         $script:tenantID = $tenantID
 
         Write-Verbose "Get-PIMAzureResourcePendingApproval start with parameters: tenantID => $tenantID"
-               
+
         $out = @()
         $response = invoke-AzRestMethod -Uri "https://management.azure.com/providers/Microsoft.Authorization/roleAssignmentScheduleRequests?api-version=2020-10-01&`$filter=asApprover()"
         $pendingApproval = $response.Content | convertfrom-json
@@ -77,5 +77,5 @@ function Get-PIMAzureResourcePendingApproval {
     catch {
         MyCatch $_
     }
-    
+
 }

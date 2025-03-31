@@ -5,7 +5,7 @@
         Copy the setting of roles $copyfrom to the role $rolename
       .Parameter tenantID
         EntraID tenant ID
-      
+
       .Parameter rolename
         Array of the rolename to update
       .Parameter copyFrom
@@ -15,7 +15,7 @@
 
         Copy settings from role role1 to the contributor and webmaster roles
       .Link
-     
+
       .Notes
         Author: Loïc MICHEL
         Homepage: https://github.com/kayasax/EasyPIM
@@ -52,9 +52,9 @@ function Copy-PIMEntraRoleEligibleAssignment {
         Write-Warning "User $from not found in the tenant"
         return
       }
-                
+
     }
-         
+
     if ($to -match ".+@.*\..+") {
       #if this is a upn we will use graph to get the objectID
       try {
@@ -65,7 +65,7 @@ function Copy-PIMEntraRoleEligibleAssignment {
         Write-Warning "User $to not found in the tenant"
         return
       }
-                
+
     }
 
     $script:tenantID = $tenantID
@@ -76,10 +76,10 @@ function Copy-PIMEntraRoleEligibleAssignment {
       Write-Verbose  ">>>New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -roleName $($_.roleName) -principalID $to"
       New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -roleName $_.roleName -principalID $to
     }
-        
+
   }
   catch {
     MyCatch $_
   }
-        
+
 }

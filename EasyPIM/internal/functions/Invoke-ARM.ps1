@@ -14,7 +14,7 @@
 
         will send an GET query to $restURI and return the response
       .Link
-     
+
       .Notes
         Author: Loïc MICHEL
         Homepage: https://github.com/kayasax/EasyPIM
@@ -54,12 +54,12 @@ function Invoke-ARM {
                 if ($script:subscriptionID -eq $null -and $PSBoundParameters.ContainsKey('subscriptionID')) {
                     $script:subscriptionID = $PSBoundParameters['subscriptionID']
                 }
-                
+
                 # Still null? Use the one from ApiInfo
                 if ($script:subscriptionID -eq $null -and $ApiInfo -and $ApiInfo.Subscriptions -and $ApiInfo.Subscriptions.Count -gt 0) {
                     $script:subscriptionID = $ApiInfo.Subscriptions[0]
                 }
-                
+
                 # If we still don't have a subscription ID, we need to throw a better error
                 if ($script:subscriptionID -eq $null) {
                     throw "Could not determine subscription ID. Please provide it explicitly."
@@ -72,15 +72,15 @@ function Invoke-ARM {
                 Connect-AzAccount -Tenantid $script:tenantID -Subscription $script:subscriptionID
             }
         }
-        
-    
+
+
         #replaced with invoke-azrestmethod
         <#
         # Get access Token
         Write-Verbose ">> Getting access token"
         # now this will return a securestring https://learn.microsoft.com/en-us/powershell/azure/upcoming-breaking-changes?view=azps-12.2.0#get-azaccesstoken
         $token = Get-AzAccessToken -AsSecureString
-                
+
         # setting the authentication headers for MSGraph calls
         $authHeader = @{
             'Content-Type'  = 'application/json'
@@ -100,7 +100,7 @@ function Invoke-ARM {
         else {
             $response=Invoke-AZRestMethod -Method $method -Uri $restURI
         }
-        
+
         return $response.content | convertfrom-json
 
     }

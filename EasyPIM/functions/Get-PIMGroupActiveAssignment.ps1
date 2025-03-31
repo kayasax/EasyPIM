@@ -27,7 +27,7 @@
     Author: Loïc MICHEL
     Homepage: https://github.com/kayasax/EasyPIM
 #>
-     
+
 function Get-PIMGroupActiveAssignment {
     [CmdletBinding()]
     param (
@@ -49,7 +49,7 @@ function Get-PIMGroupActiveAssignment {
         $response = invoke-graph -Endpoint $endpoint
         $resu = @()
         $response.value | ForEach-Object {
-    
+
             $r = @{
                 "principalname"    = $_.principal.displayName
                 "principalid"      = $_.principal.id
@@ -62,8 +62,8 @@ function Get-PIMGroupActiveAssignment {
                 "id"               = $_.id
             }
             $resu += New-Object PSObject -Property $r
-    
-  
+
+
         }
 
         if ($PSBoundParameters.Keys.Contains('summary')) {

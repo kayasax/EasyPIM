@@ -5,7 +5,7 @@
         Copy the setting of roles $copyfrom to the role $rolename
       .Parameter tenantID
         EntraID tenant ID
-      
+
       .Parameter rolename
         Array of the rolename to update
       .Parameter copyFrom
@@ -15,7 +15,7 @@
 
         Copy settings from role role1 to the contributor and webmaster roles
       .Link
-     
+
       .Notes
         Author: Loïc MICHEL
         Homepage: https://github.com/kayasax/EasyPIM
@@ -41,10 +41,10 @@ function Copy-PIMEntraRolePolicy {
     try {
         $script:tenantID = $tenantID
         Write-Verbose "Copy-PIMEntraRolePolicy start with parameters: tenantID => $tenantID subscription => $subscriptionID, rolename=> $rolename, copyfrom => $copyFrom"
-              
+
         export-PIMEntraRolepolicy  -tenantid $tenantID -rolename $copyFrom -path "$env:TEMP\role.csv"
         $c=import-csv "$env:TEMP\role.csv"
-        
+
         $rolename | ForEach-Object {
           #get policy id for current role and replace it in the csv before importing it
             $config = get-EntraRoleconfig  $_
@@ -65,5 +65,5 @@ function Copy-PIMEntraRolePolicy {
     catch {
         MyCatch $_
     }
-        
+
 }

@@ -14,16 +14,16 @@
         PS> Set-AuthenticationContext -authenticationContext_Enabled $true -authenticationContext_Value "c1"
 
         Authentication context c1 will be required to activate the role
-      
+
       .Link
-     
+
       .Notes
-      	
+
 #>
 function Set-AuthenticationContext($authenticationContext_Enabled, $authenticationContext_Value, [switch]$entraRole) {
     write-verbose "Set-AuthenticationContext : $($authenticationContext_Enabled), $($authenticationContext_Value)"
 
-    
+
 
     if ($true -eq $authenticationContext_Enabled) {
         $enabled = "true"
@@ -35,7 +35,7 @@ function Set-AuthenticationContext($authenticationContext_Enabled, $authenticati
         }
     }
     else { $enabled = "false" }
-            
+
     $properties = '{
 	"id": "AuthenticationContext_EndUser_Assignment",
 	"ruleType": "RoleManagementPolicyAuthenticationContextRule",
@@ -66,8 +66,8 @@ function Set-AuthenticationContext($authenticationContext_Enabled, $authenticati
                 "inheritableSettings": [],
                 "enforcedSettings": []
             }
-        
-    
+
+
 }'
     }
     return $properties

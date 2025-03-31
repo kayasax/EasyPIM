@@ -1,15 +1,15 @@
-<#
+﻿<#
     .SYNOPSIS
         Orchestrates the deployment and management of PIM (Privileged Identity Management) assignments in Azure, Entra ID, and Groups.
 
     .DESCRIPTION
         The Invoke-EasyPIMOrchestrator function provides a comprehensive way to manage PIM assignments across your Azure environment.
         It supports both eligible and active assignments for Azure resources, Entra ID roles, and Groups.
-        
+
         The function uses a JSON configuration file to define the desired state of PIM assignments and can operate in two modes:
         - delta mode: Only removes assignments that were created by this function and are no longer in the configuration
         - initial mode: Removes all assignments not in the configuration (except for protected users)
-        
+
         The configuration can be stored in an Azure Key Vault secret or in a local JSON file.
 
     .PARAMETER KeyVaultName
@@ -26,10 +26,10 @@
 
     .PARAMETER Mode
         The operating mode for the function. Valid values are "initial" and "delta".
-        
+
         In "initial" mode, all assignments not defined in the configuration will be removed, except for those assigned to protected users.
         In "delta" mode, only assignments created by this function that are no longer in the configuration will be removed.
-        
+
         Default is "delta".
 
     .PARAMETER TenantId
@@ -37,17 +37,17 @@
 
     .EXAMPLE
         Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "11111111-1111-1111-1111-111111111111" -Mode "delta"
-        
+
         Deploys PIM assignments from a local configuration file using delta mode.
 
     .EXAMPLE
         Invoke-EasyPIMOrchestrator -KeyVaultName "MyKeyVault" -SecretName "PIMConfig" -SubscriptionId "22222222-2222-2222-2222-222222222222" -TenantId "11111111-1111-1111-1111-111111111111" -Mode "initial"
-        
+
         Deploys PIM assignments from a Key Vault secret using initial mode.
 
     .EXAMPLE
         Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "11111111-1111-1111-1111-111111111111" -WhatIf
-        
+
         Shows what changes would be made without actually applying them.
 
     .NOTES
@@ -78,20 +78,20 @@
             "00000000-0000-0000-0000-000000000099"
           ]
         }
-        
+
         For eligible assignments:
         - Set "Permanent": true for permanent assignments that don't expire
         - Set "Duration": "P90D" for time-bound assignments with specific duration
         - If neither is specified, maximum allowed duration by policy will be used
         - If both are specified, Permanent takes precedence
-        
+
         For active assignments:
         - Set "Duration": "PT8H" for time-bound active assignments
         - Set "Permanent": true for permanent active assignments
         - If both are specified, Permanent takes precedence
-        
+
         Duration format follows ISO 8601 (e.g., "PT8H" for 8 hours, "P1D" for 1 day)
-        
+
         Required modules: Az.KeyVault, Az.Resources, EasyPIM
 
     .LINK
@@ -158,11 +158,11 @@ function Write-Summary {
         [ValidateSet("Creation", "Cleanup")]
         [string]$OperationType = "Creation"
     )
-    
+
     Write-Output "`n┌───────────────────────────────────────────────────────────────────────────────┐"
     Write-Output "│ SUMMARY: $Category"
     Write-Output "├───────────────────────────────────────────────────────────────────────────────┤"
-    
+
     if ($OperationType -eq "Cleanup") {
         # Use the right labels for cleanup operations
         Write-Output "│ ✅ Kept    : $Created"  # Reuse Created parameter for kept
@@ -177,7 +177,7 @@ function Write-Summary {
         Write-Output "│ ⏭️ Skipped : $Skipped"
         Write-Output "│ ❌ Failed  : $Failed"
     }
-    
+
     Write-Output "└───────────────────────────────────────────────────────────────────────────────┘"
 }
 
@@ -186,13 +186,13 @@ function Invoke-EasyPIMOrchestrator {
     param (
         [Parameter(Mandatory = $true, ParameterSetName = 'KeyVault')]
         [string]$KeyVaultName,
-        
+
         [Parameter(Mandatory = $true, ParameterSetName = 'KeyVault')]
         [string]$SecretName,
-        
+
         [Parameter(Mandatory = $true)]
         [string]$SubscriptionId,
-        
+
         [Parameter(Mandatory = $true, ParameterSetName = 'FilePath')]
         [string]$ConfigFilePath,
 
@@ -203,12 +203,12 @@ function Invoke-EasyPIMOrchestrator {
         [Parameter(Mandatory = $true)]
         [string]$TenantId
     )
-    
+
     Write-SectionHeader "Starting EasyPIM Orchestration (Mode: $Mode)"
-    
+
     # Initialize script-scoped counters
     $script:keptCounter = 0
-    $script:removeCounter = 0 
+    $script:removeCounter = 0
     $script:skipCounter = 0
     $protectedCounter = 0
 
@@ -222,7 +222,7 @@ function Invoke-EasyPIMOrchestrator {
     $overallKept = 0
     $overallRemoved = 0
     $overallCleanupSkipped = 0
-    
+
     # Display usage if no parameters are provided
     if (-not $PSBoundParameters) {
         Write-Output "Usage:"
@@ -231,13 +231,13 @@ function Invoke-EasyPIMOrchestrator {
         Write-Output "Invoke-EasyPIMOrchestrator -ConfigFilePath <ConfigFilePath> -SubscriptionId <SubscriptionId> -TenantId <TenantId> -Mode <initial|delta>"
         return
     }
-    
+
     try {
         # Import necessary modules
         Write-Output "Importing required modules..."
         Import-Module Az.KeyVault, Az.Resources
-        
-        
+
+
         # Retrieve the JSON config file
         Write-SectionHeader "Retrieving Configuration"
         if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
@@ -253,13 +253,13 @@ function Invoke-EasyPIMOrchestrator {
             Write-Output "Please provide either KeyVault parameters or a ConfigFilePath."
             return
         }
-        
+
         $config = $jsonContent | ConvertFrom-Json
-        
+
         # Add a timestamp to the justification
         $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
         $justification = "Created by Invoke-EasyPIMOrchestrator at $timestamp"
-        
+
         # Expand all assignments with PrincipalIds arrays
         $azureRoles = Expand-AssignmentWithPrincipalIds -Assignments $config.AzureRoles
         $azureRolesActive = Expand-AssignmentWithPrincipalIds -Assignments $config.AzureRolesActive
@@ -274,7 +274,7 @@ function Invoke-EasyPIMOrchestrator {
         if ($azureRoles.Count -gt 0) {
             Write-Verbose "First expanded assignment: $($azureRoles[0] | ConvertTo-Json -Compress)"
         }
-        
+
 
 
         # Load protected users from config
@@ -282,25 +282,25 @@ function Invoke-EasyPIMOrchestrator {
         if ($config.ProtectedUsers) {
             $protectedUsers = $config.ProtectedUsers
         }
-        
+
         #region Cleanup Logic - MOVED THIS FIRST
         Write-SectionHeader "Processing Cleanup"
-        
+
         # Cleanup in delta mode
         if ($Mode -eq "delta") {
             Write-Output "=== Performing Delta Mode Cleanup ==="
-            
+
             # Azure Role eligible delta cleanup
             Write-SubHeader "Azure Role Eligible Assignments Cleanup"
             if ($azureRoles) {
                 $subscriptions = @($azureRoles.Scope | ForEach-Object { $_.Split("/")[2] } | Select-Object -Unique)
-                
+
                 $apiInfo = @{
                     Subscriptions = $subscriptions
                     TenantId      = $TenantId
                     RemoveCmd     = "Remove-PIMAzureResourceEligibleAssignment"
                 }
-                
+
                 # Initialize counters before each cleanup operation
                 $keptCounter = 0
                 $removeCounter = 0
@@ -318,12 +318,12 @@ function Invoke-EasyPIMOrchestrator {
 
                 Write-Verbose "Running totals: Kept=$overallKept, Removed=$overallRemoved, Skipped=$overallCleanupSkipped"
             }
-            
+
             # Azure Role active delta cleanup
             Write-SubHeader "Azure Role Active Assignments Cleanup"
             if ($azureRolesActive) {
                 $subscriptions = @($azureRolesActive.Scope | ForEach-Object { $_.Split("/")[2] } | Select-Object -Unique)
-                
+
                 $apiInfo = @{
                     Subscriptions    = $subscriptions
                     ApiEndpoint      = "https://management.azure.com/subscriptions/$($subscriptions[0])/providers/Microsoft.Authorization/roleAssignmentScheduleRequests"
@@ -331,7 +331,7 @@ function Invoke-EasyPIMOrchestrator {
                     RemoveCmd        = "Remove-PIMAzureResourceActiveAssignment"
                     TenantId         = $TenantId
                 }
-                
+
                 # Initialize counters before each cleanup operation
                 $keptCounter = 0
                 $removeCounter = 0
@@ -349,7 +349,7 @@ function Invoke-EasyPIMOrchestrator {
 
                 Write-Verbose "Running totals: Kept=$overallKept, Removed=$overallRemoved, Skipped=$overallCleanupSkipped"
             }
-            
+
             # Entra Role eligible delta cleanup
             Write-SubHeader "Entra Role Eligible Assignments Cleanup"
             if ($entraRoles) {
@@ -358,7 +358,7 @@ function Invoke-EasyPIMOrchestrator {
                     RemoveCmd     = "Remove-PIMEntraRoleEligibleAssignment"
                     TenantId      = $TenantId
                 }
-                
+
                 # Initialize counters before each cleanup operation
                 $keptCounter = 0
                 $removeCounter = 0
@@ -385,7 +385,7 @@ function Invoke-EasyPIMOrchestrator {
                     RemoveCmd     = "Remove-PIMEntraRoleActiveAssignment"
                     TenantId      = $TenantId
                 }
-                
+
                 # Initialize counters before each cleanup operation
                 $keptCounter = 0
                 $removeCounter = 0
@@ -408,10 +408,10 @@ function Invoke-EasyPIMOrchestrator {
             Write-SubHeader "Group Role Eligible Assignments Cleanup"
             if ($groupRoles) {
                 Write-StatusInfo "Processing Group Role eligible delta cleanup"
-                
+
                 # Get all unique group IDs
                 $groupIds = $groupRoles | Select-Object -ExpandProperty GroupId -Unique
-                
+
                 # Create API info with list of all group IDs
                 $apiInfo = @{
                     Subscriptions = @()  # Not needed for Group roles
@@ -419,7 +419,7 @@ function Invoke-EasyPIMOrchestrator {
                     RemoveCmd     = "Remove-PIMGroupEligibleAssignment"
                     TenantId      = $TenantId
                 }
-                
+
                 # Initialize counters before each cleanup operation
                 $keptCounter = 0
                 $removeCounter = 0
@@ -442,10 +442,10 @@ function Invoke-EasyPIMOrchestrator {
             Write-SubHeader "Group Role Active Assignments Cleanup"
             if ($groupRolesActive) {
                 Write-StatusInfo "Processing Group Role active delta cleanup"
-                
+
                 # Get all unique group IDs
                 $groupIds = $groupRolesActive | Select-Object -ExpandProperty GroupId -Unique
-                
+
                 # Create API info with list of all group IDs
                 $apiInfo = @{
                     Subscriptions = @()  # Not needed for Group roles
@@ -453,7 +453,7 @@ function Invoke-EasyPIMOrchestrator {
                     RemoveCmd     = "Remove-PIMGroupActiveAssignment"
                     TenantId      = $TenantId
                 }
-                
+
                 # Initialize counters before each cleanup operation
                 $keptCounter = 0
                 $removeCounter = 0
@@ -471,11 +471,11 @@ function Invoke-EasyPIMOrchestrator {
 
                 Write-Verbose "Running totals: Kept=$overallKept, Removed=$overallRemoved, Skipped=$overallCleanupSkipped"
             }
-            
+
             # For Entra ID and Group roles, we'll continue to use the PIM cmdlets directly
             # Add implementation here if needed
         }
-        
+
         # Cleanup in initial mode
         if ($Mode -eq "initial") {
             $initialResult = Invoke-InitialCleanup -Config $config `
@@ -491,20 +491,20 @@ function Invoke-EasyPIMOrchestrator {
             $overallKept += $initialResult.KeptCount
             $overallRemoved += $initialResult.RemovedCount
             $overallCleanupSkipped += $initialResult.SkippedCount
-                    
+
             Write-Verbose "Initial cleanup results: Kept=$($initialResult.KeptCount), Removed=$($initialResult.RemovedCount), Skipped=$($initialResult.SkippedCount)"
         }
         #endregion
-        
+
         #region Process Eligible Assignments - MOVED THIS AFTER CLEANUP
         Write-SectionHeader "Processing Eligible Assignments"
-        
+
         # Process Azure Role eligible assignments
         if ($config.AzureRoles) {
             Write-SubHeader "Processing Azure Role Eligible Assignments"
-            
+
             $azureRoles = Expand-AssignmentWithPrincipalIds -Assignments $config.AzureRoles
-            
+
             $commandMap = @{
                 GetCmd       = 'Get-PIMAzureResourceEligibleAssignment'
                 GetParams    = @{
@@ -518,22 +518,22 @@ function Invoke-EasyPIMOrchestrator {
                 }
                 DirectFilter = $true
             }
-            
+
             $result = Invoke-ResourceAssignments -ResourceType "Azure Role eligible" -Assignments $azureRoles -CommandMap $commandMap
-            
+
             Write-Summary -Category "Azure Role Eligible Assignments" -Created $result.Created -Skipped $result.Skipped -Failed $result.Failed
-            
+
             $overallCreated += $result.Created
             $overallCreationSkipped += $result.Skipped
             $overallFailed += $result.Failed
         }
-        
+
         # Process Entra ID Role eligible assignments
         if ($config.EntraIDRoles) {
             Write-SubHeader "Processing Entra ID Role Eligible Assignments"
-            
+
             $entraRoles = Expand-AssignmentWithPrincipalIds -Assignments $config.EntraIDRoles
-            
+
             $commandMap = @{
                 GetCmd       = 'Get-PIMEntraRoleEligibleAssignment'
                 GetParams    = @{
@@ -546,53 +546,53 @@ function Invoke-EasyPIMOrchestrator {
                 }
                 DirectFilter = $true
             }
-            
+
             # Add verbose output
             Write-Verbose "About to process $($entraRoles.Count) Entra ID Role eligible assignments"
             if ($entraRoles.Count -gt 0) {
                 Write-Verbose "First Entra role: $($entraRoles[0] | ConvertTo-Json -Compress)"
             }
             $result = Invoke-ResourceAssignments -ResourceType "Entra ID Role eligible" -Assignments $entraRoles -CommandMap $commandMap
-            
+
             Write-Summary -Category "Entra ID Role Eligible Assignments" -Created $result.Created -Skipped $result.Skipped -Failed $result.Failed
-            
+
             $overallCreated += $result.Created
             $overallCreationSkipped += $result.Skipped
             $overallFailed += $result.Failed
         }
-        
+
         # Process Group Role eligible assignments
         if ($config.GroupRoles) {
             Write-SectionHeader "Processing Group Role Eligible Assignments"
-            
+
             # Expand assignments with PrincipalIds arrays
             $groupRoles = Expand-AssignmentWithPrincipalIds -Assignments $config.GroupRoles
-            
+
             # Group roles by GroupId to minimize API calls
             $groupedAssignments = $groupRoles | Group-Object -Property GroupId
-            
+
             $totalCreateCounter = 0
             $totalSkipCounter = 0
             $totalErrorCounter = 0
-            
+
             foreach ($groupSet in $groupedAssignments) {
                 $groupId = $groupSet.Name
                 $assignments = $groupSet.Group
-                
+
                 Write-GroupHeader "Processing group: $groupId with $($assignments.Count) assignments"
-                
+
                 # First check if group exists before trying to process assignments
                 if (-not (Test-PrincipalExists -PrincipalId $groupId)) {
                     Write-StatusWarning "Group $groupId does not exist, skipping all assignments"
                     $totalErrorCounter += $assignments.Count
                     continue
                 }
-                
+
                 # Mark this group as processed
                 $processedGroups[$groupId] = $true
-                
+
                 Write-StatusSuccess "Group $groupId exists"
-                
+
                 # Try to get existing assignments (if any)
                 try {
                     $existingAssignments = Get-PIMGroupEligibleAssignment -tenantID $TenantId -groupId $groupId -ErrorAction SilentlyContinue
@@ -603,33 +603,33 @@ function Invoke-EasyPIMOrchestrator {
                     Write-StatusInfo "Group not yet PIM-enabled, will be enabled when first assignment is created"
                     $existingAssignments = @()
                 }
-                
+
                 # Process assignments for this group using the same function
                 $result = Invoke-ResourceAssignments -ResourceType "Group Role eligible ($groupId)" -Assignments $assignments -CommandMap $commandMap
-                
+
                 # Accumulate counters
                 $totalCreateCounter += $result.Created
                 $totalSkipCounter += $result.Skipped
                 $totalErrorCounter += $result.Failed
             }
-            
+
             # Overall summary
             Write-Summary -Category "Group Role Eligible Assignments (Total)" -Created $totalCreateCounter -Skipped $totalSkipCounter -Failed $totalErrorCounter
             $overallCreated += $totalCreateCounter
             $overallCreationSkipped += $totalSkipCounter
             $overallFailed += $totalErrorCounter
         }
-        
+
         #endregion
-        
+
         #region Process Active Assignments - KEPT THIS LAST
         Write-SectionHeader "Processing Active Assignments"
-        
+
         # Process Azure Role active assignments
         if ($config.AzureRolesActive) {
             # Expand assignments with PrincipalIds arrays
             $azureRolesActive = Expand-AssignmentWithPrincipalIds -Assignments $config.AzureRolesActive
-            
+
             # First ensure we have Rolename property consistent with other sections
             $normalizedAssignments = $azureRolesActive | ForEach-Object {
                 if (!$_.Rolename -and $_.Role) {
@@ -639,7 +639,7 @@ function Invoke-EasyPIMOrchestrator {
                     $_
                 }
             }
-            
+
             $commandMap = @{
                 GetCmd       = 'Get-PIMAzureResourceActiveAssignment'
                 GetParams    = @{
@@ -652,7 +652,7 @@ function Invoke-EasyPIMOrchestrator {
                 }
                 DirectFilter = $true
             }
-            
+
             # After getting assignments, add this debugging section
             $allAssignments = & $commandMap.GetCmd -SubscriptionId $SubscriptionId -TenantId $commandMap.GetParams.tenantID
             Write-Output "    ├─ Found $($allAssignments.Count) total current assignments"
@@ -677,25 +677,25 @@ function Invoke-EasyPIMOrchestrator {
             $overallCreationSkipped += $azureActiveResult.Skipped
             $overallFailed += $azureActiveResult.Failed
         }
-        
+
         # Process Entra ID Role active assignments
         if ($config.EntraIDRolesActive) {
             Write-SubHeader "Processing Entra ID Role active Assignments"
-            
+
             $entraRolesActive = Expand-AssignmentWithPrincipalIds -Assignments $config.EntraIDRolesActive
-            
+
             # Verify principals exist
-            $validAssignments = $entraRolesActive | Where-Object { 
+            $validAssignments = $entraRolesActive | Where-Object {
                 # Verify principal exists
                 $exists = Test-PrincipalExists -PrincipalId $_.PrincipalId
                 if (-not $exists) {
                     Write-Warning "⚠️ Principal $($_.PrincipalId) does not exist, skipping assignment"
                     return $false
                 }
-                
+
                 return $true
             }
-            
+
             if ($validAssignments.Count -gt 0) {
                 $commandMap = @{
                     GetCmd       = 'Get-PIMEntraRoleActiveAssignment'
@@ -709,12 +709,12 @@ function Invoke-EasyPIMOrchestrator {
                     }
                     DirectFilter = $true
                 }
-                
+
                 $result = Invoke-ResourceAssignments -ResourceType "Entra ID Role active" -Assignments $validAssignments -CommandMap $commandMap
-                
+
                 # Display the summary
                 Write-Summary -Category "Entra ID Role Active Assignments" -Created $result.Created -Skipped $result.Skipped -Failed $result.Failed
-                
+
                 $overallCreated += $result.Created
                 $overallCreationSkipped += $result.Skipped
                 $overallFailed += $result.Failed
@@ -724,18 +724,18 @@ function Invoke-EasyPIMOrchestrator {
             }
         }
 
-  
-        
+
+
         # Process Group Role active assignments
         # Process Group Role active assignments
         if ($config.GroupRolesActive) {
             Write-SubHeader "Processing Group Role Active Assignments"
-    
+
             $groupRolesActive = Expand-AssignmentWithPrincipalIds -Assignments $config.GroupRolesActive
-    
+
             # Add debugging to see the actual command
             Write-Verbose "Group Role Active command: $(Get-Command 'New-PIMGroupActiveAssignment' | Select-Object -ExpandProperty Parameters | ConvertTo-Json -Depth 1)"
-    
+
             $commandMap = @{
                 GetCmd       = 'Get-PIMGroupActiveAssignment'
                 GetParams    = @{
@@ -750,7 +750,7 @@ function Invoke-EasyPIMOrchestrator {
                 }
                 DirectFilter = $true
             }
-    
+
             # Test if the command accepts 'role' or 'roleName'
             try {
                 $cmdInfo = Get-Command 'New-PIMGroupActiveAssignment'
@@ -759,14 +759,14 @@ function Invoke-EasyPIMOrchestrator {
             catch {
                 Write-Warning "Could not get command info: $_"
             }
-    
+
             $result = Invoke-ResourceAssignments -ResourceType "Group Role active" -Assignments $groupRolesActive -CommandMap $commandMap
-    
+
             Write-Summary -Category "Group Role Active Assignments" -Created $result.Created -Skipped $result.Skipped -Failed $result.Failed
         }
-        
+
         #endregion
-        
+
         # Add grand total summary
         Write-Output "`n┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓"
         Write-Output "┃ OVERALL SUMMARY                                                                ┃"

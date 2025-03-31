@@ -16,7 +16,7 @@
 
         Copy settings from role role1 to the contributor and webmaster roles
       .Link
-     
+
       .Notes
         Author: Loïc MICHEL
         Homepage: https://github.com/kayasax/EasyPIM
@@ -34,7 +34,7 @@ function Copy-PIMAzureResourcePolicy {
         [ValidateNotNullOrEmpty()]
         [System.String]
         $subscriptionID,
-        
+
         [Parameter(ParameterSetName = 'Scope',Position = 1, Mandatory = $true)]
         [System.String]
         $scope,
@@ -54,9 +54,9 @@ function Copy-PIMAzureResourcePolicy {
         if (!($PSBoundParameters.Keys.Contains('scope'))) {
           $scope = "subscriptions/$subscriptionID"
         }
-       
+
         $config2 = get-config $scope $copyFrom $true
-        
+
         $rolename | ForEach-Object {
             $config = get-config $scope $_
             Log "Copying settings from $copyFrom to $_"
@@ -68,5 +68,5 @@ function Copy-PIMAzureResourcePolicy {
     catch {
         MyCatch $_
     }
-        
+
 }

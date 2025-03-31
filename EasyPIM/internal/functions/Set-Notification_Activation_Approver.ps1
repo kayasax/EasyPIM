@@ -12,7 +12,7 @@
 
        set the notification sent to Admins when a role is activated
       .Link
-     
+
       .Notes
 #>
 function Set-Notification_Activation_Approver ($Notification_Activation_Approver, [switch]$entrarole) {

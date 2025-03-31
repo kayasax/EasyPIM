@@ -16,7 +16,7 @@
 
         Export settings of contributor and webmaster roles to file c:\temp\myrole.csv
       .Link
-     
+
       .Notes
         Author: Loïc MICHEL
         Homepage: https://github.com/kayasax/EasyPIM
@@ -39,7 +39,7 @@
         [Parameter(Position = 2, Mandatory = $true)]
         [System.String[]]
         $rolename,
-        
+
         [Parameter(Position = 3)]
         [System.String]
         $exportFilename
@@ -47,18 +47,18 @@
     try {
 
         $script:tenantID = $tenantID
-   
+
         Write-Verbose "Export-PIMAzureResourcePolicy start with parameters: subscription => $subscriptionID, rolename=> $rolename, exportFilname => $exportFilename"
         if (!($PSBoundParameters.Keys.Contains('scope'))) {
           $scope = "subscriptions/$subscriptionID"
         }
-        
+
         # Array to contain the settings of each selected roles
         $exports = @()
 
         # run the flow for each role name.
         $rolename | ForEach-Object {
-         
+
             #get curent config
             $config = get-config $scope $_
             $exports += $config

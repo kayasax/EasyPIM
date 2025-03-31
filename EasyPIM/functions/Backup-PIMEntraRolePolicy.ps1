@@ -3,10 +3,10 @@
     Export PIM settings of all roles  to a csv file.
     Use the path parameter to specify the csv file, if not specified default filename
     will be %appdata%\powershell\EasyPIM\Exports\BACKUP_EntraRole_<date>.csv
-      
+
     .Description
     Convert the policy rules to a csv file
-    
+
     .Example
     PS> Export-PIMEntraRolePolicy -tennantID $tenantID -path "c:\temp\myrole.csv"
 
@@ -15,7 +15,7 @@
     .Notes
     Author: Loïc MICHEL
     Homepage: https://github.com/kayasax/EasyPIM
-    
+
 #>
 function Backup-PIMEntraRolePolicy {
     [CmdletBinding(DefaultParameterSetName='Default')]
@@ -29,14 +29,14 @@ function Backup-PIMEntraRolePolicy {
         [System.String]
         # Filename of the csv to generate
         $path
-        
+
     )
     try {
         $script:tenantID = $tenantID
         $exports = @()
-       
+
         $roles=get-entraRole
-        
+
         $roles | ForEach-Object {
             log "exporting $_ role settings"
             #write-verbose  $_
@@ -50,7 +50,7 @@ function Backup-PIMEntraRolePolicy {
         if ( !(test-path  $path) ) {
             $null = New-Item -ItemType Directory -Path $exportPath -Force
         }
-        
+
         $exports | Select-Object * | ConvertTo-Csv | out-file $path
     }
     catch {

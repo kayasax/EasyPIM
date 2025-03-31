@@ -11,11 +11,11 @@
     PS> Set-ActivationDuration "PT8H"
 
     limit the activation duration to 8 hours
-    
+
     .Link
-    
+
     .Notes
-    
+
 #>
 function Set-ActivationDuration ($ActivationDuration, [switch]$entraRole) {
     # Set Maximum activation duration
@@ -32,7 +32,7 @@ function Set-ActivationDuration ($ActivationDuration, [switch]$entraRole) {
             };
             "level"                = "Assignment"
         }
-        
+
         $rule = $properties | ConvertTo-Json
         if ($entraRole) {
             $rule = '
@@ -42,7 +42,7 @@ function Set-ActivationDuration ($ActivationDuration, [switch]$entraRole) {
             "isExpirationRequired": "true",
             "maximumDuration": "'+ $ActivationDuration + '",
             "target": {
-                
+
                 "caller": "EndUser",
                 "operations": [
                     "All"

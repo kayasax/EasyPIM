@@ -13,7 +13,7 @@
         PS> get-config -scope $scop -rolename role1
 
         Get the policy of the role role1 at the specified scope
-     
+
     .Notes
         Author: Loïc MICHEL
         Homepage: https://github.com/kayasax/EasyPIM
@@ -24,7 +24,7 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
     $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
     try {
 
-        
+
         # 1 Get ID of the role $rolename assignable at the provided scope
         $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$rolename'"
 
@@ -60,7 +60,7 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
             # Get access Token
             Write-Verbose ">> Getting access token"
             $token = Get-AzAccessToken
-                
+
             # setting the authentication headers for MSGraph calls
             $authHeader = @{
                 'Content-Type'  = 'application/json'
@@ -75,7 +75,7 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
             Remove-Item "$_scriptPath\temp.json"
             return $response
         }
-      
+
         #$response
         # Get config values in a new object:
 
@@ -94,7 +94,7 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
         else{
             $_authenticationcontext_value = $response.properties.rules | Where-Object { $_.id -eq "AuthenticationContext_EndUser_Assignment" } |Select-Object -expand claimValue
         }
-        
+
 
         # approval required
         $_approvalrequired = $($response.properties.rules | Where-Object { $_.id -eq "Approval_EndUser_Assignment" }).setting.isapprovalrequired
@@ -114,7 +114,7 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
         }
         # maximum assignment eligibility duration
         $_maxAssignmentDuration = $response.properties.rules | Where-Object { $_.id -eq "Expiration_Admin_Eligibility" } | Select-Object -expand maximumDuration
-        
+
         # pemanent activation
         $_activeExpirationRequired = $response.properties.rules | Where-Object { $_.id -eq "Expiration_Admin_Assignment" } | Select-Object -expand isExpirationRequired
         if ($_activeExpirationRequired -eq "true") {
@@ -143,7 +143,7 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
         $_Notification_Active_Assignee = $response.properties.rules | Where-Object { $_.id -eq "Notification_Requestor_Admin_Assignment" }
         # Notification Active Assignment Approvers (Send notifications when members are assigned as active to this role: Request to approve a role assignment renewal/extension)
         $_Notification_Active_Approvers = $response.properties.rules | Where-Object { $_.id -eq "Notification_Approver_Admin_Assignment" }
-        
+
         # Notification Role Activation Alert (Send notifications when eligible members activate this role: Role activation alert)
         $_Notification_Activation_Alert = $response.properties.rules | Where-Object { $_.id -eq "Notification_Admin_EndUser_Assignment" }
         # Notification Role Activation Assignee (Send notifications when eligible members activate this role: Notification to activated user (requestor))

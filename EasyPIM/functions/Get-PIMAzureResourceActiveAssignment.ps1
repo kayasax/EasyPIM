@@ -13,7 +13,7 @@
     When enabled will return the most useful information only
     .Parameter atBellowScope
     Will return only the assignment defined at lower scopes
-    
+
     .Example
     PS> Get-PIMAzureResourceActiveAssignment -tenantID $tid -subscriptionID -subscription $subscription
 
@@ -26,7 +26,7 @@
     Author: Loïc MICHEL
     Homepage: https://github.com/kayasax/EasyPIM
 #>
-     
+
 function Get-PIMAzureResourceActiveAssignment {
     [CmdletBinding()]
     param (
@@ -64,7 +64,7 @@ function Get-PIMAzureResourceActiveAssignment {
         $return = @()
         #$id=$response.value.id
         #$response.value.properties |get-member
-    
+
         $response.value | ForEach-Object {
             $id = $_.id
             #echo "ID: $id"
@@ -90,8 +90,8 @@ function Get-PIMAzureResourceActiveAssignment {
                     "memberType"     = $_.memberType
                     "id"             = $id
                 }
-            
-    
+
+
                 $obj = New-Object pscustomobject -Property $properties
                 $return += $obj
             }

@@ -25,7 +25,7 @@
     Create an active assignment fot the role Arcpush, starting at a specific date and using default duration
 
     PS> New-PIMEntraRoleActiveAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "webmaster" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -justification 'TEST' -permanent
-    
+
     Create a permanent active assignement for the role webmaster
 
     .Link
@@ -42,7 +42,7 @@ function New-PIMEntraRoleActiveAssignment {
         [String]
         # Entra ID tenantID
         $tenantID,
-        
+
         [Parameter(Mandatory = $true)]
         [String]
         # Principal ID
@@ -70,7 +70,7 @@ function New-PIMEntraRoleActiveAssignment {
         $permanent
 
     )
-    
+
     try {
         $script:tenantID = $tenantID
 
@@ -80,9 +80,9 @@ function New-PIMEntraRoleActiveAssignment {
         #$response
 
         if ($response."@odata.type" -eq "#microsoft.graph.group" -and $response.isAssignableToRole -ne "True") {
-       
+
             throw "ERROR : The group $principalID is not role-assignable, exiting"
-       
+
         }
         if ($PSBoundParameters.Keys.Contains('startDateTime')) {
             $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ"

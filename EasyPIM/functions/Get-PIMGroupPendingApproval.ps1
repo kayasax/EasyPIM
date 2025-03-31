@@ -6,7 +6,7 @@ Get-PIMGroupPolicy will return the policy rules (like require MFA on activation)
 Support querrying multi roles at once
 
 .Description
- 
+
 Get-PIMGroupPendingApproval will use the Microsoft Graph APIs to retrieve the requests pending your approval
 
 .PARAMETER tenantID
@@ -16,9 +16,9 @@ Tenant ID
        PS> Get-PIMGroupPendingApproval -tenantID $tenantID
 
        show pending request you can approve
-    
+
 .Link
-   
+
 .Notes
     Homepage: https://github.com/kayasax/easyPIM
     Author: MICHEL, Loic
@@ -30,25 +30,25 @@ function Get-PIMGroupPendingApproval{
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseOutputTypeCorrectly", "")]
     [CmdletBinding()]
     param (
-        
+
         [Parameter(Position = 0, Mandatory = $true)]
         [System.String]
         # Tenant ID
         $tenantID
-        
+
     )
     try {
         $script:tenantID = $tenantID
 
         Write-Verbose "Get-PIMAzureResourcePendingApproval start with parameters: tenantID => $tenantID"
-        
+
         $endpoint="identityGovernance/privilegedAccess/group/assignmentScheduleRequests/filterByCurrentUser(on='approver')?`$filter=status eq 'PendingApproval'"
         $response = Invoke-Graph -Endpoint $endpoint -Method "GET"
 
         $out = @()
-        
+
         $pendingApproval = $response.value
-        
+
         if ($null -ne $pendingApproval) {
             $pendingApproval | ForEach-Object {
                 $details=invoke-mgGraphRequest $("https://graph.microsoft.com/v1.0/identityGovernance/privilegedAccess/group/assignmentScheduleRequests/"+$_.id) -Method get
@@ -56,7 +56,7 @@ function Get-PIMGroupPendingApproval{
                 $principalDisplayName = invoke-mgGraphRequest $("https://graph.microsoft.com/v1.0/directoryobjects/"+$details.Principalid+"/") -Method get
                 $groupDisplayName = invoke-mgGraphRequest $("https://graph.microsoft.com/v1.0/directoryobjects/"+$details.Groupid+"/") -Method get
 
-                
+
                 $request = @{
                     "principalId"          = $details.Principalid;
                     "principalDisplayname" = $principalDisplayName.displayName;
@@ -84,5 +84,5 @@ function Get-PIMGroupPendingApproval{
     catch {
         MyCatch $_
     }
-    
+
 }

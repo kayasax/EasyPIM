@@ -12,7 +12,7 @@
 
         Update $policyID with rules $rules
       .Link
-     
+
       .Notes
 #>
 function Update-Policy  {
@@ -38,10 +38,10 @@ function Update-Policy  {
           "level": "Assignment"
             }
         }'
-    
+
     $restUri = "$ARMhost/$PolicyId/?api-version=2020-10-01"
    <# write-verbose "`n>> PATCH body: $body"
-    
+
     write-verbose "Patch URI : $restURI"
     $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body -verbose:$false
     #>

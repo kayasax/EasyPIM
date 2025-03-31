@@ -15,7 +15,7 @@
     When enabled will return the most useful information only
     .Parameter atBellowScope
     Will return only the assignment defined at lower scopes
-    
+
     .Example
     PS> Get-PIMAzureResourceEligibleAssignment -tenantID $tid -subscriptionID -subscription $subscription
 
@@ -28,7 +28,7 @@
     Author: Loïc MICHEL
     Homepage: https://github.com/kayasax/EasyPIM
 #>
-     
+
 function Get-PIMAzureResourceEligibleAssignment {
     [CmdletBinding()]
     param (
@@ -55,9 +55,9 @@ function Get-PIMAzureResourceEligibleAssignment {
     )
 
     try {
-        
+
         $script:tenantID = $tenantID
-        
+
         if (!($PSBoundParameters.Keys.Contains('scope'))) {
             $scope = "/subscriptions/$subscriptionID"
         }
@@ -81,14 +81,14 @@ function Get-PIMAzureResourceEligibleAssignment {
                     Write-Warning "User $assignee not found in the tenant"
                     return
                 }
-                
+
             }
-          
+
             $restURI += "&`$filter=assignedto('"+$assignee+"')"
         }
-        
 
-        
+
+
 
         $response = Invoke-ARM -restURI $restURI -method get
         #$response|select -first 1
@@ -96,7 +96,7 @@ function Get-PIMAzureResourceEligibleAssignment {
         $return = @()
         #$id=$response.value.id
         #$response.value.properties |get-member
-    
+
         $response.value | ForEach-Object {
             $id = $_.id
             #echo "ID: $id"
@@ -122,8 +122,8 @@ function Get-PIMAzureResourceEligibleAssignment {
                     "memberType"     = $_.memberType
                     "id"             = $id
                 }
-            
-    
+
+
                 $obj = New-Object pscustomobject -Property $properties
                 $return += $obj
             }

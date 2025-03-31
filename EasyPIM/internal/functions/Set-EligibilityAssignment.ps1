@@ -14,23 +14,23 @@
 
        set Max eligibility duration to 30 days
       .Link
-     
+
       .Notes
 #>
 function Set-EligibilityAssignment($MaximumEligibilityDuration, $AllowPermanentEligibility, [switch]$entraRole) {
     write-verbose "Set-EligibilityAssignment: $MaximumEligibilityDuration $AllowPermanentEligibility"
     $max = $MaximumEligibilityDuration
-     
+
     if ( ($true -eq $AllowPermanentEligibility) -or ("true" -eq $AllowPermanentEligibility) -and ("false" -ne $AllowPermanentEligibility)) {
         $expire = "false"
         write-verbose "1 setting expire to : $expire"
     }
     else {
-            
+
         $expire = "true"
         write-verbose "2 setting expire to : $expire"
     }
-      
+
     $rule = '
         {
         "isExpirationRequired": '+ $expire + ',
@@ -66,6 +66,6 @@ if($entraRole){
     }
   }'
 }
-    
+
     return $rule
 }

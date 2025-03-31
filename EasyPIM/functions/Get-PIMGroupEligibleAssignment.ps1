@@ -25,7 +25,7 @@
     Author: Loïc MICHEL
     Homepage: https://github.com/kayasax/EasyPIM
 #>
-     
+
 function Get-PIMGroupEligibleAssignment {
     [CmdletBinding()]
     param (
@@ -48,7 +48,7 @@ function Get-PIMGroupEligibleAssignment {
         $response = invoke-graph -Endpoint $endpoint
         $resu = @()
         $response.value | ForEach-Object {
-    
+
             $r = @{
                 #"rolename"         = $_.roledefinition.displayName
                 ##"roleid"           = $_.roledefinition.id
@@ -65,8 +65,8 @@ function Get-PIMGroupEligibleAssignment {
                 "id"               = $_.id
             }
             $resu += New-Object PSObject -Property $r
-    
-  
+
+
         }
 
         if ($PSBoundParameters.Keys.Contains('summary')) {
