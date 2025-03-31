@@ -23,9 +23,9 @@ function Invoke-InitialCleanup {
         [array]$EntraRolesActive,
 
         [Parameter(Mandatory = $false)]
-        [array]$groupRoles,
+        [array]$GroupRoles,
         [Parameter(Mandatory = $false)]
-        [array]$groupRolesActive
+        [array]$GroupRolesActive
     )
     
     # Display initial warning about potentially dangerous operation
@@ -62,6 +62,14 @@ function Invoke-InitialCleanup {
     $protectedUsers = @($Config.ProtectedUsers)
     Write-StatusInfo "Found $($protectedUsers.Count) protected users that will not be removed"
     
+    # Define protected roles that should never be removed automatically
+    $protectedRoles = @(
+        "User Access Administrator",
+        "Global Administrator", 
+        "Privileged Role Administrator", 
+        "Security Administrator"
+    )
+    
     # Helper functions for cleaner code
     function Test-IsProtectedAssignment {
         param ([string]$PrincipalId)
@@ -78,7 +86,16 @@ function Invoke-InitialCleanup {
         
         foreach ($config in $ConfigAssignments) {
             $roleMatches = ($config.Rolename -eq $RoleName) -or ($config.Role -eq $RoleName)
-            if ($config.PrincipalId -eq $PrincipalId -and $roleMatches -and $config.Scope -eq $Scope) {
+            
+            # Check for direct PrincipalId match
+            $principalMatches = $config.PrincipalId -eq $PrincipalId
+            
+            # Also check in PrincipalIds array if present
+            if (-not $principalMatches -and $config.PSObject.Properties.Name -contains "PrincipalIds") {
+                $principalMatches = $config.PrincipalIds -contains $PrincipalId
+            }
+            
+            if ($principalMatches -and $roleMatches -and $config.Scope -eq $Scope) {
                 return $true
             }
         }
@@ -93,7 +110,17 @@ function Invoke-InitialCleanup {
         )
         
         foreach ($config in $ConfigAssignments) {
-            if ($config.PrincipalId -eq $PrincipalId -and $config.Rolename -eq $RoleName) {
+            $roleNameMatch = $config.Rolename -eq $RoleName
+            
+            # Check direct PrincipalId
+            $principalMatch = $config.PrincipalId -eq $PrincipalId
+            
+            # Check PrincipalIds array
+            if (-not $principalMatch -and $config.PSObject.Properties.Name -contains "PrincipalIds") {
+                $principalMatch = $config.PrincipalIds -contains $PrincipalId
+            }
+            
+            if ($principalMatch -and $roleNameMatch) {
                 return $true
             }
         }
@@ -109,9 +136,18 @@ function Invoke-InitialCleanup {
         )
         
         foreach ($config in $ConfigAssignments) {
-            if ($config.PrincipalId -eq $PrincipalId -and 
-                $config.Rolename -eq $RoleName -and 
-                $config.GroupId -eq $GroupId) {
+            $roleNameMatch = $config.Rolename -eq $RoleName
+            $groupIdMatch = $config.GroupId -eq $GroupId
+            
+            # Check direct PrincipalId
+            $principalMatch = $config.PrincipalId -eq $PrincipalId
+            
+            # Check PrincipalIds array
+            if (-not $principalMatch -and $config.PSObject.Properties.Name -contains "PrincipalIds") {
+                $principalMatch = $config.PrincipalIds -contains $PrincipalId
+            }
+            
+            if ($principalMatch -and $roleNameMatch -and $groupIdMatch) {
                 return $true
             }
         }
@@ -164,6 +200,12 @@ function Invoke-InitialCleanup {
             $isInConfig = Test-AzureRoleAssignmentInConfig -PrincipalId $principalId -RoleName $roleName -Scope $scope -ConfigAssignments $ConfigAssignments
             
             if (-not $isInConfig) {
+                # Check if role is protected
+                if ($protectedRoles -contains $roleName) {
+                    Write-Output "    ├─ ⚠️ $principalId with role '$roleName' is a protected role, skipping"
+                    continue
+                }
+                
                 # Check if principal is protected
                 if (Test-IsProtectedAssignment -PrincipalId $principalId) {
                     Write-StatusInfo "Skipping removal of protected user $principalId with role $roleName on scope $scope"
@@ -197,7 +239,7 @@ function Invoke-InitialCleanup {
         
         $elapsed = $sectionWatch.Elapsed.TotalSeconds
         Write-StatusInfo "Completed in $elapsed seconds"
-        Write-Summary -Category "Azure Role $Type Cleanup" -Created 0 -Skipped $skipCounter -Failed $removeCounter
+        Write-Summary -Category "Azure Role $Type Cleanup" -Created $skipCounter -Removed $removeCounter -Failed 0 -OperationType "Cleanup"
         Write-StatusInfo "Protected assignments skipped: $protectedCounter"
         
         # Update global counters
@@ -251,6 +293,12 @@ function Invoke-InitialCleanup {
             $isInConfig = Test-EntraRoleAssignmentInConfig -PrincipalId $principalId -RoleName $roleName -ConfigAssignments $ConfigAssignments
             
             if (-not $isInConfig) {
+                # Check if role is protected
+                if ($protectedRoles -contains $roleName) {
+                    Write-Output "    ├─ ⚠️ $principalId with role '$roleName' is a protected role, skipping"
+                    continue
+                }
+                
                 # Check if principal is protected
                 if (Test-IsProtectedAssignment -PrincipalId $principalId) {
                     Write-StatusInfo "Skipping removal of protected user $principalId with role $roleName"
@@ -350,6 +398,12 @@ function Invoke-InitialCleanup {
                     $isInConfig = Test-GroupRoleAssignmentInConfig -PrincipalId $principalId -RoleName $roleName -GroupId $groupId -ConfigAssignments $configAssignmentsForGroup
                     
                     if (-not $isInConfig) {
+                        # Check if role is protected
+                        if ($protectedRoles -contains $roleName) {
+                            Write-Output "    ├─ ⚠️ $principalId with role '$roleName' is a protected role, skipping"
+                            continue
+                        }
+                        
                         # Check if principal is protected
                         if (Test-IsProtectedAssignment -PrincipalId $principalId) {
                             Write-StatusInfo "Skipping removal of protected user $principalId with role $roleName on group $groupId"
@@ -389,8 +443,16 @@ function Invoke-InitialCleanup {
         
         $elapsed = $sectionWatch.Elapsed.TotalSeconds
         Write-StatusInfo "Completed in $elapsed seconds"
-        Write-Summary -Category "Group Role $Type Cleanup" -Created 0 -Skipped $skipCounter -Failed $removeCounter
-        Write-StatusInfo "Protected assignments skipped: $protectedCounter"
+        Write-Host "`n┌────────────────────────────────────────────────────┐" -ForegroundColor Cyan
+        Write-Host "│ Group Role $Type Cleanup Summary" -ForegroundColor Cyan
+        Write-Host "├────────────────────────────────────────────────────┤" -ForegroundColor Cyan
+        Write-Host "│ ✅ Kept:    $keptCounter" -ForegroundColor White
+        Write-Host "│ 🗑️ Removed: $removeCounter" -ForegroundColor White
+        Write-Host "│ ⏭️ Skipped: $skipCounter" -ForegroundColor White
+        if ($protectedCounter -gt 0) {
+            Write-Host "│ 🛡️ Protected: $protectedCounter" -ForegroundColor White
+        }
+        Write-Host "└────────────────────────────────────────────────────┘" -ForegroundColor Cyan
         
         # Update global counters
         $script:totalRemoved += $removeCounter
@@ -437,6 +499,19 @@ function Invoke-InitialCleanup {
     Write-StatusInfo "Total assignments kept: $script:totalSkipped"
     Write-StatusInfo "Total protected assignments skipped: $script:totalProtected"
     Write-StatusInfo "Total execution time: $($totalTime.ToString("F2")) minutes"
-    
+
+       
     Write-StatusSuccess "Initial mode cleanup completed"
+
+    # Update reference parameters with the final counter values
+    if ($KeptCounter) { $KeptCounter.Value = $script:keptCounter }
+    if ($RemoveCounter) { $RemoveCounter.Value = $script:removeCounter }
+    if ($SkipCounter) { $SkipCounter.Value = $script:skipCounter }
+
+    # Create and return a result object for better tracking
+    return @{
+        KeptCount = $script:totalSkipped  # Skipped in InitialCleanup = kept
+        RemovedCount = $script:totalRemoved
+        SkippedCount = $script:totalProtected
+    }
 }

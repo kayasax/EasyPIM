@@ -134,7 +134,8 @@ function New-PIMGroupActiveAssignment {
 '
         $endpoint = "/identityGovernance/privilegedAccess/group/assignmentScheduleRequests"
         write-verbose "patch body : $body"
-        $null = invoke-graph -Endpoint $endpoint -Method "POST" -body $body
+        $response = invoke-graph -Endpoint $endpoint -Method "POST" -body $body
+        return $response
     }
     catch {
         MyCatch $_

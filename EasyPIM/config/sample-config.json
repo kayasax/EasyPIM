@@ -6,7 +6,10 @@
       "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a"
       },
       {
-      "PrincipalId": "8b22297b-d2b8-40b5-b387-74aa7368ec7d", // PIM_SG_EligibleToEntraRole 
+      "PrincipalIds": [
+        "8b22297b-d2b8-40b5-b387-74aa7368ec7d", // PIM_SG_EligibleToEntraRole
+        "a621fbf5-d750-4e68-b898-2e2b41cd45c6"  // PIM5 (adding as example)
+      ],
       "Rolename": "Reader",
       "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a"
       },
@@ -26,22 +29,27 @@
     ],
     "EntraIDRoles": [
       {
-        "PrincipalId": "a621fbf5-d750-4e68-b898-2e2b41cd45c6",
+        "PrincipalIds": [
+          "a621fbf5-d750-4e68-b898-2e2b41cd45c6",
+          "9f2aacfc-8c80-41a7-ba07-121e0cb29757"  // Adding Loic as example
+        ],
         "Rolename": "Security Reader",
         "Duration": "P90D"
-
       }
     ],
     "EntraIDRolesActive": [
       {
-      "PrincipalId": "00000000-0000-0000-0000-000000000007",
-      "Rolename": "Global Administrator",
+      "PrincipalId": "40ff8eca-f7f5-43cc-b6f7-e10701f2214a", //PIM4
+      "Rolename": "Guest Inviter",
       "Duration": "P1D"
       }
     ],
     "GroupRoles": [
       {
-      "PrincipalId": "00000000-0000-0000-0000-000000000008",
+      "PrincipalIds": [
+        "00000000-0000-0000-0000-000000000008",
+        "00000000-0000-0000-0000-000000000009"
+      ],
       "Rolename": "Owner",
       "GroupId": "00000000-0000-0000-0000-000000000020"
       },
@@ -53,10 +61,10 @@
     ],
     "GroupRolesActive": [
       {
-      "PrincipalId": "00000000-0000-0000-0000-000000000010",
+      "PrincipalId": "40ff8eca-f7f5-43cc-b6f7-e10701f2214a",
       "Rolename": "Owner",
-      "GroupId": "00000000-0000-0000-0000-000000000022",
-      "Duration": "PT4H"
+      "GroupId": "95b0527c-51af-43b7-884d-2a4fefb67447",
+      "Duration": "P30D"
       }
     ],
     "ProtectedUsers": [

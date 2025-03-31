@@ -1,18 +1,39 @@
+# Define script-level counters at the top of the file (outside any function)
+$script:keptCounter = 0
+$script:removeCounter = 0
+$script:skipCounter = 0
+
+# Define protected roles at script level
+$script:protectedRoles = @(
+    "User Access Administrator",
+    "Global Administrator", 
+    "Privileged Role Administrator",
+    "Security Administrator"
+)
+
 function Invoke-DeltaCleanup {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param (
-        [Parameter(Mandatory = $true)]
         [string]$ResourceType,
-        
-        [Parameter(Mandatory = $true)]
         [array]$ConfigAssignments,
-        
-        [Parameter(Mandatory = $true)]
         [hashtable]$ApiInfo,
-        
+        [array]$ProtectedUsers,
+        # Keep these parameters for compatibility - they're optional now
         [Parameter(Mandatory = $false)]
-        [array]$ProtectedUsers = @()
+        [ref]$KeptCounter,
+        [Parameter(Mandatory = $false)]
+        [ref]$RemoveCounter,
+        [Parameter(Mandatory = $false)]
+        [ref]$SkipCounter
     )
+    
+    # Reset script counters at beginning of function call
+    $script:keptCounter = 0
+    $script:removeCounter = 0
+    $script:skipCounter = 0
+
+    # At the end of the function (around line 560), add a tracking variable for protected users:
+    $protectedCounter = 0
 
     #region Prevent duplicate calls
     # Simple solution: track using a hashtable of processed resource types
@@ -22,7 +43,7 @@ function Invoke-DeltaCleanup {
     if ($ApiInfo.GroupId) { $uniqueKey += "-$($ApiInfo.GroupId)" }
     
     if ($script:ProcessedCleanups.ContainsKey($uniqueKey)) {
-        Write-Output "`n⚠️ Cleanup for '$ResourceType' already processed - skipping duplicate call`n"
+        Write-host "`n⚠️ Cleanup for '$ResourceType' already processed - skipping duplicate call`n"
         return
     }
     
@@ -31,16 +52,24 @@ function Invoke-DeltaCleanup {
     #endregion
     
     #region Setup
-    # Display header
-    Write-Output "`n┌────────────────────────────────────────────────────┐"
-    Write-Output "│ Processing $ResourceType Delta Cleanup"
-    Write-Output "└────────────────────────────────────────────────────┘`n"
-    
-    # Initialize counters
-    $removeCounter = 0
-    $skipCounter = 0
-    $keptCounter = 0
-    
+    # Display header section
+    Write-Host "`n┌────────────────────────────────────────────────────┐" -ForegroundColor Cyan
+    Write-Host "│ Processing $ResourceType Delta Cleanup" -ForegroundColor Cyan
+    Write-Host "└────────────────────────────────────────────────────┘`n" -ForegroundColor Cyan
+
+    if ($config.SubscriptionBased) {
+        foreach ($subscription in $ApiInfo.Subscriptions) {
+            Write-Host "  🔍 Checking subscription: $subscription" -ForegroundColor White
+            
+            # Get the assignments
+            if ($subscription -and $config.SubscriptionBased) {
+                Write-Verbose "Getting assignments for subscription: $subscription"
+                $allAssignments = Get-PIMAzureResourceEligibleAssignment -SubscriptionId $subscription -TenantId $ApiInfo.TenantID
+                Write-Host "    ├─ Found $($allAssignments.Count) total current assignments" -ForegroundColor White
+            }
+        }
+    }
+
     # Create a tracking set for processed assignments to avoid duplicates
     $processedAssignments = @{}
 
@@ -114,7 +143,13 @@ function Invoke-DeltaCleanup {
     Write-Verbose "========== CONFIG ASSIGNMENTS DUMP ==========="
     foreach ($cfg in $ConfigAssignments) {
         $cfgId = $cfg.PrincipalId
-        $cfgRole = $cfg.Role ?? $cfg.RoleName ?? "MISSING_ROLE"
+        $cfgRole = $null
+        foreach ($propName in @("RoleName", "Rolename", "Role", "roleName", "rolename", "role")) {
+            if ($cfg.PSObject.Properties.Name -contains $propName) {
+                $cfgRole = $cfg.$propName
+                break
+            }
+        }
         $cfgScope = $cfg.Scope ?? "NO_SCOPE"
         Write-Verbose "Config Assignment: Principal=$cfgId, Role=$cfgRole, Scope=$cfgScope"
     }
@@ -127,7 +162,7 @@ function Invoke-DeltaCleanup {
         if ($config.SubscriptionBased) {
             # Process each subscription
             foreach ($subscription in $ApiInfo.Subscriptions) {
-                Write-Output "  🔍 Checking subscription: $subscription"
+                Write-Host "  🔍 Checking subscription: $subscription" -ForegroundColor White
                 
                 # Get current assignments 
                 $getCmd = if ($ResourceType -eq "Azure Role eligible") {
@@ -138,7 +173,7 @@ function Invoke-DeltaCleanup {
                 
                 # Get assignments and process
                 $allAssignments = & $getCmd -SubscriptionId $subscription -TenantId $ApiInfo.TenantId
-                Write-Output "    ├─ Found $($allAssignments.Count) total current assignments"
+                Write-Host "    ├─ Found $($allAssignments.Count) total current assignments" -ForegroundColor White
 
                 # Debug the first assignment to see its structure
                 if ($allAssignments.Count -gt 0) {
@@ -147,27 +182,52 @@ function Invoke-DeltaCleanup {
                     Write-Verbose "DEBUG: First assignment: $($firstAssignment | ConvertTo-Json -Depth 2 -Compress)"
                 }
 
+                
+                Write-Host "`n  📋 Processing assignments for: $ResourceType" -ForegroundColor Cyan
+
                 # Process each assignment
                 if ($allAssignments.Count -gt 0) {
-                    Write-Output "`n  📋 Analyzing assignments:"
+                    Write-Host "`n  📋 Analyzing assignments:" -ForegroundColor Cyan
+                    
+                    # Add a counter for processed assignments
+                    $processedCount = 0
                     
                     foreach ($assignment in $allAssignments) {
+                        $processedCount++
+                        
                         # Extract assignment details - handle different property naming conventions
                         # Try different property names based on API version
-                        $principalId = $assignment.PrincipalId ?? $assignment.SubjectId ?? $assignment.principalId
-                        $roleName = $assignment.RoleDefinitionDisplayName ?? $assignment.RoleName ?? $assignment.roleName
-                        $principalName = $assignment.PrincipalDisplayName ?? $assignment.SubjectName ?? $assignment.displayName ?? "Principal-$principalId"
+                        $principalId = if ($null -ne $assignment.PrincipalId) { $assignment.PrincipalId } 
+                                       elseif ($null -ne $assignment.SubjectId) { $assignment.SubjectId } 
+                                       elseif ($null -ne $assignment.principalId) { $assignment.principalId } 
+                                       else { $null }
+                                       
+                        $roleName = if ($null -ne $assignment.RoleDefinitionDisplayName) { $assignment.RoleDefinitionDisplayName }
+                                   elseif ($null -ne $assignment.RoleName) { $assignment.RoleName }
+                                   elseif ($null -ne $assignment.roleName) { $assignment.roleName }
+                                   else { "Unknown" }
+                                   
+                        $principalName = if ($null -ne $assignment.PrincipalDisplayName) { $assignment.PrincipalDisplayName }
+                                        elseif ($null -ne $assignment.SubjectName) { $assignment.SubjectName }
+                                        elseif ($null -ne $assignment.displayName) { $assignment.displayName }
+                                        else { "Principal-$principalId" }
                         
                         # Different ways scope might be exposed
-                        $scope = $assignment.ResourceId ?? $assignment.scope ?? $assignment.Scope ?? $assignment.directoryScopeId
+                        $scope = if ($null -ne $assignment.ResourceId) { $assignment.ResourceId }
+                                elseif ($null -ne $assignment.scope) { $assignment.scope } 
+                                elseif ($null -ne $assignment.Scope) { $assignment.Scope }
+                                elseif ($null -ne $assignment.directoryScopeId) { $assignment.directoryScopeId }
+                                else { $null }
                         
                         # Create a unique key to track this assignment
                         $assignmentKey = "$principalId|$roleName|$scope"
                         
                         # Skip if we've already processed this assignment
                         if ($processedAssignments.ContainsKey($assignmentKey)) {
-                            Write-Verbose "Skipping duplicate processing of assignment: $principalName with role '$roleName'"
-                            continue
+                            Write-Host "    ├─ ⏭️ $principalName with role '$roleName' is a duplicate entry, skipping" -ForegroundColor DarkYellow
+                            $script:skipCounter++
+                            Write-Verbose "Skipped duplicate assignment - counter now: $script:skipCounter"
+                            continue;
                         }
                         
                         # Mark as processed
@@ -175,9 +235,10 @@ function Invoke-DeltaCleanup {
                         
                         # For debugging property access issues
                         if (-not $principalId -or -not $roleName) {
-                            Write-Output "    ├─ ⚠️ Invalid assignment data, skipping"
+                            Write-Host "    ├─ ⚠️ Invalid assignment data, skipping" -ForegroundColor Yellow
                             Write-Verbose "DEBUG: Invalid assignment: $($assignment | ConvertTo-Json -Depth 2 -Compress)"
-                            $skipCounter++
+                            $script:skipCounter++
+                            Write-Verbose "Skipped assignment - counter now: $script:skipCounter"
                             continue
                         }
                         
@@ -220,8 +281,20 @@ function Invoke-DeltaCleanup {
                             Write-Verbose "Comparing assignment: Principal=$principalId, Role=$roleName, Scope=$scope"
                             Write-Verbose "With config: Principal=$configPrincipalId, Role=$configRole, Scope=$configScope"
                             
-                            # Check Principal ID match - must match exactly
-                            $principalMatches = $configPrincipalId -eq $principalId
+                            # Check Principal ID match
+                            $principalMatches = $false
+
+                            # Direct PrincipalId match
+                            if ($configPrincipalId -eq $principalId) {
+                                $principalMatches = $true
+                                Write-Verbose "Principal matched directly"
+                            }
+                            # Check in PrincipalIds array if present
+                            elseif ($configAssignment.PSObject.Properties.Name -contains "PrincipalIds" -and 
+                                    $configAssignment.PrincipalIds -is [array]) {
+                                $principalMatches = $configAssignment.PrincipalIds -contains $principalId
+                                Write-Verbose "Principal checked against PrincipalIds array: $principalMatches"
+                            }
                             
                             # Check role name match - case insensitive comparison
                             $roleMatches = $configRole -ieq $roleName
@@ -262,62 +335,57 @@ function Invoke-DeltaCleanup {
                         
                         # Keep assignment if it's in config
                         if ($foundInConfig) {
-                            Write-Output "    ├─ ✅ $principalName with role '$roleName' matches config, keeping"
-                            $keptCounter++
+                            Write-Host "    ├─ ✅ $principalName with role '$roleName' matches config, keeping" -ForegroundColor Green
+                            $script:keptCounter++
+                            Write-Verbose "Kept assignment - counter now: $script:keptCounter"
                             continue
                         }
                         
                         # Check if protected user
-                        if ($ProtectedUsers -contains $principalId) {
-                            Write-Output "    ├─ 🛡️ $principalName with role '$roleName' is a protected user, skipping"
-                            $skipCounter++
+                        if ($ProtectedUsers -contains $assignment.PrincipalId) {
+                            Write-Host "    ├─ 🛡️ $principalName with role '$roleName' is a protected user, skipping" -ForegroundColor Yellow
+                            $protectedCounter++  # Only increment protected counter, not skip counter
                             continue
                         }
 
-                        # Check if assignment is inherited
+                        # Check if protected role
+                        if ($script:protectedRoles -contains $roleName) {
+                            Write-host "    ├─ ⚠️ $principalName with role '$roleName' is a protected role, skipping"
+                            $protectedCounter++  # Only increment protected counter
+                            continue
+                        }
+
+                        # Check if assignment is inherited - consolidate all checks
                         $isInherited = $false
 
-                        # Check for memberType property first - this is what your debug output shows
+                        # Create a tracking variable
+                        $inheritedReason = ""
+
+                        # Check for memberType property first
                         if ($assignment.PSObject.Properties.Name -contains "memberType" -and $assignment.memberType -eq "Inherited") {
-                            Write-Output "    ├─ ⏭️ $principalName with role '$roleName' is an inherited assignment (memberType=Inherited), skipping"
                             $isInherited = $true
+                            $inheritedReason = "memberType=Inherited"
                         }
                         # Check for ScopeType property indicating management group
                         elseif ($assignment.PSObject.Properties.Name -contains "ScopeType" -and $assignment.ScopeType -eq "managementgroup") {
-                            Write-Output "    ├─ ⏭️ $principalName with role '$roleName' is a management group assignment (ScopeType=managementgroup), skipping"
                             $isInherited = $true
+                            $inheritedReason = "ScopeType=managementgroup"
                         }
                         # Check for ScopeId indicating management group
                         elseif ($assignment.PSObject.Properties.Name -contains "ScopeId" -and $assignment.ScopeId -like "*managementGroups*") {
-                            Write-Output "    ├─ ⏭️ $principalName with role '$roleName' is a management group assignment (ScopeId contains managementGroups), skipping"
                             $isInherited = $true
-                        }
-                        # Keep the existing checks as fallbacks
-                        elseif ($assignment.PSObject.Properties.Name -contains "AssignmentType" -and $assignment.AssignmentType -eq "Inherited") {
-                            $isInherited = $true
-                        }
-                        elseif ($assignment.PSObject.Properties.Name -contains "IsInherited" -and $assignment.IsInherited -eq $true) {
-                            $isInherited = $true
-                        }
-                        elseif ($assignment.PSObject.Properties.Name -contains "Scope" -and 
-                                $assignment.Scope -ne $scope -and 
-                                $scope.StartsWith($assignment.Scope)) {
-                            $isInherited = $true
-                        }
-                        elseif ($assignment.PSObject.Properties.Name -contains "InheritedFrom" -and 
-                                -not [string]::IsNullOrEmpty($assignment.InheritedFrom)) {
-                            $isInherited = $true
+                            $inheritedReason = "ScopeId contains managementGroups"
                         }
 
-                        # Skip inherited assignments
                         if ($isInherited) {
-                            Write-Output "    ├─ ⏭️ $principalName with role '$roleName' is an inherited assignment, cannot be removed at this scope"
-                            $skipCounter++
+                            Write-Host "    ├─ ⏭️ $principalName with role '$roleName' is an inherited assignment ($inheritedReason), skipping" -ForegroundColor DarkYellow
+                            $script:skipCounter++
+                            Write-Verbose "Skipped assignment - counter now: $script:skipCounter"
                             continue
                         }
                         
                         # Remove assignment
-                        Write-Output "    ├─ ❓ $principalName with role '$roleName' not in config, removing..."
+                        Write-Host "    ├─ ❓ $principalName with role '$roleName' not in config, removing..." -ForegroundColor White
 
                         # Prepare parameters for removal - use the exact scope value
                         $removeParams = @{ 
@@ -334,7 +402,8 @@ function Invoke-DeltaCleanup {
                         # Skip sensitive roles
                         if ($roleName -eq "User Access Administrator") {
                             Write-Warning "    │  └─ ⚠️ Skipping removal of sensitive role: User Access Administrator"
-                            $skipCounter++
+                            $script:skipCounter++
+                            Write-Verbose "Skipped assignment - counter now: $script:skipCounter"
                             continue
                         }
 
@@ -359,25 +428,33 @@ function Invoke-DeltaCleanup {
                                 }
                                 elseif ($result.PSObject.Properties.Name -contains "error" -and $result.error -ne $null) {
                                     $hasError = $true
-                                    Write-Warning "    │  └─ ⚠️ Removal failed: $($result.error.message ?? 'Unknown error')"
+                                    $errorMessage = if ($result.error.PSObject.Properties.Name -contains 'message' -and $result.error.message) {
+                                        $result.error.message
+                                    } else {
+                                        'Unknown error'
+                                    }
+                                    Write-Warning "    │  └─ ⚠️ Removal failed: $errorMessage"
                                 }
                                 
                                 # Check for "SUCCESS" in the output string itself
                                 $successMessage = $outputLines | Where-Object { $_ -match "SUCCESS" }
                                 if ($successMessage -and -not $hasError) {
                                     # Verify removal actually worked (optional for safety)
-                                    $removeCounter++
-                                    Write-Output "    │  └─ 🗑️ Removed successfully"
+                                    $script:removeCounter++
+                                    Write-Verbose "Removed assignment - counter now: $script:removeCounter"
+                                    Write-Host "    │  └─ 🗑️ Removed successfully" -ForegroundColor Green
                                 }
                                 else {
-                                    $skipCounter++
+                                    $script:skipCounter++
+                                    Write-Verbose "Skipped assignment - counter now: $script:skipCounter"
                                 }
                             } 
                             catch {
                                 # Check for inheritance-related errors
                                 if ($_.Exception.Message -match "InsufficientPermissions|inherited|cannot delete|does not belong") {
                                     Write-Warning "    │  └─ ⚠️ Cannot remove: $($_.Exception.Message)"
-                                    $skipCounter++
+                                    $script:skipCounter++
+                                    Write-Verbose "Skipped assignment - counter now: $script:skipCounter"
                                 }
                                 else {
                                     Write-Error "    │  └─ ❌ Failed to remove: $_"
@@ -385,8 +462,9 @@ function Invoke-DeltaCleanup {
                             }
                         } 
                         else {
-                            $skipCounter++
-                            Write-Output "    │  └─ ⏭️ Removal skipped (WhatIf mode)"
+                            $script:skipCounter++
+                            Write-Verbose "Skipped assignment - counter now: $script:skipCounter"
+                            Write-Host "    │  └─ ⏭️ Removal skipped (WhatIf mode)" -ForegroundColor DarkYellow
                         }
                     }
                 }
@@ -394,7 +472,7 @@ function Invoke-DeltaCleanup {
         }
         # Entra ID roles
         elseif ($config.GraphBased -and -not $config.GroupBased) {
-            Write-Output "  🔍 Checking Entra roles"
+            Write-Host "  🔍 Checking Entra roles" -ForegroundColor White
             
             # Query MS Graph for assignments with simplified error handling
             try {
@@ -406,11 +484,13 @@ function Invoke-DeltaCleanup {
                 $instancesEndpoint = ($config.ApiEndpoint -replace "https://graph.microsoft.com/beta", "")
                 $allInstances = (Invoke-Graph -endpoint $instancesEndpoint -Method Get).value
                 
-                Write-Output "    ├─ Found $($allInstances.Count) active instances (current assignments)"
+                Write-Host "    ├─ Found $($allInstances.Count) active instances (current assignments)" -ForegroundColor White
                 
+                Write-Host "`n  📋 Processing assignments for: $ResourceType" -ForegroundColor Cyan
+
                 # Process each assignment
                 if ($allInstances.Count -gt 0) {
-                    Write-Output "`n  📋 Analyzing assignments:"
+                    Write-Host "`n  📋 Analyzing assignments:" -ForegroundColor Cyan
                     
                     foreach ($assignment in $allInstances) {
                         $principalId = $assignment.principalId
@@ -447,20 +527,28 @@ function Invoke-DeltaCleanup {
                         
                         # Keep assignment if it's in config
                         if ($foundInConfig) {
-                            Write-Output "    ├─ ✅ $principalName with role '$roleName' matches config, keeping"
-                            $keptCounter++
+                            Write-Host "    ├─ ✅ $principalName with role '$roleName' matches config, keeping" -ForegroundColor Green
+                            $script:keptCounter++
+                            Write-Verbose "Kept assignment - counter now: $script:keptCounter"
                             continue
                         }
                         
                         # Check if protected user
                         if ($ProtectedUsers -contains $principalId) {
-                            Write-Output "    │  └─ 🛡️ Protected user! Skipping removal"
-                            $skipCounter++
+                           Write-Host "    ├─ 🛡️ $principalName with role '$roleName' is a protected user, skipping" -ForegroundColor Yellow
+                            $protectedCounter++  # Only increment protected counter, not skip counter
+                            continue
+                        }
+
+                        # Check if protected role
+                        if ($script:protectedRoles -contains $roleName) {
+                            Write-Host "    ├─ ⚠️ $principalName with role '$roleName' is a protected role, skipping" -ForegroundColor Yellow
+                            $protectedCounter++  # Only increment protected counter
                             continue
                         }
                         
                         # Remove assignment
-                        Write-Output "    ├─ ❓ $principalName with role '$roleName' not in config, removing..."
+                        Write-Host "    ├─ ❓ $principalName with role '$roleName' not in config, removing..." -ForegroundColor White
                         
                         # Prepare parameters for removal
                         $removeParams = @{ 
@@ -472,7 +560,8 @@ function Invoke-DeltaCleanup {
                         # Skip sensitive roles
                         if ($roleName -eq "User Access Administrator") {
                             Write-Warning "    │  └─ ⚠️ Skipping removal of sensitive role: User Access Administrator"
-                            $skipCounter++
+                            $script:skipCounter++
+                            Write-Verbose "Skipped assignment - counter now: $script:skipCounter"
                             continue
                         }
                         
@@ -480,8 +569,9 @@ function Invoke-DeltaCleanup {
                         if ($PSCmdlet.ShouldProcess("Remove $ResourceType assignment for $principalName with role '$roleName'")) {
                             try {
                                 $result = & $config.RemoveCmd @removeParams
-                                $removeCounter++
-                                Write-Output "    │  └─ 🗑️ Removed successfully"
+                                $script:removeCounter++
+                                Write-Verbose "Removed assignment - counter now: $script:removeCounter"
+                                Write-Host "    │  └─ 🗑️ Removed successfully" -ForegroundColor Green
                             } 
                             catch {
                                 # Check for inheritance or permission errors
@@ -490,15 +580,17 @@ function Invoke-DeltaCleanup {
                                     $_.Exception.Message -match "cannot delete an assignment" -or
                                     $_.Exception.Message -match "does not belong") {
                                     Write-Warning "    │  └─ ⚠️ Cannot remove: Assignment appears to be inherited from a higher scope"
-                                    $skipCounter++
+                                    $script:skipCounter++
+                                    Write-Verbose "Skipped assignment - counter now: $script:skipCounter"
                                 }
                                 else {
                                     Write-Error "    │  └─ ❌ Failed to remove: $_"
                                 }
                             }
                         } else {
-                            $skipCounter++
-                            Write-Output "    │  └─ ⏭️ Removal skipped (WhatIf mode)"
+                            $script:skipCounter++
+                            Write-Verbose "Skipped assignment - counter now: $script:skipCounter"
+                            Write-Host "    │  └─ ⏭️ Removal skipped (WhatIf mode)" -ForegroundColor DarkYellow
                         }
                     }
                 }
@@ -515,7 +607,7 @@ function Invoke-DeltaCleanup {
         }
         # Group roles
         elseif ($config.GraphBased -and $config.GroupBased) {
-            Write-Output "  ⚠️ $ResourceType cleanup via Graph API - Not yet implemented"
+            Write-Host "  ⚠️ $ResourceType cleanup via Graph API - Not yet implemented" -ForegroundColor Yellow
         }
     }
     catch {
@@ -524,12 +616,30 @@ function Invoke-DeltaCleanup {
     #endregion
     
     #region Summary
-    Write-Output "`n┌────────────────────────────────────────────────────┐"
-    Write-Output "│ $ResourceType Cleanup Summary"
-    Write-Output "├────────────────────────────────────────────────────┤"
-    Write-Output "│ ✅ Kept:    $keptCounter"
-    Write-Output "│ 🗑️ Removed: $removeCounter" 
-    Write-Output "│ ⏭️ Skipped: $skipCounter"
-    Write-Output "└────────────────────────────────────────────────────┘`n"
+    # Use Write-Host instead of Write-Output for consistent display
+    Write-Host "`n┌────────────────────────────────────────────────────┐" -ForegroundColor Cyan
+    Write-Host "│ $ResourceType Cleanup Summary" -ForegroundColor Cyan 
+    Write-Host "├────────────────────────────────────────────────────┤" -ForegroundColor Cyan
+    Write-Host "│ ✅ Kept:    $script:keptCounter" -ForegroundColor White
+    Write-Host "│ 🗑️ Removed: $script:removeCounter" -ForegroundColor White
+    Write-Host "│ ⏭️ Skipped: $script:skipCounter" -ForegroundColor White
+    if ($protectedCounter -gt 0) {
+        Write-Host "│ 🛡️ Protected: $protectedCounter" -ForegroundColor White
+    }
+    Write-Host "└────────────────────────────────────────────────────┘" -ForegroundColor Cyan
     #endregion
+
+    # Update reference parameters at the end
+    if ($KeptCounter) { $KeptCounter.Value = $script:keptCounter }
+    if ($RemoveCounter) { $RemoveCounter.Value = $script:removeCounter }
+    if ($SkipCounter) { $SkipCounter.Value = $script:skipCounter }
+
+    # Return details object
+    return @{
+        ResourceType = $ResourceType
+        KeptCount = $script:keptCounter
+        RemovedCount = $script:removeCounter
+        SkippedCount = $script:skipCounter
+        ProtectedCount = $protectedCounter
+    }
 }

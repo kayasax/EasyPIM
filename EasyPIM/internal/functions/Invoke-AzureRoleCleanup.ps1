@@ -93,6 +93,10 @@ function Invoke-AzureRoleCleanup {
                     
                     # Check if principal, role and scope match
                     $matchesPrincipal = $configAssignment.PrincipalId -eq $principalId
+                    # Also check PrincipalIds array if present
+                    if (!$matchesPrincipal -and $configAssignment.PSObject.Properties.Name -contains "PrincipalIds") {
+                        $matchesPrincipal = $configAssignment.PrincipalIds -contains $principalId
+                    }
                     $matchesRole = $configAssignment.RoleName -ieq $roleName -or $configAssignment.Role -ieq $roleName
                     
                     # Handle different scope formats
