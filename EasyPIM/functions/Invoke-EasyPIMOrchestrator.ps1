@@ -98,18 +98,18 @@
         https://github.com/yourusername/EASYPIM
     #>
 
-# Helper functions for formatted output - add these at the beginning of your script
+# Helper functions for formatted output - change these to use Write-Host
 function Write-SectionHeader {
     param ([string]$Title)
-    Write-Output "`n┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓"
-    Write-Output "┃ $($Title.PadRight(76)) ┃"
-    Write-Output "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛"
+    Write-Host "`n┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓" -ForegroundColor Cyan
+    Write-Host "┃ $($Title.PadRight(76)) ┃" -ForegroundColor Cyan
+    Write-Host "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛" -ForegroundColor Cyan
 }
 
 function Write-SubHeader {
     param ([string]$Title)
-    Write-Output "`n▶ $Title"
-    Write-Output "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄"
+    Write-Host "`n▶ $Title" -ForegroundColor Yellow
+    Write-Host "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄" -ForegroundColor DarkGray
 }
 
 function Write-GroupHeader {
@@ -119,22 +119,22 @@ function Write-GroupHeader {
         $Title = $Title.Substring(0, 62) + "..."
     }
     $remainingLength = [Math]::Max(0, (70 - $Title.Length))
-    Write-Output "`n┌─── $Title $("─" * $remainingLength)"
+    Write-Host "`n┌─── $Title $("─" * $remainingLength)" -ForegroundColor Magenta
 }
 
 function Write-StatusSuccess {
     param ([string]$Message)
-    Write-Output "✅ $Message"
+    Write-Host "✅ $Message" -ForegroundColor Green
 }
 
 function Write-StatusInfo {
     param ([string]$Message)
-    Write-Output "ℹ️ $Message"
+    Write-Host "ℹ️ $Message" -ForegroundColor Blue
 }
 
 function Write-StatusProcessing {
     param ([string]$Message)
-    Write-Output "⚙️ $Message"
+    Write-Host "⚙️ $Message" -ForegroundColor Gray
 }
 
 function Write-StatusWarning {
@@ -159,26 +159,26 @@ function Write-Summary {
         [string]$OperationType = "Creation"
     )
 
-    Write-Output "`n┌───────────────────────────────────────────────────────────────────────────────┐"
-    Write-Output "│ SUMMARY: $Category"
-    Write-Output "├───────────────────────────────────────────────────────────────────────────────┤"
+    Write-Host "`n┌───────────────────────────────────────────────────────────────────────────────┐" -ForegroundColor White
+    Write-Host "│ SUMMARY: $Category" -ForegroundColor White
+    Write-Host "├───────────────────────────────────────────────────────────────────────────────┤" -ForegroundColor White
 
     if ($OperationType -eq "Cleanup") {
         # Use the right labels for cleanup operations
-        Write-Output "│ ✅ Kept    : $Created"  # Reuse Created parameter for kept
-        Write-Output "│ 🗑️ Removed : $Removed"
-        Write-Output "│ ⏭️ Skipped : $Skipped"
+        Write-Host "│ ✅ Kept    : $Created" -ForegroundColor White  # Reuse Created parameter for kept
+        Write-Host "│ 🗑️ Removed : $Removed" -ForegroundColor White
+        Write-Host "│ ⏭️ Skipped : $Skipped" -ForegroundColor White
         if ($Protected -gt 0) {
-            Write-Output "│ 🛡️ Protected: $Protected"
+            Write-Host "│ 🛡️ Protected: $Protected" -ForegroundColor White
         }
     } else {
         # Default creation display
-        Write-Output "│ ✅ Created : $Created"
-        Write-Output "│ ⏭️ Skipped : $Skipped"
-        Write-Output "│ ❌ Failed  : $Failed"
+        Write-Host "│ ✅ Created : $Created" -ForegroundColor White
+        Write-Host "│ ⏭️ Skipped : $Skipped" -ForegroundColor White
+        Write-Host "│ ❌ Failed  : $Failed" -ForegroundColor White
     }
 
-    Write-Output "└───────────────────────────────────────────────────────────────────────────────┘"
+    Write-Host "└───────────────────────────────────────────────────────────────────────────────┘" -ForegroundColor White
 }
 
 function Invoke-EasyPIMOrchestrator {
@@ -225,32 +225,31 @@ function Invoke-EasyPIMOrchestrator {
 
     # Display usage if no parameters are provided
     if (-not $PSBoundParameters) {
-        Write-Output "Usage:"
-        Write-Output "Invoke-EasyPIMOrchestrator -KeyVaultName <KeyVaultName> -SecretName <SecretName> -SubscriptionId <SubscriptionId> -TenantId <TenantId> -Mode <initial|delta>"
-        Write-Output "or"
-        Write-Output "Invoke-EasyPIMOrchestrator -ConfigFilePath <ConfigFilePath> -SubscriptionId <SubscriptionId> -TenantId <TenantId> -Mode <initial|delta>"
+        Write-Host "Usage:" -ForegroundColor Yellow
+        Write-Host "Invoke-EasyPIMOrchestrator -KeyVaultName <KeyVaultName> -SecretName <SecretName> -SubscriptionId <SubscriptionId> -TenantId <TenantId> -Mode <initial|delta>"
+        Write-Host "or"
+        Write-Host "Invoke-EasyPIMOrchestrator -ConfigFilePath <ConfigFilePath> -SubscriptionId <SubscriptionId> -TenantId <TenantId> -Mode <initial|delta>"
         return
     }
 
     try {
         # Import necessary modules
-        Write-Output "Importing required modules..."
+        Write-Host "Importing required modules..." -ForegroundColor Gray
         Import-Module Az.KeyVault, Az.Resources
-
 
         # Retrieve the JSON config file
         Write-SectionHeader "Retrieving Configuration"
         if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
-            Write-Output "Reading from Key Vault '$KeyVaultName', Secret '$SecretName'"
+            Write-Host "Reading from Key Vault '$KeyVaultName', Secret '$SecretName'" -ForegroundColor Cyan
             $secret = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SecretName
-            $jsonContent = $secret.SecretValueText | Remove-JsonComments
+            $jsonContent = $secret.SecretValue | ConvertFrom-SecureString -AsPlainText | Remove-JsonComments
         }
         elseif ($PSCmdlet.ParameterSetName -eq 'FilePath') {
-            Write-Output "Reading from file '$ConfigFilePath'"
+            Write-Host "Reading from file '$ConfigFilePath'" -ForegroundColor Cyan
             $jsonContent = Get-Content -Path $ConfigFilePath -Raw | Remove-JsonComments
         }
         else {
-            Write-Output "Please provide either KeyVault parameters or a ConfigFilePath."
+            Write-Host "Please provide either KeyVault parameters or a ConfigFilePath." -ForegroundColor Red
             return
         }
 
@@ -275,8 +274,6 @@ function Invoke-EasyPIMOrchestrator {
             Write-Verbose "First expanded assignment: $($azureRoles[0] | ConvertTo-Json -Compress)"
         }
 
-
-
         # Load protected users from config
         $protectedUsers = @()
         if ($config.ProtectedUsers) {
@@ -288,7 +285,7 @@ function Invoke-EasyPIMOrchestrator {
 
         # Cleanup in delta mode
         if ($Mode -eq "delta") {
-            Write-Output "=== Performing Delta Mode Cleanup ==="
+            Write-Host "=== Performing Delta Mode Cleanup ===" -ForegroundColor Yellow
 
             # Azure Role eligible delta cleanup
             Write-SubHeader "Azure Role Eligible Assignments Cleanup"
@@ -655,12 +652,12 @@ function Invoke-EasyPIMOrchestrator {
 
             # After getting assignments, add this debugging section
             $allAssignments = & $commandMap.GetCmd -SubscriptionId $SubscriptionId -TenantId $commandMap.GetParams.tenantID
-            Write-Output "    ├─ Found $($allAssignments.Count) total current assignments"
+            Write-Host "    ├─ Found $($allAssignments.Count) total current assignments" -ForegroundColor Gray
 
             # Debug invalid assignments
             $invalidAssignments = $allAssignments | Where-Object { (-not $_.SubjectId) -or (-not $_.RoleName) }
             if ($invalidAssignments.Count -gt 0) {
-                Write-Output "    ├─ Found $($invalidAssignments.Count) system/orphaned assignments (normal)"
+                Write-Host "    ├─ Found $($invalidAssignments.Count) system/orphaned assignments (normal)" -ForegroundColor Gray
                 Write-Verbose "Detailed invalid assignment properties:"
                 foreach ($invalid in $invalidAssignments) {
                     $invalidJson = $invalid | ConvertTo-Json -Depth 1 -Compress
@@ -720,13 +717,10 @@ function Invoke-EasyPIMOrchestrator {
                 $overallFailed += $result.Failed
             }
             else {
-                Write-Output "No valid Entra ID Role active assignments found after filtering"
+                Write-Host "No valid Entra ID Role active assignments found after filtering" -ForegroundColor Yellow
             }
         }
 
-
-
-        # Process Group Role active assignments
         # Process Group Role active assignments
         if ($config.GroupRolesActive) {
             Write-SubHeader "Processing Group Role Active Assignments"
@@ -745,8 +739,6 @@ function Invoke-EasyPIMOrchestrator {
                 CreateCmd    = 'New-PIMGroupActiveAssignment'
                 CreateParams = @{
                     tenantID = $TenantId
-                    # Remove roleName from here if it exists
-                    # Do NOT include role here - we add it conditionally in Invoke-ResourceAssignments
                 }
                 DirectFilter = $true
             }
@@ -768,25 +760,25 @@ function Invoke-EasyPIMOrchestrator {
         #endregion
 
         # Add grand total summary
-        Write-Output "`n┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓"
-        Write-Output "┃ OVERALL SUMMARY                                                                ┃"
-        Write-Output "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛"
-        Write-Output "┌───────────────────────────────────────────────────────────────────────────────┐"
-        Write-Output "│ ASSIGNMENT CREATIONS"
-        Write-Output "├───────────────────────────────────────────────────────────────────────────────┤"
-        Write-Output "│ ✅ Created : $overallCreated"
-        Write-Output "│ ⏭️ Skipped : $overallCreationSkipped"
-        Write-Output "│ ❌ Failed  : $overallFailed"
-        Write-Output "└───────────────────────────────────────────────────────────────────────────────┘"
-        Write-Output "┌───────────────────────────────────────────────────────────────────────────────┐"
-        Write-Output "│ CLEANUP OPERATIONS"
-        Write-Output "├───────────────────────────────────────────────────────────────────────────────┤"
-        Write-Output "│ ✅ Kept    : $overallKept"
-        Write-Output "│ 🗑️ Removed : $overallRemoved"
-        Write-Output "│ ⏭️ Skipped : $overallCleanupSkipped"
-        Write-Output "└───────────────────────────────────────────────────────────────────────────────┘"
+        Write-Host "`n┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓" -ForegroundColor Green
+        Write-Host "┃ OVERALL SUMMARY                                                                ┃" -ForegroundColor Green
+        Write-Host "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛" -ForegroundColor Green
+        Write-Host "┌───────────────────────────────────────────────────────────────────────────────┐" -ForegroundColor White
+        Write-Host "│ ASSIGNMENT CREATIONS" -ForegroundColor White
+        Write-Host "├───────────────────────────────────────────────────────────────────────────────┤" -ForegroundColor White
+        Write-Host "│ ✅ Created : $overallCreated" -ForegroundColor White
+        Write-Host "│ ⏭️ Skipped : $overallCreationSkipped" -ForegroundColor White
+        Write-Host "│ ❌ Failed  : $overallFailed" -ForegroundColor White
+        Write-Host "└───────────────────────────────────────────────────────────────────────────────┘" -ForegroundColor White
+        Write-Host "┌───────────────────────────────────────────────────────────────────────────────┐" -ForegroundColor White
+        Write-Host "│ CLEANUP OPERATIONS" -ForegroundColor White
+        Write-Host "├───────────────────────────────────────────────────────────────────────────────┤" -ForegroundColor White
+        Write-Host "│ ✅ Kept    : $overallKept" -ForegroundColor White
+        Write-Host "│ 🗑️ Removed : $overallRemoved" -ForegroundColor White
+        Write-Host "│ ⏭️ Skipped : $overallCleanupSkipped" -ForegroundColor White
+        Write-Host "└───────────────────────────────────────────────────────────────────────────────┘" -ForegroundColor White
 
-        Write-Output "=== EasyPIM orchestration completed successfully ==="
+        Write-Host "=== EasyPIM orchestration completed successfully ===" -ForegroundColor Green
     }
     catch {
         Write-Error "❌ An error occurred: $($_.Exception.Message)"

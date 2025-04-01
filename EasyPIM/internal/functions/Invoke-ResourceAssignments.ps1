@@ -12,8 +12,8 @@
     Write-Host "│ Processing $ResourceType Assignments"
     Write-Host "└────────────────────────────────────────────────────┘`n"
 
-    Write-Output "  🔍 Analyzing configuration"
-    Write-Output "    ├─ Found $($Assignments.Count) assignments in config"
+    write-host "  🔍 Analyzing configuration"
+    write-host "    ├─ Found $($Assignments.Count) assignments in config"
 
     $createCounter = 0
     $skipCounter = 0
@@ -24,17 +24,27 @@
         $cmd = $CommandMap.GetCmd
         $params = $CommandMap.GetParams
         $existingAssignments = & $cmd @params
-        Write-Output "    └─ Found $($existingAssignments.Count) existing assignments"
+        write-host "    └─ Found $($existingAssignments.Count) existing assignments"
     }
     catch {
-        Write-Output "    └─ ⚠️ Error fetching existing assignments: $_"
+        write-host "    └─ ⚠️ Error fetching existing assignments: $_"
         $existingAssignments = @()
+    }
+
+    # Ensure existingAssignments is always an array
+    if ($null -eq $existingAssignments) {
+        Write-Verbose "Command returned null result, initializing empty array"
+        $existingAssignments = @()
+    }
+    elseif (-not ($existingAssignments -is [array])) {
+        Write-Verbose "Command returned a single object, converting to array"
+        $existingAssignments = @($existingAssignments)
     }
 
     # Add debug output for assignments
     if ($Assignments.Count -gt 0) {
-        Write-Output "`n  📋 Processing assignments:"
-        Write-Output "    ├─ Found $($Assignments.Count) assignments to process"
+        write-host "`n  📋 Processing assignments:"
+        write-host "    ├─ Found $($Assignments.Count) assignments to process"
 
         # Display details for ALL assignments
         foreach ($assignment in $Assignments) {
@@ -66,7 +76,7 @@
                 $principalName = "Principal-$principalId"
             }
 
-            Write-Output "    ├─ Processing: $principalName with role '$roleName'$scopeDisplay"
+            write-host "    ├─ Processing: $principalName with role '$roleName'$scopeDisplay"
         }
 
         Write-Verbose "Debug: Total assignments to process: $($Assignments.Count)"
@@ -114,7 +124,7 @@
         # Check if principal exists (if not already done in the command map)
         if (-not $CommandMap.DirectFilter) {
             if (-not (Test-PrincipalExists -PrincipalId $assignment.PrincipalId)) {
-                Write-Output "    ├─ ❌ $principalName does not exist, skipping assignment"
+                write-host "    ├─ ❌ $principalName does not exist, skipping assignment"
                 $errorCounter++
                 continue
             }
@@ -133,6 +143,9 @@
 
         # Display assignment being processed
         Write-Host "    ├─ 🔍 $principalName with role '$roleName'$scopeInfo"
+
+        # Initialize matchInfo variable at the beginning of the foreach loop
+        $matchInfo = "unknown reason" # Initialize with default value
 
         # Check if assignment already exists
         $found = 0
@@ -207,9 +220,9 @@
                 if ($principalMatched -and $roleMatched) {
                     $found = 1
                     # Store information about why this matched for display later
-                    $matchReason = if ($existing.memberType) {
+                    $matchReason = if ($null -ne $existing.memberType) {
                         "memberType='$($existing.memberType)'"
-                    } elseif ($existing.Type) {
+                    } elseif ($null -ne $existing.Type) {
                         "type='$($existing.Type)'"
                     } else {
                         "role matched"
@@ -233,14 +246,51 @@
             # Prepare parameters for the create command
             $params = $CommandMap.CreateParams.Clone()
 
-            # For Group roles, match EXACTLY what works in the direct command
+            # Replace the Group Role parameters block
             if ($ResourceType -like "Group Role*") {
-                # Use uppercase 'ID' suffix as shown in the working command
-                $params['principalID'] = $assignment.PrincipalId  # Note the capital ID
-                $params['groupID'] = $assignment.GroupId          # Note the capital ID
-                $params['type'] = $roleName.ToLower()             # Lowercase type value
-
-                Write-Verbose "Using exact parameter cases for Group command: principalID, groupID, type"
+                # Clear existing parameters to avoid any conflicts
+                $params = $CommandMap.CreateParams.Clone()
+                
+                # Debug information about what we're processing
+                Write-Verbose "Processing Group Role assignment with parameters:"
+                Write-Verbose "  PrincipalId: $($assignment.PrincipalId)"
+                Write-Verbose "  GroupId: $($assignment.GroupId)"
+                Write-Verbose "  RoleName: $roleName"
+                
+                # Verify principal and group exist
+                if ([string]::IsNullOrEmpty($assignment.PrincipalId)) {
+                    Write-Host "    │  └─ ❌ Missing PrincipalId for Group assignment" -ForegroundColor Red
+                    $errorCounter++
+                    continue
+                }
+                
+                if ([string]::IsNullOrEmpty($assignment.GroupId)) {
+                    Write-Host "    │  └─ ❌ Missing GroupId for Group assignment" -ForegroundColor Red
+                    $errorCounter++
+                    continue
+                }
+                
+                # Verify the role type is valid
+                if ([string]::IsNullOrEmpty($roleName) -or $roleName -notmatch '^(member|owner)$') {
+                    Write-Host "    │  └─ ❌ Invalid role type for Group assignment: '$roleName'. Must be 'member' or 'owner'." -ForegroundColor Red
+                    $errorCounter++
+                    continue
+                }
+                
+                # Use uppercase 'ID' suffix as required by the command
+                $params['principalID'] = $assignment.PrincipalId  # Capital ID
+                $params['groupID'] = $assignment.GroupId          # Capital ID
+                $params['type'] = $roleName.ToLower()             # Lowercase type
+                
+                # Add extensive debugging just before executing command
+                Write-Verbose "Group Role command parameters:"
+                Write-Verbose ($params | ConvertTo-Json -Depth 3 -ErrorAction SilentlyContinue)
+                Write-Verbose "Command to execute: $($CommandMap.CreateCmd)"
+                
+                # Remove these parameters as they're handled differently for Group Roles
+                $params.Remove('principalId')  # Remove lowercase version if present
+                $params.Remove('groupId')      # Remove lowercase version if present
+                $params.Remove('roleName')     # Remove roleName if present
             }
             else {
                 # Standard parameters for other resource types
@@ -312,18 +362,19 @@
 
             if ($PSCmdlet.ShouldProcess($actionDescription)) {
                 try {
-                    # Add more debugging for the exact result
-                    Write-Verbose "Executing command: $($CommandMap.CreateCmd)"
-
+                    # Add more debugging for the exact parameters
+                    Write-Verbose "Final command parameters:"
+                    Write-Verbose ($params | ConvertTo-Json -Compress -Depth 3 -ErrorAction SilentlyContinue)
+                    
                     # Capture the output of the command
                     $result = & $CommandMap.CreateCmd @params
-
-                    # Improved result inspection
-                    Write-Verbose "Result type: $($result.GetType().FullName)"
-                    if ($null -ne $result) {
-                        Write-Verbose "Result structure: $($result | ConvertTo-Json -Compress -Depth 10 -ErrorAction SilentlyContinue)"
+                    
+                    # Log success even for null results with Group Roles
+                    if ($ResourceType -like "Group Role*") {
+                        Write-Verbose "Group role command executed. Result: $(if ($null -eq $result) { "null" } else { "success" })"
+                        $createCounter++
+                        Write-Host "    │  └─ ✅ Created successfully" -ForegroundColor Green
                     }
-
                     # Check if the result contains an error
                     $hasError = $false
 
@@ -409,13 +460,13 @@
     }
 
     # Output summary
-    Write-Output "`n┌────────────────────────────────────────────────────┐"
-    Write-Output "│ $ResourceType Assignments Summary"
-    Write-Output "├────────────────────────────────────────────────────┤"
-    Write-Output "│ ✅ Created: $createCounter"
-    Write-Output "│ ⏭️ Skipped: $skipCounter"
-    Write-Output "│ ❌ Failed:  $errorCounter"
-    Write-Output "└────────────────────────────────────────────────────┘`n"
+    write-host "`n┌────────────────────────────────────────────────────┐"
+    write-host "│ $ResourceType Assignments Summary"
+    write-host "├────────────────────────────────────────────────────┤"
+    write-host "│ ✅ Created: $createCounter"
+    write-host "│ ⏭️ Skipped: $skipCounter"
+    write-host "│ ❌ Failed:  $errorCounter"
+    write-host "└────────────────────────────────────────────────────┘`n"
 
     # Return the result object
     return $result
