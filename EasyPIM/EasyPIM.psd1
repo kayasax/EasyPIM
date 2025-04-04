@@ -133,7 +133,7 @@ PrivateData = @{
     PSData = @{
 
         # Tags applied to this module. These help with module discovery in online galleries.
-        Tags = @("Azure","PIM","Entra ID","PrivilegedIdentityManagement")
+        Tags = @("Azure","PIM","EntraID","PrivilegedIdentityManagement")
 
         # A URL to the license for this module.
         LicenseUri = 'https://github.com/kayasax/EasyPIM/blob/main/LICENSE'

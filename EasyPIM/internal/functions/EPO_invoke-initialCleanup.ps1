@@ -389,7 +389,7 @@
             if (($existing.PrincipalId -eq $params['principalID']) -and
                 ($existing.Type -eq $params['type'] -or $existing.RoleName -eq $params['type'])) {
                 # Display match info in normal output
-                $matchInfo = "principalId='$($existing.PrincipalId)' and memberType='$($existing.Type || $existing.RoleName)'"
+                $matchInfo = "principalId='$($existing.PrincipalId)' and memberType='$($existing.Type -or $existing.RoleName)'"
                 Write-Host "    │  ├─ 🔍 Match found: $matchInfo" -ForegroundColor Cyan
                 $assignmentExists = $true
                 break
