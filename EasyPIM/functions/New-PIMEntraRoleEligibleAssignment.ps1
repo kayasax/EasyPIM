@@ -25,7 +25,7 @@
     Create an active assignment fot the role Arcpush, starting at a specific date and using default duration
 
     PS> New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -rolename "webmaster" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -justification 'TEST' -permanent
-    
+
     Create a permanent active assignement for the role webmaster
 
     .Link
@@ -42,7 +42,7 @@ function New-PIMEntraRoleEligibleAssignment {
         [String]
         # Entra ID tenantID
         $tenantID,
-        
+
         [Parameter(Mandatory = $true)]
         [String]
         # Principal ID
@@ -70,7 +70,7 @@ function New-PIMEntraRoleEligibleAssignment {
         $permanent
 
     )
-    
+
     try {
         $script:tenantID = $tenantID
 
@@ -80,9 +80,9 @@ function New-PIMEntraRoleEligibleAssignment {
         #$response
 
         if ($response."@odata.type" -eq "#microsoft.graph.group" -and $response.isAssignableToRole -ne "True") {
-       
+
             throw "ERROR : The group $principalID is not role-assignable, exiting"
-       
+
         }
         if ($PSBoundParameters.Keys.Contains('startDateTime')) {
             $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime().addseconds(30) -f "yyyy-MM-ddTHH:mm:ssZ"
@@ -90,7 +90,7 @@ function New-PIMEntraRoleEligibleAssignment {
         else {
             $startDateTime = get-date (get-date).touniversaltime().addseconds(30) -f "yyyy-MM-ddTHH:mm:ssZ" #we get the date as UTC (remember to add a Z at the end or it will be translated to US timezone on import)
         }
-    
+
         write-verbose "Calculated date time start is $startDateTime"
         # 2 get role settings:
         $config = Get-PIMEntraRolePolicy -tenantID $tenantID -rolename $rolename
@@ -111,7 +111,7 @@ function New-PIMEntraRoleEligibleAssignment {
         if (!($PSBoundParameters.Keys.Contains('justification'))) {
             $justification = "Approved from EasyPIM module by  $($(get-azcontext).account)"
         }
-    
+
 
         $type = "AfterDuration"
         #$type="afterDateTime"

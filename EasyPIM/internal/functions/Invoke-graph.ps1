@@ -14,7 +14,7 @@
 
         will send an GET query to $URI and return the response
       .Link
-     
+
       .Notes
         Author: Loïc MICHEL
         Homepage: https://github.com/kayasax/EasyPIM
@@ -36,7 +36,7 @@ function invoke-graph {
 
     try {
         $graph = "https://graph.microsoft.com/$version/"
-    
+
         [string]$uri = $graph + $endpoint
         Write-Verbose "uri = $uri"
 
@@ -55,12 +55,12 @@ function invoke-graph {
 
             Connect-MgGraph -Tenant $script:tenantID -Scopes $scopes -NoWelcome
         }
-      
+
         if ( $body -ne "") {
-            Invoke-MgGraphRequest -Uri "$uri" -Method $Method -Body $body
+            Invoke-MgGraphRequest -Uri "$uri" -Method $Method -Body $body -SkipHttpErrorCheck
         }
         else {
-            Invoke-MgGraphRequest -Uri "$uri" -Method $Method
+            Invoke-MgGraphRequest -Uri "$uri" -Method $Method -SkipHttpErrorCheck
         }
     }
 

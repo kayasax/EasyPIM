@@ -30,7 +30,7 @@
 
         this message will be log to the file without any display
       .Link
-     
+
       .Notes
       	Changelog :
          * 27/08/2017 version initiale
@@ -52,22 +52,22 @@ function log {
 
     #do nothing if logging is disabled
     if ($true -eq $script:logToFile ) {
-     
+
         # When no logfile is specified we append .log to the scriptname
         if ( $null -eq $logfile ) {
             $logfile = "EasyPIM.log"
         }
-       
+
         # Create folder if needed
         if ( !(test-path  $logdir) ) {
             $null = New-Item -ItemType Directory -Path $logdir  -Force
         }
-         
+
         # Ensure logfile will be save in logdir
         if ( $logfile -notmatch [regex]::escape($logdir)) {
             $logfile = "$logdir\$logfile"
         }
-         
+
         # Create file
         if ( !(Test-Path $logfile) ) {
             write-verbose "$logfile not found, creating it"
@@ -77,21 +77,21 @@ function log {
             # file exists, do size exceeds limit ?
             if ( (get-childitem $logfile | Select-Object -expand length) -gt $Maxsize) {
                 write-host "$(Get-Date -Format yyyy-MM-dd HH:mm) - $(whoami) - $($MyInvocation.ScriptName) (L $($MyInvocation.ScriptLineNumber)) : Log size exceed $MaxSize, creating a new file." >> $logfile
-                 
+
                 # rename current logfile
                 $LogFileName = $($($LogFile -split "\\")[-1])
                 $basename = Get-ChildItem $LogFile | Select-Object -expand basename
                 $dirname = Get-ChildItem $LogFile | Select-Object -expand directoryname
-     
+
                 Write-Verbose "Rename-Item $LogFile ""$($LogFileName.substring(0,$LogFileName.length-4))-$(Get-Date -format yyyddMM-HHmmss).log"""
                 Rename-Item $LogFile "$($LogFileName.substring(0,$LogFileName.length-4))-$(Get-Date -format yyyddMM-HHmmss).log"
-     
+
                 # keep $Maxfile  logfiles and delete the older ones
                 $filesToDelete = Get-ChildItem  "$dirname\$basename*.log" | Sort-Object LastWriteTime -desc | Select-Object -Skip $Maxfile
                 $filesToDelete | remove-item  -force
             }
         }
-     
+
         write-output "$(Get-Date -Format "yyyy-MM-dd HH:mm:ss") - $(whoami) - $($MyInvocation.ScriptName) (L $($MyInvocation.ScriptLineNumber)) : $msg" >> $logfile
     }# end logging to file
 
@@ -115,5 +115,5 @@ function log {
         }
     }
 
-    
+
 }

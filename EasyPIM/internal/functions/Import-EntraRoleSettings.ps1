@@ -9,7 +9,7 @@
         PS> Import-EntraRoleSetting -path "c:\temp\myrole.csv"
 
         Import settings from file c:\temp\myrole.csv
-     
+
     .Notes
         Author: Loïc MICHEL
         Homepage: https://github.com/kayasax/EasyPIM
@@ -22,7 +22,7 @@ function Import-EntraRoleSettings  {
         [String]
         $path
     )
-    
+
 
 
     log "Importing setting from $path"
@@ -34,20 +34,20 @@ function Import-EntraRoleSettings  {
     $csv | ForEach-Object {
         $rules = @()
         $rules += Set-ActivationDuration $_.ActivationDuration -entrarole
-        
+
         $enablementRules = $_.EnablementRules.Split(',')
         $rules += Set-ActivationRequirement $enablementRules -entraRole
-        
+
        # $approvers = @()
        # $approvers += $_.approvers
-       
+
         $rules += Set-ApprovalFromCSV $_.ApprovalRequired $_.Approvers -entraRole
-        
-        
+
+
         $rules += Set-EligibilityAssignmentFromCSV $_.MaximumEligibleAssignmentDuration $_.AllowPermanentEligibleAssignment -entraRole
-         
+
         $rules += Set-ActiveAssignmentFromCSV $_.MaximumActiveAssignmentDuration $_.AllowPermanentActiveAssignment -entraRole
-           
+
         $Notification_EligibleAssignment_Alert = @{
             "isDefaultRecipientEnabled" = $_.Notification_Eligibility_Alert_isDefaultRecipientEnabled;
             "notificationLevel"         = $_.Notification_Eligibility_Alert_notificationLevel;
@@ -61,7 +61,7 @@ function Import-EntraRoleSettings  {
             "Recipients"                = $_.Notification_Eligibility_Assignee_Recipients.split(',')
         }
         $rules += Set-Notification_EligibleAssignment_Assignee $Notification_EligibleAssignment_Assignee -entraRole
-            
+
         $Notification_EligibleAssignment_Approver = @{
             "isDefaultRecipientEnabled" = $_.Notification_Eligibility_Approvers_isDefaultRecipientEnabled;
             "notificationLevel"         = $_.Notification_Eligibility_Approvers_notificationLevel;
@@ -75,14 +75,14 @@ function Import-EntraRoleSettings  {
             "Recipients"                = $_.Notification_Active_Alert_Recipients.split(',')
         }
         $rules += Set-Notification_ActiveAssignment_Alert $Notification_Active_Alert -EntraRole
-            
+
         $Notification_Active_Assignee = @{
             "isDefaultRecipientEnabled" = $_.Notification_Active_Assignee_isDefaultRecipientEnabled;
             "notificationLevel"         = $_.Notification_Active_Assignee_notificationLevel;
             "Recipients"                = $_.Notification_Active_Assignee_Recipients.split(',')
         }
         $rules += Set-Notification_ActiveAssignment_Assignee $Notification_Active_Assignee -entraRole
-            
+
         $Notification_Active_Approvers = @{
             "isDefaultRecipientEnabled" = $_.Notification_Active_Approvers_isDefaultRecipientEnabled;
             "notificationLevel"         = $_.Notification_Active_Approvers_notificationLevel;

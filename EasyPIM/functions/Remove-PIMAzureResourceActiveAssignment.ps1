@@ -61,10 +61,10 @@ function Remove-PIMAzureResourceActiveAssignment {
         # justification (will be auto generated if not provided)
         $justification
 
-     
+
 
     )
-    
+
     try {
         if (!($PSBoundParameters.Keys.Contains('scope'))) {
             if (!($PSBoundParameters.Keys.Contains('subscriptionID'))) {
@@ -76,15 +76,15 @@ function Remove-PIMAzureResourceActiveAssignment {
 
         $ARMhost = "https://management.azure.com"
         $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
-    
+
         #1 get role id
         $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$rolename'"
         $response = Invoke-ARM -restURI $restUri -method "get" -body $null
         $roleID = $response.value.id
         write-verbose "Getting role ID for $rolename at $restURI"
         write-verbose "role ID = $roleid"
-    
-    
+
+
 
         if ($PSBoundParameters.Keys.Contains('startDateTime')) {
             $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ"
@@ -93,14 +93,14 @@ function Remove-PIMAzureResourceActiveAssignment {
             $startDateTime = get-date (get-date).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ" #we get the date as UTC (remember to add a Z at the end or it will be translated to US timezone on import)
         }
         write-verbose "Calculated date time start is $startDateTime"
-    
-   
+
+
         if (!($PSBoundParameters.Keys.Contains('justification'))) {
             $justification = "Removed from EasyPIM module by  $($(get-azcontext).account)"
         }
 
         $type = "null"
-    
+
 
         $body = '
 {
@@ -122,7 +122,7 @@ function Remove-PIMAzureResourceActiveAssignment {
         $guid = New-Guid
         $restURI = "$armendpoint/roleAssignmentScheduleRequests/$($guid)?api-version=2020-10-01"
         write-verbose "sending PUT request at $restUri with body :`n $body"
-    
+
         $response = Invoke-ARM -restURI $restUri -method PUT -body $body -Verbose:$false
         Write-Host "SUCCESS : Assignment removed!"
         return $response

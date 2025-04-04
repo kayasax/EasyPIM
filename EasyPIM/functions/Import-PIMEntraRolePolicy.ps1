@@ -11,7 +11,7 @@
         PS> Import-PIMEntraRolePolicy -tenantID $tenantID -path "c:\temp\myrole.csv"
 
         Import settings from file c:\temp\myrole.csv
-     
+
     .Notes
         Author: Loïc MICHEL
         Homepage: https://github.com/kayasax/EasyPIM
@@ -29,9 +29,9 @@ function Import-PIMEntraRolePolicy {
         $Path
     )
     try{
-    
+
     $script:tenantID = $TenantID
-       
+
     #load settings
     Write-Verbose "Importing settings from $path"
     if ($PSCmdlet.ShouldProcess($path, "Importing policy from")) {

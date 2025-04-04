@@ -10,11 +10,11 @@
         PS> Set-Activationrequirement "Justification"
 
         A justification will be required to activate the role
-      
+
       .Link
-     
+
       .Notes
-      	
+
 #>
 function Set-ActivationRequirement($ActivationRequirement, [switch]$entraRole) {
     write-verbose "Set-ActivationRequirement : $($ActivationRequirement.length)"
@@ -26,7 +26,7 @@ function Set-ActivationRequirement($ActivationRequirement, [switch]$entraRole) {
     else {
         write-verbose "requirement is NOT nul"
         $formatedRules = '['
-            
+
         $ActivationRequirement | ForEach-Object {
             $formatedRules += '"'
             $formatedRules += "$_"
@@ -39,7 +39,7 @@ function Set-ActivationRequirement($ActivationRequirement, [switch]$entraRole) {
         $enabledRules = $formatedRules
         #Write-Verbose "************* $enabledRules "
     }
-            
+
     $properties = '{
                 "enabledRules": '+ $enabledRules + '
                 "id": "Enablement_EndUser_Assignment",

@@ -53,13 +53,13 @@ function Set-Notification_Activation_Alert($Notification_Activation_Alert, [swit
             "notificationRecipients": ['
             #write-verbose "recipient : $($Notification_ActiveAssignment_Assignee.Recipients)"
             If ( ($Notification_Activation_Alert.Recipients |Measure-Object |Select-Object -expand count) -gt 0 ){
-    
+
                 $Notification_Activation_Alert.Recipients | ForEach-Object {
                 $rule += '"' + $_ + '",'
             }
             $rule = $rule -replace ".$" #remove the last comma
             }
-        
+
             $rule += '],
             "target": {
                 "caller": "EndUser",

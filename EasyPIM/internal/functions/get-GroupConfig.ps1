@@ -11,7 +11,7 @@
         PS> get-config -scope $scope -rolename role1
 
         Get the policy of the role role1 at the specified scope
-     
+
     .Notes
         Author: Loïc MICHEL
         Homepage: https://github.com/kayasax/EasyPIM
@@ -19,14 +19,14 @@
 function get-Groupconfig ( $id, $type) {
 
     try {
-       
+
         $endpoint = "policies/roleManagementPolicyAssignments?`$filter=scopeId eq '$id' and scopeType eq 'Group' and roleDefinitionId eq '$type'&`$expand=policy(`$expand=rules)"
         $response = invoke-graph -Endpoint $endpoint
 
         $policyId=$response.value.policyid
         #$response
         # Get config values in a new object:
-    
+
 
         # Maximum end user activation duration in Hour (PT24H) // Max 24H in portal but can be greater
         $_activationDuration = ($response.value.policy.rules | Where-Object { $_.id -eq "Expiration_EndUser_Assignment" }).maximumDuration
@@ -51,7 +51,7 @@ function get-Groupconfig ( $id, $type) {
                     $_.userType = "user"
                     $_.id=$_.userID
                 }
-    
+
                 $_approvers += '@{"id"="' + $_.id + '";"description"="' + $_.description + '";"userType"="' + $_.userType + '"},'
             }
         }
@@ -66,7 +66,7 @@ function get-Groupconfig ( $id, $type) {
         }
         # maximum assignment eligibility duration
         $_maxAssignmentDuration = ($response.value.policy.rules | Where-Object { $_.id -eq "Expiration_Admin_Eligibility" }).maximumDuration
-        
+
         # pemanent activation
         $_activeExpirationRequired = ($response.value.policy.rules | Where-Object { $_.id -eq "Expiration_Admin_Assignment" }).isExpirationRequired
         if ($_activeExpirationRequired -eq "true") {
@@ -95,7 +95,7 @@ function get-Groupconfig ( $id, $type) {
         $_Notification_Active_Assignee = $response.value.policy.rules | Where-Object { $_.id -eq "Notification_Requestor_Admin_Assignment" }
         # Notification Active Assignment Approvers (Send notifications when members are assigned as active to this role: Request to approve a role assignment renewal/extension)
         $_Notification_Active_Approvers = $response.value.policy.rules | Where-Object { $_.id -eq "Notification_Approver_Admin_Assignment" }
-        
+
         # Notification Role Activation Alert (Send notifications when eligible members activate this role: Role activation alert)
         $_Notification_Activation_Alert = $response.value.policy.rules | Where-Object { $_.id -eq "Notification_Admin_EndUser_Assignment" }
         # Notification Role Activation Assignee (Send notifications when eligible members activate this role: Notification to activated user (requestor))
@@ -105,7 +105,7 @@ function get-Groupconfig ( $id, $type) {
 
 
         $config = [PSCustomObject]@{
-            
+
             PolicyID                                                     = $policyId
             ActivationDuration                                           = $_activationDuration
             EnablementRules                                              = $_enablementRules -join ','

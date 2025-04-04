@@ -13,11 +13,11 @@
         PS> Set-ActiveAssignment -MaximumActiveAssignmentDuration "P30D" -AllowPermanentActiveAssignment $false
 
         limit the active assignment duration to 30 days
-      
+
       .Link
-     
+
       .Notes
-      	
+
 #>
 function Set-ActiveAssignmentFromCSV($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment, [switch]$EntraRole) {
     write-verbose "Set-ActiveAssignmentFromCSV($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment)"
@@ -27,7 +27,7 @@ function Set-ActiveAssignmentFromCSV($MaximumActiveAssignmentDuration, $AllowPer
     else {
         $expire2 = "true"
     }
-            
+
     $rule = '
         {
         "isExpirationRequired": '+ $expire2 + ',
@@ -66,5 +66,5 @@ function Set-ActiveAssignmentFromCSV($MaximumActiveAssignmentDuration, $AllowPer
             }'
      }
     return $rule
-        
+
 }

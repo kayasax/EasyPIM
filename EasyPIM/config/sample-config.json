@@ -1,0 +1,87 @@
+{
+    "AzureRoles": [
+      {
+      "PrincipalId": "a621fbf5-d750-4e68-b898-2e2b41cd45c6", // PIM5
+      "Rolename": "Owner",
+      "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a"
+      },
+      {
+      "PrincipalIds": [
+        "8b22297b-d2b8-40b5-b387-74aa7368ec7d", // PIM_SG_EligibleToEntraRole
+        "a621fbf5-d750-4e68-b898-2e2b41cd45c6"  // PIM5 (adding as example)
+      ],
+      "Rolename": "Reader",
+      "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a"
+      },
+      {
+      "PrincipalId": "a621fbf5-d750-4e68-b898-2e2b41cd45c6", // PIM5
+      "Rolename": "Reader",
+      "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a/resourceGroups/RG-HUB"
+      },
+      {
+      "PrincipalId": "aec7e1be-91cf-41bf-b849-10e5ada8353c", // Admin group
+      "Rolename": "Owner",
+      "Scope": "/providers/Microsoft.Management/managementGroups/all_sub" //management group scope
+      }
+    ],
+    "AzureRolesActive": [
+      {
+        "PrincipalId": "a621fbf5-d750-4e68-b898-2e2b41cd45c6",
+        "Rolename": "Reader",
+        "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a",
+        "Duration": "PT8H"
+      }
+    ],
+    "EntraIDRoles": [
+      {
+        "PrincipalIds": [
+          "a621fbf5-d750-4e68-b898-2e2b41cd45c6",
+          "9f2aacfc-8c80-41a7-ba07-121e0cb29757"  // Adding Loic as example
+        ],
+        "Rolename": "Security Reader",
+        "Duration": "P90D"
+      }
+    ],
+    "EntraIDRolesActive": [
+      {
+      "PrincipalId": "40ff8eca-f7f5-43cc-b6f7-e10701f2214a", //PIM4
+      "Rolename": "Guest Inviter",
+      "Duration": "P1D"
+      }
+    ],
+    "GroupRoles": [
+      {
+      "PrincipalIds": [
+"a621fbf5-d750-4e68-b898-2e2b41cd45c6",
+          "9f2aacfc-8c80-41a7-ba07-121e0cb29757" 
+      ],
+      "Rolename": "Owner",
+      "GroupId": "8737e307-5069-43e9-9545-931f1ca4957f" //MSI
+      },
+      {
+      "PrincipalId": "00000000-0000-0000-0000-000000000009",
+      "Rolename": "Member",
+      "GroupId": "00000000-0000-0000-0000-000000000021"
+      },
+      {
+        "PrincipalIds": ["00000000-0000-0000-0000-000000000009",
+        "7dbf49ad-f2be-42fa-b522-3bc99fc56c80" // loic MS
+      ],
+        "Rolename": "Member",
+        "GroupId": "aec7e1be-91cf-41bf-b849-10e5ada8353c"
+        }
+    ],
+    "GroupRolesActive": [
+      {
+      "PrincipalId": "40ff8eca-f7f5-43cc-b6f7-e10701f2214a",
+      "Rolename": "Owner",
+      "GroupId": "95b0527c-51af-43b7-884d-2a4fefb67447",
+      "Duration": "P30D"
+      }
+    ],
+    "ProtectedUsers": [
+      "7a55ec4d-028e-4ff1-8ee9-93da07b6d5d5", // BG
+      "9f2aacfc-8c80-41a7-ba07-121e0cb29757",  // Loic
+      "aec7e1be-91cf-41bf-b849-10e5ada8353c" // PIM GLobal Admin Group
+    ]
+}

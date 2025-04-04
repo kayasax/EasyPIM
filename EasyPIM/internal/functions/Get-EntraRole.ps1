@@ -10,7 +10,7 @@
 
         Get all roles
       .Link
-     
+
       .Notes
 #>
 function Get-Entrarole {
@@ -25,7 +25,7 @@ function Get-Entrarole {
 
     write-verbose "Getting All Policies at $endpoint"
     $response = invoke-graph -Endpoint $endpoint
-    
+
     $roles = $response | ForEach-Object {
         $_.value.displayname
     }

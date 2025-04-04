@@ -10,11 +10,11 @@
         PS> Set-ActiveAssignmentRequirement "Justification"
 
         A justification will be required to activate the role
-      
+
       .Link
-     
+
       .Notes
-      	
+
 #>
 function Set-ActiveAssignmentRequirement($ActiveAssignmentRequirement, [switch]$entraRole) {
     write-verbose "Set-ActiveAssignmentRequirementt : $($ActiveAssignmentRequirement.length)"
@@ -26,7 +26,7 @@ function Set-ActiveAssignmentRequirement($ActiveAssignmentRequirement, [switch]$
     else {
         write-verbose "requirement is NOT null"
         $formatedRules = '['
-            
+
         $ActiveAssignmentRequirement | ForEach-Object {
             $formatedRules += '"'
             $formatedRules += "$_"
@@ -39,7 +39,7 @@ function Set-ActiveAssignmentRequirement($ActiveAssignmentRequirement, [switch]$
         $enabledRules = $formatedRules
         #Write-Verbose "************* $enabledRules "
     }
-            
+
     $properties = '{
                 "enabledRules": '+ $enabledRules + '
                 "id": "Enablement_Admin_Assignment",

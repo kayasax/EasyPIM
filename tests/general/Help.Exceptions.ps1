@@ -1,6 +1,6 @@
 ﻿# List of functions that should be ignored
 $global:FunctionHelpTestExceptions = @(
-    
+
 )
 
 <#
@@ -10,7 +10,7 @@ $global:FunctionHelpTestExceptions = @(
   "Sqlcollaborative.Dbatools.Connection.ManagementConnectionType[]"
 #>
 $global:HelpTestEnumeratedArrays = @(
-	
+
 )
 
 <#
@@ -24,5 +24,5 @@ $global:HelpTestEnumeratedArrays = @(
 $global:HelpTestSkipParameterType = @{
   Set-Notification_ActiveAssignment_Assignee=@(Notification_ActiveAssignment_Assignee);
   Set-Notification_EligibleAssignment_Alert=@(Notification_EligibleAssignment_Alert);
-    
+
 }

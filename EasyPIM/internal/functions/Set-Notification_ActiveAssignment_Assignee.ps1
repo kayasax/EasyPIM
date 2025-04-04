@@ -61,7 +61,7 @@ set the notification sent to assignee when active assignment is created
             $rule += '"' + $_ + '",'
         }
         $rule = $rule -replace ".$" #remove the last comma
-        
+
     }
         $rule += '],
         "target": {

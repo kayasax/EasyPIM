@@ -14,7 +14,7 @@
 
         Export settings of "Global Reader" and "Directory Writers" roles to file c:\temp\role.csv
       .Link
-     
+
       .Notes
         Author: Loïc MICHEL
         Homepage: https://github.com/kayasax/EasyPIM
@@ -29,7 +29,7 @@
         [Parameter(Position = 1, Mandatory = $true)]
         [System.String[]]
         $rolename,
-        
+
         [Parameter(Position = 2)]
         [System.String]
         $path
@@ -37,16 +37,16 @@
     try {
 
         $script:tenantID = $tenantID
-   
+
         Write-Verbose "Export-PIMEntraRolePolicy start with parameters: subscription => $subscriptionID, rolename=> $rolename, exportFilname => $path"
-        
-        
+
+
         # Array to contain the settings of each selected roles
         $exports = @()
 
         # run the flow for each role name.
         $rolename | ForEach-Object {
-         
+
             #get curent config
             $config = get-EntraRoleconfig $_
             $exports += $config

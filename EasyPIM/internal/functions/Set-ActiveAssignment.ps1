@@ -13,11 +13,11 @@
     PS> Set-ActiveAssignment -MaximumActiveAssignmentDuration "P30D" -AllowPermanentActiveAssignment $false
 
     limit the active assignment duration to 30 days
-    
+
     .Link
-    
+
     .Notes
-    
+
 #>
 function Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment, [switch]$EntraRole) {
     write-verbose "Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment)"
@@ -27,7 +27,7 @@ function Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentA
     else {
         $expire2 = "true"
     }
-            
+
     $rule = '
         {
         "isExpirationRequired": '+ $expire2 + ',
@@ -65,5 +65,5 @@ if($EntraRole){
         }'
  }
     return $rule
-        
+
 }

@@ -10,7 +10,7 @@
 
         Get all roles then for each get the policy
       .Link
-     
+
       .Notes
 #>
 function Get-AllPolicies {
@@ -21,7 +21,7 @@ function Get-AllPolicies {
       [string]
       $scope
   )
-    
+
     $ARMhost = "https://management.azure.com"
     $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
     $restUri = "$ARMendpoint/roleDefinitions?`$select=roleName&api-version=2022-04-01"

@@ -29,7 +29,7 @@
     Remove the active assignment for the role Arcpush and principal $principalID, at a specific date
 
     PS> Remove-PIMEntraRoleActiveAssignment -tenantID $tenantID -rolename "webmaster" -principalname "loic" -justification 'TEST'
-    
+
     Remove the active assignement for the role webmaster and username "loic"
 
     .Link
@@ -46,7 +46,7 @@ function Remove-PIMEntraRoleActiveAssignment {
         [String]
         # Entra ID tenantID
         $tenantID,
-        
+
         [Parameter(Mandatory = $true)]
         [String]
         # Principal ID
@@ -66,18 +66,18 @@ function Remove-PIMEntraRoleActiveAssignment {
         $justification
 
     )
-    
+
     try {
         $script:tenantID = $tenantID
 
-    
+
         if ($PSBoundParameters.Keys.Contains('startDateTime')) {
             $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime().addseconds(30) -f "yyyy-MM-ddTHH:mm:ssZ"
         }
         else {
             $startDateTime = get-date (get-date).touniversaltime().addseconds(30) -f "yyyy-MM-ddTHH:mm:ssZ" #we get the date as UTC (remember to add a Z at the end or it will be translated to US timezone on import)
         }
-    
+
         write-verbose "Calculated date time start is $startDateTime"
         # 2 get role settings:
         $config = Get-PIMEntraRolePolicy -tenantID $tenantID -rolename $rolename
@@ -98,7 +98,7 @@ function Remove-PIMEntraRoleActiveAssignment {
         if (!($PSBoundParameters.Keys.Contains('justification'))) {
             $justification = "Approved from EasyPIM module by  $($(get-azcontext).account)"
         }
-    
+
 
         $type = "AfterDuration"
         #$type="afterDateTime"

@@ -29,7 +29,7 @@
     Create an eligible assignment fot the role Arcpush, starting at a specific date and using default duration
 
     PS> New-PIMAzureResourceEligibleAssigment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "webmaster" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -justification 'TEST' -permanent
-    
+
     Create a permanent eligible assignement for the role webmaster
 
 
@@ -85,7 +85,7 @@ function New-PIMAzureResourceEligibleAssignment {
         $permanent
 
     )
-    
+
     try {
         if (!($PSBoundParameters.Keys.Contains('scope'))) {
             if (!($PSBoundParameters.Keys.Contains('subscriptionID'))) {
@@ -104,7 +104,7 @@ function New-PIMAzureResourceEligibleAssignment {
         write-verbose "Getting role ID for $rolename at $restURI"
         write-verbose "role ID = $roleid"
 
-    
+
 
         if ($PSBoundParameters.Keys.Contains('startDateTime')) {
             $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ"
@@ -113,7 +113,7 @@ function New-PIMAzureResourceEligibleAssignment {
             $startDateTime = get-date (get-date).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ" #we get the date as UTC (remember to add a Z at the end or it will be translated to US timezone on import)
         }
         write-verbose "Calculated date time start is $startDateTime"
-    
+
         # get role settings:
         $config = Get-PIMAzureResourcePolicy -tenantID $tenantID -scope $scope -rolename $rolename
 
@@ -159,7 +159,7 @@ function New-PIMAzureResourceEligibleAssignment {
         $guid = New-Guid
         $restURI = "$armendpoint/roleEligibilityScheduleRequests/$($guid)?api-version=2020-10-01"
         write-verbose "sending PUT request at $restUri with body :`n $body"
-    
+
         $response = Invoke-ARM -restURI $restUri -method PUT -body $body -Verbose:$false
         Write-Host "SUCCESS : Assignment created!"
         return $response

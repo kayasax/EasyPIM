@@ -12,7 +12,7 @@
 
         Update $policyID with rules $rules
       .Link
-     
+
       .Notes
 #>
 function Update-EntraRolePolicy  {
@@ -32,8 +32,8 @@ function Update-EntraRolePolicy  {
         '+ $rules +
     ']
     }'
-    
-    
+
+
     write-verbose "`n>> PATCH body: $body"
     write-verbose "Patch endpoint : $endpoint"
     $response = invoke-graph -Endpoint $endpoint -Method "PATCH" -Body $body

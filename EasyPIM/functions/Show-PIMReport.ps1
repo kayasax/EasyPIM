@@ -1,19 +1,19 @@
 ﻿<#
     .Synopsis
     Visualize PIM activities
-      
+
     .Description
     Visualire PIM activities
-    
+
     .Example
     PS> Get-PIMReport -tennantID $tenantID
 
-    
+
 
     .Notes
     Author: Loïc MICHEL
     Homepage: https://github.com/kayasax/EasyPIM
-    
+
 #>
 function Show-PIMReport {
     [CmdletBinding(DefaultParameterSetName = 'Default')]
@@ -52,7 +52,7 @@ function Show-PIMReport {
 
         #filter activities from the PIM service and completed activities
         $allresults = $allresults | Where-Object { $null -ne $_.initiatedby.values.userprincipalname } | Where-Object { $_.activityDisplayName -notmatch "completed" }
-        
+
         #check if upn parameter is set using psboundparameters
         if ($PSBoundParameters.ContainsKey('upn')) {
             Write-Verbose "Filtering activities for $upn"
@@ -62,7 +62,7 @@ function Show-PIMReport {
                 return
             }
         }
-        
+
         $Myoutput = @()
 
         $allresults | ForEach-Object {
@@ -102,28 +102,28 @@ function Show-PIMReport {
             $stats_category[$_.Name] = $_.Count
         }
         $props["category"] = $stats_category
-    
+
         $stats_requestor = @{}
         $requestors = $Myoutput | Group-Object -Property initiatedBy | Sort-Object -Property Count -Descending | select-object -first 10
         $requestors | ForEach-Object {
             $stats_requestor[$_.Name] = $_.Count
         }
         $props["requestor"] = $stats_requestor
-    
+
         $stats_result = @{}
         $results = $Myoutput | Group-Object -Property result
         $results | ForEach-Object {
             $stats_result[$_.Name] = $_.Count
         }
         $props["result"] = $stats_result
-    
+
         $stats_activity = @{}
         $activities = $Myoutput | Group-Object -Property activityDisplayName
         $activities | ForEach-Object {
             if ($_.Name -notmatch "completed") {
                 $stats_activity[$_.Name] = $_.Count
             }
-                
+
         }
         $props["activity"] = $stats_activity
 
@@ -140,7 +140,7 @@ function Show-PIMReport {
             $stats_resource[$_.Name] = $_.Count
         }
         $props["targetresource"] = $stats_resource
-    
+
         $stats_role = @{}
         $targetrole = $Myoutput | Where-Object { $_.category -match "role" } | Group-Object -Property role | Sort-Object -Property Count -Descending | select-object -first 10
         $targetrole | ForEach-Object {
@@ -156,13 +156,13 @@ function Show-PIMReport {
 
         #building the dynamic part of the report
         $myscript = "
-        
+
             <script>
             Chart.defaults.plugins.title.font.size = 18;
             Chart.defaults.plugins.title.color='#DDDDDD';
             Chart.defaults.plugins.legend.labels.color='#ffff99';
             Chart.defaults.scale.ticks.color = '#ffff99';
-            
+
                 const ctx = document.getElementById('myChart');
                 new Chart(ctx, {
                     type: 'pie',
@@ -195,7 +195,7 @@ function Show-PIMReport {
                         plugins: {
                             legend: {
                                 display: true,
-        
+
                                 position: 'right',
                             },
                             title: {
@@ -206,11 +206,11 @@ function Show-PIMReport {
                                     top: 10
                                 }
                             }
-        
+
                         }
                     }
                 });
-        
+
                 const ctx4 = document.getElementById('activities');
                 new Chart(ctx4, {
                     type: 'pie',
@@ -220,9 +220,9 @@ function Show-PIMReport {
             $myscript += "'" + $_ + "',"
         }
         $myscript = $myscript.Replace(",$", "") #remove the last comma
-                            
+
         $myscript += "],
-        
+
                         datasets: [{
                             label: '# of activities',
                             data: ["
@@ -245,7 +245,7 @@ function Show-PIMReport {
                         plugins: {
                             legend: {
                                 display: true,
-        
+
                                 position: 'right',
                             },
                             title: {
@@ -256,11 +256,11 @@ function Show-PIMReport {
                                     top: 10
                                 }
                             }
-        
+
                         }
                     }
                 });
-        
+
                 const ctx2 = document.getElementById('result');
                 new Chart(ctx2, {
                     type: 'pie',
@@ -273,8 +273,8 @@ function Show-PIMReport {
         $myscript += "','"
         $myscript += $props.result['failure']
         $myscript += "'"
-        
-        
+
+
         $myscript += "],
                             backgroundColor: [
                                 'rgb(0, 255, 0)',
@@ -294,7 +294,7 @@ function Show-PIMReport {
                         plugins: {
                             legend: {
                                 display: true,
-        
+
                                 position: 'right',
                             },
                             title: {
@@ -305,15 +305,15 @@ function Show-PIMReport {
                                     top: 10
                                 }
                             },
-        
-        
+
+
                         }
-        
-        
+
+
                     }
                 });
-        
-        
+
+
                 const ctx3 = document.getElementById('requestor');
                 new Chart(ctx3, {
                     type: 'bar',
@@ -332,19 +332,19 @@ function Show-PIMReport {
         }
         $myscript = $myscript.Replace(",$", "") #remove the last comma
         $myscript += "],
-        
+
                             hoverOffset: 10
                         }]
                     },
                     options: {
                         responsive: false,
-        
-        
+
+
                         indexAxis: 'y',
                         plugins: {
                             legend: {
                                 display: false,
-        
+
                                 position: 'right',
                             },
                             title: {
@@ -355,14 +355,14 @@ function Show-PIMReport {
                                     top: 10
                                 }
                             },
-        
-        
+
+
                         }
-        
-        
+
+
                     }
                 });
-        
+
                 const ctx5 = document.getElementById('Groups');
                 new Chart(ctx5, {
                     type: 'bar',
@@ -381,19 +381,19 @@ function Show-PIMReport {
         }
         $myscript = $myscript.Replace(",$", "") #remove the last comma
         $myscript += "],
-        
+
                             hoverOffset: 10
                         }]
                     },
                     options: {
                         responsive: false,
-        
-        
+
+
                         indexAxis: 'y',
                         plugins: {
                             legend: {
                                 display: false,
-        
+
                                 position: 'right',
                             },
                             title: {
@@ -404,11 +404,11 @@ function Show-PIMReport {
                                     top: 10
                                 }
                             },
-        
-        
+
+
                         }
-        
-        
+
+
                     }
                 });
 
@@ -430,19 +430,19 @@ function Show-PIMReport {
         }
         $myscript = $myscript.Replace(",$", "") #remove the last comma
         $myscript += "],
-        
+
                             hoverOffset: 10
                         }]
                     },
                     options: {
                         responsive: false,
-        
-        
+
+
                         indexAxis: 'y',
                         plugins: {
                             legend: {
                                 display: false,
-        
+
                                 position: 'right',
                             },
                             title: {
@@ -453,11 +453,11 @@ function Show-PIMReport {
                                     top: 10
                                 }
                             },
-        
-        
+
+
                         }
-        
-        
+
+
                     }
                 });
 
@@ -479,19 +479,19 @@ function Show-PIMReport {
         }
         $myscript = $myscript.Replace(",$", "") #remove the last comma
         $myscript += "],
-        
+
                             hoverOffset: 10
                         }]
                     },
                     options: {
                         responsive: false,
-        
-        
+
+
                         indexAxis: 'y',
                         plugins: {
                             legend: {
                                 display: false,
-        
+
                                 position: 'right',
                             },
                             title: {
@@ -502,18 +502,18 @@ function Show-PIMReport {
                                     top: 10
                                 }
                             },
-        
-        
+
+
                         }
-        
-        
+
+
                     }
                 });
-        
+
             </script>
-           
+
         </body>
-        
+
         </html>"
 
         #$myscript
@@ -578,7 +578,7 @@ function Show-PIMReport {
         width: 200px;
         /* Adjust as needed */
         height: 200px;
-       
+
         /* Adjust as needed */
         padding: 10px;
         /* Adjust as needed */
@@ -647,7 +647,7 @@ $html += @'
                 <code>$r | where-object {$_.result -eq "Failure"}</code>
             </div>
         </div>
-    
+
 
     <div class="row">
         <div class="chart">

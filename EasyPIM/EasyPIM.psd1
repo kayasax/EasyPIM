@@ -4,7 +4,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.7.7'
+ModuleVersion = '1.7.8'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -105,7 +105,8 @@ FunctionsToExport = @(
     'Approve-PIMGroupPendingApproval',
     'Deny-PIMGroupPendingApproval',
     'Copy-PIMAzureResourceEligibleAssignment',
-    'Copy-PIMEntraRoleEligibleAssignment'
+    'Copy-PIMEntraRoleEligibleAssignment',
+    'Invoke-EasyPIMOrchestrator'
 )
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
@@ -132,7 +133,7 @@ PrivateData = @{
     PSData = @{
 
         # Tags applied to this module. These help with module discovery in online galleries.
-        Tags = @("Azure","PIM","EntraID","Identity","PrivilegedIdentityManagement")
+        Tags = @("Azure","PIM","EntraID","PrivilegedIdentityManagement")
 
         # A URL to the license for this module.
         LicenseUri = 'https://github.com/kayasax/EasyPIM/blob/main/LICENSE'
@@ -144,7 +145,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        # ReleaseNotes = ''
+        #ReleaseNotes = ''
 
         # Prerelease string of this module
         # Prerelease = ''

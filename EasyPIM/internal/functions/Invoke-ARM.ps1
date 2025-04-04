@@ -14,7 +14,7 @@
 
         will send an GET query to $restURI and return the response
       .Link
-     
+
       .Notes
         Author: Loïc MICHEL
         Homepage: https://github.com/kayasax/EasyPIM
@@ -46,7 +46,25 @@ function Invoke-ARM {
 
         #TODO need better way to handle mangement group scope!!
         if($restURI -notmatch "managementgroups"){
-            $script:subscriptionID=[regex]::Matches($restURI,".*\/subscriptions\/(.*)\/providers.*$").groups[1].Value
+            $subscriptionMatches = [regex]::Matches($restURI,".*\/subscriptions\/([^\/]*).*")
+            if ($subscriptionMatches.Count -gt 0 -and $subscriptionMatches.Groups.Count -gt 1) {
+                $script:subscriptionID = $subscriptionMatches.Groups[1].Value
+            } else {
+                # If we can't extract it from the URI, try to use the one passed to the function
+                if ($null -eq $script:subscriptionID -and $PSBoundParameters.ContainsKey('subscriptionID')) {
+                    $script:subscriptionID = $PSBoundParameters['subscriptionID']
+                }
+
+                # Still null? Use the one from ApiInfo
+                if ($null -eq $script:subscriptionID -and $ApiInfo -and $ApiInfo.Subscriptions -and $ApiInfo.Subscriptions.Count -gt 0) {
+                    $script:subscriptionID = $ApiInfo.Subscriptions[0]
+                }
+
+                # If we still don't have a subscription ID, we need to throw a better error
+                if ($null -eq $script:subscriptionID) {
+                    throw "Could not determine subscription ID. Please provide it explicitly."
+                }
+            }
 
 
             if ( $null -eq (get-azcontext) -or ( (get-azcontext).Tenant.Id -ne $script:tenantID ) ) {
@@ -54,15 +72,15 @@ function Invoke-ARM {
                 Connect-AzAccount -Tenantid $script:tenantID -Subscription $script:subscriptionID
             }
         }
-        
-    
+
+
         #replaced with invoke-azrestmethod
         <#
         # Get access Token
         Write-Verbose ">> Getting access token"
         # now this will return a securestring https://learn.microsoft.com/en-us/powershell/azure/upcoming-breaking-changes?view=azps-12.2.0#get-azaccesstoken
         $token = Get-AzAccessToken -AsSecureString
-                
+
         # setting the authentication headers for MSGraph calls
         $authHeader = @{
             'Content-Type'  = 'application/json'
@@ -82,7 +100,7 @@ function Invoke-ARM {
         else {
             $response=Invoke-AZRestMethod -Method $method -Uri $restURI
         }
-        
+
         return $response.content | convertfrom-json
 
     }

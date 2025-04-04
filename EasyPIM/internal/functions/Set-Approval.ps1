@@ -13,11 +13,11 @@
     PS> Set-Approval -ApprovalRequired $true -Approvers @(@{"Id"=$UID;"Name"="John":"Type"="user"}, @{"Id"=$GID;"Name"="Group1":"Type"="group"})
 
     define John and Group1 as approvers and require approval
-    
+
     .Link
-    
+
     .Notes
-    
+
 #>
 function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
     try {
@@ -41,7 +41,7 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
 "escalationApprovers":[]
 }]}}]}
     #>
-    
+
         $rule = '{
     "id":"Approval_EndUser_Assignment",
     "ruleType":"RoleManagementPolicyApprovalRule",
@@ -159,13 +159,13 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
             ],
             "level": "Assignment",
             "targetObjects": null
-                
+
             },
-            
+
 
             "inheritableSettings": null,
             "enforcedSettings": null
-        
+
         }}'
 #>
 
@@ -199,14 +199,14 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
                     "primaryApprovers": ['
             if ($null -ne $Approvers) {
                 #at least one approver required if approval is enable
-                           
+
                 $cpt = 0
                 $Approvers | ForEach-Object {
                     #write-host $_
                     $id = $_.Id
                     $name = $_.Name
                     ##$type = $_.Type
-                    
+
                     if ($cpt -gt 0) {
                         $rule += ","
                     }
@@ -220,10 +220,10 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
                                 '
                     $cpt++
                 }
-                    
+
                 $rule += '
-                                
-                        
+
+
                     ],
                     "escalationApprovers": []
                 }

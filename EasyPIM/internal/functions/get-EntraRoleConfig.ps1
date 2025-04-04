@@ -9,14 +9,14 @@
         PS> get-EntraRoleConfig -rolename "Global Administrator","Global Reader"
 
         Get the policy of the roles
-     
+
     .Notes
         Author: Loïc MICHEL
         Homepage: https://github.com/kayasax/EasyPIM
      #>
 function Get-EntraRoleConfig ($rolename) {
     try {
-        
+
         # 1 Get roleID for $rolename
         $endpoint = "roleManagement/directory/roleDefinitions?`$filter=displayname eq '$rolename'"
         $response = invoke-graph -Endpoint $endpoint
@@ -39,7 +39,7 @@ function Get-EntraRoleConfig ($rolename) {
         $response = invoke-graph -Endpoint $endpoint
         #$response.value.properties
 
-      
+
         #$response
         # Get config values in a new object:
 
@@ -67,11 +67,11 @@ function Get-EntraRoleConfig ($rolename) {
                     $_.userType = "user"
                     $_.id=$_.userID
                 }
-    
+
                 $_approvers += '@{"id"="' + $_.id + '";"description"="' + $_.description + '";"userType"="' + $_.userType + '"},'
             }
         }
-        
+
 
         # permanent assignmnent eligibility
         $_eligibilityExpirationRequired = $($response.value | Where-Object { $_.id -eq "Expiration_Admin_Eligibility" }).isExpirationRequired
@@ -83,7 +83,7 @@ function Get-EntraRoleConfig ($rolename) {
         }
         # maximum assignment eligibility duration
         $_maxAssignmentDuration = $($response.value | Where-Object { $_.id -eq "Expiration_Admin_Eligibility" }).maximumDuration
-        
+
         # pemanent activation
         $_activeExpirationRequired = $($response.value | Where-Object { $_.id -eq "Expiration_Admin_Assignment" }).isExpirationRequired
         if ($_activeExpirationRequired -eq "true") {
@@ -112,7 +112,7 @@ function Get-EntraRoleConfig ($rolename) {
         $_Notification_Active_Assignee = $response.value | Where-Object { $_.id -eq "Notification_Requestor_Admin_Assignment" }
         # Notification Active Assignment Approvers (Send notifications when members are assigned as active to this role: Request to approve a role assignment renewal/extension)
         $_Notification_Active_Approvers = $response.value | Where-Object { $_.id -eq "Notification_Approver_Admin_Assignment" }
-        
+
         # Notification Role Activation Alert (Send notifications when eligible members activate this role: Role activation alert)
         $_Notification_Activation_Alert = $response.value | Where-Object { $_.id -eq "Notification_Admin_EndUser_Assignment" }
         # Notification Role Activation Assignee (Send notifications when eligible members activate this role: Notification to activated user (requestor))

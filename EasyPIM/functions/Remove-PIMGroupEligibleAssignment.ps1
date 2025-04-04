@@ -29,7 +29,7 @@
     Create an active assignment fot the role Arcpush, starting at a specific date and using default duration
 
     PS> New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "webmaster" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -justification 'TEST' -permanent
-    
+
     Create a permanent active assignement for the role webmaster
 
     .Link
@@ -46,7 +46,7 @@ function Remove-PIMGroupEligibleAssignment {
         [String]
         # Entra ID tenantID
         $tenantID,
-        
+
         [Parameter(Mandatory = $true)]
         [String]
         # Principal ID
@@ -80,18 +80,18 @@ function Remove-PIMGroupEligibleAssignment {
         $permanent
 
     )
-    
+
     try {
         $script:tenantID = $tenantID
 
-    
+
         if ($PSBoundParameters.Keys.Contains('startDateTime')) {
             $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime().addseconds(30) -f "yyyy-MM-ddTHH:mm:ssZ"
         }
         else {
             $startDateTime = get-date (get-date).touniversaltime().addseconds(30) -f "yyyy-MM-ddTHH:mm:ssZ" #we get the date as UTC (remember to add a Z at the end or it will be translated to US timezone on import)
         }
-    
+
         write-verbose "Calculated date time start is $startDateTime"
         # 2 get role settings:
         $config = Get-PIMGroupPolicy -tenantID $tenantID -groupID $groupid -type $type
@@ -112,7 +112,7 @@ function Remove-PIMGroupEligibleAssignment {
         if (!($PSBoundParameters.Keys.Contains('justification'))) {
             $justification = "Approved from EasyPIM module by  $($(get-azcontext).account)"
         }
-    
+
 
         $exptype = "AfterDuration"
         #$type="afterDateTime"

@@ -13,11 +13,11 @@
         PS> Set-Approval -ApprovalRequired $true -Approvers @(@{"Id"=$UID;"Name"="John":"Type"="user"}, @{"Id"=$GID;"Name"="Group1":"Type"="group"})
 
         define John and Group1 as approvers and require approval
-      
+
       .Link
-     
+
       .Notes
-      	
+
 #>
 function Set-ApprovalFromCSV  {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingInvokeExpression", "")]
@@ -33,7 +33,7 @@ function Set-ApprovalFromCSV  {
     write-verbose "Set-ApprovalFromCSV"
     if ($null -eq $Approvers) { $Approvers = $script:config.Approvers }
 if ($ApprovalRequired -eq "FALSE") { $req = "false" }else { $req = "true" }
-    
+
     if (!$entraRole) {
         $rule = '
         {
@@ -41,7 +41,7 @@ if ($ApprovalRequired -eq "FALSE") { $req = "false" }else { $req = "true" }
         if ($null -ne $ApprovalRequired) {
             $rule += '"isApprovalRequired":' + $req + ','
         }
-       
+
         $rule += '
         "isApprovalRequiredForExtension": false,
         "isRequestorJustificationRequired": true,
@@ -69,11 +69,11 @@ if ($ApprovalRequired -eq "FALSE") { $req = "false" }else { $req = "true" }
             '
             $cpt = 0
             $Appr| ForEach-Object {
-                
+
                 $id = $_.id
                 $name = $_.description
                 $type = $_.userType
-    
+
                 if ($cpt -gt 0) {
                     $rule += ","
                 }
@@ -106,12 +106,12 @@ if ($ApprovalRequired -eq "FALSE") { $req = "false" }else { $req = "true" }
             "targetObjects": null,
             "inheritableSettings": null,
             "enforcedSettings": null
-        
+
         }}'
     }
 
     if ($entraRole) {
-        
+
         $rule = '
             {
                 "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyApprovalRule",
@@ -141,7 +141,7 @@ if ($ApprovalRequired -eq "FALSE") { $req = "false" }else { $req = "true" }
                             "primaryApprovers": ['
         if (($null -ne $Approvers) -and ("" -ne $Approvers)) {
             #at least one approver required if approval is enable
-                                   
+
             $cpt = 0
             # write-verbose "approvers: $approvers"
             $Approvers = $Approvers -replace ",$" # remove the last comma
@@ -151,11 +151,11 @@ if ($ApprovalRequired -eq "FALSE") { $req = "false" }else { $req = "true" }
                 $id = $_.id
                 $name = $_.description
                 #$type = $_.userType
-                        
+
                 if ($cpt -gt 0) {
                     $rule += ","
                 }
-            
+
                 $rule += '
             {
                 "@odata.type": "#microsoft.graph.singleUser",
@@ -168,15 +168,15 @@ if ($ApprovalRequired -eq "FALSE") { $req = "false" }else { $req = "true" }
             }
         }
         $rule += '
-                                        
-                                
+
+
                             ],
                             "escalationApprovers": []
                         }
                     ]
                 }
             }'
-        
+
     }
     return $rule
 }

@@ -6,7 +6,7 @@ Get-PIMEntraRolePolicy will return the policy rules (like require MFA on activat
 Support querrying multi roles at once
 
 .Description
- 
+
 Deny-PIMAzureResourcePendingApproval will deny request
 
 .PARAMETER approvalID
@@ -19,9 +19,9 @@ justification for the deny
        PS> Deny-PIMAzureResourcePendingApproval -approvalID $approvalID -justification "You don't need this role"
 
        Deny a pending request
-    
+
 .Link
-   
+
 .Notes
     Homepage: https://github.com/kayasax/easyPIM
     Author: MICHEL, Loic
@@ -43,14 +43,14 @@ function Deny-PIMAzureResourcePendingApproval {
         [System.String]
         # justification
         $justification
-        
+
     )
     process{
     try {
         $script:tenantID = $tenantID
 
         Write-Verbose "approve-PIMAzureResourcePendingApproval start with parameters: approvalid => $approvalID, justification => $justification"
-               
+
         #Get the stages:
         #Role Assignment Approval Steps - List - REST API (Azure Authorization) | Microsoft Learn
         $stages = Invoke-AzRestMethod -Uri "https://management.azure.com/$approvalID/stages?api-version=2021-01-01-preview" -Method GET
@@ -69,5 +69,5 @@ function Deny-PIMAzureResourcePendingApproval {
     catch {
         MyCatch $_
     }
-    
+
 }}

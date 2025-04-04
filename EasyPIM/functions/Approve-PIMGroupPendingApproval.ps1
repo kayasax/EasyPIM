@@ -6,7 +6,7 @@ Get-PIMGroupPolicy will return the policy rules (like require MFA on activation)
 Support querrying multi roles at once
 
 .Description
- 
+
 Approve-PIMGroupPendingApprovall will use the Microsoft Graph APIs to retrieve the requests pending your approval
 
 .PARAMETER approvalID
@@ -19,9 +19,9 @@ justification for the approval
        PS> approve-PIMAzureResourcePendingApproval -approvalID $approvalID -justification "I approve this request"
 
        Approve a pending request
-    
+
 .Link
-   
+
 .Notes
     Homepage: https://github.com/kayasax/easyPIM
     Author: MICHEL, Loic
@@ -33,7 +33,7 @@ function Approve-PIMGroupPendingApproval {
     [CmdletBinding()]
     [OutputType([String])]
     param (
-        
+
         [Parameter(Position = 0, Mandatory = $true, ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
         [System.String]
@@ -44,18 +44,18 @@ function Approve-PIMGroupPendingApproval {
         [System.String]
         # justification
         $justification
-        
+
     )
     process {
         try {
             #$script:tenantID = $tenantID
 
             Write-Verbose "approve-PIMGroupPendingApproval start with parameters: approvalid => $approvalID, justification => $justification"
-               
+
             #Get the stages:
             #in groups stageID is the same as the approvalID
 
-          
+
             #approve the request
             #https://learn.microsoft.com/en-us/graph/api/approvalstage-update?view=graph-rest-1.0&tabs=http
 
