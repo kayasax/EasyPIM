@@ -1,4 +1,5 @@
 ﻿function Expand-AssignmentWithPrincipalIds {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "")]
     param (
         [array]$Assignments
     )

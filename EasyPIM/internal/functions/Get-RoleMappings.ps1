@@ -2,6 +2,7 @@
 $script:roleCache = @{}
 
 function Get-RoleMappings {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "")]
     param([string]$SubscriptionId)
 
     # Cache key for this subscription

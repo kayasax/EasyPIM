@@ -1,10 +1,13 @@
 ﻿function Invoke-ResourceAssignments {
-    [CmdletBinding(SupportsShouldProcess=$true)]
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    [OutputType([System.Collections.Hashtable])]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "")]
     param (
         [string]$ResourceType,
         [array]$Assignments,
-        [hashtable]$CommandMap
+        [hashtable]$CommandMap,
+        [PSCustomObject]$Config
     )
 
     # Improved formatting for section headers
@@ -118,6 +121,7 @@
             }
         }
         catch {
+            write-verbose "    ├─ ⚠️ Failed to resolve principal name for ID ${principalId}: $_"
             # Silently continue with the default name
         }
 
@@ -126,6 +130,35 @@
             if (-not (Test-PrincipalExists -PrincipalId $assignment.PrincipalId)) {
                 write-host "    ├─ ❌ $principalName does not exist, skipping assignment"
                 $errorCounter++
+                continue
+            }
+        }
+
+        # Check if group exists for Group Role assignments
+        if ($ResourceType -like "Group Role*") {
+            $groupId = $assignment.GroupId
+            if (-not $groupId) {
+                Write-Host "    ├─ ❌ Missing GroupId for assignment, skipping" -ForegroundColor Red
+                $errorCounter++
+                continue
+            }
+            
+            # Validate the group exists
+            try {
+                $uri = "https://graph.microsoft.com/v1.0/directoryObjects/$groupId"
+                Invoke-MgGraphRequest -Uri $uri -Method GET -ErrorAction Stop
+                Write-Verbose "Group $groupId exists and is accessible"
+                
+                # Check if group is eligible for PIM (not synced from on-premises)
+                if (-not (Test-GroupEligibleForPIM -GroupId $groupId)) {
+                    Write-Host "    ├─ ⚠️ Group $groupId is not eligible for PIM management (likely synced from on-premises), skipping" -ForegroundColor Yellow
+                    $skipCounter++
+                    continue
+                }
+            }
+            catch {
+                Write-StatusWarning "Group $groupId does not exist, skipping all assignments"
+                $results.Skipped += $assignmentsForGroup.Count  # Skipped rather than Failed
                 continue
             }
         }
@@ -222,13 +255,15 @@
                     # Store information about why this matched for display later
                     $matchReason = if ($null -ne $existing.memberType) {
                         "memberType='$($existing.memberType)'"
-                    } elseif ($null -ne $existing.Type) {
+                    }
+                    elseif ($null -ne $existing.Type) {
                         "type='$($existing.Type)'"
-                    } else {
+                    }
+                    else {
                         "role matched"
                     }
                     $matchInfo = "principalId='$($existing.principalId)' and $matchReason"
-                    Write-Verbose "Match found for Group Role assignment: $matchInfo"
+                    Write-host "Match found for Group Role assignment: $matchInfo"
                     break
                 }
             }
@@ -243,192 +278,139 @@
         }
 
         if ($found -eq 0) {
-            # Prepare parameters for the create command
-            $params = $CommandMap.CreateParams.Clone()
-
-            # Replace the Group Role parameters block
-            if ($ResourceType -like "Group Role*") {
-                # Clear existing parameters to avoid any conflicts
-                $params = $CommandMap.CreateParams.Clone()
-                
-                # Debug information about what we're processing
-                Write-Verbose "Processing Group Role assignment with parameters:"
-                Write-Verbose "  PrincipalId: $($assignment.PrincipalId)"
-                Write-Verbose "  GroupId: $($assignment.GroupId)"
-                Write-Verbose "  RoleName: $roleName"
-                
-                # Verify principal and group exist
-                if ([string]::IsNullOrEmpty($assignment.PrincipalId)) {
-                    Write-Host "    │  └─ ❌ Missing PrincipalId for Group assignment" -ForegroundColor Red
-                    $errorCounter++
-                    continue
+            # Create a SINGLE parameters hashtable - this is critical
+            $params = @{}
+            
+            # First, copy all base parameters from the command map
+            if ($CommandMap.CreateParams) {
+                foreach ($key in $CommandMap.CreateParams.Keys) {
+                    $params[$key] = $CommandMap.CreateParams[$key]
                 }
-                
-                if ([string]::IsNullOrEmpty($assignment.GroupId)) {
-                    Write-Host "    │  └─ ❌ Missing GroupId for Group assignment" -ForegroundColor Red
-                    $errorCounter++
-                    continue
+            }
+            
+            # Ensure justification exists from the beginning
+            if (-not $params.ContainsKey('justification')) {
+                # Try to get it from Config first
+                if ($Config -and $Config.PSObject.Properties.Name -contains 'Justification' -and $Config.Justification) {
+                    $params['justification'] = $Config.Justification
+                    Write-Verbose "Using justification from Config: $($Config.Justification)"
                 }
-                
-                # Verify the role type is valid
-                if ([string]::IsNullOrEmpty($roleName) -or $roleName -notmatch '^(member|owner)$') {
-                    Write-Host "    │  └─ ❌ Invalid role type for Group assignment: '$roleName'. Must be 'member' or 'owner'." -ForegroundColor Red
-                    $errorCounter++
-                    continue
+                # Otherwise generate a new one
+                else {
+                    $params['justification'] = "Created by EasyPIM Orchestrator on $(Get-Date -Format 'yyyy-MM-dd')"
+                    Write-Verbose "Using default justification: $($params['justification'])"
                 }
-                
-                # Use uppercase 'ID' suffix as required by the command
+            }
+            
+            # Display justification
+            Write-Verbose "    │  ├─ 📝 Justification: $($params['justification'])"
+            
+            # Resource-specific parameters
+            if ($ResourceType -like "Azure Role*") {
+                $params['principalId'] = $assignment.PrincipalId
+                $params['roleName'] = $roleName
+                $params['scope'] = $assignment.Scope
+            }
+            elseif ($ResourceType -like "Group Role*") {
+                # For Group roles, use uppercase ID properties
                 $params['principalID'] = $assignment.PrincipalId  # Capital ID
                 $params['groupID'] = $assignment.GroupId          # Capital ID
                 $params['type'] = $roleName.ToLower()             # Lowercase type
                 
-                # Add extensive debugging just before executing command
-                Write-Verbose "Group Role command parameters:"
-                Write-Verbose ($params | ConvertTo-Json -Depth 3 -ErrorAction SilentlyContinue)
-                Write-Verbose "Command to execute: $($CommandMap.CreateCmd)"
-                
-                # Remove these parameters as they're handled differently for Group Roles
-                $params.Remove('principalId')  # Remove lowercase version if present
-                $params.Remove('groupId')      # Remove lowercase version if present
-                $params.Remove('roleName')     # Remove roleName if present
+                # Double-check the parameters are set
+                if (-not $params.ContainsKey('groupID') -or [string]::IsNullOrEmpty($params['groupID'])) {
+                    Write-Error "Failed to set groupID parameter"
+                    $errorCounter++
+                    continue
+                }
             }
             else {
-                # Standard parameters for other resource types
+                # For other resource types like Entra roles
                 $params['principalId'] = $assignment.PrincipalId
                 $params['roleName'] = $roleName
             }
-
-            # Add scope parameter for Azure role assignments
-            if ($ResourceType -like "Azure Role*") {
-                $params['scope'] = $assignment.Scope
-            }
-
-            # Add group ID parameter for Group role assignments
-            if ($ResourceType -like "Group Role*") {
-                $params['groupId'] = $assignment.GroupId
-            }
-
-            # Handle Permanent flag and Duration for all assignment types
+            
+            # Handle duration and permanent settings
             if ($assignment.Permanent -eq $true) {
-                if ($ResourceType -like "Group Role*") {
-                    $params['permanent'] = $true  # Lowercase for group roles
-                } else {
-                    $params['permanent'] = $true
-                }
+                $params['permanent'] = $true
                 Write-Host "    │  ├─ ⏱️ Setting as permanent assignment" -ForegroundColor Cyan
             }
             elseif ($assignment.Duration) {
-                if ($ResourceType -like "Group Role*") {
-                    $params['duration'] = $assignment.Duration  # Lowercase for group roles
-                } else {
-                    $params['duration'] = $assignment.Duration
-                }
+                $params['duration'] = $assignment.Duration
                 Write-Host "    │  ├─ ⏱️ Setting duration: $($assignment.Duration)" -ForegroundColor Cyan
             }
             else {
                 Write-Host "    │  ├─ ⏱️ Using maximum allowed duration" -ForegroundColor Cyan
             }
-
-            # Ensure justification has the right case for each resource type
-            if ($ResourceType -like "Group Role*") {
-                $params['justification'] = $justification  # Lowercase for group roles
-            } else {
-                $params['justification'] = $justification
-            }
-
-            Write-Host "    │  ├─ 📝 Justification: $justification" -ForegroundColor Cyan
-
-            # Just before executing the command:
-            if ($ResourceType -like "Group Role*") {
-                Write-Verbose "Group Role command parameters:"
-                Write-Verbose ($params | ConvertTo-Json -Compress)
-                Write-Verbose "Command being executed: $($CommandMap.CreateCmd)"
-
-                # Debug command parameters
-                try {
-                    $cmdInfo = Get-Command $CommandMap.CreateCmd
-                    Write-Verbose "Command accepts these parameters: $($cmdInfo.Parameters.Keys -join ', ')"
-                } catch {
-                    Write-Warning "Could not get command info: $_"
-                }
-            }
-
+            
+            # Pre-execution debug
+            Write-Verbose "Command accepts these parameters: $((Get-Command $CommandMap.CreateCmd -ErrorAction SilentlyContinue).Parameters.Keys -join ', ')"
+            Write-Verbose "Final command parameters:"
+            Write-Verbose ($params | ConvertTo-Json -Compress)
+            
+            # IMPORTANT: Do not create any new parameter hashtables after this point
+            
+            # Action description for ShouldProcess
             $actionDescription = if ($ResourceType -like "Azure Role*") {
                 "Create $ResourceType assignment for $principalName with role '$roleName' on scope $($assignment.Scope)"
             }
             else {
                 "Create $ResourceType assignment for $principalName with role '$roleName'"
             }
-
+            
             if ($PSCmdlet.ShouldProcess($actionDescription)) {
                 try {
-                    # Add more debugging for the exact parameters
-                    Write-Verbose "Final command parameters:"
-                    Write-Verbose ($params | ConvertTo-Json -Compress -Depth 3 -ErrorAction SilentlyContinue)
-                    
-                    # Capture the output of the command
+                    # Execute the command
                     $result = & $CommandMap.CreateCmd @params
                     
-                    # Log success even for null results with Group Roles
+                    # For Group role assignments, verify the operation succeeded
                     if ($ResourceType -like "Group Role*") {
-                        Write-Verbose "Group role command executed. Result: $(if ($null -eq $result) { "null" } else { "success" })"
+                        # Add verification that the assignment was created
+                        $verifyParams = @{
+                            tenantID = $params['tenantID']
+                            groupID = $params['groupID']
+                            # Don't include principalID to get all assignments for the group
+                        }
+                        
+                        # Get command name based on eligible vs active
+                        $verifyCmd = if ($ResourceType -like "*eligible*") {
+                            "Get-PIMGroupEligibleAssignment"
+                        } else {
+                            "Get-PIMGroupActiveAssignment"
+                        }
+                        
+                        Write-Verbose "Verifying assignment creation with $verifyCmd"
+                        
+                        # Get current assignments and verify ours exists
+                        $currentAssignments = & $verifyCmd @verifyParams
+                        
+                        # Check if our assignment now exists
+                        $assignmentExists = $false
+                        foreach ($existing in $currentAssignments) {
+                            if (($existing.PrincipalId -eq $params['principalID']) -and
+                                ($existing.Type -eq $params['type'] -or $existing.RoleName -eq $params['type'])) {
+                                $assignmentExists = $true
+                                break
+                            }
+                        }
+                        
+                        if ($assignmentExists) {
+                            $createCounter++
+                            Write-Host "    │  └─ ✅ Created and verified successfully" -ForegroundColor Green
+                        } else {
+                            Write-Host "    │  └─ ⚠️ Command completed but assignment not found in verification" -ForegroundColor Yellow
+                            $errorCounter++
+                        }
+                    }
+                    # For Azure roles, we rely on the existing check
+                    elseif (($null -ne $result) -or ($ResourceType -like "Azure Role*" -and $? -eq $true)) {
                         $createCounter++
                         Write-Host "    │  └─ ✅ Created successfully" -ForegroundColor Green
                     }
-                    # Check if the result contains an error
-                    $hasError = $false
-
-                    # Different error checking based on object type
-                    if ($result -is [System.Collections.Hashtable]) {
-                        # For hashtables, use ContainsKey
-                        if ($result.ContainsKey('error')) {
-                            $hasError = $true
-                            # Replace null-coalescing operator with if-else for PS5 compatibility
-                            $errorMessage = if ($null -ne $result.error.message) {
-                                $result.error.message
-                            } elseif ($null -ne $result.error.code) {
-                                $result.error.code
-                            } else {
-                                "Unknown error"
-                            }
-                            Write-Host "    │  └─ ❌ API returned error: $errorMessage" -ForegroundColor Red
-                            $errorCounter++
-                        }
-                    }
-                    elseif ($result -is [PSCustomObject]) {
-                        # For PSCustomObject, check Properties collection
-                        if ($result.PSObject.Properties.Name -contains 'error') {
-                            $hasError = $true
-                            # Replace null-coalescing operator with if-else for PS5 compatibility
-                            $errorMessage = if ($null -ne $result.error.message) {
-                                $result.error.message
-                            } elseif ($null -ne $result.error.code) {
-                                $result.error.code
-                            } else {
-                                "Unknown error"
-                            }
-                            Write-Host "    │  └─ ❌ API returned error: $errorMessage" -ForegroundColor Red
-                            $errorCounter++
-                        }
-                    }
-
-                    # Only proceed if no error was detected
-                    if (-not $hasError) {
-                        # Group Role assignments may return nothing or a response
-                        if ($ResourceType -like "Group Role*") {
-                            # For Group roles, success if no error was detected
-                            $createCounter++
-                            Write-Host "    │  └─ ✅ Created successfully" -ForegroundColor Green
-                        } else {
-                            # For other resource types, still check for non-null result
-                            if ($null -ne $result) {
-                                $createCounter++
-                                Write-Host "    │  └─ ✅ Created successfully" -ForegroundColor Green
-                            } else {
-                                Write-Host "    │  └─ ❌ Command executed but returned null result" -ForegroundColor Red
-                                $errorCounter++
-                            }
-                        }
+                    else {
+                        # For other resource types
+                        Write-Host "    │  └─ ⚠️ Command completed but returned null" -ForegroundColor Yellow
+                        $skipCounter++
                     }
                 }
                 catch {
@@ -453,21 +435,12 @@
     }
 
     # Return the counters in a structured format
-    $result = @{
+    Write-CreationSummary -Category "$ResourceType Assignments" -Created $createCounter -Skipped $skipCounter -Failed $errorCounter
+
+    # Return standardized result
+    return @{
         Created = $createCounter
         Skipped = $skipCounter
         Failed  = $errorCounter
     }
-
-    # Output summary
-    write-host "`n┌────────────────────────────────────────────────────┐"
-    write-host "│ $ResourceType Assignments Summary"
-    write-host "├────────────────────────────────────────────────────┤"
-    write-host "│ ✅ Created: $createCounter"
-    write-host "│ ⏭️ Skipped: $skipCounter"
-    write-host "│ ❌ Failed:  $errorCounter"
-    write-host "└────────────────────────────────────────────────────┘`n"
-
-    # Return the result object
-    return $result
 }

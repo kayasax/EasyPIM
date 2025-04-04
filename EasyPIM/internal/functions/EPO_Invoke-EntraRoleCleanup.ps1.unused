@@ -47,7 +47,9 @@
                 try {
                     $principalObj = Invoke-Graph -endpoint "/directoryObjects/$principalId" -Method Get -ErrorAction SilentlyContinue
                     if ($principalObj.displayName) { $principalName = $principalObj.displayName }
-                } catch {}
+                } catch {
+                    Write-Error "    │  └─ ❌ Failed to resolve principal name for ID ${principalId}: $_"
+                }
 
                 # Check if assignment matches config
                 $foundInConfig = $false

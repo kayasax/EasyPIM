@@ -2,6 +2,7 @@
 $script:principalCache = @{}
 
 function Test-PrincipalExists {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "")]
     param ([string]$PrincipalId)
 
 

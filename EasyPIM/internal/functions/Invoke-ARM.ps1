@@ -51,17 +51,17 @@ function Invoke-ARM {
                 $script:subscriptionID = $subscriptionMatches.Groups[1].Value
             } else {
                 # If we can't extract it from the URI, try to use the one passed to the function
-                if ($script:subscriptionID -eq $null -and $PSBoundParameters.ContainsKey('subscriptionID')) {
+                if ($null -eq $script:subscriptionID -and $PSBoundParameters.ContainsKey('subscriptionID')) {
                     $script:subscriptionID = $PSBoundParameters['subscriptionID']
                 }
 
                 # Still null? Use the one from ApiInfo
-                if ($script:subscriptionID -eq $null -and $ApiInfo -and $ApiInfo.Subscriptions -and $ApiInfo.Subscriptions.Count -gt 0) {
+                if ($null -eq $script:subscriptionID -and $ApiInfo -and $ApiInfo.Subscriptions -and $ApiInfo.Subscriptions.Count -gt 0) {
                     $script:subscriptionID = $ApiInfo.Subscriptions[0]
                 }
 
                 # If we still don't have a subscription ID, we need to throw a better error
-                if ($script:subscriptionID -eq $null) {
+                if ($null -eq $script:subscriptionID) {
                     throw "Could not determine subscription ID. Please provide it explicitly."
                 }
             }

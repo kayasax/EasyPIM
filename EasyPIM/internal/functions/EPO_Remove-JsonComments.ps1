@@ -1,6 +1,7 @@
 ﻿function Remove-JsonComments {
     [CmdletBinding()]
     [OutputType([System.String])]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "")]
 
     param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]

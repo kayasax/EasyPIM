@@ -140,7 +140,7 @@ function Invoke-DeltaCleanup {
     }
 
     # Justification filter used for identifying our assignments
-    $justificationFilter = "Invoke-EasyPIMOrchestrator"
+    #$justificationFilter = "Invoke-EasyPIMOrchestrator"
 
     Write-Verbose "========== CONFIG ASSIGNMENTS DUMP ==========="
     foreach ($cfg in $ConfigAssignments) {
@@ -428,7 +428,7 @@ function Invoke-DeltaCleanup {
                                     $hasError = $true
                                     Write-Warning "    │  └─ ⚠️ Removal failed: $($result.Exception.Message)"
                                 }
-                                elseif ($result.PSObject.Properties.Name -contains "error" -and $result.error -ne $null) {
+                                elseif ($result.PSObject.Properties.Name -contains "error" -and $null -ne $result.error) {
                                     $hasError = $true
                                     $errorMessage = if ($result.error.PSObject.Properties.Name -contains 'message' -and $result.error.message) {
                                         $result.error.message
@@ -513,7 +513,9 @@ function Invoke-DeltaCleanup {
                         try {
                             $principalObj = Invoke-Graph -endpoint "/directoryObjects/$principalId" -Method Get -ErrorAction SilentlyContinue
                             if ($principalObj.displayName) { $principalName = $principalObj.displayName }
-                        } catch {}
+                        } catch {
+                            Write-Error "    │  └─ ❌ Failed to resolve principal name for ID ${principalId}: $_"
+                        }
 
                         # Check if assignment matches config
                         $foundInConfig = $false

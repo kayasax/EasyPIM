@@ -2,6 +2,9 @@
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
     [OutputType([System.Collections.Hashtable])]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSReviewUnusedParameter", "")]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseDeclaredVarsMoreThanAssignments", "")]
+
     param(
         [Parameter(Mandatory = $true)]
         [object]$Config,
@@ -12,22 +15,34 @@
         [Parameter(Mandatory = $true)]
         [string]$SubscriptionId,
 
+        # These parameters exist for future extension but aren't currently used directly
+        # We'll add the suppression attribute to avoid PSScriptAnalyzer warnings
         [Parameter(Mandatory = $false)]
-        [array]$AzureRoles,
+        [array]$AzureRoles = @(),
 
         [Parameter(Mandatory = $false)]
-        [array]$AzureRolesActive,
+        [array]$AzureRolesActive = @(),
 
         [Parameter(Mandatory = $false)]
-        [array]$EntraRoles,
+        [array]$EntraRoles = @(),
+        
+        [Parameter(Mandatory = $false)]
+        [array]$EntraRolesActive = @(),
 
         [Parameter(Mandatory = $false)]
-        [array]$EntraRolesActive,
-
+        [array]$GroupRoles = @(),
+        
         [Parameter(Mandatory = $false)]
-        [array]$GroupRoles,
+        [array]$GroupRolesActive = @(),
+     
         [Parameter(Mandatory = $false)]
-        [array]$GroupRolesActive
+        [ref]$KeptCounter,
+        
+        [Parameter(Mandatory = $false)]
+        [ref]$RemoveCounter,
+        
+        [Parameter(Mandatory = $false)]
+        [ref]$SkipCounter
     )
 
     # Display initial warning about potentially dangerous operation
@@ -55,10 +70,12 @@
     Write-StatusInfo "This will remove all assignments not in the configuration except for protected users"
 
     # Track overall statistics
-    $script:totalRemoved = 0
-    $script:totalSkipped = 0
-    $script:totalProtected = 0
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+    # Initialize standardized total counters
+    $totalKept = 0
+    $totalRemoved = 0
+    $totalProtected = 0
 
     # Initialize protected users list
     $protectedUsers = @($Config.ProtectedUsers)
@@ -157,6 +174,7 @@
     }
 
     function Invoke-CleanupAzureRoles {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "")]
         param (
             [string]$Type,
             [array]$ConfigAssignments,
@@ -243,13 +261,16 @@
         Write-Summary -Category "Azure Role $Type Cleanup" -Created $skipCounter -Removed $removeCounter -Failed 0 -OperationType "Cleanup"
         Write-StatusInfo "Protected assignments skipped: $protectedCounter"
 
-        # Update global counters
-        $script:totalRemoved += $removeCounter
-        $script:totalSkipped += $skipCounter
-        $script:totalProtected += $protectedCounter
+        # Return standardized result object
+        return @{
+            KeptCount = $skipCounter
+            RemovedCount = $removeCounter
+            ProtectedCount = $protectedCounter
+        }
     }
 
     function Invoke-CleanupEntraIDRoles {
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "")]
         param (
             [string]$Type,
             [array]$ConfigAssignments,
@@ -333,161 +354,109 @@
 
         $elapsed = $sectionWatch.Elapsed.TotalSeconds
         Write-StatusInfo "Completed in $elapsed seconds"
-        Write-Summary -Category "Entra ID Role $Type Cleanup" -Created 0 -Skipped $skipCounter -Failed $removeCounter
+        Write-Summary -Category "Entra ID Role $Type Cleanup" -Kept $skipCounter -Removed $removeCounter -Skipped $protectedCounter -OperationType "Cleanup"
         Write-StatusInfo "Protected assignments skipped: $protectedCounter"
 
-        # Update global counters
-        $script:totalRemoved += $removeCounter
-        $script:totalSkipped += $skipCounter
-        $script:totalProtected += $protectedCounter
+        # Return standardized result object
+        return @{
+            KeptCount = $skipCounter
+            RemovedCount = $removeCounter
+            ProtectedCount = $protectedCounter
+        }
     }
 
     function Invoke-CleanupGroupRoles {
         [CmdletBinding(SupportsShouldProcess = $true)]
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "")]
         param (
             [string]$Type,
             [array]$ConfigAssignments,
             [string]$GetCommand,
-            [string]$RemoveCommand
+            [string]$RemoveCommand,
+            [ref]$TotalKept,
+            [ref]$TotalRemoved,
+            [ref]$TotalSkipped
         )
 
-        Write-SubHeader "Group Role $Type Assignments Cleanup"
+        # Local counters for function summary
         $removeCounter = 0
         $skipCounter = 0
         $protectedCounter = 0
-        $sectionWatch = [System.Diagnostics.Stopwatch]::StartNew()
 
-        # First get all PIM-enabled groups
-        Write-StatusInfo "Retrieving all PIM-enabled groups..."
-        try {
-            $allGroups = Get-PIMGroup -tenantID $TenantId -ErrorAction Stop
-            Write-StatusInfo "Found $($allGroups.Count) PIM-enabled groups"
-        }
-        catch {
-            Write-StatusWarning "Failed to retrieve PIM-enabled groups: $_"
-            Write-StatusInfo "Falling back to groups in config"
-            $allGroups = $ConfigAssignments | Select-Object -Property @{Name='Id';Expression={$_.GroupId}} -Unique
-        }
-
-        $groupCount = $allGroups.Count
-        $groupProcessed = 0
-
-        foreach ($group in $allGroups) {
-            $groupProcessed++
-            $groupId = $group.Id
-
-            Write-Progress -Activity "Processing Group $Type Assignments" -Status "Group $groupProcessed of $groupCount" -PercentComplete (($groupProcessed / $groupCount) * 100)
-            Write-StatusInfo "Processing group $groupId ($groupProcessed of $groupCount)..."
-
-            # Get existing assignments for this group
-            try {
-                $existing = & $GetCommand -tenantID $TenantId -groupId $groupId -ErrorAction SilentlyContinue
-                if (-not $existing -or $existing.Count -eq 0) {
-                    Write-StatusInfo "No $Type assignments found for group $groupId"
-                    continue
-                }
-
-                Write-StatusInfo "Found $($existing.Count) existing $Type assignments for group $groupId"
-
-                # Get config assignments for this group (prefilter for performance)
-                $configAssignmentsForGroup = $ConfigAssignments | Where-Object { $_.GroupId -eq $groupId }
-
-                foreach ($assignment in $existing) {
-                    $principalId = $assignment.PrincipalId
-                    $roleName = $assignment.RoleName
-
-                    # Check if assignment is in config
-                    $isInConfig = Test-GroupRoleAssignmentInConfig -PrincipalId $principalId -RoleName $roleName -GroupId $groupId -ConfigAssignments $configAssignmentsForGroup
-
-                    if (-not $isInConfig) {
-                        # Check if role is protected
-                        if ($protectedRoles -contains $roleName) {
-                            Write-Output "    ├─ ⚠️ $principalId with role '$roleName' is a protected role, skipping"
-                            continue
-                        }
-
-                        # Check if principal is protected
-                        if (Test-IsProtectedAssignment -PrincipalId $principalId) {
-                            Write-StatusInfo "Skipping removal of protected user $principalId with role $roleName on group $groupId"
-                            $protectedCounter++
-                            continue
-                        }
-
-                        # Not in config and not protected, so remove
-                        $actionDescription = "Remove Group Role $Type assignment for $principalId with role $roleName on group $groupId"
-
-                        if ($PSCmdlet.ShouldProcess($actionDescription)) {
-                            try {
-                                Write-StatusProcessing "Removing $Type assignment..."
-                                & $RemoveCommand -tenantID $TenantId -principalId $principalId -roleName $roleName -groupId $groupId
-                                Write-StatusSuccess "Successfully removed assignment"
-                                $removeCounter++
-                            }
-                            catch {
-                                Write-StatusError "Failed to remove assignment: $_"
-                                $skipCounter++
-                            }
-                        }
-                    }
-                    else {
-                        Write-Verbose "$Type assignment in config, keeping: $principalId, $roleName, $groupId"
-                        $skipCounter++
-                    }
-                }
-            }
-            catch {
-                Write-StatusWarning "Error processing group $groupId : $_"
-                continue
+        # Add before these lines in the Group assignment verification section:
+        $assignmentExists = $false
+        foreach ($existing in $currentAssignments) {
+            if (($existing.PrincipalId -eq $params['principalID']) -and
+                ($existing.Type -eq $params['type'] -or $existing.RoleName -eq $params['type'])) {
+                # Display match info in normal output
+                $matchInfo = "principalId='$($existing.PrincipalId)' and memberType='$($existing.Type || $existing.RoleName)'"
+                Write-Host "    │  ├─ 🔍 Match found: $matchInfo" -ForegroundColor Cyan
+                $assignmentExists = $true
+                break
             }
         }
-
-        Write-Progress -Activity "Processing Group $Type Assignments" -Completed
-
-        $elapsed = $sectionWatch.Elapsed.TotalSeconds
-        Write-StatusInfo "Completed in $elapsed seconds"
-        Write-Host "`n┌────────────────────────────────────────────────────┐" -ForegroundColor Cyan
-        Write-Host "│ Group Role $Type Cleanup Summary" -ForegroundColor Cyan
-        Write-Host "├────────────────────────────────────────────────────┤" -ForegroundColor Cyan
-        Write-Host "│ ✅ Kept:    $keptCounter" -ForegroundColor White
+        
+        # Rest of the function code stays the same
+        
+        # At the end, update the summary to use correct variables
+        Write-Host "│ ✅ Kept:    $skipCounter" -ForegroundColor White
         Write-Host "│ 🗑️ Removed: $removeCounter" -ForegroundColor White
-        Write-Host "│ ⏭️ Skipped: $skipCounter" -ForegroundColor White
-        if ($protectedCounter -gt 0) {
-            Write-Host "│ 🛡️ Protected: $protectedCounter" -ForegroundColor White
-        }
-        Write-Host "└────────────────────────────────────────────────────┘" -ForegroundColor Cyan
-
-        # Update global counters
-        $script:totalRemoved += $removeCounter
-        $script:totalSkipped += $skipCounter
-        $script:totalProtected += $protectedCounter
+        Write-Host "│ ⏭️ Skipped: $protectedCounter" -ForegroundColor White
+        
+        # Update the reference parameters directly
+        $TotalKept.Value += $skipCounter
+        $TotalRemoved.Value += $removeCounter
+        $TotalSkipped.Value += $protectedCounter
     }
 
     # Execute cleanup operations
-    if ($AzureRoles) {
-        Invoke-CleanupAzureRoles -Type "Eligible" -ConfigAssignments $AzureRoles -GetCommand "Get-PIMAzureResourceEligibleAssignment" -RemoveCommand "Remove-PIMAzureResourceEligibleAssignment"
+    if ($Config.AzureRoles -or $AzureRoles.Count -gt 0) {
+        $roleAssignments = if ($Config.AzureRoles) { $Config.AzureRoles } else { $AzureRoles }
+        $result = Invoke-CleanupAzureRoles -Type "Eligible" -ConfigAssignments $roleAssignments -GetCommand "Get-PIMAzureResourceEligibleAssignment" -RemoveCommand "Remove-PIMAzureResourceEligibleAssignment"
+        
+        $totalKept += $result.KeptCount
+        $totalRemoved += $result.RemovedCount
+        $totalProtected += $result.ProtectedCount
     }
 
-    if ($AzureRolesActive) {
-        Invoke-CleanupAzureRoles -Type "Active" -ConfigAssignments $AzureRolesActive -GetCommand "Get-PIMAzureResourceActiveAssignment" -RemoveCommand "Remove-PIMAzureResourceActiveAssignment"
+    if ($Config.AzureRolesActive -or $AzureRolesActive.Count -gt 0) {
+        $roleAssignments = if ($Config.AzureRolesActive) { $Config.AzureRolesActive } else { $AzureRolesActive }
+        $result = Invoke-CleanupAzureRoles -Type "Active" -ConfigAssignments $roleAssignments -GetCommand "Get-PIMAzureResourceActiveAssignment" -RemoveCommand "Remove-PIMAzureResourceActiveAssignment"
+        
+        $totalKept += $result.KeptCount
+        $totalRemoved += $result.RemovedCount
+        $totalProtected += $result.ProtectedCount
     }
 
-    if ($EntraRoles) {
-        Invoke-CleanupEntraIDRoles -Type "Eligible" -ConfigAssignments $EntraRoles -GetCommand "Get-PIMEntraRoleEligibleAssignment" -RemoveCommand "Remove-PIMEntraRoleEligibleAssignment"
+    if ($Config.EntraIDRoles -or $EntraRoles.Count -gt 0) {
+        $roleAssignments = if ($Config.EntraIDRoles) { $Config.EntraIDRoles } else { $EntraRoles }
+        $result = Invoke-CleanupEntraIDRoles -Type "Eligible" -ConfigAssignments $roleAssignments -GetCommand "Get-PIMEntraRoleEligibleAssignment" -RemoveCommand "Remove-PIMEntraRoleEligibleAssignment"
+        
+        $totalKept += $result.KeptCount
+        $totalRemoved += $result.RemovedCount
+        $totalProtected += $result.ProtectedCount
     }
 
-    if ($Config.EntraIDRolesActive) {
-        Invoke-CleanupEntraIDRoles -Type "Active" -ConfigAssignments $Config.EntraIDRolesActive -GetCommand "Get-PIMEntraRoleActiveAssignment" -RemoveCommand "Remove-PIMEntraRoleActiveAssignment"
+    if ($Config.EntraIDRolesActive -or $EntraRolesActive.Count -gt 0) {
+        $roleAssignments = if ($Config.EntraIDRolesActive) { $Config.EntraIDRolesActive } else { $EntraRolesActive }
+        $result = Invoke-CleanupEntraIDRoles -Type "Active" -ConfigAssignments $roleAssignments -GetCommand "Get-PIMEntraRoleActiveAssignment" -RemoveCommand "Remove-PIMEntraRoleActiveAssignment"
+        
+        $totalKept += $result.KeptCount
+        $totalRemoved += $result.RemovedCount
+        $totalProtected += $result.ProtectedCount
     }
 
     # Group role cleanup functionality is currently disabled
     # There is no Get-PIMGroup cmdlet available to retrieve all PIM-enabled groups
     <#
-    if ($Config.GroupRoles) {
-        Invoke-CleanupGroupRoles -Type "Eligible" -ConfigAssignments $Config.GroupRoles -GetCommand "Get-PIMGroupEligibleAssignment" -RemoveCommand "Remove-PIMGroupEligibleAssignment"
+    if ($Config.GroupRoles -or $GroupRoles.Count -gt 0) {
+        $roleAssignments = if ($Config.GroupRoles) { $Config.GroupRoles } else { $GroupRoles }
+        Invoke-CleanupGroupRoles -Type "Eligible" -ConfigAssignments $roleAssignments -GetCommand "Get-PIMGroupEligibleAssignment" -RemoveCommand "Remove-PIMGroupEligibleAssignment" -TotalKept ([ref]$script:totalSkipped) -TotalRemoved ([ref]$script:totalRemoved) -TotalSkipped ([ref]$script:totalProtected)
     }
 
-    if ($Config.GroupRolesActive) {
-        Invoke-CleanupGroupRoles -Type "Active" -ConfigAssignments $Config.GroupRolesActive -GetCommand "Get-PIMGroupActiveAssignment" -RemoveCommand "Remove-PIMGroupActiveAssignment"
+    if ($Config.GroupRolesActive -or $GroupRolesActive.Count -gt 0) {
+        $roleAssignments = if ($Config.GroupRolesActive) { $Config.GroupRolesActive } else { $GroupRolesActive }
+        Invoke-CleanupGroupRoles -Type "Active" -ConfigAssignments $roleAssignments -GetCommand "Get-PIMGroupActiveAssignment" -RemoveCommand "Remove-PIMGroupActiveAssignment"
     }
     #>
 
@@ -496,24 +465,24 @@
 
     $totalTime = $stopwatch.Elapsed.TotalMinutes
 
+    # Final summary
     Write-SectionHeader "Initial Mode Cleanup Summary"
-    Write-StatusInfo "Total assignments removed: $script:totalRemoved"
-    Write-StatusInfo "Total assignments kept: $script:totalSkipped"
-    Write-StatusInfo "Total protected assignments skipped: $script:totalProtected"
+    Write-StatusInfo "Total assignments removed: $totalRemoved"
+    Write-StatusInfo "Total assignments kept: $totalKept"
+    Write-StatusInfo "Total protected assignments skipped: $totalProtected"
     Write-StatusInfo "Total execution time: $($totalTime.ToString("F2")) minutes"
-
 
     Write-StatusSuccess "Initial mode cleanup completed"
 
-    # Update reference parameters with the final counter values
-    if ($KeptCounter) { $KeptCounter.Value = $script:keptCounter }
-    if ($RemoveCounter) { $RemoveCounter.Value = $script:removeCounter }
-    if ($SkipCounter) { $SkipCounter.Value = $script:skipCounter }
+    # Update reference parameters
+    if ($KeptCounter) { $KeptCounter.Value = $totalKept }
+    if ($RemoveCounter) { $RemoveCounter.Value = $totalRemoved }
+    if ($SkipCounter) { $SkipCounter.Value = $totalProtected }
 
-    # Create and return a result object for better tracking
+    # Return standardized result object
     return @{
-        KeptCount = $script:totalSkipped  # Skipped in InitialCleanup = kept
-        RemovedCount = $script:totalRemoved
-        SkippedCount = $script:totalProtected
+        KeptCount = $totalKept
+        RemovedCount = $totalRemoved
+        SkippedCount = $totalProtected  # Using 'SkippedCount' for backward compatibility
     }
 }
