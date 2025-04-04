@@ -152,7 +152,7 @@ function Invoke-DeltaCleanup {
                 break
             }
         }
-        $cfgScope = $cfg.Scope ?? "NO_SCOPE"
+        $cfgScope = if ($null -ne $cfg.Scope) { $cfg.Scope } else { "NO_SCOPE" }
         Write-Verbose "Config Assignment: Principal=$cfgId, Role=$cfgRole, Scope=$cfgScope"
     }
     Write-Verbose "========== END CONFIG DUMP ==========="
