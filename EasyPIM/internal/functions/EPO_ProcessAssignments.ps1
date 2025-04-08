@@ -1,3 +1,8 @@
+# This function is deprecated.
+# The functionality has been consolidated into:
+# - Invoke-DeltaCleanup (for cleanup operations)
+# - Process-PIMAssignments (for creation operations)
+# This function can be safely removed in a future version.
 function Invoke-PIMAssignments {
     [CmdletBinding(SupportsShouldProcess = $true)]
     [OutputType([System.Collections.Hashtable])]
