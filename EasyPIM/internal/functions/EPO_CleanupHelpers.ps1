@@ -1,5 +1,5 @@
 # Define shared helper functions for cleanup operations
-# Used by both Invoke-DeltaCleanup and Invoke-InitialCleanup
+# Used by Invoke-DeltaCleanup
 
 # Define protected roles that should never be removed automatically at script level
 $script:protectedRoles = @(
@@ -130,28 +130,6 @@ function Test-AssignmentInConfig {
         
         # Return true if all required components match
         if ($principalMatches -and $roleMatches -and $typeMatches) {
-            return $true
-        }
-    }
-    
-    return $false
-}
-
-function Test-IsJustificationFromOrchestrator {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory = $true)]
-        [object]$Assignment,
-        
-        [Parameter(Mandatory = $false)]
-        [string]$JustificationFilter = "Invoke-EasyPIMOrchestrator"
-    )
-    
-    # Check various properties where justification might be stored
-    foreach ($propName in @("Justification", "justification", "Reason", "reason")) {
-        if ($Assignment.PSObject.Properties.Name -contains $propName -and 
-            $Assignment.$propName -and 
-            $Assignment.$propName -like "*$JustificationFilter*") {
             return $true
         }
     }
@@ -291,4 +269,26 @@ function Get-AssignmentProperties {
     
     Write-Verbose "Extracted properties: $($result | ConvertTo-Json -Compress)"
     return $result
+}
+
+function Test-IsJustificationFromOrchestrator {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [object]$Assignment,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$JustificationFilter = "Invoke-EasyPIMOrchestrator"
+    )
+    
+    # Check various properties where justification might be stored
+    foreach ($propName in @("Justification", "justification", "Reason", "reason")) {
+        if ($Assignment.PSObject.Properties.Name -contains $propName -and 
+            $Assignment.$propName -and 
+            $Assignment.$propName -like "*$JustificationFilter*") {
+            return $true
+        }
+    }
+    
+    return $false
 }
