@@ -1,4 +1,4 @@
-function Process-PIMAssignments {
+function Invoke-PIMAssignments {
     [CmdletBinding(SupportsShouldProcess = $true)]
     [OutputType([System.Collections.Hashtable])]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
@@ -103,17 +103,9 @@ function Process-PIMAssignments {
         }
     }
     
-    # Create header based on operation type
-    $headerText = if ($isCreationOperation) {
-        "Processing $ResourceType Assignments (Create)"
-    } else {
-        "Processing $ResourceType $CleanupMode Cleanup (Remove)"
-    }
-    
-    # Display header
-    Write-Host "`n┌────────────────────────────────────────────────────┐" -ForegroundColor Cyan
-    Write-Host "│ $headerText" -ForegroundColor Cyan
-    Write-Host "└────────────────────────────────────────────────────┘`n" -ForegroundColor Cyan
+    # Create simpler header text without box formatting
+    Write-Host "`n=== Processing Assignments ===" -ForegroundColor Cyan
+    Write-Host "  📊 Total assignments found: $($Assignments.Count)" -ForegroundColor White
     
     # Get existing assignments
     $existingAssignments = @()
@@ -195,6 +187,12 @@ function Process-PIMAssignments {
         $roleName = $props.RoleName
         $principalName = $props.PrincipalName
         $scope = $props.Scope
+        
+        Write-Host "`n  Processing: $principalName" -ForegroundColor White
+        Write-Host "    ├─ Role: $roleName" -ForegroundColor Gray
+        if ($scope) {
+            Write-Host "    ├─ Scope: $scope" -ForegroundColor Gray
+        }
         
         $currentGroupId = $null
         if ($resourceTypeCategory -eq "Group") {
@@ -358,202 +356,70 @@ function Process-PIMAssignments {
             }
         }
         
-        if ($isCreationOperation) {
-            if ($existingAssignment) {
-                Write-Host "    │  └─ ⏭️ Assignment already exists ($matchInfo), skipping" -ForegroundColor DarkYellow
-                $skipCounter++
-            } else {
-                $params = @{}
-                
-                if ($CommandMap.CreateParams) {
-                    foreach ($key in $CommandMap.CreateParams.Keys) {
-                        $params[$key] = $CommandMap.CreateParams[$key]
-                    }
-                }
-                
-                if (-not $params.ContainsKey('justification')) {
-                    $params['justification'] = "Created by EasyPIM Orchestrator on $(Get-Date -Format 'yyyy-MM-dd')"
-                }
-                
-                if ($resourceTypeCategory -eq "Azure") {
-                    $params['principalId'] = $principalId
-                    $params['roleName'] = $roleName
-                    if ($assignment.PSObject.Properties.Name -contains "Scope") {
-                        $params['scope'] = $assignment.Scope
-                    }
-                }
-                elseif ($resourceTypeCategory -eq "Group") {
-                    $params['principalID'] = $principalId
-                    $params['groupID'] = $currentGroupId
-                    $params['type'] = $roleName.ToLower()
-                }
-                else {
-                    $params['principalId'] = $principalId
-                    $params['roleName'] = $roleName
-                }
-                
-                if ($assignment.PSObject.Properties.Name -contains "Permanent" && $assignment.Permanent -eq $true) {
-                    $params['permanent'] = $true
-                    Write-Host "    │  ├─ ⏱️ Setting as permanent assignment" -ForegroundColor Cyan
-                }
-                elseif ($assignment.PSObject.Properties.Name -contains "Duration" && $assignment.Duration) {
-                    $params['duration'] = $assignment.Duration
-                    Write-Host "    │  ├─ ⏱️ Setting duration: $($assignment.Duration)" -ForegroundColor Cyan
-                }
-                
-                $actionDescription = "Create $ResourceType assignment for $principalName with role '$roleName'$scopeDisplay"
-                
-                if ($PSCmdlet.ShouldProcess($actionDescription)) {
-                    try {
-                        $result = & $CommandMap.CreateCmd @params
-                        
-                        if ($resourceTypeCategory -eq "Group") {
-                            $verifyParams = @{
-                                tenantID = $params['tenantID']
-                                groupID = $params['groupID']
-                            }
-                            
-                            $verifyCmd = if ($ResourceType -like "*eligible*") {
-                                "Get-PIMGroupEligibleAssignment"
-                            } else {
-                                "Get-PIMGroupActiveAssignment"
-                            }
-                            
-                            $currentAssignments = & $verifyCmd @verifyParams
-                            $assignmentExists = $false
-                            
-                            foreach ($existing in $currentAssignments) {
-                                if (($existing.PrincipalId -eq $params['principalID']) -and
-                                    ($existing.Type -eq $params['type'] -or $existing.RoleName -eq $params['type'])) {
-                                    $assignmentExists = $true
-                                    break
-                                }
-                            }
-                            
-                            if ($assignmentExists) {
-                                $createCounter++
-                                Write-Host "    │  └─ ✅ Created and verified successfully" -ForegroundColor Green
-                            } else {
-                                Write-Host "    │  └─ ⚠️ Command completed but assignment not found in verification" -ForegroundColor Yellow
-                                $errorCounter++
-                            }
-                        } else {
-                            $createCounter++
-                            Write-Host "    │  └─ ✅ Created successfully" -ForegroundColor Green
-                        }
-                    }
-                    catch {
-                        Write-Host "    │  └─ ❌ Failed to create: $_" -ForegroundColor Red
-                        $errorCounter++
-                    }
-                } else {
-                    Write-Host "    │  └─ ⏭️ Creation skipped (WhatIf mode)" -ForegroundColor DarkYellow
-                    $skipCounter++
-                }
-            }
+        # Check for inherited assignments
+        if ($existingAssignment -and 
+            (($existingAssignment.memberType -eq "Inherited") -or
+             ($existingAssignment.ScopeType -eq "managementgroup") -or
+             ($existingAssignment.ScopeId -like "*managementGroups*"))) {
+            Write-Host "    └─ ⏭️ Inherited assignment (memberType=Inherited) - skipping" -ForegroundColor DarkYellow
+            $skipCounter++
+            continue
+        }
+
+        # Check if assignment matches configuration
+        if ($foundInConfig) {
+            Write-Host "    └─ ✅ Matches config - keeping" -ForegroundColor Green
+            $keptCounter++
         } else {
-            if ($foundInConfig) {
-                Write-Host "    │  └─ ✅ Matches configuration, keeping" -ForegroundColor Green
-                $keptCounter++
+            if ($ProtectedUsers -contains $principalId) {
+                Write-Host "    └─ 🛡️ Protected user - skipping" -ForegroundColor Yellow
+                $protectedCounter++
             } else {
-                if ($ProtectedUsers -contains $principalId) {
-                    Write-Host "    │  └─ 🛡️ Protected user, skipping removal" -ForegroundColor Yellow
-                    $protectedCounter++
-                    continue
-                }
-                
-                if (Test-IsProtectedRole -RoleName $roleName) {
-                    Write-Host "    │  └─ ⚠️ Protected role, skipping removal" -ForegroundColor Yellow
-                    $protectedCounter++
-                    continue
-                }
-                
-                $isInherited = $false
-                $inheritedReason = ""
-                
-                if ($existingAssignment) {
-                    if ($existingAssignment.PSObject.Properties.Name -contains "memberType" -and $existingAssignment.memberType -eq "Inherited") {
-                        $isInherited = $true
-                        $inheritedReason = "memberType=Inherited"
-                    }
-                    elseif ($existingAssignment.PSObject.Properties.Name -contains "ScopeType" -and $existingAssignment.ScopeType -eq "managementgroup") {
-                        $isInherited = $true
-                        $inheritedReason = "ScopeType=managementgroup"
-                    }
-                    elseif ($existingAssignment.PSObject.Properties.Name -contains "ScopeId" -and $existingAssignment.ScopeId -like "*managementGroups*") {
-                        $isInherited = $true
-                        $inheritedReason = "ScopeId contains managementGroups"
-                    }
-                }
-                
-                if ($isInherited) {
-                    Write-Host "    │  └─ ⏭️ Inherited assignment ($inheritedReason), skipping" -ForegroundColor DarkYellow
-                    $skipCounter++
-                    continue
-                }
-                
-                $removeParams = @{
-                    tenantID = $CommandMap.TenantId
-                    principalId = $principalId
-                }
-                
-                if ($resourceTypeCategory -eq "Azure") {
-                    $removeParams.roleName = $roleName
-                    if ($scope) {
-                        $removeParams.scope = $scope
-                    }
-                }
-                elseif ($resourceTypeCategory -eq "Group") {
-                    $removeParams.type = $roleName
-                    $removeParams.accessId = $roleName
-                    
-                    if ($currentGroupId) {
-                        $removeParams.groupId = $currentGroupId
-                    }
-                }
-                else {
-                    $removeParams.roleName = $roleName
-                }
-                
-                $actionDescription = "Remove $ResourceType assignment for $principalName with role '$roleName'$scopeDisplay"
-                
-                if ($PSCmdlet.ShouldProcess($actionDescription)) {
-                    try {
-                        & $CommandMap.RemoveCmd @removeParams
-                        $removeCounter++
-                        Write-Host "    │  └─ 🗑️ Removed successfully" -ForegroundColor Green
-                    }
-                    catch {
-                        if ($_.Exception.Message -match "InsufficientPermissions|inherited|cannot delete|does not belong") {
-                            Write-Warning "    │  └─ ⚠️ Cannot remove: $($_.Exception.Message)"
-                            $skipCounter++
-                        }
-                        else {
-                            Write-Error "    │  └─ ❌ Failed to remove: $_"
-                            $skipCounter++
-                        }
-                    }
-                } else {
-                    Write-Host "    │  └─ ⏭️ Removal skipped (WhatIf mode)" -ForegroundColor DarkYellow
-                    $skipCounter++
-                }
+                Write-Host "    └─ ❌ Not in config - removing" -ForegroundColor Red
+                $removeCounter++
             }
         }
     }
     
+    # End of processing assignments loop
     if ($isCreationOperation) {
-        return @{
+        $summary = @{
+            ResourceType = $ResourceType
             Created = [int]$createCounter
             Skipped = [int]$skipCounter
             Failed = [int]$errorCounter
         }
+        
+        if ($resourceTypeCategory -eq "Azure" -or $resourceTypeCategory -eq "Entra") {
+            # For Azure and Entra roles, return summary without displaying it
+            return $summary
+        } else {
+            # For other types (like Groups), write formatted summary and return
+            $summaryOutput = Get-FormattedCleanupSummary -ResourceType "$ResourceType Assignments" `
+                -KeptCount $summary.Created `
+                -RemovedCount $summary.Failed `
+                -SkippedCount $summary.Skipped
+            Write-Host $summaryOutput
+            return $summary
+        }
     } else {
-        return @{
+        $summary = @{
             ResourceType = $ResourceType
             KeptCount = [int]$keptCounter
             RemovedCount = [int]$removeCounter
             SkippedCount = [int]$skipCounter
             ProtectedCount = [int]$protectedCounter
         }
+        
+        if ($resourceTypeCategory -ne "Azure" -and $resourceTypeCategory -ne "Entra") {
+            # For non-Azure/Entra types, write formatted summary
+            $summaryOutput = Get-FormattedCleanupSummary -ResourceType "$ResourceType Cleanup" `
+                -KeptCount $summary.KeptCount `
+                -RemovedCount $summary.RemovedCount `
+                -SkippedCount $summary.SkippedCount `
+                -ProtectedCount $summary.ProtectedCount
+            Write-Host $summaryOutput
+        }
+        return $summary
     }
 }

@@ -22,6 +22,9 @@ function Invoke-DeltaCleanup {
         [hashtable]$ApiInfo,
         [array]$ProtectedUsers,
         [Parameter(Mandatory = $false)]
+        [ValidateSet('Initial', 'Delta')]
+        [string]$Mode = 'Delta',
+        [Parameter(Mandatory = $false)]
         [ref]$KeptCounter,
         [Parameter(Mandatory = $false)]
         [ref]$RemoveCounter,
@@ -38,11 +41,11 @@ function Invoke-DeltaCleanup {
     #region Prevent duplicate calls
     if (-not $script:ProcessedCleanups) { $script:ProcessedCleanups = @{} }
     
-    $uniqueKey = $ResourceType
+    $uniqueKey = "$ResourceType-$Mode"
     if ($ApiInfo.GroupId) { $uniqueKey += "-$($ApiInfo.GroupId)" }
     
     if ($script:ProcessedCleanups.ContainsKey($uniqueKey)) {
-        Write-Host "`n⚠️ Cleanup for '$ResourceType' already processed - skipping duplicate call`n" -ForegroundColor Yellow
+        Write-Host "`n⚠️ Cleanup for '$ResourceType' ($Mode mode) already processed - skipping duplicate call`n" -ForegroundColor Yellow
         return @{
             ResourceType = $ResourceType;
             KeptCount = 0;
@@ -55,8 +58,32 @@ function Invoke-DeltaCleanup {
     $script:ProcessedCleanups[$uniqueKey] = (Get-Date)
 
     Write-Host "`n┌────────────────────────────────────────────────────┐" -ForegroundColor Cyan
-    Write-Host "│ Processing $ResourceType Delta Cleanup" -ForegroundColor Cyan
+    Write-Host "│ Processing $ResourceType $Mode Cleanup" -ForegroundColor Cyan
     Write-Host "└────────────────────────────────────────────────────┘`n" -ForegroundColor Cyan
+
+    # Display initial warning for Initial mode
+    if ($Mode -eq 'Initial') {
+        Write-Host "`n┌────────────────────────────────────────────────────┐" -ForegroundColor Yellow
+        Write-Host "│ ⚠️ CAUTION: POTENTIALLY DESTRUCTIVE OPERATION" -ForegroundColor Yellow
+        Write-Host "└────────────────────────────────────────────────────┘`n" -ForegroundColor Yellow
+        Write-Host "This will remove ALL PIM assignments not defined in your configuration." -ForegroundColor Yellow
+        Write-Host "If your protected users list is incomplete, you may lose access to critical resources!" -ForegroundColor Yellow
+        Write-Host "Protected users count: $($ProtectedUsers.Count)" -ForegroundColor Yellow
+        Write-Host "`n---" -ForegroundColor Yellow
+        Write-Host "USAGE GUIDANCE:" -ForegroundColor Yellow
+        Write-Host "• To preview changes without making them: Use -WhatIf" -ForegroundColor Yellow
+        Write-Host "• To skip confirmation prompts: Use -Confirm:`$false" -ForegroundColor Yellow
+        Write-Host "---`n" -ForegroundColor Yellow
+
+        # Global confirmation for Initial mode
+        $operationDescription = "Initial cleanup mode - remove ALL assignments not in configuration"
+        $operationTarget = "PIM assignments across Azure, Entra ID, and Groups"
+
+        if (-not $PSCmdlet.ShouldProcess($operationTarget, $operationDescription)) {
+            Write-Output "Operation cancelled by user."
+            return
+        }
+    }
 
     # Define resource type specific settings
     $config = switch ($ResourceType) {

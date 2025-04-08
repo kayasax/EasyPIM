@@ -46,16 +46,18 @@
     )
 
     # Display initial warning about potentially dangerous operation
-    Write-Warning "⚠️ CAUTION: POTENTIALLY DESTRUCTIVE OPERATION ⚠️"
-    Write-Warning "This will remove ALL PIM assignments not defined in your configuration."
-    Write-Warning "If your protected users list is incomplete, you may lose access to critical resources!"
-    Write-Warning "Protected users count: $($Config.ProtectedUsers.Count)"
-    Write-Warning "---"
-    Write-Warning "USAGE GUIDANCE:"
-    Write-Warning "• To preview changes without making them: Use -WhatIf"
-    Write-Warning '• To skip confirmation prompts: Use -Confirm:$false'
-    Write-Warning '• Example: Invoke-InitialCleanup ... -Confirm:$false'
-    Write-Warning "---"
+    Write-Host "`n┌────────────────────────────────────────────────────┐" -ForegroundColor Cyan
+    Write-Host "│ ⚠️ CAUTION: POTENTIALLY DESTRUCTIVE OPERATION" -ForegroundColor Yellow
+    Write-Host "└────────────────────────────────────────────────────┘`n" -ForegroundColor Cyan
+    Write-Host "This will remove ALL PIM assignments not defined in your configuration." -ForegroundColor Yellow
+    Write-Host "If your protected users list is incomplete, you may lose access to critical resources!" -ForegroundColor Yellow
+    Write-Host "Protected users count: $($Config.ProtectedUsers.Count)" -ForegroundColor Yellow
+    Write-Host "`n---" -ForegroundColor Yellow
+    Write-Host "USAGE GUIDANCE:" -ForegroundColor Yellow
+    Write-Host "• To preview changes without making them: Use -WhatIf" -ForegroundColor Yellow
+    Write-Host "• To skip confirmation prompts: Use -Confirm:`$false" -ForegroundColor Yellow
+    Write-Host "• Example: Invoke-InitialCleanup ... -Confirm:`$false" -ForegroundColor Yellow
+    Write-Host "---`n" -ForegroundColor Yellow
 
     # Global confirmation for the entire operation
     $operationDescription = "Initial cleanup mode - remove ALL assignments not in configuration"
@@ -66,8 +68,12 @@
         return
     }
 
-    Write-SectionHeader "Initial Mode Cleanup"
-    Write-StatusInfo "This will remove all assignments not in the configuration except for protected users"
+    Write-Host "`n┌────────────────────────────────────────────────────┐" -ForegroundColor Cyan
+    Write-Host "│ Initial Mode Cleanup" -ForegroundColor Cyan
+    Write-Host "└────────────────────────────────────────────────────┘`n" -ForegroundColor Cyan
+    Write-Host "  ℹ️ This will remove all assignments not in the configuration except for protected users" -ForegroundColor White
+    Write-Host "  ℹ️ Found $($Config.ProtectedUsers.Count) protected users that will not be removed" -ForegroundColor White
+    Write-Host "  ℹ️ Processing will show detailed progress for each resource type`n" -ForegroundColor White
 
     # Track overall statistics
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
@@ -79,7 +85,6 @@
 
     # Initialize protected users list
     $protectedUsers = @($Config.ProtectedUsers)
-    Write-StatusInfo "Found $($protectedUsers.Count) protected users that will not be removed"
 
     # Define protected roles that should never be removed automatically
     $protectedRoles = @(
@@ -173,6 +178,22 @@
         return $false
     }
 
+    function Write-DetailedProgress {
+        param(
+            [string]$Activity,
+            [int]$Current,
+            [int]$Total,
+            [string]$Status
+        )
+        $percentComplete = [Math]::Floor(($Current / $Total) * 100)
+        Write-Progress -Activity $Activity -Status "$Status ($Current of $Total - $percentComplete%)" -PercentComplete $percentComplete
+    }
+
+    function Write-ProcessingStatus {
+        param([string]$Message)
+        Write-Host "    ├─ $Message" -ForegroundColor White
+    }
+
     function Invoke-CleanupAzureRoles {
         [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "")]
         param (
@@ -200,20 +221,22 @@
         $total = $existing.Count
         $processed = 0
 
+        Write-Host "`n=== Processing Azure Role $Type Assignments ===" -ForegroundColor Cyan
         foreach ($assignment in $existing) {
             $processed++
             $principalId = $assignment.PrincipalId
             $roleName = $assignment.RoleName
             $scope = $assignment.ScopeId
 
+            Write-DetailedProgress -Activity "Processing Azure Role $Type Assignments" -Current $processed -Total $total -Status "Checking assignment"
+
             # Check if principal exists
             if (-not (Test-PrincipalExists -PrincipalId $principalId)) {
-                Write-StatusWarning "Principal $principalId does not exist, skipping..."
+                Write-ProcessingStatus "Principal $principalId does not exist, skipping..."
                 continue
             }
 
-            $percentComplete = [Math]::Floor(($processed / $total) * 100)
-            Write-Progress -Activity "Processing Azure Role $Type Assignments" -Status "$processed of $total ($percentComplete%)" -PercentComplete $percentComplete
+            Write-ProcessingStatus "Checking assignment for principal: $principalId with role: $roleName"
 
             # Check if assignment is in config
             $isInConfig = Test-AzureRoleAssignmentInConfig -PrincipalId $principalId -RoleName $roleName -Scope $scope -ConfigAssignments $ConfigAssignments
@@ -221,13 +244,14 @@
             if (-not $isInConfig) {
                 # Check if role is protected
                 if ($protectedRoles -contains $roleName) {
-                    Write-Output "    ├─ ⚠️ $principalId with role '$roleName' is a protected role, skipping"
+                    Write-Verbose "Protected role $roleName for $principalId - skipping"
+                    $protectedCounter++
                     continue
                 }
 
                 # Check if principal is protected
                 if (Test-IsProtectedAssignment -PrincipalId $principalId) {
-                    Write-StatusInfo "Skipping removal of protected user $principalId with role $roleName on scope $scope"
+                    Write-Verbose "Protected user $principalId with role $roleName - skipping"
                     $protectedCounter++
                     continue
                 }
@@ -237,13 +261,11 @@
 
                 if ($PSCmdlet.ShouldProcess($actionDescription)) {
                     try {
-                        Write-StatusProcessing "Removing assignment for $principalId with role $roleName..."
                         & $RemoveCommand -tenantID $TenantId -scope $scope -principalId $principalId -roleName $roleName
-                        Write-StatusSuccess "Successfully removed assignment"
                         $removeCounter++
                     }
                     catch {
-                        Write-StatusError "Failed to remove assignment: $_"
+                        Write-Verbose "Failed to remove assignment: $_"
                         $skipCounter++
                     }
                 }
@@ -257,9 +279,14 @@
         Write-Progress -Activity "Processing Azure Role $Type Assignments" -Completed
 
         $elapsed = $sectionWatch.Elapsed.TotalSeconds
-        Write-StatusInfo "Completed in $elapsed seconds"
-        Write-Summary -Category "Azure Role $Type Cleanup" -Created $skipCounter -Removed $removeCounter -Failed 0 -OperationType "Cleanup"
-        Write-StatusInfo "Protected assignments skipped: $protectedCounter"
+        Write-Host "`n┌────────────────────────────────────────────────────┐" -ForegroundColor Cyan
+        Write-Host "│ Azure Role $Type Cleanup Summary" -ForegroundColor Cyan
+        Write-Host "├────────────────────────────────────────────────────┤" -ForegroundColor Cyan
+        Write-Host "│ ✅ Kept:      $skipCounter" -ForegroundColor White
+        Write-Host "│ 🗑️ Removed:   $removeCounter" -ForegroundColor White
+        Write-Host "│ 🛡️ Protected: $protectedCounter" -ForegroundColor White
+        Write-Host "│ ⏱️ Duration:  $($elapsed.ToString("F2"))s" -ForegroundColor White
+        Write-Host "└────────────────────────────────────────────────────┘" -ForegroundColor Cyan
 
         # Return standardized result object
         return @{
@@ -284,8 +311,8 @@
         $protectedCounter = 0
         $sectionWatch = [System.Diagnostics.Stopwatch]::StartNew()
 
-        # Get ALL existing assignments at once
-        Write-StatusInfo "Fetching ALL existing Entra ID $Type assignments..."
+        # Get ALL existing assignments
+        Write-StatusInfo "Fetching existing Entra ID $Type assignments..."
         $allExisting = & $GetCommand -tenantID $TenantId
         Write-StatusInfo "Found $($allExisting.Count) existing assignments"
 
@@ -304,7 +331,7 @@
 
             # Check if principal exists
             if (-not (Test-PrincipalExists -PrincipalId $principalId)) {
-                Write-StatusWarning "Principal $principalId does not exist, skipping..."
+                Write-Verbose "Principal $principalId does not exist, skipping..."
                 continue
             }
 
@@ -317,13 +344,14 @@
             if (-not $isInConfig) {
                 # Check if role is protected
                 if ($protectedRoles -contains $roleName) {
-                    Write-Output "    ├─ ⚠️ $principalId with role '$roleName' is a protected role, skipping"
+                    Write-Verbose "Protected role $roleName for $principalId - skipping"
+                    $protectedCounter++
                     continue
                 }
 
                 # Check if principal is protected
                 if (Test-IsProtectedAssignment -PrincipalId $principalId) {
-                    Write-StatusInfo "Skipping removal of protected user $principalId with role $roleName"
+                    Write-Verbose "Protected user $principalId with role $roleName - skipping"
                     $protectedCounter++
                     continue
                 }
@@ -333,13 +361,11 @@
 
                 if ($PSCmdlet.ShouldProcess($actionDescription)) {
                     try {
-                        Write-StatusProcessing "Removing assignment for $principalId with role $roleName..."
                         & $RemoveCommand -tenantID $TenantId -principalId $principalId -roleName $roleName
-                        Write-StatusSuccess "Successfully removed assignment"
                         $removeCounter++
                     }
                     catch {
-                        Write-StatusError "Failed to remove assignment: $_"
+                        Write-Verbose "Failed to remove assignment: $_"
                         $skipCounter++
                     }
                 }
@@ -353,9 +379,13 @@
         Write-Progress -Activity "Processing Entra ID Role $Type Assignments" -Completed
 
         $elapsed = $sectionWatch.Elapsed.TotalSeconds
-        Write-StatusInfo "Completed in $elapsed seconds"
-        Write-Summary -Category "Entra ID Role $Type Cleanup" -Kept $skipCounter -Removed $removeCounter -Skipped $protectedCounter -OperationType "Cleanup"
-        Write-StatusInfo "Protected assignments skipped: $protectedCounter"
+        Write-Host "`n┌────────────────────────────────────────────────────┐" -ForegroundColor Cyan
+        Write-Host "│ Entra ID Role $Type Cleanup Summary" -ForegroundColor Cyan
+        Write-Host "├────────────────────────────────────────────────────┤" -ForegroundColor Cyan
+        Write-Host "│ ✅ Kept:      $skipCounter" -ForegroundColor White
+        Write-Host "│ 🗑️ Removed:   $removeCounter" -ForegroundColor White
+        Write-Host "│ 🛡️ Protected: $protectedCounter" -ForegroundColor White
+        Write-Host "└────────────────────────────────────────────────────┘" -ForegroundColor Cyan
 
         # Return standardized result object
         return @{
@@ -466,11 +496,14 @@
     $totalTime = $stopwatch.Elapsed.TotalMinutes
 
     # Final summary
-    Write-SectionHeader "Initial Mode Cleanup Summary"
-    Write-StatusInfo "Total assignments removed: $totalRemoved"
-    Write-StatusInfo "Total assignments kept: $totalKept"
-    Write-StatusInfo "Total protected assignments skipped: $totalProtected"
-    Write-StatusInfo "Total execution time: $($totalTime.ToString("F2")) minutes"
+    Write-Host "`n┌────────────────────────────────────────────────────┐" -ForegroundColor Cyan
+    Write-Host "│ Initial Mode Cleanup Summary" -ForegroundColor Cyan
+    Write-Host "├────────────────────────────────────────────────────┤" -ForegroundColor Cyan
+    Write-Host "│ ✅ Kept:      $totalKept" -ForegroundColor White
+    Write-Host "│ 🗑️ Removed:   $totalRemoved" -ForegroundColor White
+    Write-Host "│ 🛡️ Protected: $totalProtected" -ForegroundColor White
+    Write-Host "└────────────────────────────────────────────────────┘" -ForegroundColor Cyan
+    Write-Host "Total execution time: $($totalTime.ToString("F2")) minutes`n" -ForegroundColor White
 
     Write-StatusSuccess "Initial mode cleanup completed"
 

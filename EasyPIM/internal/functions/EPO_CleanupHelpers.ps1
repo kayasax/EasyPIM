@@ -9,6 +9,12 @@ $script:protectedRoles = @(
     "Security Administrator"
 )
 
+# Define script-level counters at the top of the file (outside any function)
+$script:keptCounter = 0
+$script:removeCounter = 0
+$script:skipCounter = 0
+$script:protectedCounter = 0
+
 function Test-IsProtectedAssignment {
     [CmdletBinding()]
     param (
@@ -176,9 +182,9 @@ function Get-FormattedCleanupSummary {
 ┌────────────────────────────────────────────────────┐
 │ $ResourceType Cleanup Summary                      
 ├────────────────────────────────────────────────────┤
-│ ✅ Kept:    $KeptCount
-│ 🗑️ Removed: $RemovedCount
-│ ⏭️ Skipped: $SkippedCount
+│ ✅ Kept:      $KeptCount
+│ 🗑️ Removed:   $RemovedCount
+│ ⏭️ Skipped:   $SkippedCount
 "@
 
     if ($ProtectedCount -gt 0) {
@@ -188,6 +194,13 @@ function Get-FormattedCleanupSummary {
     $output += "`n└────────────────────────────────────────────────────┘"
     
     return $output
+}
+
+function Reset-CleanupCounters {
+    $script:keptCounter = 0
+    $script:removeCounter = 0
+    $script:skipCounter = 0
+    $script:protectedCounter = 0
 }
 
 function Get-AssignmentProperties {
