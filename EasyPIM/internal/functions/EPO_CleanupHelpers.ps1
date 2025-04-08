@@ -1,5 +1,5 @@
 # Define shared helper functions for cleanup operations
-# Used by Invoke-DeltaCleanup
+# Used by Invoke-Cleanup
 
 # Define protected roles that should never be removed automatically at script level
 $script:protectedRoles = @(

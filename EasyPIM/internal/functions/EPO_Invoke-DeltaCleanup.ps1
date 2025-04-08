@@ -12,7 +12,7 @@ $script:protectedRoles = @(
     "Security Administrator"
 )
 
-function Invoke-DeltaCleanup {
+function Invoke-Cleanup {
     [CmdletBinding(SupportsShouldProcess = $true)]
     [OutputType([System.Collections.Hashtable])]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]

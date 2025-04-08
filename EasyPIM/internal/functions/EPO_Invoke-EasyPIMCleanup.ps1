@@ -38,7 +38,7 @@ function Invoke-EasyPIMCleanup {
             TenantId = $TenantId
             SubscriptionId = $SubscriptionId
         }
-        $results += Invoke-DeltaCleanup -ResourceType "Azure Role eligible" -ConfigAssignments $Config.AzureRoles -ApiInfo $apiInfo -ProtectedUsers $Config.ProtectedUsers -Mode $Mode
+        $results += Invoke-Cleanup -ResourceType "Azure Role eligible" -ConfigAssignments $Config.AzureRoles -ApiInfo $apiInfo -ProtectedUsers $Config.ProtectedUsers -Mode $Mode
     }
 
     # Process Azure Resource roles (active)
@@ -47,7 +47,7 @@ function Invoke-EasyPIMCleanup {
             TenantId = $TenantId
             SubscriptionId = $SubscriptionId
         }
-        $results += Invoke-DeltaCleanup -ResourceType "Azure Role active" -ConfigAssignments $Config.AzureRolesActive -ApiInfo $apiInfo -ProtectedUsers $Config.ProtectedUsers -Mode $Mode
+        $results += Invoke-Cleanup -ResourceType "Azure Role active" -ConfigAssignments $Config.AzureRolesActive -ApiInfo $apiInfo -ProtectedUsers $Config.ProtectedUsers -Mode $Mode
     }
 
     # Process Entra ID roles (eligible)
@@ -55,7 +55,7 @@ function Invoke-EasyPIMCleanup {
         $apiInfo = @{
             TenantId = $TenantId
         }
-        $results += Invoke-DeltaCleanup -ResourceType "Entra Role eligible" -ConfigAssignments $Config.EntraIDRoles -ApiInfo $apiInfo -ProtectedUsers $Config.ProtectedUsers -Mode $Mode
+        $results += Invoke-Cleanup -ResourceType "Entra Role eligible" -ConfigAssignments $Config.EntraIDRoles -ApiInfo $apiInfo -ProtectedUsers $Config.ProtectedUsers -Mode $Mode
     }
 
     # Process Entra ID roles (active)
@@ -63,7 +63,7 @@ function Invoke-EasyPIMCleanup {
         $apiInfo = @{
             TenantId = $TenantId
         }
-        $results += Invoke-DeltaCleanup -ResourceType "Entra Role active" -ConfigAssignments $Config.EntraIDRolesActive -ApiInfo $apiInfo -ProtectedUsers $Config.ProtectedUsers -Mode $Mode
+        $results += Invoke-Cleanup -ResourceType "Entra Role active" -ConfigAssignments $Config.EntraIDRolesActive -ApiInfo $apiInfo -ProtectedUsers $Config.ProtectedUsers -Mode $Mode
     }
 
     # Process Group roles (eligible)
@@ -74,7 +74,7 @@ function Invoke-EasyPIMCleanup {
                     TenantId = $TenantId
                     GroupIds = @($groupConfig.GroupId)
                 }
-                $results += Invoke-DeltaCleanup -ResourceType "Group eligible" -ConfigAssignments $Config.GroupRoles -ApiInfo $apiInfo -ProtectedUsers $Config.ProtectedUsers -Mode $Mode
+                $results += Invoke-Cleanup -ResourceType "Group eligible" -ConfigAssignments $Config.GroupRoles -ApiInfo $apiInfo -ProtectedUsers $Config.ProtectedUsers -Mode $Mode
             }
         }
     }
@@ -87,7 +87,7 @@ function Invoke-EasyPIMCleanup {
                     TenantId = $TenantId
                     GroupIds = @($groupConfig.GroupId)
                 }
-                $results += Invoke-DeltaCleanup -ResourceType "Group active" -ConfigAssignments $Config.GroupRolesActive -ApiInfo $apiInfo -ProtectedUsers $Config.ProtectedUsers -Mode $Mode
+                $results += Invoke-Cleanup -ResourceType "Group active" -ConfigAssignments $Config.GroupRolesActive -ApiInfo $apiInfo -ProtectedUsers $Config.ProtectedUsers -Mode $Mode
             }
         }
     }
