@@ -137,20 +137,45 @@ function Invoke-DeltaCleanup {
         $allAssignments = @()
         
         if ($config.GraphBased) {
-            # For Entra roles, get assignments using our module's commands
-            Write-Host "  🔍 Checking tenant-wide Entra Role assignments" -ForegroundColor White
-            try {
-                $getCmd = if ($ResourceType -eq "Entra Role eligible") {
-                    "Get-PIMEntraRoleEligibleAssignment"
-                } else {
-                    "Get-PIMEntraRoleActiveAssignment"
-                }
+            if ($config.GroupBased) {
+                # For group assignments, need to get assignments for each group
+                Write-Host "  🔍 Checking group assignments" -ForegroundColor White
+                try {
+                    $getCmd = if ($ResourceType -eq "Group eligible") {
+                        "Get-PIMGroupEligibleAssignment"
+                    } else {
+                        "Get-PIMGroupActiveAssignment"
+                    }
 
-                $allAssignments = & $getCmd -TenantId $ApiInfo.TenantId
-                Write-Host "    ├─ Found $($allAssignments.Count) assignments" -ForegroundColor Gray
+                    foreach ($groupId in $ApiInfo.GroupIds) {
+                        Write-Host "    ├─ Processing group: $groupId" -ForegroundColor White
+                        $groupAssignments = & $getCmd -TenantId $ApiInfo.TenantId -groupId $groupId
+                        if ($null -ne $groupAssignments) {
+                            $allAssignments += $groupAssignments
+                            Write-Host "    │  └─ Found $($groupAssignments.Count) assignments" -ForegroundColor Gray
+                        }
+                    }
+                }
+                catch {
+                    Write-Error "Failed to get group assignments: $_"
+                }
             }
-            catch {
-                Write-Error "Failed to get Entra role assignments: $_"
+            else {
+                # For Entra roles, get assignments using our module's commands
+                Write-Host "  🔍 Checking tenant-wide Entra Role assignments" -ForegroundColor White
+                try {
+                    $getCmd = if ($ResourceType -eq "Entra Role eligible") {
+                        "Get-PIMEntraRoleEligibleAssignment"
+                    } else {
+                        "Get-PIMEntraRoleActiveAssignment"
+                    }
+
+                    $allAssignments = & $getCmd -TenantId $ApiInfo.TenantId
+                    Write-Host "    ├─ Found $($allAssignments.Count) assignments" -ForegroundColor Gray
+                }
+                catch {
+                    Write-Error "Failed to get Entra role assignments: $_"
+                }
             }
         }
         else {
@@ -212,9 +237,12 @@ function Invoke-DeltaCleanup {
                     $null 
                 }
 
-                # Handle role name - simplified since our module provides consistent output
-                $roleName = if ($config.GraphBased) {
-                    $assignment.rolename  # Our module's commands provide this consistently
+                # Handle role name/member type based on resource type
+                $roleName = if ($config.GroupBased) {
+                    $assignment.memberType  # For groups, use memberType (member/owner)
+                }
+                elseif ($config.GraphBased) {
+                    $assignment.rolename  # For Entra roles, use rolename consistently
                 }
                 elseif ($null -ne $assignment.RoleName -and $assignment.RoleName -ne '') { 
                     $assignment.RoleName 
@@ -247,8 +275,8 @@ function Invoke-DeltaCleanup {
                 $scope = if ($config.GraphBased) {
                     $null  # Entra roles don't use scope
                 }
-                else {  # For Azure roles, use exactly what's returned by Get-PIMAzureResource*Assignment
-                    $assignment.Scope
+                else {  # For Azure roles, always use ScopeId
+                    $assignment.ScopeId
                 }
 
                 # Get principal name - simplified since our module provides consistent output
@@ -368,7 +396,23 @@ function Invoke-DeltaCleanup {
                 Write-Host "    └─ 🗑️ Not in config - removing..." -ForegroundColor Magenta
                 if ($PSCmdlet.ShouldProcess("Remove $ResourceType assignment for $principalName with role '$roleName'")) {
                     try {
-                        & $config.RemoveCmd -TenantId $ApiInfo.TenantId -PrincipalId $principalId -RoleName $roleName -Scope $scope
+                        if ($config.GroupBased) {
+                            # For groups, we need to use groupId and memberType
+                            & $config.RemoveCmd -TenantId $ApiInfo.TenantId -GroupId $assignment.id.Split('_')[0] -PrincipalId $principalId -type $roleName
+                        }
+                        else {
+                            # For Azure and Entra roles, use RoleName
+                            $params = @{
+                                TenantId = $ApiInfo.TenantId
+                                PrincipalId = $principalId
+                                RoleName = $roleName
+                            }
+                            if ($scope) {
+                                $params.Scope = $scope
+                            }
+                            & $config.RemoveCmd @params
+                        }
+                        
                         $script:removeCounter++
                         Write-Host "       ✓ Removed successfully" -ForegroundColor Green
                     }
