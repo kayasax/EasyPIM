@@ -1,4 +1,4 @@
-﻿function Invoke-ResourceAssignments {
+﻿function Invoke-ResourceAssignment {
     [CmdletBinding(SupportsShouldProcess = $true)]
     [OutputType([System.Collections.Hashtable])]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
@@ -435,7 +435,7 @@
     }
 
     # Return the counters in a structured format
-    Write-CreationSummary -Category "$ResourceType Assignments" -Created $createCounter -Skipped $skipCounter -Failed $errorCounter
+    Write-Summary -Category "$ResourceType Assignments" -Created $createCounter -Skipped $skipCounter -Failed $errorCounter
 
     # Return standardized result
     return @{
@@ -444,3 +444,6 @@
         Failed  = $errorCounter
     }
 }
+
+# Create an alias for backward compatibility
+Set-Alias -Name Invoke-ResourceAssignments -Value Invoke-ResourceAssignment

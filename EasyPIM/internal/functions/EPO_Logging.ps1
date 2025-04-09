@@ -84,3 +84,28 @@ function Write-CleanupSummary {
     Write-Host "│ 🛡️ Protected: $Protected" -ForegroundColor White
     Write-Host "└────────────────────────────────────────────────────┘" -ForegroundColor Cyan
 }
+
+function Write-Summary {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$Category,
+        
+        [Parameter(Mandatory = $true)]
+        [int]$Created,
+        
+        [Parameter(Mandatory = $true)]
+        [int]$Skipped,
+        
+        [Parameter(Mandatory = $true)]
+        [int]$Failed
+    )
+    
+    Write-Host "`n┌───────────────────────────────────────────────────────────────────────────────┐" -ForegroundColor Cyan
+    Write-Host "│ SUMMARY: $Category" -ForegroundColor Cyan
+    Write-Host "├───────────────────────────────────────────────────────────────────────────────┤" -ForegroundColor Cyan
+    Write-Host "│ ✅ Created : $Created" -ForegroundColor White
+    Write-Host "│ ⏭️ Skipped : $Skipped" -ForegroundColor White
+    Write-Host "│ ❌ Failed  : $Failed" -ForegroundColor White
+    Write-Host "└───────────────────────────────────────────────────────────────────────────────┘" -ForegroundColor Cyan
+}

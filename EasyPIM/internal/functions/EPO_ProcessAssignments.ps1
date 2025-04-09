@@ -1,7 +1,7 @@
 # This function is deprecated.
 # The functionality has been consolidated into:
 # - Invoke-DeltaCleanup (for cleanup operations)
-# - Process-PIMAssignments (for creation operations)
+# - Invoke-PIMAssignment (for creation operations)
 # This function can be safely removed in a future version.
 function Invoke-PIMAssignments {
     [CmdletBinding(SupportsShouldProcess = $true)]
@@ -428,3 +428,63 @@ function Invoke-PIMAssignments {
         return $summary
     }
 }
+
+# Process PIM assignments using the robust Invoke-ResourceAssignment function
+function Invoke-PIMAssignment {
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    [OutputType([System.Collections.Hashtable])]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
+    param (
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("Create", "Remove")]
+        [string]$Operation,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$ResourceType,
+        
+        [Parameter(Mandatory = $true)]
+        [array]$Assignments,
+        
+        [Parameter(Mandatory = $true)]
+        [array]$ConfigAssignments,
+        
+        [Parameter(Mandatory = $true)]
+        [hashtable]$CommandMap,
+        
+        [Parameter(Mandatory = $false)]
+        [array]$ProtectedUsers = @(),
+        
+        [Parameter(Mandatory = $false)]
+        [string]$CleanupMode = "delta",
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$FilterByJustification,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$JustificationFilter = "Invoke-EasyPIMOrchestrator"
+    )
+    
+    # When Operation is Create, use Invoke-ResourceAssignment
+    if ($Operation -eq "Create") {
+        # Create a simple config object for justification
+        $Config = [PSCustomObject]@{
+            Justification = "Created by EasyPIM Orchestrator on $(Get-Date -Format 'yyyy-MM-dd')"
+            ProtectedUsers = $ProtectedUsers
+        }
+        
+        return Invoke-ResourceAssignment -ResourceType $ResourceType -Assignments $Assignments -CommandMap $CommandMap -Config $Config
+    }
+    else {
+        # For Remove operations, use existing functionality or Invoke-DeltaCleanup
+        Write-Warning "Remove operation not implemented in this function. Please use Invoke-DeltaCleanup instead."
+        return @{
+            Created = 0
+            Skipped = 0
+            Failed = 0
+        }
+    }
+}
+
+# Create aliases for backward compatibility
+Set-Alias -Name Process-PIMAssignments -Value Invoke-PIMAssignment
+Set-Alias -Name Process-PIMAssignment -Value Invoke-PIMAssignment

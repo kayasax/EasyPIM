@@ -183,7 +183,8 @@ function New-GroupRoleAssignments {
         $groupId = $groupSet.Name
         $assignmentsForGroup = $groupSet.Group
         
-        Write-GroupHeader "Processing group: $groupId with $($assignmentsForGroup.Count) assignments"
+        # Use Write-StatusInfo instead of Write-GroupHeader
+        Write-StatusInfo "Processing group: $groupId with $($assignmentsForGroup.Count) assignments"
         
         # First check if group exists before trying to process assignments
         if (-not (Test-PrincipalExists -PrincipalId $groupId)) {

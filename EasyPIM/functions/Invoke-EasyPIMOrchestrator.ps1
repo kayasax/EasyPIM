@@ -26,7 +26,10 @@
         [string[]]$Operations = @("All"),
 
         [Parameter(Mandatory = $false)]
-        [switch]$SkipAssignments
+        [switch]$SkipAssignments,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$SkipCleanup
     )
 
     Write-SectionHeader "Starting EasyPIM Orchestration (Mode: $Mode)"
@@ -74,11 +77,15 @@
             $processedConfig = $filteredConfig
         }
         
-        # 3. Perform cleanup operations if running full operations or specific role types
-        $cleanupResults = if ($Operations -contains "All") {
+        # 3. Perform cleanup operations if running full operations or specific role types (skip if requested)
+        $cleanupResults = if ($Operations -contains "All" -and -not $SkipCleanup) {
             Invoke-EasyPIMCleanup -Config $processedConfig -Mode $Mode -TenantId $TenantId -SubscriptionId $SubscriptionId
         } else {
-            Write-Host "⚠️ Skipping cleanup as specific operations were selected" -ForegroundColor Yellow
+            if ($SkipCleanup) {
+                Write-Host "⚠️ Skipping cleanup as requested by SkipCleanup parameter" -ForegroundColor Yellow
+            } else {
+                Write-Host "⚠️ Skipping cleanup as specific operations were selected" -ForegroundColor Yellow
+            }
             $null
         }
         
