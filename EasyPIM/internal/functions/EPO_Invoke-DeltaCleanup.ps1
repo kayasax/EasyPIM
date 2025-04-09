@@ -300,7 +300,12 @@ function Invoke-Cleanup {
 
                 # Get scope - handle Azure roles properly
                 $scope = if ($config.GraphBased) {
-                    $null  # Entra roles don't use scope
+                    # For Entra roles, try to get the directoryScopeId for AU-scoped assignments
+                    if ($assignment.PSObject.Properties.Name -contains 'directoryScopeId') {
+                        $assignment.directoryScopeId
+                    } else {
+                        $null  # Default for tenant-wide Entra roles
+                    }
                 }
                 else {  # For Azure roles, always use ScopeId
                     $assignment.ScopeId
