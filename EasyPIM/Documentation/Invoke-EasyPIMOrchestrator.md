@@ -120,7 +120,7 @@ The configuration file follows a JSON structure with these key sections:
 |---------|-------------|
 | **AzureRoles** | Eligible (PIM) assignments for Azure RBAC roles |
 | **AzureRolesActive** | Active (immediate) assignments for Azure RBAC roles |
-| **EntraIDRoles** | Eligible assignments for Entra ID directory roles |
+| **EntraIDRoles** | Eligible assignments for Entra ID directory roles. **Note**: Administrative Unit (AU) scoped assignments are detected but cannot be removed automatically due to API limitations |
 | **EntraIDRolesActive** | Active assignments for Entra ID directory roles |
 | **GroupRoles** | Eligible assignments for Group roles |
 | **GroupRolesActive** | Active assignments for Group roles |
@@ -288,6 +288,7 @@ Skip cleanup:
 | **Cannot find role** | Typo in role name | Ensure exact role names match Azure/Entra ID |
 | **Access denied** | Insufficient permissions | Ensure you have required permissions for all operations |
 | **Duration format error** | Invalid ISO 8601 format | Ensure durations follow proper format (PT8H, P1D, etc.) |
+| **Administrative Unit scoped assignments not removed** | API limitation | AU-scoped Entra role assignments are detected but skipped during cleanup due to API limitations. Remove these manually |
 
 ### Logging and Diagnostics
 
@@ -323,6 +324,9 @@ A: The orchestrator will validate the configuration and report any issues before
 
 ### Q: How do I update existing assignments?
 A: Modify your configuration file and run the orchestrator again. It will reconcile changes automatically.
+
+### Q: Why aren't my Entra ID role assignments scoped to Administrative Units being removed?
+A: Due to current API limitations, the removal of Entra ID role assignments scoped to Administrative Units is not supported in the automatic cleanup process. These assignments will be detected and reported during execution, but you'll need to remove them manually. The orchestrator will output detailed information about these assignments to help you identify them.
 
 ## Security Considerations
 
@@ -360,5 +364,5 @@ Contributions to EasyPIM are welcome! Please submit pull requests or open issues
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-`````
+`
 

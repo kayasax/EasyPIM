@@ -105,8 +105,23 @@ function Test-AssignmentInConfig {
                 }
             }
             "Entra" {
-                # For Entra roles, we only need to match principal and role
-                $typeMatches = $true
+                # For Entra roles, check for directoryScopeId if available
+                if (-not $Scope) {
+                    # If no scope provided, it's tenant-wide
+                    $typeMatches = $true
+                } else {
+                    # If scope is provided and matches an Administrative Unit format, check for DirectoryScopeId property
+                    # or assume it's tenant-wide if not specified in config
+                    $scopeMatches = $false
+                    foreach ($propName in @("DirectoryScopeId", "directoryScopeId")) {
+                        if ($config.PSObject.Properties.Name -contains $propName) {
+                            $scopeMatches = $config.$propName -eq $Scope
+                            if ($scopeMatches) { break }
+                        }
+                    }
+                    # If the config has no DirectoryScopeId, assume it's tenant-wide and doesn't match AU-scoped role
+                    $typeMatches = $scopeMatches
+                }
             }
             "Group" {
                 if (-not $GroupId) {

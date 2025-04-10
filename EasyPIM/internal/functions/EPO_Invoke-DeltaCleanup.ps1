@@ -439,9 +439,22 @@ function Invoke-Cleanup {
                                 PrincipalId = $principalId
                                 RoleName = $roleName
                             }
-                            if ($scope) {
+                            
+                            # For Entra roles with Administrative Unit scope
+                            if ($config.GraphBased -and $scope -and $scope -like "/administrativeUnits/*") {
+                                $auId = ($scope -split '/')[-1]
+                                Write-Host "       ⚠️ Administrative Unit scoped assignments are not currently supported for removal" -ForegroundColor Yellow
+                                Write-Host "       ℹ️ Administrative Unit ID: $auId" -ForegroundColor Cyan
+                                Write-Host "       ℹ️ Full scope: $scope" -ForegroundColor Cyan
+                                Write-Host "       ⏭️ Skipping removal" -ForegroundColor Yellow
+                                $script:skipCounter++
+                                continue
+                            }
+                            # For Azure resources with scope
+                            elseif ($scope) {
                                 $params.Scope = $scope
                             }
+                            
                             & $config.RemoveCmd @params
                         }
                         
