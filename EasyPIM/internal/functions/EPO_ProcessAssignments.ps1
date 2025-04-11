@@ -301,18 +301,18 @@ function Invoke-PIMAssignments {
                 if ($existing.PSObject.Properties.Name -contains 'principal') {
                     $principalMatched = $existing.principal.id -eq $principalId
                     $roleMatched = $existing.roleDefinition.displayName -ieq $roleName
-                    if ($principalMatched && $roleMatched) {
+                    if ($principalMatched -and $roleMatched) {
                         $matchInfo = "principal.id='$($existing.principal.id)' and roleDefinition.displayName='$($existing.roleDefinition.displayName)'"
                     }
                 } else {
                     $principalMatched = $existing.PrincipalId -eq $principalId
                     $roleMatched = $existing.RoleName -ieq $roleName
-                    if ($principalMatched && $roleMatched) {
+                    if ($principalMatched -and $roleMatched) {
                         $matchInfo = "PrincipalId='$($existing.PrincipalId)' and RoleName='$($existing.RoleName)'"
                     }
                 }
 
-                if ($principalMatched && $roleMatched) {
+                if ($principalMatched -and $roleMatched) {
                     $existingAssignment = $existing
                     break
                 }
@@ -321,15 +321,15 @@ function Invoke-PIMAssignments {
                 $principalMatched = $false
                 $roleMatched = $false
 
-                if ($existing.PrincipalId -eq $principalId || $existing.principalid -eq $principalId) {
+                if ($existing.PrincipalId -eq $principalId -or $existing.principalid -eq $principalId) {
                     $principalMatched = $true
                 }
 
-                if ($existing.RoleName -ieq $roleName || $existing.Type -ieq $roleName || $existing.memberType -ieq $roleName) {
+                if ($existing.RoleName -ieq $roleName -or $existing.Type -ieq $roleName -or $existing.memberType -ieq $roleName) {
                     $roleMatched = $true
                 }
 
-                if ($principalMatched && $roleMatched) {
+                if ($principalMatched -and $roleMatched) {
                     $matchInfo = if ($null -ne $existing.memberType) {
                         "memberType='$($existing.memberType)'"
                     }
@@ -345,7 +345,7 @@ function Invoke-PIMAssignments {
                 }
             }
             else {
-                if (($existing.PrincipalId -eq $principalId) && ($existing.RoleName -eq $roleName)) {
+                if (($existing.PrincipalId -eq $principalId) -and ($existing.RoleName -eq $roleName)) {
                     if ($scope) {
                         if ($existing.ScopeId -eq $scope) {
                             $matchInfo = "PrincipalId='$principalId', RoleName='$roleName', Scope='$scope'"
