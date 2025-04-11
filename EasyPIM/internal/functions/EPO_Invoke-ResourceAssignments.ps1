@@ -105,6 +105,14 @@
         else {
             $assignment.Rolename
         }
+
+        if (-not $roleName) {
+            Write-Warning "Assignment is missing Role/Rolename: $($assignment | ConvertTo-Json -Compress)"
+            $errorCounter++
+            continue
+        }
+
+        # Get a friendly name for the principal
         $principalName = "Principal-$principalId"
 
         # Try to get a better name for the principal if possible
@@ -142,13 +150,13 @@
                 $errorCounter++
                 continue
             }
-            
+
             # Validate the group exists
             try {
                 $uri = "https://graph.microsoft.com/v1.0/directoryObjects/$groupId"
                 Invoke-MgGraphRequest -Uri $uri -Method GET -ErrorAction Stop
                 Write-Verbose "Group $groupId exists and is accessible"
-                
+
                 # Check if group is eligible for PIM (not synced from on-premises)
                 if (-not (Test-GroupEligibleForPIM -GroupId $groupId)) {
                     Write-Host "    ├─ ⚠️ Group $groupId is not eligible for PIM management (likely synced from on-premises), skipping" -ForegroundColor Yellow
@@ -280,14 +288,14 @@
         if ($found -eq 0) {
             # Create a SINGLE parameters hashtable - this is critical
             $params = @{}
-            
+
             # First, copy all base parameters from the command map
             if ($CommandMap.CreateParams) {
                 foreach ($key in $CommandMap.CreateParams.Keys) {
                     $params[$key] = $CommandMap.CreateParams[$key]
                 }
             }
-            
+
             # Ensure justification exists from the beginning
             if (-not $params.ContainsKey('justification')) {
                 # Try to get it from Config first
@@ -301,12 +309,13 @@
                     Write-Verbose "Using default justification: $($params['justification'])"
                 }
             }
-            
+
             # Display justification
             Write-Verbose "    │  ├─ 📝 Justification: $($params['justification'])"
-            
+
             # Resource-specific parameters
             if ($ResourceType -like "Azure Role*") {
+                # For Azure roles, use lowercase property names
                 $params['principalId'] = $assignment.PrincipalId
                 $params['roleName'] = $roleName
                 $params['scope'] = $assignment.Scope
@@ -316,7 +325,7 @@
                 $params['principalID'] = $assignment.PrincipalId  # Capital ID
                 $params['groupID'] = $assignment.GroupId          # Capital ID
                 $params['type'] = $roleName.ToLower()             # Lowercase type
-                
+
                 # Double-check the parameters are set
                 if (-not $params.ContainsKey('groupID') -or [string]::IsNullOrEmpty($params['groupID'])) {
                     Write-Error "Failed to set groupID parameter"
@@ -329,7 +338,7 @@
                 $params['principalId'] = $assignment.PrincipalId
                 $params['roleName'] = $roleName
             }
-            
+
             # Handle duration and permanent settings
             if ($assignment.Permanent -eq $true) {
                 $params['permanent'] = $true
@@ -342,14 +351,14 @@
             else {
                 Write-Host "    │  ├─ ⏱️ Using maximum allowed duration" -ForegroundColor Cyan
             }
-            
+
             # Pre-execution debug
             Write-Verbose "Command accepts these parameters: $((Get-Command $CommandMap.CreateCmd -ErrorAction SilentlyContinue).Parameters.Keys -join ', ')"
             Write-Verbose "Final command parameters:"
             Write-Verbose ($params | ConvertTo-Json -Compress)
-            
+
             # IMPORTANT: Do not create any new parameter hashtables after this point
-            
+
             # Action description for ShouldProcess
             $actionDescription = if ($ResourceType -like "Azure Role*") {
                 "Create $ResourceType assignment for $principalName with role '$roleName' on scope $($assignment.Scope)"
@@ -357,12 +366,12 @@
             else {
                 "Create $ResourceType assignment for $principalName with role '$roleName'"
             }
-            
+
             if ($PSCmdlet.ShouldProcess($actionDescription)) {
                 try {
                     # Execute the command
                     $result = & $CommandMap.CreateCmd @params
-                    
+
                     # For Group role assignments, verify the operation succeeded
                     if ($ResourceType -like "Group Role*") {
                         # Add verification that the assignment was created
@@ -371,19 +380,19 @@
                             groupID = $params['groupID']
                             # Don't include principalID to get all assignments for the group
                         }
-                        
+
                         # Get command name based on eligible vs active
                         $verifyCmd = if ($ResourceType -like "*eligible*") {
                             "Get-PIMGroupEligibleAssignment"
                         } else {
                             "Get-PIMGroupActiveAssignment"
                         }
-                        
+
                         Write-Verbose "Verifying assignment creation with $verifyCmd"
-                        
+
                         # Get current assignments and verify ours exists
                         $currentAssignments = & $verifyCmd @verifyParams
-                        
+
                         # Check if our assignment now exists
                         $assignmentExists = $false
                         foreach ($existing in $currentAssignments) {
@@ -393,7 +402,7 @@
                                 break
                             }
                         }
-                        
+
                         if ($assignmentExists) {
                             $createCounter++
                             Write-Host "    │  └─ ✅ Created and verified successfully" -ForegroundColor Green
@@ -402,6 +411,7 @@
                             $errorCounter++
                         }
                     }
+                    # For Entra ID and Azure role assignments
                     # For Azure roles, we rely on the existing check
                     elseif (($null -ne $result) -or ($ResourceType -like "Azure Role*" -and $? -eq $true)) {
                         $createCounter++
@@ -434,10 +444,7 @@
         }
     }
 
-    # Return the counters in a structured format
-    Write-Summary -Category "$ResourceType Assignments" -Created $createCounter -Skipped $skipCounter -Failed $errorCounter
-
-    # Return standardized result
+    # Return the counters in a structured format without writing the summary (it will be handled by EPO_New-Assignment.ps1)
     return @{
         Created = $createCounter
         Skipped = $skipCounter

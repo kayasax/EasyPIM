@@ -4,21 +4,21 @@
     param (
         [Parameter()]
         [PSCustomObject]$CleanupResults,
-        
+
         [Parameter()]
         [PSCustomObject]$AssignmentResults
     )
-    
+
     # Add grand total summary
     Write-Host "`n┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓" -ForegroundColor Green
     Write-Host "┃ OVERALL SUMMARY                                                                ┃" -ForegroundColor Green
     Write-Host "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛" -ForegroundColor Green
-    
+
     # Assignments section
     Write-Host "┌───────────────────────────────────────────────────────────────────────────────┐" -ForegroundColor White
     Write-Host "│ ASSIGNMENT CREATIONS" -ForegroundColor White
     Write-Host "├───────────────────────────────────────────────────────────────────────────────┤" -ForegroundColor White
-    
+
     # Handle assignment results - might be null if assignments were skipped
     if ($null -ne $AssignmentResults) {
         Write-Host "│ ✅ Created : $($AssignmentResults.Created)" -ForegroundColor White
@@ -30,19 +30,37 @@
         Write-Host "│ ❌ Failed  : 0" -ForegroundColor White
     }
     Write-Host "└───────────────────────────────────────────────────────────────────────────────┘" -ForegroundColor White
-    
+
     # Cleanup section
     Write-Host "┌───────────────────────────────────────────────────────────────────────────────┐" -ForegroundColor White
     Write-Host "│ CLEANUP OPERATIONS" -ForegroundColor White
     Write-Host "├───────────────────────────────────────────────────────────────────────────────┤" -ForegroundColor White
-    
+
     # Handle cleanup results - might be null if cleanup was skipped
     if ($null -ne $CleanupResults) {
-        Write-Host "│ ✅ Kept    : $($CleanupResults.Kept)" -ForegroundColor White
-        Write-Host "│ 🗑️ Removed : $($CleanupResults.Removed)" -ForegroundColor White
-        Write-Host "│ ⏭️ Skipped : $($CleanupResults.Skipped)" -ForegroundColor White
-        if ($CleanupResults.Protected -gt 0) {
-            Write-Host "│ 🛡️ Protected: $($CleanupResults.Protected)" -ForegroundColor White
+        # Support for both property naming conventions
+        # First try with "Count" suffix, then without
+        $kept = if ($null -ne $CleanupResults.KeptCount) { $CleanupResults.KeptCount }
+                elseif ($null -ne $CleanupResults.Kept) { $CleanupResults.Kept }
+                else { 0 }
+
+        $removed = if ($null -ne $CleanupResults.RemovedCount) { $CleanupResults.RemovedCount }
+                elseif ($null -ne $CleanupResults.Removed) { $CleanupResults.Removed }
+                else { 0 }
+
+        $skipped = if ($null -ne $CleanupResults.SkippedCount) { $CleanupResults.SkippedCount }
+                elseif ($null -ne $CleanupResults.Skipped) { $CleanupResults.Skipped }
+                else { 0 }
+
+        $protected = if ($null -ne $CleanupResults.ProtectedCount) { $CleanupResults.ProtectedCount }
+                elseif ($null -ne $CleanupResults.Protected) { $CleanupResults.Protected }
+                else { 0 }
+
+        Write-Host "│ ✅ Kept    : $kept" -ForegroundColor White
+        Write-Host "│ 🗑️ Removed : $removed" -ForegroundColor White
+        Write-Host "│ ⏭️ Skipped : $skipped" -ForegroundColor White
+        if ($protected -gt 0) {
+            Write-Host "│ 🛡️ Protected: $protected" -ForegroundColor White
         }
     } else {
         Write-Host "│ ✅ Kept    : 0" -ForegroundColor White

@@ -1,4 +1,4 @@
-# This function is deprecated.
+﻿# This function is deprecated.
 # The functionality has been consolidated into:
 # - Invoke-DeltaCleanup (for cleanup operations)
 # - Invoke-PIMAssignment (for creation operations)
@@ -12,36 +12,36 @@ function Invoke-PIMAssignments {
         [Parameter(Mandatory = $true)]
         [ValidateSet("Create", "Remove")]
         [string]$Operation,
-        
+
         [Parameter(Mandatory = $true)]
         [string]$ResourceType,
-        
+
         [Parameter(Mandatory = $true)]
         [array]$Assignments,
-        
+
         [Parameter(Mandatory = $true)]
         [array]$ConfigAssignments,
-        
+
         [Parameter(Mandatory = $true)]
         [hashtable]$CommandMap,
-        
+
         [Parameter(Mandatory = $false)]
         [array]$ProtectedUsers = @(),
-        
+
         [Parameter(Mandatory = $false)]
         [string]$CleanupMode = "delta",
-        
+
         [Parameter(Mandatory = $false)]
         [switch]$FilterByJustification,
-        
+
         [Parameter(Mandatory = $false)]
         [string]$JustificationFilter = "Invoke-EasyPIMOrchestrator"
     )
-    
+
     # Determine operation type
     $isCreationOperation = $Operation -eq "Create"
     $isRemovalOperation = $Operation -eq "Remove"
-    
+
     # Initialize counters based on operation type
     if ($isCreationOperation) {
         $createCounter = 0
@@ -53,10 +53,10 @@ function Invoke-PIMAssignments {
         $skipCounter = 0
         $protectedCounter = 0
     }
-    
+
     # Create a tracking map for processed assignments
     $processedAssignments = @{}
-    
+
     # Get resource type category for matching logic
     $resourceTypeCategory = if ($ResourceType -like "Azure*") {
         "Azure"
@@ -67,7 +67,7 @@ function Invoke-PIMAssignments {
     } else {
         "Unknown"
     }
-    
+
     # Determine group ID if applicable
     $groupId = $null
     if ($resourceTypeCategory -eq "Group") {
@@ -88,7 +88,7 @@ function Invoke-PIMAssignments {
                 $groupId = $CommandMap.EligibleGroupId
                 Write-Verbose "Using EligibleGroupId $groupId from CommandMap for removal operation"
             }
-            
+
             if (-not $groupId -and $Assignments.Count -gt 0) {
                 foreach ($assignment in $Assignments) {
                     if ($assignment.PSObject.Properties.Name -contains "groupId" -and $assignment.groupId) {
@@ -98,7 +98,7 @@ function Invoke-PIMAssignments {
                     }
                 }
             }
-        } 
+        }
         elseif ($isCreationOperation -and $Assignments.Count -gt 0) {
             $firstAssignment = $Assignments[0]
             if ($firstAssignment.PSObject.Properties.Name -contains "GroupId") {
@@ -107,11 +107,11 @@ function Invoke-PIMAssignments {
             }
         }
     }
-    
+
     # Create simpler header text without box formatting
     Write-Host "`n=== Processing Assignments ===" -ForegroundColor Cyan
     Write-Host "  📊 Total assignments found: $($Assignments.Count)" -ForegroundColor White
-    
+
     # Get existing assignments
     $existingAssignments = @()
     try {
@@ -123,16 +123,16 @@ function Invoke-PIMAssignments {
             $params = @{
                 tenantID = $CommandMap.TenantId
             }
-            
+
             if ($resourceTypeCategory -eq "Azure" -and $CommandMap.Subscriptions -and $CommandMap.Subscriptions.Count -gt 0) {
                 $params.subscriptionID = $CommandMap.Subscriptions[0]
             }
-            
+
             if ($resourceTypeCategory -eq "Group" -and $groupId) {
                 $params.groupId = $groupId
             }
         }
-        
+
         if ($resourceTypeCategory -eq "Group") {
             if ($groupId) {
                 $cmdExpression = "$cmd -tenantID '$($CommandMap.TenantId)' -groupID '$groupId'"
@@ -145,7 +145,7 @@ function Invoke-PIMAssignments {
         } else {
             $existingAssignments = & $cmd @params
         }
-        
+
         Write-Host "  🔍 Analyzing configuration" -ForegroundColor Cyan
         Write-Host "    ├─ Found $($Assignments.Count) assignments to process" -ForegroundColor White
         Write-Host "    └─ Found $($existingAssignments.Count) existing assignments" -ForegroundColor White
@@ -154,7 +154,7 @@ function Invoke-PIMAssignments {
         Write-Host "    └─ ⚠️ Error fetching existing assignments: $_" -ForegroundColor Yellow
         $existingAssignments = @()
     }
-    
+
     if ($null -eq $existingAssignments) {
         Write-Verbose "Command returned null result, initializing empty array"
         $existingAssignments = @()
@@ -163,12 +163,12 @@ function Invoke-PIMAssignments {
         Write-Verbose "Command returned a single object, converting to array"
         $existingAssignments = @($existingAssignments)
     }
-    
+
     Write-Host "`n  📋 Processing assignments:" -ForegroundColor Cyan
-    
+
     if ($Assignments.Count -eq 0) {
         Write-Host "    ├─ No assignments to process" -ForegroundColor White
-        
+
         if ($isCreationOperation) {
             return @{
                 Created = 0
@@ -185,20 +185,20 @@ function Invoke-PIMAssignments {
             }
         }
     }
-    
+
     foreach ($assignment in $Assignments) {
         $props = Get-AssignmentProperties -Assignment $assignment
         $principalId = $props.PrincipalId
         $roleName = $props.RoleName
         $principalName = $props.PrincipalName
         $scope = $props.Scope
-        
+
         Write-Host "`n  Processing: $principalName" -ForegroundColor White
         Write-Host "    ├─ Role: $roleName" -ForegroundColor Gray
         if ($scope) {
             Write-Host "    ├─ Scope: $scope" -ForegroundColor Gray
         }
-        
+
         $currentGroupId = $null
         if ($resourceTypeCategory -eq "Group") {
             if ($isCreationOperation) {
@@ -211,44 +211,44 @@ function Invoke-PIMAssignments {
                 Write-Verbose "Using GroupId $currentGroupId from CommandMap for removal"
             }
         }
-        
+
         if (-not $principalId -or -not $roleName) {
             Write-Host "    ├─ ⚠️ Invalid assignment data, skipping" -ForegroundColor Yellow
             Write-Verbose "DEBUG: Invalid assignment: $($assignment | ConvertTo-Json -Depth 2 -Compress)"
             $skipCounter++
             continue
         }
-        
+
         $assignmentKey = "$principalId|$roleName"
         if ($scope) { $assignmentKey += "|$scope" }
         if ($currentGroupId) { $assignmentKey += "|$currentGroupId" }
-        
+
         if ($processedAssignments.ContainsKey($assignmentKey)) {
             Write-Host "    ├─ ⏭️ $principalName with role '$roleName' is a duplicate entry, skipping" -ForegroundColor DarkYellow
             $skipCounter++
             continue
         }
-        
+
         $processedAssignments[$assignmentKey] = $true
-        
+
         if (-not (Test-PrincipalExists -PrincipalId $principalId)) {
             Write-Host "    │  ❌ Principal '$principalName' ($principalId) does not exist, skipping assignment" -ForegroundColor Red
             $errorCounter++
             continue
         }
-        
+
         if ($resourceTypeCategory -eq "Group") {
             if (-not $currentGroupId) {
                 Write-Host "    ├─ ❌ Missing GroupId for assignment, skipping" -ForegroundColor Red
                 $errorCounter++
                 continue
             }
-            
+
             try {
                 $uri = "https://graph.microsoft.com/v1.0/directoryObjects/$currentGroupId"
                 Invoke-MgGraphRequest -Uri $uri -Method GET -ErrorAction Stop
                 Write-Verbose "Group $currentGroupId exists and is accessible"
-                
+
                 if (-not (Test-GroupEligibleForPIM -GroupId $currentGroupId)) {
                     Write-Host "    │  ⚠️ Group $currentGroupId is not eligible for PIM management (likely synced from on-premises), skipping" -ForegroundColor Yellow
                     $skipCounter++
@@ -261,43 +261,43 @@ function Invoke-PIMAssignments {
                 continue
             }
         }
-        
+
         $scopeDisplay = ""
         if ($resourceTypeCategory -eq "Azure" -and $scope) {
             $scopeDisplay = " on scope $scope"
         } elseif ($resourceTypeCategory -eq "Group" -and $currentGroupId) {
             $scopeDisplay = " in group $currentGroupId"
         }
-        
+
         Write-Host "    ├─ 🔍 $principalName with role '$roleName'$scopeDisplay" -ForegroundColor White
-        
+
         if ($isRemovalOperation -and $CleanupMode -eq "delta" -and $FilterByJustification) {
             $isFromOrchestrator = Test-IsJustificationFromOrchestrator -Assignment $assignment -JustificationFilter $JustificationFilter
-            
+
             if (-not $isFromOrchestrator) {
                 Write-Host "    │  └─ ⏭️ Not created by orchestrator, skipping" -ForegroundColor DarkYellow
                 $skipCounter++
                 continue
             }
         }
-        
+
         $foundInConfig = $false
-        
+
         if ($isCreationOperation) {
             $foundInConfig = $true
         } else {
             $foundInConfig = Test-AssignmentInConfig -PrincipalId $principalId -RoleName $roleName `
                 -Scope $scope -GroupId $currentGroupId -ConfigAssignments $ConfigAssignments -ResourceType $resourceTypeCategory
         }
-        
+
         $existingAssignment = $null
         $matchInfo = ""
-        
+
         foreach ($existing in $existingAssignments) {
             if ($resourceTypeCategory -eq "Entra") {
                 $principalMatched = $false
                 $roleMatched = $false
-                
+
                 if ($existing.PSObject.Properties.Name -contains 'principal') {
                     $principalMatched = $existing.principal.id -eq $principalId
                     $roleMatched = $existing.roleDefinition.displayName -ieq $roleName
@@ -311,24 +311,24 @@ function Invoke-PIMAssignments {
                         $matchInfo = "PrincipalId='$($existing.PrincipalId)' and RoleName='$($existing.RoleName)'"
                     }
                 }
-                
+
                 if ($principalMatched && $roleMatched) {
                     $existingAssignment = $existing
                     break
                 }
-            } 
+            }
             elseif ($resourceTypeCategory -eq "Group") {
                 $principalMatched = $false
                 $roleMatched = $false
-                
+
                 if ($existing.PrincipalId -eq $principalId || $existing.principalid -eq $principalId) {
                     $principalMatched = $true
                 }
-                
+
                 if ($existing.RoleName -ieq $roleName || $existing.Type -ieq $roleName || $existing.memberType -ieq $roleName) {
                     $roleMatched = $true
                 }
-                
+
                 if ($principalMatched && $roleMatched) {
                     $matchInfo = if ($null -ne $existing.memberType) {
                         "memberType='$($existing.memberType)'"
@@ -343,7 +343,7 @@ function Invoke-PIMAssignments {
                     $existingAssignment = $existing
                     break
                 }
-            } 
+            }
             else {
                 if (($existing.PrincipalId -eq $principalId) && ($existing.RoleName -eq $roleName)) {
                     if ($scope) {
@@ -360,9 +360,9 @@ function Invoke-PIMAssignments {
                 }
             }
         }
-        
+
         # Check for inherited assignments
-        if ($existingAssignment -and 
+        if ($existingAssignment -and
             (($existingAssignment.memberType -eq "Inherited") -or
              ($existingAssignment.ScopeType -eq "managementgroup") -or
              ($existingAssignment.ScopeId -like "*managementGroups*"))) {
@@ -385,7 +385,7 @@ function Invoke-PIMAssignments {
             }
         }
     }
-    
+
     # End of processing assignments loop
     if ($isCreationOperation) {
         $summary = @{
@@ -394,7 +394,7 @@ function Invoke-PIMAssignments {
             Skipped = [int]$skipCounter
             Failed = [int]$errorCounter
         }
-        
+
         if ($resourceTypeCategory -eq "Azure" -or $resourceTypeCategory -eq "Entra") {
             # For Azure and Entra roles, return summary without displaying it
             return $summary
@@ -415,7 +415,7 @@ function Invoke-PIMAssignments {
             SkippedCount = [int]$skipCounter
             ProtectedCount = [int]$protectedCounter
         }
-        
+
         if ($resourceTypeCategory -ne "Azure" -and $resourceTypeCategory -ne "Entra") {
             # For non-Azure/Entra types, write formatted summary
             $summaryOutput = Get-FormattedCleanupSummary -ResourceType "$ResourceType Cleanup" `
@@ -434,44 +434,53 @@ function Invoke-PIMAssignment {
     [CmdletBinding(SupportsShouldProcess = $true)]
     [OutputType([System.Collections.Hashtable])]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSReviewUnusedParameter", "ConfigAssignments",
+        Justification="Parameter is declared for API consistency but currently only used in the 'Create' operation path")]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSReviewUnusedParameter", "CleanupMode",
+        Justification="Parameter is declared for API consistency but currently only used in the 'Create' operation path")]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSReviewUnusedParameter", "FilterByJustification",
+        Justification="Parameter is declared for API consistency but currently only used in the 'Create' operation path")]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSReviewUnusedParameter", "JustificationFilter",
+        Justification="Parameter is declared for API consistency but currently only used in the 'Create' operation path")]
     param (
         [Parameter(Mandatory = $true)]
         [ValidateSet("Create", "Remove")]
         [string]$Operation,
-        
+
         [Parameter(Mandatory = $true)]
         [string]$ResourceType,
-        
+
         [Parameter(Mandatory = $true)]
         [array]$Assignments,
-        
+
         [Parameter(Mandatory = $true)]
         [array]$ConfigAssignments,
-        
+
         [Parameter(Mandatory = $true)]
         [hashtable]$CommandMap,
-        
+
         [Parameter(Mandatory = $false)]
         [array]$ProtectedUsers = @(),
-        
+
         [Parameter(Mandatory = $false)]
         [string]$CleanupMode = "delta",
-        
+
         [Parameter(Mandatory = $false)]
         [switch]$FilterByJustification,
-        
+
         [Parameter(Mandatory = $false)]
         [string]$JustificationFilter = "Invoke-EasyPIMOrchestrator"
     )
-    
+
     # When Operation is Create, use Invoke-ResourceAssignment
     if ($Operation -eq "Create") {
         # Create a simple config object for justification
         $Config = [PSCustomObject]@{
-            Justification = "Created by EasyPIM Orchestrator on $(Get-Date -Format 'yyyy-MM-dd')"
+            # Use the standardized prefix format for justification to enable delta mode detection
+            Justification = "Invoke-EasyPIMOrchestrator: Created by EasyPIM Orchestrator on $(Get-Date -Format 'yyyy-MM-dd')"
             ProtectedUsers = $ProtectedUsers
         }
-        
+
         return Invoke-ResourceAssignment -ResourceType $ResourceType -Assignments $Assignments -CommandMap $CommandMap -Config $Config
     }
     else {

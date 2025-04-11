@@ -1,4 +1,4 @@
-function Show-EasyPIMUsage {
+﻿function Show-EasyPIMUsage {
     [CmdletBinding()]
     param()
     

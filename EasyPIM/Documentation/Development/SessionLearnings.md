@@ -66,6 +66,94 @@ For assigning the same role to multiple principals with identical settings:
 
 - Add notes here as you learn new things in future sessions
 
+## Session Notes - 2025-04-10
+
+### API Access Patterns
+
+#### Utility Functions for API Access
+
+The EasyPIM module provides standardized utility functions for ARM and Graph API access:
+
+1. **Invoke-ARM**: Used for Azure Resource Manager API calls
+   - Located in `internal/functions/Invoke-ARM.ps1`
+   - Parameters:
+     - `restURI`: (Mandatory) The full URI to call
+     - `method`: HTTP method to use (GET, POST, etc.)
+     - `body`: Optional request body for POST/PUT/PATCH requests
+   - Example:
+     ```powershell
+     $armUrl = "$scope/providers/Microsoft.Authorization/roleEligibilityScheduleRequests?api-version=2020-10-01"
+     $response = Invoke-ARM -restURI $armUrl -method "GET"
+     ```
+
+2. **Invoke-Graph**: Used for Microsoft Graph API calls
+   - Located in `internal/functions/Invoke-Graph.ps1`
+   - Parameters:
+     - `Endpoint`: The Graph API endpoint (without base URL)
+     - `Method`: HTTP method (default: "GET")
+     - `version`: API version (default: "v1.0", can use "beta")
+     - `body`: Optional request body
+   - Example:
+     ```powershell
+     $graphEndpoint = "roleManagement/directory/roleEligibilityScheduleRequests?`$filter=principalId eq '$principalId'"
+     $response = Invoke-Graph -Endpoint $graphEndpoint -Method "GET" -version "beta"
+     ```
+
+#### Best Practices for API Access
+
+When implementing new functions that require API calls to Azure or Microsoft Graph:
+
+1. **Use Existing Helper Functions**: Always use `Invoke-ARM` and `Invoke-Graph` instead of direct `Invoke-RestMethod` calls
+2. **Authentication Handling**: The helper functions handle authentication tokens automatically
+3. **Error Handling**: The helper functions include consistent error handling
+4. **Script Variables**: Remember that these functions use `$script:tenantID` and `$script:subscriptionID`
+
+#### Common API Patterns
+
+- **ARM Resource API**: `/subscriptions/{subId}/resourceGroups/{rgName}/providers/{providerName}/{resourceType}/{resourceName}/providers/Microsoft.Authorization/{resourceType}`
+- **Graph API Directory**: `https://graph.microsoft.com/beta/roleManagement/directory/{endpointType}`
+- **Graph API Groups**: `https://graph.microsoft.com/beta/roleManagement/directory/{endpointType}?$filter=resourceId eq '{groupId}'`
+
+### Recent Function Updates
+
+- **Test-AssignmentCreatedByOrchestrator**: Updated to use `Invoke-ARM` and `Invoke-Graph` instead of direct API calls
+  - Uses `Invoke-ARM` for Azure role assignments
+  - Uses `Invoke-Graph` for Entra ID and Group role assignments
+  - This approach follows module standards and improves maintainability
+
+## Session Notes - 2025-04-11
+
+### Summary Display Issues
+
+#### Property Naming Convention for Summary Counters
+- **Issue**: The `Write-EasyPIMSummary` function was not displaying cleanup operation counters correctly because of property name mismatches.
+- **Root Cause**: 
+  - `Invoke-EasyPIMCleanup` returns an object with properties using "Count" suffix: `KeptCount`, `RemovedCount`, `SkippedCount`, `ProtectedCount`
+  - `Write-EasyPIMSummary` was expecting properties without the suffix: `Kept`, `Removed`, `Skipped`, `Protected`
+- **Solution**: Modified `Write-EasyPIMSummary` to check for both naming conventions with fallback logic:
+  ```powershell
+  $kept = if ($null -ne $CleanupResults.KeptCount) { $CleanupResults.KeptCount } 
+          elseif ($null -ne $CleanupResults.Kept) { $CleanupResults.Kept }
+          else { 0 }
+  ```
+- **Best Practice**: When updating or creating summary functions:
+  - Use consistent property naming across the module
+  - Handle multiple property name formats for backward compatibility
+  - Document the expected property names in comments
+
+### Code Quality Requirements
+
+#### PSScriptAnalyzer Compliance
+- **Trailing Spaces**: Avoid trailing spaces in code to pass PSScriptAnalyzer checks
+  - Trailing spaces at the end of lines can trigger PSScriptAnalyzer warnings
+  - These spaces are invisible and can cause inconsistent formatting
+  - Most IDEs have settings to automatically trim trailing whitespace
+  - Use VS Code's "Trim Trailing Whitespace" feature or configure auto-trimming on save
+- **Best Practice**: 
+  - Configure your editor to highlight or automatically remove trailing whitespace
+  - Run PSScriptAnalyzer regularly during development to catch these issues early
+  - Include PSScriptAnalyzer checks in your CI/CD pipeline
+
 ## Code Standards and Practices
 
 ### Naming Conventions

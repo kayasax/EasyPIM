@@ -1,4 +1,4 @@
-function Invoke-EasyPIMCleanup {
+﻿function Invoke-EasyPIMCleanup {
     [CmdletBinding(SupportsShouldProcess = $true)]
     [OutputType([System.Collections.Hashtable])]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]

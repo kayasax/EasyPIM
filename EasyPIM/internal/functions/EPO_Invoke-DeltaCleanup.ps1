@@ -40,10 +40,10 @@ function Invoke-Cleanup {
 
     #region Prevent duplicate calls
     if (-not $script:ProcessedCleanups) { $script:ProcessedCleanups = @{} }
-    
+
     $uniqueKey = "$ResourceType-$Mode"
     if ($ApiInfo.GroupId) { $uniqueKey += "-$($ApiInfo.GroupId)" }
-    
+
     if ($script:ProcessedCleanups.ContainsKey($uniqueKey)) {
         Write-Host "`n⚠️ Cleanup for '$ResourceType' ($Mode mode) already processed - skipping duplicate call`n" -ForegroundColor Yellow
         return @{
@@ -54,7 +54,7 @@ function Invoke-Cleanup {
             ProtectedCount = 0
         }
     }
-    
+
     $script:ProcessedCleanups[$uniqueKey] = (Get-Date)
 
     Write-Host "`n┌────────────────────────────────────────────────────┐" -ForegroundColor Cyan
@@ -162,7 +162,7 @@ function Invoke-Cleanup {
         # Get current assignments directly using scopes from config
         Write-Host "`n=== Processing Scopes ===" -ForegroundColor Cyan
         $allAssignments = @()
-        
+
         if ($config.GraphBased) {
             if ($config.GroupBased) {
                 # For group assignments, need to get assignments for each group
@@ -229,12 +229,12 @@ function Invoke-Cleanup {
                         TenantId = $ApiInfo.TenantId
                         Scope = $configAssignment.Scope
                     }
-                    
+
                     $scopeAssignments = & $getCmd @params
                     if ($null -ne $scopeAssignments) {
                         $allAssignments += $scopeAssignments
                     }
-                    
+
                     Write-Host "    ├─ Found $($scopeAssignments.Count) assignments" -ForegroundColor Gray
                     $processedScopes[$configAssignment.Scope] = $true
                 }
@@ -254,14 +254,14 @@ function Invoke-Cleanup {
                 $principalId = if ($config.GraphBased) {
                     $assignment.principalid  # Our module's commands provide this consistently
                 }
-                elseif ($null -ne $assignment.PrincipalId) { 
-                    $assignment.PrincipalId 
+                elseif ($null -ne $assignment.PrincipalId) {
+                    $assignment.PrincipalId
                 }
-                elseif ($null -ne $assignment.principalId) { 
-                    $assignment.principalId 
+                elseif ($null -ne $assignment.principalId) {
+                    $assignment.principalId
                 }
-                else { 
-                    $null 
+                else {
+                    $null
                 }
 
                 # Handle role name/member type based on resource type
@@ -271,11 +271,11 @@ function Invoke-Cleanup {
                 elseif ($config.GraphBased) {
                     $assignment.rolename  # For Entra roles, use rolename consistently
                 }
-                elseif ($null -ne $assignment.RoleName -and $assignment.RoleName -ne '') { 
-                    $assignment.RoleName 
+                elseif ($null -ne $assignment.RoleName -and $assignment.RoleName -ne '') {
+                    $assignment.RoleName
                 }
-                elseif ($null -ne $assignment.roleName -and $assignment.roleName -ne '') { 
-                    $assignment.roleName 
+                elseif ($null -ne $assignment.roleName -and $assignment.roleName -ne '') {
+                    $assignment.roleName
                 }
                 elseif ($null -ne $assignment.RoleDefinitionDisplayName -and $assignment.RoleDefinitionDisplayName -ne '') {
                     $assignment.RoleDefinitionDisplayName
@@ -315,14 +315,14 @@ function Invoke-Cleanup {
                 $principalName = if ($config.GraphBased) {
                     $assignment.principalname  # Our module's commands provide this consistently
                 }
-                elseif ($null -ne $assignment.PrincipalName) { 
-                    $assignment.PrincipalName 
+                elseif ($null -ne $assignment.PrincipalName) {
+                    $assignment.PrincipalName
                 }
-                elseif ($null -ne $assignment.principalName) { 
-                    $assignment.principalName 
+                elseif ($null -ne $assignment.principalName) {
+                    $assignment.principalName
                 }
-                else { 
-                    "Principal-$principalId" 
+                else {
+                    "Principal-$principalId"
                 }
 
                 Write-Host "`n  Processing: $principalName" -ForegroundColor White
@@ -424,8 +424,36 @@ function Invoke-Cleanup {
                     continue
                 }
 
-                # Remove assignment
-                Write-Host "    └─ 🗑️ Not in config - removing..." -ForegroundColor Magenta
+                # For initial mode, we remove everything not in config
+                if ($Mode -eq "Initial") {
+                    Write-Host "    └─ 🗑️ Not in config - removing..." -ForegroundColor Magenta
+                } else {
+                    # For delta mode, only remove if it was created by the orchestrator
+                    # Use direct ARM/Graph API calls to check the schedule requests for justification
+                    # Create parameters hash table for Test-AssignmentCreatedByOrchestrator
+                    $testParams = @{
+                        Assignment = $assignment
+                        TenantId = $ApiInfo.TenantId
+                        ResourceType = $ResourceType
+                    }
+
+                    # Only add SubscriptionId if it exists in ApiInfo (it won't for Entra roles)
+                    if ($ApiInfo.ContainsKey('SubscriptionId')) {
+                        $testParams['SubscriptionId'] = $ApiInfo.SubscriptionId
+                    }
+
+                    # Call the function with splatted parameters
+                    $isFromOrchestrator = Test-AssignmentCreatedByOrchestrator @testParams -Verbose:$VerbosePreference
+
+                    if (-not $isFromOrchestrator) {
+                        Write-Host "    └─ ⏭️ Not created by orchestrator - skipping (delta mode)" -ForegroundColor DarkYellow
+                        $script:skipCounter++
+                        continue
+                    } else {
+                        Write-Host "    └─ 🔍 Created by orchestrator but not in config - removing..." -ForegroundColor Magenta
+                    }
+                }
+
                 if ($PSCmdlet.ShouldProcess("Remove $ResourceType assignment for $principalName with role '$roleName'")) {
                     try {
                         if ($config.GroupBased) {
@@ -439,7 +467,7 @@ function Invoke-Cleanup {
                                 PrincipalId = $principalId
                                 RoleName = $roleName
                             }
-                            
+
                             # For Entra roles with Administrative Unit scope
                             if ($config.GraphBased -and $scope -and $scope -like "/administrativeUnits/*") {
                                 $auId = ($scope -split '/')[-1]
@@ -454,10 +482,10 @@ function Invoke-Cleanup {
                             elseif ($scope) {
                                 $params.Scope = $scope
                             }
-                            
+
                             & $config.RemoveCmd @params
                         }
-                        
+
                         $script:removeCounter++
                         Write-Host "       ✓ Removed successfully" -ForegroundColor Green
                     }

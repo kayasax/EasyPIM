@@ -1,5 +1,7 @@
-# Define shared helper functions for cleanup operations
+﻿# Define shared helper functions for cleanup operations
 # Used by Invoke-Cleanup
+[System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "", Justification="Module includes an alias with plural form for backward compatibility")]
+param()
 
 # Define protected roles that should never be removed automatically at script level
 $script:protectedRoles = @(
@@ -17,49 +19,52 @@ $script:protectedCounter = 0
 
 function Test-IsProtectedAssignment {
     [CmdletBinding()]
+    [OutputType([System.Boolean])]
     param (
         [Parameter(Mandatory = $true)]
         [string]$PrincipalId,
-        
+
         [Parameter(Mandatory = $true)]
         [array]$ProtectedUsers
     )
-    
+
     return $ProtectedUsers -contains $PrincipalId
 }
 
 function Test-IsProtectedRole {
     [CmdletBinding()]
+    [OutputType([System.Boolean])]
     param (
         [Parameter(Mandatory = $true)]
         [string]$RoleName
     )
-    
+
     return $script:protectedRoles -contains $RoleName
 }
 
 function Test-AssignmentInConfig {
     [CmdletBinding()]
+    [OutputType([System.Boolean])]
     param (
         [Parameter(Mandatory = $true)]
         [string]$PrincipalId,
-        
+
         [Parameter(Mandatory = $true)]
         [string]$RoleName,
-        
+
         [Parameter(Mandatory = $false)]
         [string]$Scope,
-        
+
         [Parameter(Mandatory = $false)]
         [string]$GroupId,
-        
+
         [Parameter(Mandatory = $true)]
         [array]$ConfigAssignments,
-        
+
         [Parameter(Mandatory = $false)]
         [string]$ResourceType = "Azure"
     )
-    
+
     # Base matching logic for all resource types
     foreach ($config in $ConfigAssignments) {
         # Check role name match - handle various property possibilities
@@ -70,7 +75,7 @@ function Test-AssignmentInConfig {
                 if ($roleMatches) { break }
             }
         }
-        
+
         # Check principal ID match - direct match
         $principalMatches = $false
         foreach ($propName in @("PrincipalId", "principalId", "PrincipalID", "principalID")) {
@@ -79,18 +84,18 @@ function Test-AssignmentInConfig {
                 if ($principalMatches) { break }
             }
         }
-        
+
         # If not matched directly, check in PrincipalIds array if present
         if (-not $principalMatches -and $config.PSObject.Properties.Name -contains "PrincipalIds") {
             $principalMatches = $config.PrincipalIds -contains $PrincipalId
         }
-        
+
         # Different matching logic based on resource type
         $typeMatches = $false
-        
+
         switch ($ResourceType) {
             "Azure" {
-                if (-not $Scope) { 
+                if (-not $Scope) {
                     $typeMatches = $true # No scope to check
                 } else {
                     # Check scope match
@@ -142,38 +147,39 @@ function Test-AssignmentInConfig {
                 $typeMatches = $true # Default to true if resource type is not specified
             }
         }
-        
+
         # Return true if all required components match
         if ($principalMatches -and $roleMatches -and $typeMatches) {
             return $true
         }
     }
-    
+
     return $false
 }
 
 function Get-FormattedCleanupSummary {
     [CmdletBinding()]
+    [OutputType([System.String])]
     param (
         [Parameter(Mandatory = $true)]
         [string]$ResourceType,
-        
+
         [Parameter(Mandatory = $true)]
         [int]$KeptCount,
-        
+
         [Parameter(Mandatory = $true)]
         [int]$RemovedCount,
-        
+
         [Parameter(Mandatory = $true)]
         [int]$SkippedCount,
-        
+
         [Parameter(Mandatory = $false)]
         [int]$ProtectedCount = 0
     )
-    
+
     $output = @"
 ┌────────────────────────────────────────────────────┐
-│ $ResourceType Cleanup Summary                      
+│ $ResourceType Cleanup Summary                      |
 ├────────────────────────────────────────────────────┤
 │ ✅ Kept:      $KeptCount
 │ 🗑️ Removed:   $RemovedCount
@@ -183,26 +189,34 @@ function Get-FormattedCleanupSummary {
     if ($ProtectedCount -gt 0) {
         $output += "`n│ 🛡️ Protected: $ProtectedCount"
     }
-    
+
     $output += "`n└────────────────────────────────────────────────────┘"
-    
+
     return $output
 }
 
-function Reset-CleanupCounters {
+function Reset-CleanupCounter {
+    [CmdletBinding()]
+    [OutputType([System.Void])]
+    param()
+
     $script:keptCounter = 0
     $script:removeCounter = 0
     $script:skipCounter = 0
     $script:protectedCounter = 0
 }
 
+# Create an alias for backward compatibility
+Set-Alias -Name Reset-CleanupCounters -Value Reset-CleanupCounter -Scope Global
+
 function Get-AssignmentProperties {
     [CmdletBinding()]
+    [OutputType([System.Collections.Hashtable])]
     param (
         [Parameter(Mandatory = $true)]
         [object]$Assignment
     )
-    
+
     # Extract principal ID
     $principalId = $null
     foreach ($propName in @("PrincipalId", "principalId", "SubjectId", "subjectId")) {
@@ -212,10 +226,10 @@ function Get-AssignmentProperties {
             break
         }
     }
-    
+
     # Extract role name/type - special handling for Group assignments
     $roleName = "Unknown"
-    
+
     # First try to get accessId which is the authoritative source for Group PIM assignments
     if ($Assignment.PSObject.Properties.Name -contains 'accessId') {
         $roleName = $Assignment.accessId
@@ -234,7 +248,7 @@ function Get-AssignmentProperties {
                 break
             }
         }
-        
+
         # If still no role found, try standard role properties
         if ($roleName -eq "Unknown") {
             foreach ($propName in @("RoleDefinitionDisplayName", "RoleName", "roleName", "displayName")) {
@@ -246,7 +260,7 @@ function Get-AssignmentProperties {
             }
         }
     }
-    
+
     # Extract principal name
     $principalName = "Principal-$principalId"
     foreach ($propName in @("PrincipalDisplayName", "SubjectName", "displayName")) {
@@ -256,14 +270,14 @@ function Get-AssignmentProperties {
             break
         }
     }
-    
+
     # Try to get principal name from expanded principal object
-    if ($Assignment.PSObject.Properties.Name -contains "principal" -and 
+    if ($Assignment.PSObject.Properties.Name -contains "principal" -and `
         $Assignment.principal.PSObject.Properties.Name -contains "displayName") {
         $principalName = $Assignment.principal.displayName
         Write-Verbose "Found principal name in expanded principal object: $principalName"
     }
-    
+
     # Extract scope
     $scope = $null
     foreach ($propName in @("ResourceId", "scope", "Scope", "directoryScopeId", "ScopeId")) {
@@ -273,7 +287,7 @@ function Get-AssignmentProperties {
             break
         }
     }
-    
+
     # Return properties as hashtable
     $result = @{
         PrincipalId = $principalId
@@ -281,29 +295,270 @@ function Get-AssignmentProperties {
         PrincipalName = $principalName
         Scope = $scope
     }
-    
+
     Write-Verbose "Extracted properties: $($result | ConvertTo-Json -Compress)"
     return $result
 }
 
 function Test-IsJustificationFromOrchestrator {
     [CmdletBinding()]
+    [OutputType([System.Boolean])]
     param (
         [Parameter(Mandatory = $true)]
         [object]$Assignment,
-        
+
         [Parameter(Mandatory = $false)]
         [string]$JustificationFilter = "Invoke-EasyPIMOrchestrator"
     )
-    
+
     # Check various properties where justification might be stored
     foreach ($propName in @("Justification", "justification", "Reason", "reason")) {
-        if ($Assignment.PSObject.Properties.Name -contains $propName -and 
-            $Assignment.$propName -and 
+        if ($Assignment.PSObject.Properties.Name -contains $propName -and `
+            $Assignment.$propName -and `
             $Assignment.$propName -like "*$JustificationFilter*") {
+
+            # Log successful detection of orchestrator-created assignment
+            Write-Verbose "Found orchestrator justification in property '$propName': $($Assignment.$propName)"
             return $true
         }
     }
-    
+
+    # Try to check additional properties that might contain justification in different API responses
+    foreach ($propName in @("creationConditions", "scheduleInfo", "metadata")) {
+        if ($Assignment.PSObject.Properties.Name -contains $propName -and $Assignment.$propName) {
+            # Handle object properties that might contain justification
+            if ($Assignment.$propName -is [System.Collections.IDictionary] -or `
+                $Assignment.$propName.PSObject.Properties.Name -contains "justification") {
+
+                $justification = if ($Assignment.$propName -is [System.Collections.IDictionary]) {
+                    $Assignment.$propName["justification"]
+                } else {
+                    $Assignment.$propName.justification
+                }
+
+                if ($justification -and $justification -like "*$JustificationFilter*") {
+                    Write-Verbose "Found orchestrator justification in nested property '$propName': $justification"
+                    return $true
+                }
+            }
+        }
+    }
+
+    return $false
+}
+
+function Test-AssignmentCreatedByOrchestrator {
+    [CmdletBinding()]
+    [OutputType([System.Boolean])]
+    param (
+        [Parameter(Mandatory = $true)]
+        [object]$Assignment,
+
+        [Parameter(Mandatory = $true)]
+        [string]$TenantId,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ResourceType,
+
+        [Parameter(Mandatory = $false)]
+        [string]$SubscriptionId = "",
+
+        [Parameter(Mandatory = $false)]
+        [string]$JustificationFilter = "Invoke-EasyPIMOrchestrator"
+    )
+
+    try {
+        # Set the tenant ID for the helper functions to use
+        $script:tenantID = $TenantId
+
+        # Only set subscriptionID for Azure roles that require it
+        if ($ResourceType -like "Azure Role*" -and -not [string]::IsNullOrEmpty($SubscriptionId)) {
+            $script:subscriptionID = $SubscriptionId
+        }
+
+        # Extract necessary properties from the assignment
+        $principalId = if ($Assignment.PSObject.Properties.Name -contains 'principalId') {
+            $Assignment.principalId
+        } elseif ($Assignment.PSObject.Properties.Name -contains 'PrincipalId') {
+            $Assignment.PrincipalId
+        } else { $null }
+
+        if (-not $principalId) {
+            Write-Verbose "No principalId found in assignment, cannot query schedule requests"
+            return $false
+        }
+
+        # Check if the assignment itself contains justification information first
+        if (Test-IsJustificationFromOrchestrator -Assignment $Assignment -JustificationFilter $JustificationFilter) {
+            Write-Verbose "Found orchestrator justification directly in the assignment"
+            return $true
+        }
+
+        # Handle Azure RBAC vs Entra ID vs Group roles differently
+        if ($ResourceType -like "Azure Role*") {
+            # For Azure roles, use Invoke-ARM with the proper API endpoint
+            if ([string]::IsNullOrEmpty($SubscriptionId)) {
+                Write-Verbose "No SubscriptionId provided for Azure role, cannot query ARM API"
+                return $false
+            }
+
+            $scope = if ($Assignment.PSObject.Properties.Name -contains 'ScopeId') {
+                $Assignment.ScopeId
+            } elseif ($Assignment.PSObject.Properties.Name -contains 'scope') {
+                $Assignment.scope
+            } elseif ($Assignment.PSObject.Properties.Name -contains 'Scope') {
+                $Assignment.Scope
+            } else { $null }
+
+            if (-not $scope) {
+                Write-Verbose "No scope found in assignment, cannot query ARM API"
+                return $false
+            }
+
+            # Extract role definition ID if available
+            $roleDefinitionId = $null
+            foreach ($propName in @("RoleDefinitionId", "roleDefinitionId")) {
+                if ($Assignment.PSObject.Properties.Name -contains $propName -and $Assignment.$propName) {
+                    $roleDefinitionId = $Assignment.$propName
+                    break
+                }
+            }
+
+            # Determine if we're checking eligible or active assignments
+            $isEligible = $ResourceType -like "*eligible*"
+
+            # For eligible assignments: Use roleEligibilityScheduleRequests
+            # For active assignments: Use roleAssignmentScheduleRequests
+            $requestType = if ($isEligible) {
+                "roleEligibilityScheduleRequests"
+            } else {
+                "roleAssignmentScheduleRequests"
+            }
+
+            # Ensure the scope is properly formatted for the API URL
+            # The API expects a scope like /subscriptions/{subscriptionId}
+            if (-not $scope.StartsWith('/')) {
+                $scope = "/$scope"
+            }
+
+            # Build the API URL as per documentation:
+            # https://learn.microsoft.com/en-us/rest/api/authorization/role-assignment-schedule-requests/list-for-scope
+            $apiUrl = "$scope/providers/Microsoft.Authorization/$requestType"
+            $apiVersion = "2020-10-01"
+
+            # Build the filter query parameter
+            $filter = "principalId eq '$principalId'"
+
+            # If we have a role definition ID, add it to the filter
+            if ($roleDefinitionId) {
+                $filter += " and roleDefinitionId eq '$roleDefinitionId'"
+            }
+
+            $apiUrl += "?api-version=$apiVersion&`$filter=$filter"
+
+            Write-Verbose "Querying ARM API for schedule requests: $apiUrl"
+
+            # Make the API call using the module's Invoke-ARM function
+            $response = Invoke-ARM -restURI $apiUrl -method "GET"
+
+            # Check if we received a valid response with results
+            if ($response -and `
+                $response.PSObject.Properties.Name -contains 'value' -and `
+                $response.value -and `
+                $response.value.Count -gt 0) {
+
+                Write-Verbose "Found $($response.value.Count) schedule requests for principal $principalId"
+
+                # Examine each request in the response
+                foreach ($request in $response.value) {
+                    # Look for the justification in the properties
+                    if ($request.PSObject.Properties.Name -contains 'properties' -and `
+                        $request.properties.PSObject.Properties.Name -contains 'justification') {
+
+                        $justification = $request.properties.justification
+                        Write-Verbose "Found justification in schedule request: $justification"
+
+                        # Check if the justification matches our specific filter only
+                        if ($justification -like "*$JustificationFilter*") {
+                            Write-Verbose "Assignment was created by orchestrator based on justification: $justification"
+                            return $true
+                        }
+                    }
+                }
+
+                Write-Verbose "No matching justification pattern found in any schedule requests"
+            }
+            else {
+                Write-Verbose "No matching schedule requests found for principal $principalId at scope $scope"
+            }
+        }
+        elseif ($ResourceType -like "Entra Role*" -or $ResourceType -like "Group*") {
+            # For Entra ID roles or Group roles, use Invoke-Graph
+
+            # Determine if it's an eligible or active role
+            $requestType = if ($ResourceType -like "*eligible*") {
+                "roleEligibilityScheduleRequests"
+            } else {
+                "roleAssignmentScheduleRequests"
+            }
+
+            # Determine if it's for directory (Entra) or groups
+            $directoryType = "directory"  # Default for Entra roles
+            $additionalFilter = ""
+
+            # If it's a group role, extract the group ID and add to filter
+            if ($ResourceType -like "Group*") {
+                $groupId = $null
+
+                # Extract group ID from assignment
+                if ($Assignment.PSObject.Properties.Name -contains 'id' -and `
+                    $Assignment.id -like "*_*") {
+                    $groupId = $Assignment.id.Split('_')[0]
+                } elseif ($Assignment.PSObject.Properties.Name -contains 'GroupId') {
+                    $groupId = $Assignment.GroupId
+                } elseif ($Assignment.PSObject.Properties.Name -contains 'groupId') {
+                    $groupId = $Assignment.groupId
+                }
+
+                if (-not $groupId) {
+                    Write-Verbose "No group ID found in group assignment, cannot query Graph API"
+                    return $false
+                }
+
+                $additionalFilter = " and resourceId eq '$groupId'"
+            }
+
+            # Build the Graph API endpoint
+            $graphEndpoint = "roleManagement/$directoryType/$requestType"
+            $filter = "principalId eq '$principalId'$additionalFilter"
+            $graphEndpoint += "?`$filter=$filter"
+
+            Write-Verbose "Querying Microsoft Graph API using Invoke-Graph: $graphEndpoint"
+
+            # Use the module's Invoke-Graph function with beta version
+            $response = Invoke-Graph -Endpoint $graphEndpoint -Method "GET" -version "beta"
+
+            # Check for orchestrator justification in the response
+            if ($response -and $response.PSObject.Properties.Name -contains 'value' -and $response.value) {
+                foreach ($request in $response.value) {
+                    # Graph API returns justification directly at root level for Entra roles
+                    if ($request.PSObject.Properties.Name -contains 'justification' -and `
+                        ($request.justification -like "*$JustificationFilter*")) {
+
+                        Write-Verbose "Found orchestrator justification in Graph API response: $($request.justification)"
+                        return $true
+                    }
+                }
+            }
+        }
+
+    }
+    catch {
+        Write-Verbose "Error in Test-AssignmentCreatedByOrchestrator: $_"
+        Write-Verbose $_.Exception.Message
+        Write-Verbose $_.ScriptStackTrace
+    }
+
+    # Default to false if no evidence found that the assignment was created by orchestrator
     return $false
 }

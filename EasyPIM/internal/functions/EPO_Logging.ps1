@@ -1,10 +1,15 @@
+﻿# Contains output formatting functions for the EasyPIM module
+# These functions are meant to be used for terminal display, so Write-Host is appropriate here
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "", Justification="These functions are specifically designed for console output in an interactive module")]
+param()
+
 function Write-SectionHeader {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
         [string]$Message
     )
-    
+
     Write-Host "`n┌────────────────────────────────────────────────────┐" -ForegroundColor Cyan
     Write-Host "│ $Message" -ForegroundColor Cyan
     Write-Host "└────────────────────────────────────────────────────┘`n" -ForegroundColor Cyan
@@ -16,7 +21,7 @@ function Write-SubHeader {
         [Parameter(Mandatory = $true)]
         [string]$Message
     )
-    
+
     Write-Host "`n=== $Message ===" -ForegroundColor Cyan
 }
 
@@ -26,7 +31,7 @@ function Write-StatusInfo {
         [Parameter(Mandatory = $true)]
         [string]$Message
     )
-    
+
     Write-Host "  ℹ️ $Message" -ForegroundColor White
 }
 
@@ -36,7 +41,7 @@ function Write-StatusSuccess {
         [Parameter(Mandatory = $true)]
         [string]$Message
     )
-    
+
     Write-Host "  ✅ $Message" -ForegroundColor Green
 }
 
@@ -46,7 +51,7 @@ function Write-StatusWarning {
         [Parameter(Mandatory = $true)]
         [string]$Message
     )
-    
+
     Write-Host "  ⚠️ $Message" -ForegroundColor Yellow
 }
 
@@ -56,7 +61,7 @@ function Write-StatusError {
         [Parameter(Mandatory = $true)]
         [string]$Message
     )
-    
+
     Write-Host "  ❌ $Message" -ForegroundColor Red
 }
 
@@ -65,17 +70,17 @@ function Write-CleanupSummary {
     param (
         [Parameter(Mandatory = $true)]
         [string]$Category,
-        
+
         [Parameter(Mandatory = $true)]
         [int]$Kept,
-        
+
         [Parameter(Mandatory = $true)]
         [int]$Removed,
-        
+
         [Parameter(Mandatory = $true)]
         [int]$Protected
     )
-    
+
     Write-Host "`n┌────────────────────────────────────────────────────┐" -ForegroundColor Cyan
     Write-Host "│ $Category Summary" -ForegroundColor Cyan
     Write-Host "├────────────────────────────────────────────────────┤" -ForegroundColor Cyan
@@ -90,17 +95,17 @@ function Write-Summary {
     param (
         [Parameter(Mandatory = $true)]
         [string]$Category,
-        
+
         [Parameter(Mandatory = $true)]
         [int]$Created,
-        
+
         [Parameter(Mandatory = $true)]
         [int]$Skipped,
-        
+
         [Parameter(Mandatory = $true)]
         [int]$Failed
     )
-    
+
     Write-Host "`n┌───────────────────────────────────────────────────────────────────────────────┐" -ForegroundColor Cyan
     Write-Host "│ SUMMARY: $Category" -ForegroundColor Cyan
     Write-Host "├───────────────────────────────────────────────────────────────────────────────┤" -ForegroundColor Cyan

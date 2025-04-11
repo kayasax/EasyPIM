@@ -1,4 +1,4 @@
-function Test-PIMGroupValid {
+﻿function Test-PIMGroupValid {
     [CmdletBinding()]
     [OutputType([bool])]
     param (
