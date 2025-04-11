@@ -23,6 +23,13 @@
       "Rolename": "Owner",
       "Scope": "/providers/Microsoft.Management/managementGroups/all_sub" //management group scope
       }
+      /*,
+      {
+        "PrincipalId": "b47520e4-3370-46a9-956d-e613256a8557", // PIM3
+        "Rolename": "Owner",
+        "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a"
+        }*/
+      
     ],
     "AzureRolesActive": [
       {

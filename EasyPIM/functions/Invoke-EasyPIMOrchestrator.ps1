@@ -19,7 +19,17 @@
         [string]$Mode = "delta",
 
         [Parameter(Mandatory = $true)]
-        [string]$TenantId
+        [string]$TenantId,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("All", "AzureRoles", "EntraRoles", "GroupRoles")]
+        [string[]]$Operations = @("All"),
+
+        [Parameter(Mandatory = $false)]
+        [switch]$SkipAssignments,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$SkipCleanup
     )
 
     Write-SectionHeader "Starting EasyPIM Orchestration (Mode: $Mode)"
@@ -41,14 +51,51 @@
         } else {
             Get-EasyPIMConfiguration -ConfigFilePath $ConfigFilePath
         }
-        # 2. Process and normalize config
+
+        # 2. Process and normalize config based on selected operations
         $processedConfig = Initialize-EasyPIMAssignments -Config $config
         
-        # 3. Perform cleanup operations
-        $cleanupResults = Invoke-EasyPIMCleanup -Config $processedConfig -Mode $Mode -TenantId $TenantId -SubscriptionId $SubscriptionId
+        # Filter config based on selected operations
+        if ($Operations -notcontains "All") {
+            $filteredConfig = @{}
+            foreach ($op in $Operations) {
+                switch ($op) {
+                    "AzureRoles" {
+                        $filteredConfig.AzureRoles = $processedConfig.AzureRoles
+                        $filteredConfig.AzureRolesActive = $processedConfig.AzureRolesActive
+                    }
+                    "EntraRoles" {
+                        $filteredConfig.EntraIDRoles = $processedConfig.EntraIDRoles
+                        $filteredConfig.EntraIDRolesActive = $processedConfig.EntraIDRolesActive
+                    }
+                    "GroupRoles" {
+                        $filteredConfig.GroupRoles = $processedConfig.GroupRoles
+                        $filteredConfig.GroupRolesActive = $processedConfig.GroupRolesActive
+                    }
+                }
+            }
+            $processedConfig = $filteredConfig
+        }
         
-        # 4. Process assignments
-        $assignmentResults = New-EasyPIMAssignments -Config $processedConfig -TenantId $TenantId -SubscriptionId $SubscriptionId
+        # 3. Perform cleanup operations if running full operations or specific role types (skip if requested)
+        $cleanupResults = if ($Operations -contains "All" -and -not $SkipCleanup) {
+            Invoke-EasyPIMCleanup -Config $processedConfig -Mode $Mode -TenantId $TenantId -SubscriptionId $SubscriptionId
+        } else {
+            if ($SkipCleanup) {
+                Write-Host "⚠️ Skipping cleanup as requested by SkipCleanup parameter" -ForegroundColor Yellow
+            } else {
+                Write-Host "⚠️ Skipping cleanup as specific operations were selected" -ForegroundColor Yellow
+            }
+            $null
+        }
+        
+        # 4. Process assignments (skip if requested)
+        if (-not $SkipAssignments) {
+            $assignmentResults = New-EasyPIMAssignments -Config $processedConfig -TenantId $TenantId -SubscriptionId $SubscriptionId
+        } else {
+            Write-Host "⚠️ Skipping assignment creation as requested" -ForegroundColor Yellow
+            $assignmentResults = $null
+        }
         
         # 5. Display summary
         Write-EasyPIMSummary -CleanupResults $cleanupResults -AssignmentResults $assignmentResults

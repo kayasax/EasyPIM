@@ -4,7 +4,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.8'
+ModuleVersion = '1.8.1'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -92,7 +92,7 @@ FunctionsToExport = @(
     "Get-PIMGroupEligibleAssignment",
     'New-PIMGroupActiveAssignment',
     'New-PIMGroupEligibleAssignment',
-    'Remove-PIMGroupActiveAssignment', 
+    'Remove-PIMGroupActiveAssignment',
     'Remove-PIMGroupEligibleAssignment',
     'Show-PIMReport',
     'Get-PIMAzureResourcePendingApproval',
