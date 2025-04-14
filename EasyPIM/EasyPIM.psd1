@@ -4,7 +4,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.8.2'
+ModuleVersion = '1.8.2.1'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -43,7 +43,7 @@ Description = 'Manage PIM Azure Resource, PIM Entra role and PIM for Group setti
 # ProcessorArchitecture = ''
 
 # Modules that must be imported into the global environment prior to importing this module
- RequiredModules = @("Az.Accounts")
+ RequiredModules = @("Az.Accounts","Az.KeyVault", "Az.Resources")
 
 # Assemblies that must be loaded prior to importing this module
 # RequiredAssemblies = @()
