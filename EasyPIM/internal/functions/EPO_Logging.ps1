@@ -1,10 +1,10 @@
 ﻿# Contains output formatting functions for the EasyPIM module
 # These functions are meant to be used for terminal display, so Write-Host is appropriate here
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "", Justification="These functions are specifically designed for console output in an interactive module")]
-param()
+
 
 function Write-SectionHeader {
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
     param (
         [Parameter(Mandatory = $true)]
         [string]$Message
@@ -17,6 +17,7 @@ function Write-SectionHeader {
 
 function Write-SubHeader {
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
     param (
         [Parameter(Mandatory = $true)]
         [string]$Message
@@ -27,6 +28,7 @@ function Write-SubHeader {
 
 function Write-StatusInfo {
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
     param (
         [Parameter(Mandatory = $true)]
         [string]$Message
@@ -37,6 +39,7 @@ function Write-StatusInfo {
 
 function Write-StatusSuccess {
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
     param (
         [Parameter(Mandatory = $true)]
         [string]$Message
@@ -47,6 +50,7 @@ function Write-StatusSuccess {
 
 function Write-StatusWarning {
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
     param (
         [Parameter(Mandatory = $true)]
         [string]$Message
@@ -57,6 +61,7 @@ function Write-StatusWarning {
 
 function Write-StatusError {
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
     param (
         [Parameter(Mandatory = $true)]
         [string]$Message
@@ -67,6 +72,7 @@ function Write-StatusError {
 
 function Write-CleanupSummary {
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
     param (
         [Parameter(Mandatory = $true)]
         [string]$Category,
@@ -92,6 +98,7 @@ function Write-CleanupSummary {
 
 function Write-Summary {
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
     param (
         [Parameter(Mandatory = $true)]
         [string]$Category,
