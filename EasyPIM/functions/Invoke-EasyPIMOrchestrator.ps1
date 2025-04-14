@@ -42,8 +42,8 @@
 
     try {
         # Import necessary modules
-        Write-Host "Importing required modules..." -ForegroundColor Gray
-        Import-Module Az.KeyVault, Az.Resources
+        #Write-Host "Importing required modules..." -ForegroundColor Gray
+        #Import-Module Az.KeyVault, Az.Resources
 
         # 1. Load configuration
         $config = if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
@@ -54,7 +54,7 @@
 
         # 2. Process and normalize config based on selected operations
         $processedConfig = Initialize-EasyPIMAssignments -Config $config
-        
+
         # Filter config based on selected operations
         if ($Operations -notcontains "All") {
             $filteredConfig = @{}
@@ -76,7 +76,7 @@
             }
             $processedConfig = $filteredConfig
         }
-        
+
         # 3. Perform cleanup operations if running full operations or specific role types (skip if requested)
         $cleanupResults = if ($Operations -contains "All" -and -not $SkipCleanup) {
             Invoke-EasyPIMCleanup -Config $processedConfig -Mode $Mode -TenantId $TenantId -SubscriptionId $SubscriptionId
@@ -88,7 +88,7 @@
             }
             $null
         }
-        
+
         # 4. Process assignments (skip if requested)
         if (-not $SkipAssignments) {
             $assignmentResults = New-EasyPIMAssignments -Config $processedConfig -TenantId $TenantId -SubscriptionId $SubscriptionId
@@ -96,10 +96,10 @@
             Write-Host "⚠️ Skipping assignment creation as requested" -ForegroundColor Yellow
             $assignmentResults = $null
         }
-        
+
         # 5. Display summary
         Write-EasyPIMSummary -CleanupResults $cleanupResults -AssignmentResults $assignmentResults
-        
+
         Write-Host "=== EasyPIM orchestration completed successfully ===" -ForegroundColor Green
     }
     catch {
