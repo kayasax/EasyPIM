@@ -1,7 +1,7 @@
 ﻿# Define shared helper functions for cleanup operations
 # Used by Invoke-Cleanup
-[System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "", Justification="Module includes an alias with plural form for backward compatibility")]
-param()
+#[System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "", Justification="Module includes an alias with plural form for backward compatibility")]
+#param()
 
 # Define protected roles that should never be removed automatically at script level
 $script:protectedRoles = @(
@@ -211,6 +211,7 @@ Set-Alias -Name Reset-CleanupCounters -Value Reset-CleanupCounter -Scope Global
 
 function Get-AssignmentProperties {
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "")]
     [OutputType([System.Collections.Hashtable])]
     param (
         [Parameter(Mandatory = $true)]
