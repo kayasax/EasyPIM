@@ -12,9 +12,10 @@
        the Graph API version to use (default: v1.0)
       .Parameter Body
        an optional body
+      .Parameter Filter
+       an optional OData filter string to apply to the request
       .Parameter NoPagination
-       if specified, disables automatic pagination for GET requests
-      .Example
+       if specified, disables automatic pagination for GET requests      .Example
         PS> invoke-Graph -Endpoint "users" -Method "GET"
 
         will send a GET query to the users endpoint and return all results (handling pagination automatically)
@@ -23,6 +24,16 @@
         PS> invoke-Graph -Endpoint "users?`$top=10" -Method "GET" -NoPagination
 
         will send a GET query and return only the first page of results
+
+      .Example
+        PS> invoke-Graph -Endpoint "users" -Method "GET" -Filter "displayName eq 'John Doe'"
+
+        will send a GET query to the users endpoint with a filter for displayName equals 'John Doe'
+
+      .Example
+        PS> invoke-Graph -Endpoint "users?`$filter=userType eq 'Member'" -Method "GET" -Filter "accountEnabled eq true"
+
+        will combine filters using 'and' operator, resulting in: userType eq 'Member' and accountEnabled eq true
       .Link
 
       .Notes
@@ -42,6 +53,8 @@ function invoke-graph {
         $version = "v1.0",
         [String]
         $body,
+        [String]
+        $Filter,
         [switch]
         $NoPagination
     )
@@ -49,7 +62,22 @@ function invoke-graph {
     try {
         $graph = "https://graph.microsoft.com/$version/"
 
-        [string]$uri = $graph + $endpoint
+        [string]$uri = $graph + $endpoint        # Handle filter parameter
+        if (-not [string]::IsNullOrEmpty($Filter)) {
+            if ($uri -like "*`$filter=*") {
+                # URI already contains a filter, combine them with 'and'
+                $uri = $uri -replace "(\`$filter=[^&]*)", "`$1 and $Filter"
+            }
+            elseif ($uri.Contains("?")) {
+                # URI has query parameters but no filter, add filter parameter
+                $uri += "&`$filter=$Filter"
+            }
+            else {
+                # URI has no query parameters, add filter as first parameter
+                $uri += "?`$filter=$Filter"
+            }
+        }
+
         Write-Verbose "uri = $uri"
 
         if ( $null -eq (get-mgcontext) -or ( (get-mgcontext).TenantId -ne $script:tenantID ) ) {
