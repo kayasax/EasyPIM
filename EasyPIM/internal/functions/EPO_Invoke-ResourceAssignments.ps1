@@ -113,18 +113,28 @@
         }
 
         # Get a friendly name for the principal
-        $principalName = "Principal-$principalId"
+                $principalName = "Principal-$principalId"
 
         # Try to get a better name for the principal if possible
         try {
-            $principalObj = Get-AzADUser -ObjectId $principalId -ErrorAction SilentlyContinue
-            if ($principalObj) {
-                $principalName = $principalObj.DisplayName
+            # Try to get user information first
+            try {
+                $principalObj = Invoke-Graph -Endpoint "/users/$principalId" -Method GET -ErrorAction Stop
+                if ($principalObj) {
+                    $principalName = $principalObj.displayName
+                }
             }
-            else {
-                $principalGroup = Get-AzADGroup -ObjectId $principalId -ErrorAction SilentlyContinue
-                if ($principalGroup) {
-                    $principalName = $principalGroup.DisplayName
+            catch {
+                # If not a user, try to get group information
+                try {
+                    $principalGroup = Invoke-Graph -Endpoint "/groups/$principalId" -Method GET -ErrorAction Stop
+                    if ($principalGroup) {
+                        $principalName = $principalGroup.displayName
+                    }
+                }
+                catch {
+                    # Just continue with the default name if we can't find either
+                    Write-Verbose "Could not resolve principal name for ID $principalId from users or groups"
                 }
             }
         }
