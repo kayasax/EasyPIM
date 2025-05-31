@@ -17,6 +17,8 @@ $script:removeCounter = 0
 $script:skipCounter = 0
 $script:protectedCounter = 0
 
+<# Marked unsued 14/04
+
 function Test-IsProtectedAssignment {
     [CmdletBinding()]
     [OutputType([System.Boolean])]
@@ -31,6 +33,7 @@ function Test-IsProtectedAssignment {
     return $ProtectedUsers -contains $PrincipalId
 }
 
+
 function Test-IsProtectedRole {
     [CmdletBinding()]
     [OutputType([System.Boolean])]
@@ -41,7 +44,7 @@ function Test-IsProtectedRole {
 
     return $script:protectedRoles -contains $RoleName
 }
-
+ #>
 function Test-AssignmentInConfig {
     [CmdletBinding()]
     [OutputType([System.Boolean])]
@@ -195,6 +198,7 @@ function Get-FormattedCleanupSummary {
     return $output
 }
 
+<# marked unused 14/04
 function Reset-CleanupCounter {
     [CmdletBinding()]
     [OutputType([System.Void])]
@@ -208,7 +212,7 @@ function Reset-CleanupCounter {
 
 # Create an alias for backward compatibility
 Set-Alias -Name Reset-CleanupCounters -Value Reset-CleanupCounter -Scope Global
-
+#>
 function Get-AssignmentProperties {
     [CmdletBinding()]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "")]

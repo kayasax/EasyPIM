@@ -60,6 +60,23 @@ Remove-Item -Path "$($publishDir.FullName)\EasyPIM\internal" -Recurse -Force
 Remove-Item -Path "$($publishDir.FullName)\EasyPIM\functions" -Recurse -Force
 #endregion Update the psm1 file & Cleanup
 
+#region Test Module Import
+Write-Host "Testing module import to catch any syntax errors..."
+try {
+    # Import the module to validate it loads correctly
+    Import-Module -Name "$($publishDir.FullName)\EasyPIM\EasyPIM.psd1" -Force -ErrorAction Stop
+    Write-Host "Module imported successfully!" -ForegroundColor Green
+    # Optional: List commands to further validate
+    #Get-Command -Module EasyPIM | Select-Object -First 5 | Format-Table -AutoSize
+    # Remove the module after testing
+    Remove-Module -Name EasyPIM -ErrorAction SilentlyContinue
+} catch {
+    Write-Host "ERROR: Module failed to import. Details:" -ForegroundColor Red
+    Write-Host $_.Exception.Message -ForegroundColor Red
+    throw "Module validation failed. Please check the error message above."
+}
+#endregion Test Module Import
+
 #region Updating the Module Version
 if ($AutoVersion)
 {
