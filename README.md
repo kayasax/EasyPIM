@@ -22,6 +22,9 @@ Packed with more than 30 cmdlets, EasyPIM leverages the ARM and Graph APIs compl
 
 With the export function you can now edit your PIM settings in Excel then import back your changes :wink:
 
+## Use cases
+Discover how EasyPIM answers to common challenges [Use cases](https://github.com/kayasax/EasyPIM/wiki/Use-Cases)
+
 ## Installation
 This module is available on the PowerShell gallery: [https://www.powershellgallery.com/packages/EasyPIM](https://www.powershellgallery.com/packages/EasyPIM), install it with:
 ```pwsh
