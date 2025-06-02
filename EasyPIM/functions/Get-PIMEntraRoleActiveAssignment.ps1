@@ -8,16 +8,22 @@
     .Parameter summary
     When enabled will return the most useful information only
     .PARAMETER rolename
-    Filter by rolename
-    .PARAMETER principalid
+    Filter by rolename    .PARAMETER principalid
     Filter by principalid
     .PARAMETER principalName
     Filter by principalName
+    .PARAMETER userPrincipalName
+    Filter by userPrincipalName (UPN). Will resolve to object ID for efficient Graph API filtering.
 
     .Example
     PS> Get-PIMEntraRoleActiveAssignment -tenantID $tid -rolename "testrole" -principalName "loic"
 
     List active assignement for role "testrole" and user name "loic"
+
+    .Example
+    PS> Get-PIMEntraRoleActiveAssignment -tenantID $tid -userPrincipalName "user@domain.com" -rolename "Global Administrator"
+
+    List active assignments for a specific user by UPN and role
 
 
     .Link
@@ -36,21 +42,45 @@ function Get-PIMEntraRoleActiveAssignment {
         [switch]$summary,
         [string]$principalid,
         [string]$rolename,
-        [string]$principalName
+        [string]$principalName,
+        [string]$userPrincipalName
     )    try {
-        $script:tenantID = $tenantID        # Build Graph API filter for better performance (only for supported properties)
+        $script:tenantID = $tenantID
+
+        # Resolve userPrincipalName to object ID if provided
+        $resolvedPrincipalId = $null
+        if ($PSBoundParameters.Keys.Contains('userPrincipalName')) {
+            try {
+                Write-Verbose "Resolving userPrincipalName '$userPrincipalName' to object ID..."
+                $userEndpoint = "/users/$userPrincipalName"
+                $userResponse = invoke-graph -Endpoint $userEndpoint
+                $resolvedPrincipalId = $userResponse.id
+                Write-Verbose "Resolved to object ID: $resolvedPrincipalId"
+            }
+            catch {
+                Write-Warning "Could not resolve userPrincipalName '$userPrincipalName': $($_.Exception.Message)"
+                # Return empty result if user not found
+                Write-Output "0 $rolename active assignment(s) found for tenant $tenantID"
+                return @()
+            }
+        }
+
+        # Build Graph API filter for better performance (only for supported properties)
         $graphFilters = @()
-        if ($PSBoundParameters.Keys.Contains('principalid')) {
-            $graphFilters += "principal/id eq '$principalid'"
+
+        # Use resolved principal ID if we got one from userPrincipalName, otherwise use provided principalid
+        $effectivePrincipalId = if ($resolvedPrincipalId) { $resolvedPrincipalId } else { $principalid }
+        if ($PSBoundParameters.Keys.Contains('principalid') -or $resolvedPrincipalId) {
+            $graphFilters += "principal/id eq '$effectivePrincipalId'"
         }
         if ($PSBoundParameters.Keys.Contains('rolename')) {
             # Use tolower() for case-insensitive comparison
             $rolenameLower = $rolename.ToLower()
-            $graphFilters += "tolower(roleDefinition/displayName) eq '$rolenameLower'"
-        }
+            $graphFilters += "tolower(roleDefinition/displayName) eq '$rolenameLower'"        }
 
         # Note: principalName filtering not supported by Graph API for this endpoint
         # Will be handled with PowerShell filtering after retrieval
+        # Note: userPrincipalName is now resolved to object ID above for efficient Graph API filtering
 
         $filter = if ($graphFilters.Count -gt 0) { $graphFilters -join ' and ' } else { $null }
 
@@ -80,14 +110,17 @@ function Get-PIMEntraRoleActiveAssignment {
         }
 
         if ($PSBoundParameters.Keys.Contains('summary')) {
-            $resu = $resu | Select-Object rolename, roleid, principalid, principalName, principalEmail, PrincipalType, startDateTime, endDateTime, directoryScopeId
-        }
+            $resu = $resu | Select-Object rolename, roleid, principalid, principalName, principalEmail, PrincipalType, startDateTime, endDateTime, directoryScopeId        }
 
         # Apply PowerShell filtering for principalName (not supported by Graph API for this endpoint)
         if ($PSBoundParameters.Keys.Contains('principalName')) {
             $resu = $resu | Where-Object { $_.principalName -match $principalName }
         }
 
+        # No need for PowerShell filtering for userPrincipalName since it's resolved to object ID
+        # and filtered efficiently at the Graph API level
+
+        Write-Output "$($resu.Count) $rolename active assignment(s) found for tenant $tenantID"
         return $resu
     }
     catch {
