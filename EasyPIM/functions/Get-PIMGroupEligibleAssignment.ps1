@@ -38,14 +38,20 @@ function Get-PIMGroupEligibleAssignment {
         [string]$groupID,
         [string]$rolename,
         [string]$principalName
-    )
-
-    try {
+    )    try {
         $script:tenantID = $tenantID
 
-        $endpoint = "identityGovernance/privilegedAccess/group/eligibilitySchedules?`$filter=groupId eq '$groupID'&`$expand=principal
-        "
-        $response = invoke-graph -Endpoint $endpoint
+        # Build Graph API filter for better performance
+        $graphFilters = @("groupId eq '$groupID'")  # groupID is always required
+
+        if ($PSBoundParameters.Keys.Contains('principalName')) {
+            $graphFilters += "startswith(principal/displayName,'$principalName')"
+        }
+
+        $filter = $graphFilters -join ' and '
+
+        $endpoint = "identityGovernance/privilegedAccess/group/eligibilitySchedules?`$expand=principal"
+        $response = invoke-graph -Endpoint $endpoint -Filter $filter
         $resu = @()
         $response.value | ForEach-Object {
 
@@ -73,15 +79,9 @@ function Get-PIMGroupEligibleAssignment {
             $resu = $resu | Select-Object rolename, roleid, principalid, principalName, principalEmail, PrincipalType, startDateTime, endDateTime, directoryScopeId
         }
 
+        # Note: keeping minimal PowerShell filtering for edge cases
         if ($PSBoundParameters.Keys.Contains('principalid')) {
             $resu = $resu | Where-Object { $_.principalid -eq $principalid }
-        }
-
-        if ($PSBoundParameters.Keys.Contains('rolename')) {
-            $resu = $resu | Where-Object { $_.rolename -eq $rolename }
-        }
-        if($PSBoundParameters.Keys.Contains('principalName')){
-            $resu = $resu | Where-Object { $_.principalName -match $principalName }
         }
 
         return $resu

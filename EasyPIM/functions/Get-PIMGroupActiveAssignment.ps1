@@ -39,14 +39,24 @@ function Get-PIMGroupActiveAssignment {
         [string]$memberType,
         [string]$principalName,
         [switch]$summary
-    )
-
-    try {
+    )    try {
         $script:tenantID = $tenantID
 
-        $endpoint = "identityGovernance/privilegedAccess/group/assignmentSchedules?`$filter=groupId eq '$groupID'&`$expand=principal
-        "
-        $response = invoke-graph -Endpoint $endpoint
+        # Build Graph API filter for better performance
+        $graphFilters = @("groupId eq '$groupID'")  # groupID is always required
+
+        if ($PSBoundParameters.Keys.Contains('memberType')) {
+            $graphFilters += "accessId eq '$memberType'"
+        }
+
+        if ($PSBoundParameters.Keys.Contains('principalName')) {
+            $graphFilters += "startswith(principal/displayName,'$principalName')"
+        }
+
+        $filter = $graphFilters -join ' and '
+
+        $endpoint = "identityGovernance/privilegedAccess/group/assignmentSchedules?`$expand=principal"
+        $response = invoke-graph -Endpoint $endpoint -Filter $filter
         $resu = @()
         $response.value | ForEach-Object {
 
@@ -70,15 +80,9 @@ function Get-PIMGroupActiveAssignment {
             $resu = $resu | Select-Object rolename, roleid, principalid, principalName, principalEmail, PrincipalType, startDateTime, endDateTime, directoryScopeId
         }
 
+        # Keeping principalid filtering in PowerShell as it's not a common parameter for this function
         if ($PSBoundParameters.Keys.Contains('principalid')) {
             $resu = $resu | Where-Object { $_.principalid -eq $principalid }
-        }
-
-        if ($PSBoundParameters.Keys.Contains('memberType')) {
-            $resu = $resu | Where-Object { $_.memberType -eq $memberType }
-        }
-        if($PSBoundParameters.Keys.Contains('principalName')){
-            $resu = $resu | Where-Object { $_.principalName -match $principalName }
         }
 
         return $resu

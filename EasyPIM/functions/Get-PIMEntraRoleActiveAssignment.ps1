@@ -37,13 +37,25 @@ function Get-PIMEntraRoleActiveAssignment {
         [string]$principalid,
         [string]$rolename,
         [string]$principalName
-    )
+    )    try {
+        $script:tenantID = $tenantID        # Build Graph API filter for better performance (only for supported properties)
+        $graphFilters = @()
+        if ($PSBoundParameters.Keys.Contains('principalid')) {
+            $graphFilters += "principal/id eq '$principalid'"
+        }
+        if ($PSBoundParameters.Keys.Contains('rolename')) {
+            # Use tolower() for case-insensitive comparison
+            $rolenameLower = $rolename.ToLower()
+            $graphFilters += "tolower(roleDefinition/displayName) eq '$rolenameLower'"
+        }
 
-    try {
-        $script:tenantID = $tenantID
+        # Note: principalName filtering not supported by Graph API for this endpoint
+        # Will be handled with PowerShell filtering after retrieval
+
+        $filter = if ($graphFilters.Count -gt 0) { $graphFilters -join ' and ' } else { $null }
 
         $endpoint = "roleManagement/directory/roleAssignmentScheduleInstances?`$expand=roleDefinition,principal"
-        $response = invoke-graph -Endpoint $endpoint
+        $response = invoke-graph -Endpoint $endpoint -Filter $filter
         $resu = @()
         $response.value | ForEach-Object {
 
@@ -71,14 +83,8 @@ function Get-PIMEntraRoleActiveAssignment {
             $resu = $resu | Select-Object rolename, roleid, principalid, principalName, principalEmail, PrincipalType, startDateTime, endDateTime, directoryScopeId
         }
 
-        if ($PSBoundParameters.Keys.Contains('principalid')) {
-            $resu = $resu | Where-Object { $_.principalid -eq $principalid }
-        }
-
-        if ($PSBoundParameters.Keys.Contains('rolename')) {
-            $resu = $resu | Where-Object { $_.rolename -eq $rolename }
-        }
-        if($PSBoundParameters.Keys.Contains('principalName')){
+        # Apply PowerShell filtering for principalName (not supported by Graph API for this endpoint)
+        if ($PSBoundParameters.Keys.Contains('principalName')) {
             $resu = $resu | Where-Object { $_.principalName -match $principalName }
         }
 
