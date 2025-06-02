@@ -34,6 +34,7 @@
 
 function Get-PIMEntraRoleActiveAssignment {
     [CmdletBinding()]
+    [OutputType([PSCustomObject[]])]
     param (
         [Parameter(Position = 0, Mandatory = $true)]
         [String]

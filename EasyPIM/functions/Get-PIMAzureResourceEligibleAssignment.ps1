@@ -35,6 +35,7 @@
 
 function Get-PIMAzureResourceEligibleAssignment {
     [CmdletBinding()]
+    [OutputType([PSCustomObject[]])]
     param (
         [Parameter(Position = 0, Mandatory = $true)]
         [String]
