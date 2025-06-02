@@ -80,9 +80,16 @@ function Get-PIMAzureResourceEligibleAssignment {
             }
         }
 
+       # Validate that either scope or subscriptionID is provided
+        if (!($PSBoundParameters.Keys.Contains('scope')) -and !($PSBoundParameters.Keys.Contains('subscriptionID'))) {
+            throw "Either -scope or -subscriptionID parameter must be provided. Cannot determine which Azure resource scope to query."
+        }
+
+        # Set default scope if not explicitly provided
         if (!($PSBoundParameters.Keys.Contains('scope'))) {
             $scope = "/subscriptions/$subscriptionID"
         }
+
         # issue #23: due to a bug with the API regarding the membertype, we will use RoleEligibilitySchedulesInstance instead of RoleEligibilitySchedule
         # the downside is we will not get assignment with a future start date
         if ($PSBoundParameters.Keys.Contains('includeFutureAssignments')) {
