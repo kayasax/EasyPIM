@@ -6,18 +6,24 @@
     .Parameter tenantID
     EntraID tenant ID
     .Parameter subscriptionID
-    subscription ID
-    .Parameter scope
+    subscription ID    .Parameter scope
     use scope parameter if you want to work at other scope than a subscription
+    .PARAMETER assignee
+    Filter assignment using userprincipalname or objectID
+    .PARAMETER userPrincipalName
+    Filter by userPrincipalName (UPN). Will resolve to object ID for efficient ARM API filtering.
     .Parameter summary
     When enabled will return the most useful information only
     .Parameter atBellowScope
-    Will return only the assignment defined at lower scopes
-
-    .Example
+    Will return only the assignment defined at lower scopes    .Example
     PS> Get-PIMAzureResourceActiveAssignment -tenantID $tid -subscriptionID -subscription $subscription
 
     List active assignement at the subscription scope.
+
+    .Example
+    PS> Get-PIMAzureResourceActiveAssignment -tenantID $tid -subscriptionID $sub -userPrincipalName "user@domain.com"
+
+    List active assignments for a specific user by UPN
 
 
     .Link
@@ -35,28 +41,72 @@ function Get-PIMAzureResourceActiveAssignment {
         $tenantID,
         [Parameter(Position = 1)]
         [String]
-        $subscriptionID,
-        [Parameter()]
+        $subscriptionID,        [Parameter()]
         [String]
         $scope,
+        [String]
+        $assignee,
+        [String]
+        $userPrincipalName,
         [switch]
         # select the most usefull info only
         $summary,
         [switch]
         # return only assignment defined at a lower scope
         $atBellowScope
-    )
+    )    try {
+        $script:tenantID = $tenantID
 
-    try {
+        # Resolve userPrincipalName to object ID if provided
+        $resolvedPrincipalId = $null
+        if ($PSBoundParameters.Keys.Contains('userPrincipalName')) {
+            try {
+                Write-Verbose "Resolving userPrincipalName '$userPrincipalName' to object ID..."
+                $userEndpoint = "/users/$userPrincipalName"
+                $userResponse = invoke-graph -Endpoint $userEndpoint
+                $resolvedPrincipalId = $userResponse.id
+                Write-Verbose "Resolved to object ID: $resolvedPrincipalId"
+            }
+            catch {
+                Write-Warning "Could not resolve userPrincipalName '$userPrincipalName': $($_.Exception.Message)"
+                # Return empty result if user not found
+                Write-Output "0 active assignment(s) found for scope $scope"
+                return @()
+            }
+        }
+
         if (!($PSBoundParameters.Keys.Contains('scope'))) {
             $scope = "/subscriptions/$subscriptionID"
-        }
-        # Issue #23due to a bug with the API regarding the membertype, we will use RoleAssignmentSchedulesInstance instead of RoleAssignmentsSchedule
+        }        # Issue #23due to a bug with the API regarding the membertype, we will use RoleAssignmentSchedulesInstance instead of RoleAssignmentsSchedule
         # the downside is we will not get assignment with a future start date
         #$restURI = "https://management.azure.com/$scope/providers/Microsoft.Authorization/roleAssignmentSchedules?api-version=2020-10-01"
         $restURI = "https://management.azure.com/$scope/providers/Microsoft.Authorization/roleAssignmentScheduleInstances?api-version=2020-10-01"
 
-        $script:tenantID = $tenantID
+        # Determine which principal ID to use for filtering
+        $effectivePrincipalId = $null
+        if ($resolvedPrincipalId) {
+            $effectivePrincipalId = $resolvedPrincipalId
+        }
+        elseif ($PSBoundParameters.Keys.Contains('assignee')) {
+            if($assignee -match ".+@.*\..+") { # if this is a UPN we will use graph to get the objectID
+                try{
+                    $resu=invoke-graph -endpoint "users/$assignee" -Method GET -version "beta"
+                    $effectivePrincipalId = $resu.id
+                }
+                catch {
+                    Write-Warning "User $assignee not found in the tenant"
+                    return @()
+                }
+            }
+            else {
+                $effectivePrincipalId = $assignee
+            }
+        }
+
+        # Add principal filtering to REST URI if we have a principal ID
+        if ($effectivePrincipalId) {
+            $restURI += "?`$filter=assignedto('"+$effectivePrincipalId+"')"
+        }
 
         $response = Invoke-ARM -restURI $restURI -method get
         #$response|select -first 1
@@ -99,10 +149,11 @@ function Get-PIMAzureResourceActiveAssignment {
 
         if ($PSBoundParameters.Keys.Contains('summary')) {
             $return = $return | Select-Object scopeid, rolename, roletype, principalid, principalName, principalEmail, PrincipalType, status, startDateTime, endDateTime
-        }
-        if ($PSBoundParameters.Keys.Contains('atBellowScope')) {
+        }        if ($PSBoundParameters.Keys.Contains('atBellowScope')) {
             $return = $return | Where-Object { $($_.scopeid).Length -gt $scope.Length }
         }
+
+        Write-Output "$($return.Count) active assignment(s) found for scope $scope"
         return $return
     }
     catch {
