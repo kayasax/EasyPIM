@@ -36,7 +36,7 @@
 
 function Get-PIMGroupActiveAssignment {
     [CmdletBinding()]
-    [OutputType([PSCustomObject[]])]
+    [OutputType([System.Object[]])]
     param (
         [Parameter(Position = 0, Mandatory = $true)]
         [String]
