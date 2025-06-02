@@ -35,6 +35,7 @@
 
 function Get-PIMAzureResourceActiveAssignment {
     [CmdletBinding()]
+    [OutputType([System.Object[]])]
     param (
         [Parameter(Position = 0, Mandatory = $true)]
         [String]

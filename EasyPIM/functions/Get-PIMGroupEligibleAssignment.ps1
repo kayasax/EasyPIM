@@ -34,6 +34,7 @@
 
 function Get-PIMGroupEligibleAssignment {
     [CmdletBinding()]
+    [OutputType([System.Object[]])]
     param (
         [Parameter(Position = 0, Mandatory = $true)]
         [String]
