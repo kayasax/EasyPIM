@@ -8,9 +8,10 @@
     .PARAMETER groupID
     The group id to check
     .PARAMETER memberType
-    Filter results by memberType (owner or member)
-    .PARAMETER principalName
+    Filter results by memberType (owner or member)    .PARAMETER principalName
     Filter results by principalName starting with the given value
+    .PARAMETER userPrincipalName
+    Filter by userPrincipalName (UPN). Will resolve to object ID for efficient Graph API filtering.
     .Parameter summary
     When enabled will return the most useful information only
     .Example
@@ -21,6 +22,11 @@
     PS> Get-PIMGroupActiveAssignment -tenantID $tid -groupID $gID -memberType owner -principalName "loic" -summary
 
     Get a summary of the active assignement for the group $gID, for the owner role and for the user "loic"
+
+    .Example
+    PS> Get-PIMGroupActiveAssignment -tenantID $tid -groupID $gID -userPrincipalName "user@domain.com"
+
+    List active assignments for a specific user by UPN
 
     .Link
     .Notes
@@ -38,15 +44,48 @@ function Get-PIMGroupActiveAssignment {
         [string]$groupID,
         [string]$memberType,
         [string]$principalName,
+        [string]$userPrincipalName,
         [switch]$summary
-    )
-
-    try {
+    )    try {
         $script:tenantID = $tenantID
 
-        $endpoint = "identityGovernance/privilegedAccess/group/assignmentSchedules?`$filter=groupId eq '$groupID'&`$expand=principal
-        "
-        $response = invoke-graph -Endpoint $endpoint
+        # Resolve userPrincipalName to object ID if provided
+        $resolvedPrincipalId = $null
+        if ($PSBoundParameters.Keys.Contains('userPrincipalName')) {
+            try {
+                Write-Verbose "Resolving userPrincipalName '$userPrincipalName' to object ID..."
+                $userEndpoint = "/users/$userPrincipalName"
+                $userResponse = invoke-graph -Endpoint $userEndpoint
+                $resolvedPrincipalId = $userResponse.id
+                Write-Verbose "Resolved to object ID: $resolvedPrincipalId"
+            }
+            catch {
+                Write-Warning "Could not resolve userPrincipalName '$userPrincipalName': $($_.Exception.Message)"
+                # Return empty result if user not found
+                Write-Output "0 active assignment(s) found for group $groupID in tenant $tenantID"
+                return @()
+            }
+        }
+
+        # Build Graph API filter for better performance
+        $graphFilters = @("groupId eq '$groupID'")  # groupID is always required
+
+        if ($PSBoundParameters.Keys.Contains('memberType')) {
+            $graphFilters += "accessId eq '$memberType'"
+        }
+
+        # Use resolved principal ID if we got one from userPrincipalName
+        if ($resolvedPrincipalId) {
+            $graphFilters += "principal/id eq '$resolvedPrincipalId'"
+        }
+        elseif ($PSBoundParameters.Keys.Contains('principalName')) {
+            $graphFilters += "startswith(principal/displayName,'$principalName')"
+        }
+
+        $filter = $graphFilters -join ' and '
+
+        $endpoint = "identityGovernance/privilegedAccess/group/assignmentSchedules?`$expand=principal"
+        $response = invoke-graph -Endpoint $endpoint -Filter $filter
         $resu = @()
         $response.value | ForEach-Object {
 
@@ -67,20 +106,17 @@ function Get-PIMGroupActiveAssignment {
         }
 
         if ($PSBoundParameters.Keys.Contains('summary')) {
-            $resu = $resu | Select-Object rolename, roleid, principalid, principalName, principalEmail, PrincipalType, startDateTime, endDateTime, directoryScopeId
-        }
+            $resu = $resu | Select-Object rolename, roleid, principalid, principalName, principalEmail, PrincipalType, startDateTime, endDateTime, directoryScopeId        }
 
+        # Keeping principalid filtering in PowerShell as it's not a common parameter for this function
         if ($PSBoundParameters.Keys.Contains('principalid')) {
             $resu = $resu | Where-Object { $_.principalid -eq $principalid }
         }
 
-        if ($PSBoundParameters.Keys.Contains('memberType')) {
-            $resu = $resu | Where-Object { $_.memberType -eq $memberType }
-        }
-        if($PSBoundParameters.Keys.Contains('principalName')){
-            $resu = $resu | Where-Object { $_.principalName -match $principalName }
-        }
+        # No need for PowerShell filtering for userPrincipalName since it's resolved to object ID
+        # and filtered efficiently at the Graph API level
 
+        Write-Output "$($resu.Count) active assignment(s) found for group $groupID in tenant $tenantID"
         return $resu
     }
     catch {
