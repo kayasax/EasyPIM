@@ -96,19 +96,18 @@ function Get-PIMEntraRoleEligibleAssignment {
                 "memberType"       = $_.memberType
                 "assignmentType"   = $_.assignmentType
                 #"activatedUsing"=$_.activatedUsing
-                "type"             = $_.principal."@odata.type"
+                "principaltype"    = $_.principal."@odata.type"
                 "id"               = $_.id
             }
             $resu += New-Object PSObject -Property $r
         }
 
         if ($PSBoundParameters.Keys.Contains('summary')) {
-            $resu = $resu | Select-Object rolename, roleid, principalid, principalName, principalEmail, @{l="Type";e={if ($_ -match "user"){"user"}else{"group"}}}, startDateTime, endDateTime, directoryScopeId        }
+            $resu = $resu | Select-Object rolename, roleid, principalid, principalName, principalEmail, @{l="principalType";e={if ($_ -match "user"){"user"}else{"group"}}}, startDateTime, endDateTime, directoryScopeId        }
 
-        # No need for PowerShell filtering since userPrincipalName is now resolved to object ID
-        # and filtered efficiently at the Graph API level
-
-        Write-Output "$($resu.Count) $rolename eligible assignment(s) found for tenant $tenantID"
+        #Note this was for a demo we should not write host normally
+        # need to use Write-Host since Write-Output will be counted as a result otherwise
+        #Write-Host "$($resu.Count) $rolename eligible assignment(s) found for tenant $tenantID"
         return $resu
 
 
