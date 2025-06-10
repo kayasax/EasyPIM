@@ -30,6 +30,7 @@
 
 function Get-PIMEntraRoleEligibleAssignment {
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
     [OutputType([System.Object[]])]
     param (
         [Parameter(Position = 0, Mandatory = $true)]
@@ -105,10 +106,8 @@ function Get-PIMEntraRoleEligibleAssignment {
         if ($PSBoundParameters.Keys.Contains('summary')) {
             $resu = $resu | Select-Object rolename, roleid, principalid, principalName, principalEmail, @{l="principalType";e={if ($_ -match "user"){"user"}else{"group"}}}, startDateTime, endDateTime, directoryScopeId        }
 
-# need to use Write-Host since Write-Output will be counted as a result otherwise
-        # PSScriptAnalyzer disable PSAvoidUsingWriteHost
+        # need to use Write-Host since Write-Output will be counted as a result otherwise
         Write-Host "$($resu.Count) $rolename eligible assignment(s) found for tenant $tenantID"
-        # PSScriptAnalyzer enable PSAvoidUsingWriteHost
         return $resu
 
 
