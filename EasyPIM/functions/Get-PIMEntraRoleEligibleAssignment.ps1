@@ -105,8 +105,10 @@ function Get-PIMEntraRoleEligibleAssignment {
         if ($PSBoundParameters.Keys.Contains('summary')) {
             $resu = $resu | Select-Object rolename, roleid, principalid, principalName, principalEmail, @{l="principalType";e={if ($_ -match "user"){"user"}else{"group"}}}, startDateTime, endDateTime, directoryScopeId        }
 
-# need to use writ-host cause write-output will be counted as a result otherwise
-        Write-host "$($resu.Count) $rolename eligible assignment(s) found for tenant $tenantID"
+# need to use Write-Host since Write-Output will be counted as a result otherwise
+        # PSScriptAnalyzer disable PSAvoidUsingWriteHost
+        Write-Host "$($resu.Count) $rolename eligible assignment(s) found for tenant $tenantID"
+        # PSScriptAnalyzer enable PSAvoidUsingWriteHost
         return $resu
 
 
