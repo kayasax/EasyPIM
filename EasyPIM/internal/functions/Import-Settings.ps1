@@ -21,13 +21,16 @@ function Import-Setting ($path) {
     }
     $csv = Import-Csv $path
 
-    $csv | ForEach-Object {
-        $rules = @()
+    $csv | ForEach-Object {        $rules = @()
         $script:scope=$_.policyID -replace "/providers.*"
 
         $rules += Set-ActivationDuration $_.ActivationDuration
         $enablementRules = $_.EnablementRules.Split(',')
         $rules += Set-ActivationRequirement $enablementRules
+
+        $activeAssignmentRules = $_.ActiveAssignmentRules.Split(',')
+        $rules += Set-ActiveAssignmentRequirement $activeAssignmentRules
+
         #$approvers = @()
         #$approvers += $_.approvers
         $rules += Set-ApprovalFromCSV $_.ApprovalRequired $_.Approvers
