@@ -31,12 +31,15 @@ function Import-EntraRoleSettings  {
     }
     $csv = Import-Csv $path
 
-    $csv | ForEach-Object {
-        $rules = @()
+    $csv | ForEach-Object {        $rules = @()
         $rules += Set-ActivationDuration $_.ActivationDuration -entrarole
 
         $enablementRules = $_.EnablementRules.Split(',')
         $rules += Set-ActivationRequirement $enablementRules -entraRole
+
+        # Add missing ActiveAssignmentRequirement processing
+        $activeAssignmentRequirements = $_.ActiveAssignmentRequirement.Split(',')
+        $rules += Set-ActiveAssignmentRequirement $activeAssignmentRequirements -entraRole
 
        # $approvers = @()
        # $approvers += $_.approvers
