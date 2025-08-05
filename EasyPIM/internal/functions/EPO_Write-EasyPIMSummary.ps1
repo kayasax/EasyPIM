@@ -6,7 +6,10 @@
         [PSCustomObject]$CleanupResults,
 
         [Parameter()]
-        [PSCustomObject]$AssignmentResults
+        [PSCustomObject]$AssignmentResults,
+
+        [Parameter()]
+        [hashtable]$PolicyResults
     )
 
     # Add grand total summary
@@ -28,6 +31,25 @@
         Write-Host "│ ✅ Created : 0" -ForegroundColor White
         Write-Host "│ ⏭️ Skipped : 0" -ForegroundColor White
         Write-Host "│ ❌ Failed  : 0" -ForegroundColor White
+    }
+    Write-Host "└───────────────────────────────────────────────────────────────────────────────┘" -ForegroundColor White
+
+    # Policy section
+    Write-Host "┌───────────────────────────────────────────────────────────────────────────────┐" -ForegroundColor White
+    Write-Host "│ POLICY OPERATIONS" -ForegroundColor White
+    Write-Host "├───────────────────────────────────────────────────────────────────────────────┤" -ForegroundColor White
+
+    # Handle policy results - might be null if policies were skipped
+    if ($null -ne $PolicyResults -and $null -ne $PolicyResults.Summary) {
+        Write-Host "│ ✅ Applied : $($PolicyResults.Summary.Successful)" -ForegroundColor White
+        Write-Host "│ ⏭️ Skipped : $($PolicyResults.Summary.Skipped)" -ForegroundColor White
+        Write-Host "│ ❌ Failed  : $($PolicyResults.Summary.Failed)" -ForegroundColor White
+        Write-Host "│ 📋 Total   : $($PolicyResults.Summary.TotalProcessed)" -ForegroundColor White
+    } else {
+        Write-Host "│ ✅ Applied : 0" -ForegroundColor White
+        Write-Host "│ ⏭️ Skipped : 0" -ForegroundColor White
+        Write-Host "│ ❌ Failed  : 0" -ForegroundColor White
+        Write-Host "│ 📋 Total   : 0" -ForegroundColor White
     }
     Write-Host "└───────────────────────────────────────────────────────────────────────────────┘" -ForegroundColor White
 

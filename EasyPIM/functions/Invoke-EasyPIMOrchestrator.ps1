@@ -29,7 +29,18 @@
         [switch]$SkipAssignments,
 
         [Parameter(Mandatory = $false)]
-        [switch]$SkipCleanup
+        [switch]$SkipCleanup,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$SkipPolicies,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("All", "AzureRoles", "EntraRoles", "GroupRoles")]
+        [string[]]$PolicyOperations = @("All"),
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("validate", "delta", "initial")]
+        [string]$PolicyMode = "validate"
     )
 
     Write-SectionHeader "Starting EasyPIM Orchestration (Mode: $Mode)"
@@ -54,6 +65,55 @@
 
         # 2. Process and normalize config based on selected operations
         $processedConfig = Initialize-EasyPIMAssignments -Config $config
+
+        # 2.1. Process policy configurations if present
+        $policyConfig = $null
+        if (-not $SkipPolicies -and (
+            $config.ContainsKey('AzureRolePolicies') -or 
+            $config.ContainsKey('EntraRolePolicies') -or 
+            $config.ContainsKey('GroupPolicies') -or 
+            $config.ContainsKey('PolicyTemplates')
+        )) {
+            Write-Host "🔧 Processing policy configurations..." -ForegroundColor Cyan
+            $policyConfig = Initialize-EasyPIMPolicies -Config $config
+            
+            # Filter policy config based on selected policy operations
+            if ($PolicyOperations -notcontains "All") {
+                $filteredPolicyConfig = @{}
+                foreach ($op in $PolicyOperations) {
+                    switch ($op) {
+                        "AzureRoles" {
+                            if ($policyConfig.ContainsKey('AzureRolePolicies')) {
+                                $filteredPolicyConfig.AzureRolePolicies = $policyConfig.AzureRolePolicies
+                            }
+                        }
+                        "EntraRoles" {
+                            if ($policyConfig.ContainsKey('EntraRolePolicies')) {
+                                $filteredPolicyConfig.EntraRolePolicies = $policyConfig.EntraRolePolicies
+                            }
+                        }
+                        "GroupRoles" {
+                            if ($policyConfig.ContainsKey('GroupPolicies')) {
+                                $filteredPolicyConfig.GroupPolicies = $policyConfig.GroupPolicies
+                            }
+                        }
+                    }
+                }
+                # Merge filtered policy config with processed config
+                foreach ($key in $filteredPolicyConfig.Keys) {
+                    $processedConfig[$key] = $filteredPolicyConfig[$key]
+                }
+            } else {
+                # Merge all policy config with processed config
+                foreach ($key in $policyConfig.Keys) {
+                    if ($key -match ".*Policies$") {
+                        $processedConfig[$key] = $policyConfig[$key]
+                    }
+                }
+            }
+        } elseif ($SkipPolicies) {
+            Write-Host "⚠️ Skipping policy processing as requested by SkipPolicies parameter" -ForegroundColor Yellow
+        }
 
         # Filter config based on selected operations
         if ($Operations -notcontains "All") {
@@ -89,7 +149,17 @@
             $null
         }
 
-        # 4. Process assignments (skip if requested)
+        # 4. Process policies (skip if requested)
+        $policyResults = $null
+        if (-not $SkipPolicies -and $policyConfig -and (
+            $processedConfig.ContainsKey('AzureRolePolicies') -or 
+            $processedConfig.ContainsKey('EntraRolePolicies') -or 
+            $processedConfig.ContainsKey('GroupPolicies')
+        )) {
+            $policyResults = New-EasyPIMPolicies -Config $processedConfig -TenantId $TenantId -SubscriptionId $SubscriptionId -PolicyMode $PolicyMode
+        }
+
+        # 5. Process assignments (skip if requested)
         if (-not $SkipAssignments) {
             $assignmentResults = New-EasyPIMAssignments -Config $processedConfig -TenantId $TenantId -SubscriptionId $SubscriptionId
         } else {
@@ -97,8 +167,8 @@
             $assignmentResults = $null
         }
 
-        # 5. Display summary
-        Write-EasyPIMSummary -CleanupResults $cleanupResults -AssignmentResults $assignmentResults
+        # 6. Display summary
+        Write-EasyPIMSummary -CleanupResults $cleanupResults -AssignmentResults $assignmentResults -PolicyResults $policyResults
 
         Write-Host "=== EasyPIM orchestration completed successfully ===" -ForegroundColor Green
     }
