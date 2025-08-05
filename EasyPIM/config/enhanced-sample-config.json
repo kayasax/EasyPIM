@@ -148,6 +148,12 @@
             "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a",
             "PolicySource": "template",
             "PolicyTemplate": "Standard"
+        },
+        {
+            "RoleName": "User Access Administrator",
+            "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a",
+            "PolicySource": "template",
+            "PolicyTemplate": "ExecutiveApproval"
         }
     ],
     "EntraRolePolicies": [
@@ -179,7 +185,7 @@
             "GroupId": "8737e307-5069-43e9-9545-931f1ca4957f",
             "RoleName": "Owner",
             "PolicySource": "template",
-            "PolicyTemplate": "HighSecurity"
+            "PolicyTemplate": "ExecutiveApproval"
         }
     ],
     "PolicyTemplates": {
@@ -187,28 +193,182 @@
             "ActivationDuration": "PT2H",
             "EnablementRules": ["MultiFactorAuthentication", "Justification"],
             "ApprovalRequired": true,
+            "Approvers": [
+                {
+                    "id": "5dba24e0-00ef-4c21-9702-7c093a0775eb",
+                    "description": "Security Team",
+                    "userType": "Group"
+                },
+                {
+                    "id": "aec7e1be-91cf-41bf-b849-10e5ada8353c",
+                    "description": "PIM Global Admin Group",
+                    "userType": "Group"
+                }
+            ],
             "AllowPermanentEligibleAssignment": false,
             "MaximumEligibleAssignmentDuration": "P30D",
             "AllowPermanentActiveAssignment": false,
-            "MaximumActiveAssignmentDuration": "P1D"
+            "MaximumActiveAssignmentDuration": "P1D",
+            "Notifications": {
+                "Eligibility": {
+                    "Alert": {
+                        "isDefaultRecipientEnabled": true,
+                        "NotificationLevel": "All",
+                        "Recipients": ["security-team@company.com"]
+                    },
+                    "Assignee": {
+                        "isDefaultRecipientEnabled": true,
+                        "NotificationLevel": "All",
+                        "Recipients": []
+                    },
+                    "Approvers": {
+                        "isDefaultRecipientEnabled": true,
+                        "NotificationLevel": "All",
+                        "Recipients": []
+                    }
+                },
+                "Activation": {
+                    "Alert": {
+                        "isDefaultRecipientEnabled": true,
+                        "NotificationLevel": "All",
+                        "Recipients": ["security-team@company.com"]
+                    },
+                    "Assignee": {
+                        "isDefaultRecipientEnabled": true,
+                        "NotificationLevel": "All",
+                        "Recipients": []
+                    },
+                    "Approvers": {
+                        "isDefaultRecipientEnabled": true,
+                        "NotificationLevel": "All",
+                        "Recipients": []
+                    }
+                }
+            }
         },
         "Standard": {
             "ActivationDuration": "PT8H",
             "EnablementRules": ["MultiFactorAuthentication"],
             "ApprovalRequired": false,
+            "Approvers": [],
             "AllowPermanentEligibleAssignment": true,
             "MaximumEligibleAssignmentDuration": "P90D",
             "AllowPermanentActiveAssignment": false,
-            "MaximumActiveAssignmentDuration": "P30D"
+            "MaximumActiveAssignmentDuration": "P30D",
+            "Notifications": {
+                "Eligibility": {
+                    "Alert": {
+                        "isDefaultRecipientEnabled": true,
+                        "NotificationLevel": "All",
+                        "Recipients": []
+                    },
+                    "Assignee": {
+                        "isDefaultRecipientEnabled": true,
+                        "NotificationLevel": "All",
+                        "Recipients": []
+                    }
+                },
+                "Activation": {
+                    "Alert": {
+                        "isDefaultRecipientEnabled": true,
+                        "NotificationLevel": "Critical",
+                        "Recipients": []
+                    },
+                    "Assignee": {
+                        "isDefaultRecipientEnabled": true,
+                        "NotificationLevel": "All",
+                        "Recipients": []
+                    }
+                }
+            }
         },
         "LowPrivilege": {
             "ActivationDuration": "PT24H",
             "EnablementRules": [],
             "ApprovalRequired": false,
+            "Approvers": [],
             "AllowPermanentEligibleAssignment": true,
             "MaximumEligibleAssignmentDuration": "P365D",
             "AllowPermanentActiveAssignment": true,
-            "MaximumActiveAssignmentDuration": "P90D"
+            "MaximumActiveAssignmentDuration": "P90D",
+            "Notifications": {
+                "Eligibility": {
+                    "Alert": {
+                        "isDefaultRecipientEnabled": false,
+                        "NotificationLevel": "None",
+                        "Recipients": []
+                    },
+                    "Assignee": {
+                        "isDefaultRecipientEnabled": true,
+                        "NotificationLevel": "All",
+                        "Recipients": []
+                    }
+                },
+                "Activation": {
+                    "Alert": {
+                        "isDefaultRecipientEnabled": false,
+                        "NotificationLevel": "None",
+                        "Recipients": []
+                    },
+                    "Assignee": {
+                        "isDefaultRecipientEnabled": true,
+                        "NotificationLevel": "All",
+                        "Recipients": []
+                    }
+                }
+            }
+        },
+        "ExecutiveApproval": {
+            "ActivationDuration": "PT4H",
+            "EnablementRules": ["MultiFactorAuthentication", "Justification"],
+            "ApprovalRequired": true,
+            "Approvers": [
+                {
+                    "id": "7a55ec4d-028e-4ff1-8ee9-93da07b6d5d5",
+                    "description": "Executive Team",
+                    "userType": "Group"
+                }
+            ],
+            "AllowPermanentEligibleAssignment": false,
+            "MaximumEligibleAssignmentDuration": "P7D",
+            "AllowPermanentActiveAssignment": false,
+            "MaximumActiveAssignmentDuration": "PT4H",
+            "Notifications": {
+                "Eligibility": {
+                    "Alert": {
+                        "isDefaultRecipientEnabled": true,
+                        "NotificationLevel": "All",
+                        "Recipients": ["executives@company.com", "security-team@company.com"]
+                    },
+                    "Assignee": {
+                        "isDefaultRecipientEnabled": true,
+                        "NotificationLevel": "All",
+                        "Recipients": []
+                    },
+                    "Approvers": {
+                        "isDefaultRecipientEnabled": true,
+                        "NotificationLevel": "All",
+                        "Recipients": []
+                    }
+                },
+                "Activation": {
+                    "Alert": {
+                        "isDefaultRecipientEnabled": true,
+                        "NotificationLevel": "All",
+                        "Recipients": ["executives@company.com", "security-team@company.com"]
+                    },
+                    "Assignee": {
+                        "isDefaultRecipientEnabled": true,
+                        "NotificationLevel": "All",
+                        "Recipients": []
+                    },
+                    "Approvers": {
+                        "isDefaultRecipientEnabled": true,
+                        "NotificationLevel": "All",
+                        "Recipients": []
+                    }
+                }
+            }
         }
     }
 }

@@ -85,15 +85,46 @@ The enhanced `Invoke-EasyPIMOrchestrator` now supports comprehensive policy mana
         "ActivationDuration": "PT2H",
         "EnablementRules": ["MultiFactorAuthentication", "Justification"],
         "ApprovalRequired": true,
+        "Approvers": [
+            {
+                "id": "5dba24e0-00ef-4c21-9702-7c093a0775eb",
+                "description": "Security Team",
+                "userType": "Group"
+            }
+        ],
         "AllowPermanentEligibleAssignment": false,
-        "MaximumEligibleAssignmentDuration": "P30D"
+        "MaximumEligibleAssignmentDuration": "P30D",
+        "Notifications": {
+            "Eligibility": {
+                "Alert": {
+                    "isDefaultRecipientEnabled": true,
+                    "NotificationLevel": "All",
+                    "Recipients": ["security-team@company.com"]
+                }
+            }
+        }
     },
     "Standard": {
         "ActivationDuration": "PT8H",
         "EnablementRules": ["MultiFactorAuthentication"],
         "ApprovalRequired": false,
+        "Approvers": [],
         "AllowPermanentEligibleAssignment": true,
         "MaximumEligibleAssignmentDuration": "P90D"
+    },
+    "ExecutiveApproval": {
+        "ActivationDuration": "PT4H",
+        "EnablementRules": ["MultiFactorAuthentication", "Justification"],
+        "ApprovalRequired": true,
+        "Approvers": [
+            {
+                "id": "7a55ec4d-028e-4ff1-8ee9-93da07b6d5d5",
+                "description": "Executive Team",
+                "userType": "Group"
+            }
+        ],
+        "AllowPermanentEligibleAssignment": false,
+        "MaximumEligibleAssignmentDuration": "P7D"
     }
 }
 ```
@@ -206,7 +237,7 @@ Invoke-EasyPIMOrchestrator `
 
 ### Notification Settings
 Configure notifications for different events:
-- `Eligibility`: Notifications for eligibility changes
+- `Elegibility`: Notifications for eligibility changes
 - `Active`: Notifications for active assignment changes
 - `Activation`: Notifications for role activations
 
@@ -214,6 +245,29 @@ Each notification type supports:
 - `Alert`: Admin notifications
 - `Assignee`: User notifications
 - `Approvers`: Approver notifications
+
+### Approver Configuration
+Define approvers for policy templates and inline policies:
+
+```json
+"Approvers": [
+    {
+        "id": "group-or-user-id",
+        "description": "Human-readable description",
+        "userType": "Group|User"
+    }
+]
+```
+
+**Approver Types:**
+- **Group**: Azure AD/Entra ID security group (recommended)
+- **User**: Individual user account
+
+**Best Practices for Approvers:**
+- Use groups instead of individual users for easier management
+- Include backup approvers to avoid single points of failure
+- Use descriptive names for easy identification
+- Consider time zones when selecting approvers
 
 ## Best Practices
 
@@ -227,9 +281,43 @@ Always test configurations in validation mode first:
 Create reusable templates for consistent policy application:
 ```json
 "PolicyTemplates": {
-    "HighPrivilege": { /* high security settings */ },
-    "Standard": { /* standard settings */ },
-    "ReadOnly": { /* minimal requirements */ }
+    "HighPrivilege": {
+        "ActivationDuration": "PT2H",
+        "EnablementRules": ["MultiFactorAuthentication", "Justification"],
+        "ApprovalRequired": true,
+        "Approvers": [
+            {
+                "id": "security-team-group-id",
+                "description": "Security Team",
+                "userType": "Group"
+            }
+        ]
+    },
+    "Standard": {
+        "ActivationDuration": "PT8H",
+        "EnablementRules": ["MultiFactorAuthentication"],
+        "ApprovalRequired": false,
+        "Approvers": []
+    },
+    "ExecutiveLevel": {
+        "ActivationDuration": "PT4H",
+        "EnablementRules": ["MultiFactorAuthentication", "Justification"],
+        "ApprovalRequired": true,
+        "Approvers": [
+            {
+                "id": "executive-team-group-id",
+                "description": "Executive Team",
+                "userType": "Group"
+            }
+        ],
+        "Notifications": {
+            "Activation": {
+                "Alert": {
+                    "Recipients": ["executives@company.com", "security@company.com"]
+                }
+            }
+        }
+    }
 }
 ```
 
