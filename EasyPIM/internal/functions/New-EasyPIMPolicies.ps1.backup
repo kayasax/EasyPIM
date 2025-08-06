@@ -29,7 +29,7 @@ function New-EasyPIMPolicies {
         $results = New-EasyPIMPolicies -Config $processedConfig -TenantId $tenantId -SubscriptionId $subscriptionId
 
     .NOTES
-        Author: Loic MICHEL
+        Author: Loïc MICHEL
         Homepage: https://github.com/kayasax/EasyPIM
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
@@ -93,13 +93,13 @@ function New-EasyPIMPolicies {
                 $policyDetails += "Max Eligibility: $($resolvedPolicy.MaximumEligibilityDuration)"
                 $policyDetails += "Permanent Eligibility: $(if ($resolvedPolicy.AllowPermanentEligibility) { 'Allowed' } else { 'Not Allowed' })"
 
-                $whatIfDetails += "    * $($policyDetails -join ' | ')"
+                $whatIfDetails += "    • $($policyDetails -join ' | ')"
             }
 
             $whatIfMessage = "Apply Azure Role Policy configurations:`n$($whatIfDetails -join "`n")"
 
             if ($PSCmdlet.ShouldProcess($whatIfMessage, "Azure Role Policies")) {
-                Write-Host "[PROC] Processing Azure Role Policies..." -ForegroundColor Cyan
+                Write-Host "🔧 Processing Azure Role Policies..." -ForegroundColor Cyan
 
                 if (-not $SubscriptionId) {
                     $errorMsg = "SubscriptionId is required for Azure Role Policies"
@@ -117,13 +117,13 @@ function New-EasyPIMPolicies {
                             # Check if role was protected
                             if ($policyResult.Status -like "*Protected*") {
                                 $results.Summary.Skipped++
-                                Write-Host "  [PROTECTED] Protected Azure role '$($policyDef.RoleName)' - policy change blocked for security" -ForegroundColor Yellow
+                                Write-Host "  🛡️ Protected Azure role '$($policyDef.RoleName)' - policy change blocked for security" -ForegroundColor Yellow
                             } else {
                                 $results.Summary.Successful++
                                 if ($PolicyMode -eq "validate") {
-                                    Write-Host "  [OK] Validated policy for role '$($policyDef.RoleName)' at scope '$($policyDef.Scope)' (no changes applied)" -ForegroundColor Green
+                                    Write-Host "  ✅ Validated policy for role '$($policyDef.RoleName)' at scope '$($policyDef.Scope)' (no changes applied)" -ForegroundColor Green
                                 } else {
-                                    Write-Host "  [OK] Applied policy for role '$($policyDef.RoleName)' at scope '$($policyDef.Scope)'" -ForegroundColor Green
+                                    Write-Host "  ✅ Applied policy for role '$($policyDef.RoleName)' at scope '$($policyDef.Scope)'" -ForegroundColor Green
                                 }
                             }
                         }
@@ -136,7 +136,7 @@ function New-EasyPIMPolicies {
                     }
                 }
             } else {
-                Write-Host "[WARNING] Skipping Azure Role Policies processing due to WhatIf" -ForegroundColor Yellow
+                Write-Host "⚠️ Skipping Azure Role Policies processing due to WhatIf" -ForegroundColor Yellow
                 Write-Host "   Would have applied the following policy configurations:" -ForegroundColor Yellow
                 foreach ($line in $whatIfDetails) {
                     Write-Host "   $line" -ForegroundColor Yellow
@@ -208,13 +208,13 @@ function New-EasyPIMPolicies {
                     $policyDetails += "Permanent Eligibility: $(if ($policy.AllowPermanentEligibility) { 'Allowed' } else { 'Not Allowed' })"
                 }
 
-                $whatIfDetails += "    * $($policyDetails -join ' | ')"
+                $whatIfDetails += "    • $($policyDetails -join ' | ')"
             }
 
             $whatIfMessage = "Apply Entra Role Policy configurations:`n$($whatIfDetails -join "`n")"
 
             if ($PSCmdlet.ShouldProcess($whatIfMessage, "Entra Role Policies")) {
-                Write-Host "[PROC] Processing Entra Role Policies..." -ForegroundColor Cyan
+                Write-Host "🔧 Processing Entra Role Policies..." -ForegroundColor Cyan
 
                 foreach ($policyDef in $Config.EntraRolePolicies) {
                     $results.Summary.TotalProcessed++
@@ -226,13 +226,13 @@ function New-EasyPIMPolicies {
                         # Check if role was protected
                         if ($policyResult.Status -like "*Protected*") {
                             $results.Summary.Skipped++
-                            Write-Host "  [PROTECTED] Protected role '$($policyDef.RoleName)' - policy change blocked for security" -ForegroundColor Yellow
+                            Write-Host "  🛡️ Protected role '$($policyDef.RoleName)' - policy change blocked for security" -ForegroundColor Yellow
                         } else {
                             $results.Summary.Successful++
                             if ($PolicyMode -eq "validate") {
-                                Write-Host "  [OK] Validated policy for Entra role '$($policyDef.RoleName)' (no changes applied)" -ForegroundColor Green
+                                Write-Host "  ✅ Validated policy for Entra role '$($policyDef.RoleName)' (no changes applied)" -ForegroundColor Green
                             } else {
-                                Write-Host "  [OK] Applied policy for Entra role '$($policyDef.RoleName)'" -ForegroundColor Green
+                                Write-Host "  ✅ Applied policy for Entra role '$($policyDef.RoleName)'" -ForegroundColor Green
                             }
                         }
                     }
@@ -244,7 +244,7 @@ function New-EasyPIMPolicies {
                     }
                 }
             } else {
-                Write-Host "[WARNING] Skipping Entra Role Policies processing due to WhatIf" -ForegroundColor Yellow
+                Write-Host "⚠️ Skipping Entra Role Policies processing due to WhatIf" -ForegroundColor Yellow
                 Write-Host "   Would have applied the following policy configurations:" -ForegroundColor Yellow
                 foreach ($line in $whatIfDetails) {
                     Write-Host "   $line" -ForegroundColor Yellow
@@ -282,13 +282,13 @@ function New-EasyPIMPolicies {
                 $policyDetails += "Max Eligibility: $($resolvedPolicy.MaximumEligibilityDuration)"
                 $policyDetails += "Permanent Eligibility: $(if ($resolvedPolicy.AllowPermanentEligibility) { 'Allowed' } else { 'Not Allowed' })"
 
-                $whatIfDetails += "    * $($policyDetails -join ' | ')"
+                $whatIfDetails += "    • $($policyDetails -join ' | ')"
             }
 
             $whatIfMessage = "Apply Group Policy configurations:`n$($whatIfDetails -join "`n")"
 
             if ($PSCmdlet.ShouldProcess($whatIfMessage, "Group Policies")) {
-                Write-Host "[PROC] Processing Group Policies..." -ForegroundColor Cyan
+                Write-Host "🔧 Processing Group Policies..." -ForegroundColor Cyan
 
                 foreach ($policyDef in $Config.GroupPolicies) {
                     $results.Summary.TotalProcessed++
@@ -300,13 +300,13 @@ function New-EasyPIMPolicies {
                         # Check if role was protected
                         if ($policyResult.Status -like "*Protected*") {
                             $results.Summary.Skipped++
-                            Write-Host "  [PROTECTED] Protected Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' - policy change blocked for security" -ForegroundColor Yellow
+                            Write-Host "  🛡️ Protected Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' - policy change blocked for security" -ForegroundColor Yellow
                         } else {
                             $results.Summary.Successful++
                             if ($PolicyMode -eq "validate") {
-                                Write-Host "  [OK] Validated policy for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' (no changes applied)" -ForegroundColor Green
+                                Write-Host "  ✅ Validated policy for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' (no changes applied)" -ForegroundColor Green
                             } else {
-                                Write-Host "  [OK] Applied policy for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)'" -ForegroundColor Green
+                                Write-Host "  ✅ Applied policy for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)'" -ForegroundColor Green
                             }
                         }
                     }
@@ -318,7 +318,7 @@ function New-EasyPIMPolicies {
                     }
                 }
             } else {
-                Write-Host "[WARNING] Skipping Group Policies processing due to WhatIf" -ForegroundColor Yellow
+                Write-Host "⚠️ Skipping Group Policies processing due to WhatIf" -ForegroundColor Yellow
                 Write-Host "   Would have applied the following policy configurations:" -ForegroundColor Yellow
                 foreach ($line in $whatIfDetails) {
                     Write-Host "   $line" -ForegroundColor Yellow
@@ -382,9 +382,9 @@ function Set-AzureRolePolicy {
 
     # Check if this is a protected Azure role
     if ($protectedAzureRoles -contains $PolicyDefinition.RoleName) {
-        $warningMsg = "[WARNING] PROTECTED AZURE ROLE: '$($PolicyDefinition.RoleName)' is a critical role. Policy changes are blocked for security."
+        $warningMsg = "⚠️ PROTECTED AZURE ROLE: '$($PolicyDefinition.RoleName)' is a critical role. Policy changes are blocked for security."
         Write-Warning $warningMsg
-        Write-Host "[PROTECTED] Protected Azure role '$($PolicyDefinition.RoleName)' - policy change blocked" -ForegroundColor Yellow
+        Write-Host "🛡️ Protected Azure role '$($PolicyDefinition.RoleName)' - policy change blocked" -ForegroundColor Yellow
 
         return @{
             RoleName = $PolicyDefinition.RoleName
@@ -400,27 +400,27 @@ function Set-AzureRolePolicy {
 
         # Show policy details that would be applied
         $policy = $PolicyDefinition.ResolvedPolicy
-        Write-Host "[INFO] Policy Changes for Azure Role '$($PolicyDefinition.RoleName)' at '$($PolicyDefinition.Scope)':" -ForegroundColor Cyan
-        Write-Host "   [TIME] Activation Duration: $($policy.ActivationDuration)" -ForegroundColor Yellow
-        Write-Host "   [LOCK] Activation Requirements: $($policy.ActivationRequirement)" -ForegroundColor Yellow
+        Write-Host "📋 Policy Changes for Azure Role '$($PolicyDefinition.RoleName)' at '$($PolicyDefinition.Scope)':" -ForegroundColor Cyan
+        Write-Host "   ⏰ Activation Duration: $($policy.ActivationDuration)" -ForegroundColor Yellow
+        Write-Host "   🔐 Activation Requirements: $($policy.ActivationRequirement)" -ForegroundColor Yellow
         if ($policy.ActiveAssignmentRequirement) {
-            Write-Host "   [SECURE] Active Assignment Requirements: $($policy.ActiveAssignmentRequirement)" -ForegroundColor Yellow
+            Write-Host "   🔒 Active Assignment Requirements: $($policy.ActiveAssignmentRequirement)" -ForegroundColor Yellow
         }
-        Write-Host "   [OK] Approval Required: $($policy.ApprovalRequired)" -ForegroundColor Yellow
+        Write-Host "   ✅ Approval Required: $($policy.ApprovalRequired)" -ForegroundColor Yellow
         if ($policy.Approvers -and $policy.ApprovalRequired -eq $true) {
-            Write-Host "   [USERS] Approvers: $($policy.Approvers.Count) configured" -ForegroundColor Yellow
+            Write-Host "   👥 Approvers: $($policy.Approvers.Count) configured" -ForegroundColor Yellow
         }
-        Write-Host "   [TARGET] Max Eligibility Duration: $($policy.MaximumEligibilityDuration)" -ForegroundColor Yellow
-        Write-Host "   [FAST] Max Active Duration: $($policy.MaximumActiveAssignmentDuration)" -ForegroundColor Yellow
+        Write-Host "   🎯 Max Eligibility Duration: $($policy.MaximumEligibilityDuration)" -ForegroundColor Yellow
+        Write-Host "   ⚡ Max Active Duration: $($policy.MaximumActiveAssignmentDuration)" -ForegroundColor Yellow
 
         # Count notification settings
         $notificationCount = 0
         $policy.PSObject.Properties | Where-Object { $_.Name -like "Notification_*" } | ForEach-Object { $notificationCount++ }
         if ($notificationCount -gt 0) {
-            Write-Host "   [EMAIL] Notification Settings: $notificationCount configured" -ForegroundColor Yellow
+            Write-Host "   📧 Notification Settings: $notificationCount configured" -ForegroundColor Yellow
         }
 
-        Write-Host "   [WARNING]  NOTE: No changes applied in validation mode" -ForegroundColor Magenta
+        Write-Host "   ⚠️  NOTE: No changes applied in validation mode" -ForegroundColor Magenta
 
         return @{
             RoleName = $PolicyDefinition.RoleName
@@ -500,9 +500,9 @@ function Set-EntraRolePolicy {
 
     # Check if this is a protected role
     if ($protectedRoles -contains $PolicyDefinition.RoleName) {
-        $warningMsg = "[WARNING] PROTECTED ROLE: '$($PolicyDefinition.RoleName)' is a critical role. Policy changes are blocked for security."
+        $warningMsg = "⚠️ PROTECTED ROLE: '$($PolicyDefinition.RoleName)' is a critical role. Policy changes are blocked for security."
         Write-Warning $warningMsg
-        Write-Host "[PROTECTED] Protected role '$($PolicyDefinition.RoleName)' - policy change blocked" -ForegroundColor Yellow
+        Write-Host "🛡️ Protected role '$($PolicyDefinition.RoleName)' - policy change blocked" -ForegroundColor Yellow
 
         return @{
             RoleName = $PolicyDefinition.RoleName
@@ -517,30 +517,30 @@ function Set-EntraRolePolicy {
 
         # Show policy details that would be applied
         $policy = $PolicyDefinition.ResolvedPolicy
-        Write-Host "[INFO] Policy Changes for Entra Role '$($PolicyDefinition.RoleName)':" -ForegroundColor Cyan
-        Write-Host "   [TIME] Activation Duration: $($policy.ActivationDuration)" -ForegroundColor Yellow
-        Write-Host "   [LOCK] Activation Requirements: $($policy.ActivationRequirement)" -ForegroundColor Yellow
+        Write-Host "📋 Policy Changes for Entra Role '$($PolicyDefinition.RoleName)':" -ForegroundColor Cyan
+        Write-Host "   ⏰ Activation Duration: $($policy.ActivationDuration)" -ForegroundColor Yellow
+        Write-Host "   🔐 Activation Requirements: $($policy.ActivationRequirement)" -ForegroundColor Yellow
         if ($policy.ActiveAssignmentRequirement) {
-            Write-Host "   [SECURE] Active Assignment Requirements: $($policy.ActiveAssignmentRequirement)" -ForegroundColor Yellow
+            Write-Host "   🔒 Active Assignment Requirements: $($policy.ActiveAssignmentRequirement)" -ForegroundColor Yellow
         }
-        Write-Host "   [OK] Approval Required: $($policy.ApprovalRequired)" -ForegroundColor Yellow
+        Write-Host "   ✅ Approval Required: $($policy.ApprovalRequired)" -ForegroundColor Yellow
         if ($policy.Approvers -and $policy.ApprovalRequired -eq $true) {
-            Write-Host "   [USERS] Approvers: $($policy.Approvers.Count) configured" -ForegroundColor Yellow
+            Write-Host "   👥 Approvers: $($policy.Approvers.Count) configured" -ForegroundColor Yellow
         }
-        Write-Host "   [TARGET] Max Eligibility Duration: $($policy.MaximumEligibilityDuration)" -ForegroundColor Yellow
-        Write-Host "   [FAST] Max Active Duration: $($policy.MaximumActiveAssignmentDuration)" -ForegroundColor Yellow
+        Write-Host "   🎯 Max Eligibility Duration: $($policy.MaximumEligibilityDuration)" -ForegroundColor Yellow
+        Write-Host "   ⚡ Max Active Duration: $($policy.MaximumActiveAssignmentDuration)" -ForegroundColor Yellow
         if ($policy.AuthenticationContext_Enabled -eq $true) {
-            Write-Host "   [PROTECTED] Auth Context: $($policy.AuthenticationContext_Value)" -ForegroundColor Yellow
+            Write-Host "   🛡️ Auth Context: $($policy.AuthenticationContext_Value)" -ForegroundColor Yellow
         }
 
         # Count notification settings
         $notificationCount = 0
         $policy.PSObject.Properties | Where-Object { $_.Name -like "Notification_*" } | ForEach-Object { $notificationCount++ }
         if ($notificationCount -gt 0) {
-            Write-Host "   [EMAIL] Notification Settings: $notificationCount configured" -ForegroundColor Yellow
+            Write-Host "   📧 Notification Settings: $notificationCount configured" -ForegroundColor Yellow
         }
 
-        Write-Host "   [WARNING]  NOTE: No changes applied in validation mode" -ForegroundColor Magenta
+        Write-Host "   ⚠️  NOTE: No changes applied in validation mode" -ForegroundColor Magenta
 
         return @{
             RoleName = $PolicyDefinition.RoleName
