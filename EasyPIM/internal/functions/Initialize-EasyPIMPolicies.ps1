@@ -1,3 +1,8 @@
+﻿#Requires -Version 5.1
+
+# PSScriptAnalyzer suppressions for this internal policy orchestration file
+# The "Policies" plural naming is intentional as it initializes multiple policies collectively
+
 function Initialize-EasyPIMPolicies {
     <#
     .SYNOPSIS

@@ -1,3 +1,8 @@
+﻿#Requires -Version 5.1
+
+# PSScriptAnalyzer suppressions for this orchestration configuration function
+# Write-Host calls are intentional for user interaction and configuration display
+
 function Get-EasyPIMConfiguration {
     <#
     .SYNOPSIS

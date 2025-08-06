@@ -1,3 +1,9 @@
+﻿#Requires -Version 5.1
+
+# PSScriptAnalyzer suppressions for this internal policy orchestration file
+# This module contains Write-Host calls for user interaction which are intentional
+# The "Policies" plural naming is intentional as it manages multiple policies collectively
+
 function New-EasyPIMPolicies {
     <#
     .SYNOPSIS

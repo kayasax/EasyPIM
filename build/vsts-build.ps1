@@ -43,19 +43,42 @@ $text = @()
 
 # Gather commands
 Get-ChildItem -Path "$($publishDir.FullName)\EasyPIM\internal\functions\" -Recurse -File -Filter "*.ps1" | ForEach-Object {
-	$text += [System.IO.File]::ReadAllText($_.FullName)
+	$content = Get-Content $_.FullName -Raw -ErrorAction SilentlyContinue
+	if ($content) {
+		# Ensure content ends with a newline to prevent concatenation issues
+		if (-not $content.EndsWith("`n") -and -not $content.EndsWith("`r`n")) {
+			$content += "`r`n"
+		}
+		$text += $content
+	}
 }
 Get-ChildItem -Path "$($publishDir.FullName)\EasyPIM\functions\" -Recurse -File -Filter "*.ps1" | ForEach-Object {
-	$text += [System.IO.File]::ReadAllText($_.FullName)
+	$content = Get-Content $_.FullName -Raw -ErrorAction SilentlyContinue
+	if ($content) {
+		# Ensure content ends with a newline to prevent concatenation issues
+		if (-not $content.EndsWith("`n") -and -not $content.EndsWith("`r`n")) {
+			$content += "`r`n"
+		}
+		$text += $content
+	}
 }
 
 # Gather scripts
 Get-ChildItem -Path "$($publishDir.FullName)\EasyPIM\internal\scripts\" -Recurse -File -Filter "*.ps1" | ForEach-Object {
-	$text += [System.IO.File]::ReadAllText($_.FullName)
+	$content = Get-Content $_.FullName -Raw -ErrorAction SilentlyContinue
+	if ($content) {
+		# Ensure content ends with a newline to prevent concatenation issues
+		if (-not $content.EndsWith("`n") -and -not $content.EndsWith("`r`n")) {
+			$content += "`r`n"
+		}
+		$text += $content
+	}
 }
 
 #region Update the psm1 file & Cleanup
-[System.IO.File]::WriteAllText("$($publishDir.FullName)\EasyPIM\EasyPIM.psm1", ($text -join "`n`n"), [System.Text.Encoding]::UTF8)
+# Join with consistent line endings and write with UTF8 encoding
+$combinedContent = $text -join "`r`n`r`n"
+[System.IO.File]::WriteAllText("$($publishDir.FullName)\EasyPIM\EasyPIM.psm1", $combinedContent, [System.Text.UTF8Encoding]::new($false))
 Remove-Item -Path "$($publishDir.FullName)\EasyPIM\internal" -Recurse -Force
 Remove-Item -Path "$($publishDir.FullName)\EasyPIM\functions" -Recurse -Force
 #endregion Update the psm1 file & Cleanup
