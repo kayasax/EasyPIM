@@ -1,11 +1,3 @@
-# Define critical roles that should be protected from policy changes at script level
-$script:protectedRoles = @(
-    "Global Administrator",
-    "Privileged Role Administrator",
-    "Security Administrator",
-    "User Access Administrator"
-)
-
 function New-EasyPIMPolicies {
     <#
     .SYNOPSIS
@@ -492,8 +484,16 @@ function Set-EntraRolePolicy {
 
     Write-Verbose "Applying Entra role policy for $($PolicyDefinition.RoleName)"
 
+    # Define critical roles that should be protected from policy changes
+    $protectedRoles = @(
+        "Global Administrator",
+        "Privileged Role Administrator",
+        "Security Administrator",
+        "User Access Administrator"
+    )
+
     # Check if this is a protected role
-    if ($script:protectedRoles -contains $PolicyDefinition.RoleName) {
+    if ($protectedRoles -contains $PolicyDefinition.RoleName) {
         $warningMsg = "⚠️ PROTECTED ROLE: '$($PolicyDefinition.RoleName)' is a critical role. Policy changes are blocked for security."
         Write-Warning $warningMsg
         Write-Host "🛡️ Protected role '$($PolicyDefinition.RoleName)' - policy change blocked" -ForegroundColor Yellow
