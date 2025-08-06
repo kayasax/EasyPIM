@@ -9,8 +9,7 @@ $script:protectedRoles = @(
 function New-EasyPIMPolicies {
     <#
     .SYNOPSIS
-        Applies PIM policy configuration        # Process Entra Role Policies
-        if ($Config.PSObject.Properties['EntraRolePolicies'] -and $Config.EntraRolePolicies -and $Config.EntraRolePolicies.Count -gt 0) {from the processed configuration.
+        Applies PIM policy configuration from the processed configuration.
 
     .DESCRIPTION
         This function applies policy configurations for Azure Resources, Entra Roles, and Groups
