@@ -4,7 +4,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.8.4.3'
+ModuleVersion = '1.9.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -145,7 +145,33 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        #ReleaseNotes = ''
+        ReleaseNotes = @'
+v1.9.0 Release Notes:
+
+🚀 MAJOR FEATURE: Policy Orchestrator System
+- New Invoke-EasyPIMOrchestrator cmdlet for comprehensive PIM management
+- Unified configuration format supporting Azure Roles, Entra Roles, and Groups
+- Policy templates and inheritance system for reusable configurations
+- Corrected execution flow: policies → cleanup → assignments for compliance
+- WhatIf support for validation before applying changes
+- Environment variable integration ($env:TENANTID, $env:SUBSCRIPTIONID)
+
+🔧 ENHANCEMENTS:
+- Robust error handling with graceful failure recovery
+- CSV import compatibility between Azure and Entra role formats
+- PowerShell 5.1 compatibility improvements
+- Enhanced assignment processing with detailed progress reporting
+- Comprehensive summary reporting with structured output
+- Delta mode cleanup operations
+
+🐛 FIXES:
+- Fixed field naming differences (ActiveAssignmentRules vs ActiveAssignmentRequirement)
+- Resolved PowerShell 7+ ternary operator compatibility issues
+- Improved boolean value parsing in CSV operations
+- Enhanced template value resolution in policy configurations
+
+For detailed documentation and examples, visit: https://github.com/kayasax/EasyPIM/wiki
+'@
 
         # Prerelease string of this module
         # Prerelease = ''

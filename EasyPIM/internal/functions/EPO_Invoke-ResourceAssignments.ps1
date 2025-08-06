@@ -369,13 +369,29 @@
 
             # IMPORTANT: Do not create any new parameter hashtables after this point
 
-            # Action description for ShouldProcess
-            $actionDescription = if ($ResourceType -like "Azure Role*") {
-                "Create $ResourceType assignment for $principalName with role '$roleName' on scope $($assignment.Scope)"
+            # Action description for ShouldProcess with detailed information
+            $assignmentDetails = @()
+            $assignmentDetails += "Principal: $principalName ($principalId)"
+            $assignmentDetails += "Role: '$roleName'"
+
+            if ($ResourceType -like "Azure Role*") {
+                $assignmentDetails += "Scope: $($assignment.Scope)"
             }
-            else {
-                "Create $ResourceType assignment for $principalName with role '$roleName'"
+            elseif ($ResourceType -like "Group*") {
+                $assignmentDetails += "Group: $($assignment.GroupId)"
             }
+
+            $assignmentDetails += "Assignment Type: $(if ($ResourceType -like '*eligible*') { 'Eligible' } else { 'Active' })"
+
+            if ($assignment.Duration) {
+                $assignmentDetails += "Duration: $($assignment.Duration)"
+            }
+
+            if ($assignment.Justification) {
+                $assignmentDetails += "Justification: $($assignment.Justification)"
+            }
+
+            $actionDescription = "Create $ResourceType assignment with details:`n    • $($assignmentDetails -join ' | ')"
 
             if ($PSCmdlet.ShouldProcess($actionDescription)) {
                 try {
@@ -453,6 +469,15 @@
             $skipCounter++
         }
     }
+
+    # Add a closing section with summary
+    Write-Host "`n  📊 Processing completed:"
+    Write-Host "    ├─ Created: $createCounter"
+    Write-Host "    ├─ Skipped: $skipCounter"
+    Write-Host "    └─ Failed: $errorCounter"
+    Write-Host "`n┌────────────────────────────────────────────────────┐"
+    Write-Host "│ Completed $ResourceType Assignments"
+    Write-Host "└────────────────────────────────────────────────────┘"
 
     # Return the counters in a structured format without writing the summary (it will be handled by EPO_New-Assignment.ps1)
     return @{

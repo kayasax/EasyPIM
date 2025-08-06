@@ -384,6 +384,6 @@ Existing configurations continue to work unchanged. To add policies:
 
 ---
 
-**Version**: Enhanced Orchestrator v2.0  
-**Branch**: feature/orchestrator-policy-management  
+**Version**: Enhanced Orchestrator v2.0
+**Branch**: feature/orchestrator-policy-management
 **Status**: ✅ Ready for Production Use

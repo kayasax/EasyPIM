@@ -8,7 +8,7 @@
         [Parameter(Mandatory = $true, ParameterSetName = 'KeyVault')]
         [string]$SecretName,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [string]$SubscriptionId,
 
         [Parameter(Mandatory = $true, ParameterSetName = 'FilePath')]
@@ -18,7 +18,7 @@
         [ValidateSet("initial", "delta")]
         [string]$Mode = "delta",
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [string]$TenantId,
 
         [Parameter(Mandatory = $false)]
@@ -36,11 +36,7 @@
 
         [Parameter(Mandatory = $false)]
         [ValidateSet("All", "AzureRoles", "EntraRoles", "GroupRoles")]
-        [string[]]$PolicyOperations = @("All"),
-
-        [Parameter(Mandatory = $false)]
-        [ValidateSet("validate", "delta", "initial")]
-        [string]$PolicyMode = "validate"
+        [string[]]$PolicyOperations = @("All")
     )
 
     Write-SectionHeader "Starting EasyPIM Orchestration (Mode: $Mode)"
@@ -69,14 +65,18 @@
         # 2.1. Process policy configurations if present
         $policyConfig = $null
         if (-not $SkipPolicies -and (
-            $config.ContainsKey('AzureRolePolicies') -or 
-            $config.ContainsKey('EntraRolePolicies') -or 
-            $config.ContainsKey('GroupPolicies') -or 
-            $config.ContainsKey('PolicyTemplates')
+            ($config.PSObject.Properties['AzureRolePolicies'] -and $config.AzureRolePolicies) -or
+            ($config.PSObject.Properties['EntraRolePolicies'] -and $config.EntraRolePolicies) -or
+            ($config.PSObject.Properties['GroupPolicies'] -and $config.GroupPolicies) -or
+            ($config.PSObject.Properties['PolicyTemplates'] -and $config.PolicyTemplates) -or
+            ($config.PSObject.Properties['Policies'] -and $config.Policies) -or
+            ($config.PSObject.Properties['EntraRoles'] -and $config.EntraRoles.PSObject.Properties['Policies'] -and $config.EntraRoles.Policies) -or
+            ($config.PSObject.Properties['AzureRoles'] -and $config.AzureRoles.PSObject.Properties['Policies'] -and $config.AzureRoles.Policies) -or
+            ($config.PSObject.Properties['GroupRoles'] -and $config.GroupRoles.PSObject.Properties['Policies'] -and $config.GroupRoles.Policies)
         )) {
             Write-Host "🔧 Processing policy configurations..." -ForegroundColor Cyan
             $policyConfig = Initialize-EasyPIMPolicies -Config $config
-            
+
             # Filter policy config based on selected policy operations
             if ($PolicyOperations -notcontains "All") {
                 $filteredPolicyConfig = @{}
@@ -101,13 +101,21 @@
                 }
                 # Merge filtered policy config with processed config
                 foreach ($key in $filteredPolicyConfig.Keys) {
-                    $processedConfig[$key] = $filteredPolicyConfig[$key]
+                    if ($processedConfig.PSObject.Properties[$key]) {
+                        $processedConfig.PSObject.Properties[$key].Value = $filteredPolicyConfig[$key]
+                    } else {
+                        $processedConfig | Add-Member -MemberType NoteProperty -Name $key -Value $filteredPolicyConfig[$key]
+                    }
                 }
             } else {
                 # Merge all policy config with processed config
                 foreach ($key in $policyConfig.Keys) {
                     if ($key -match ".*Policies$") {
-                        $processedConfig[$key] = $policyConfig[$key]
+                        if ($processedConfig.PSObject.Properties[$key]) {
+                            $processedConfig.PSObject.Properties[$key].Value = $policyConfig[$key]
+                        } else {
+                            $processedConfig | Add-Member -MemberType NoteProperty -Name $key -Value $policyConfig[$key]
+                        }
                     }
                 }
             }
@@ -137,9 +145,31 @@
             $processedConfig = $filteredConfig
         }
 
-        # 3. Perform cleanup operations if running full operations or specific role types (skip if requested)
+        # 3. Process policies FIRST (skip if requested) - CRITICAL: Policies must be applied before assignments to ensure compliance
+        $policyResults = $null
+        if (-not $SkipPolicies -and $policyConfig -and (
+            ($policyConfig.ContainsKey('AzureRolePolicies') -and $policyConfig.AzureRolePolicies) -or
+            ($policyConfig.ContainsKey('EntraRolePolicies') -and $policyConfig.EntraRolePolicies) -or
+            ($policyConfig.ContainsKey('GroupPolicies') -and $policyConfig.GroupPolicies)
+        )) {
+            $effectivePolicyMode = if ($WhatIfPreference) { "validate" } else { "delta" }
+            # Convert hashtable to PSCustomObject for the policy function
+            $policyConfigObject = [PSCustomObject]$policyConfig
+            $policyResults = New-EasyPIMPolicies -Config $policyConfigObject -TenantId $TenantId -SubscriptionId $SubscriptionId -PolicyMode $effectivePolicyMode -WhatIf:$WhatIfPreference
+
+            if ($WhatIfPreference) {
+                Write-Host "✅ Policy validation completed - role policies are configured correctly for assignment compliance" -ForegroundColor Green
+            } else {
+                Write-Host "✅ Policy configuration completed - proceeding with assignments using updated role policies" -ForegroundColor Green
+            }
+        } elseif ($SkipPolicies) {
+            Write-Warning "⚠️ Policy processing skipped - assignments may not comply with intended role policies"
+        }
+
+        # 4. Perform cleanup operations AFTER policy processing (skip if requested)
         $cleanupResults = if ($Operations -contains "All" -and -not $SkipCleanup) {
-            Invoke-EasyPIMCleanup -Config $processedConfig -Mode $Mode -TenantId $TenantId -SubscriptionId $SubscriptionId
+            Write-Host "🧹 Performing cleanup operations based on updated policies..." -ForegroundColor Cyan
+            Invoke-EasyPIMCleanup -Config $processedConfig -Mode $Mode -TenantId $TenantId -SubscriptionId $SubscriptionId -WhatIf:$WhatIfPreference
         } else {
             if ($SkipCleanup) {
                 Write-Host "⚠️ Skipping cleanup as requested by SkipCleanup parameter" -ForegroundColor Yellow
@@ -149,26 +179,18 @@
             $null
         }
 
-        # 4. Process policies (skip if requested)
-        $policyResults = $null
-        if (-not $SkipPolicies -and $policyConfig -and (
-            $processedConfig.ContainsKey('AzureRolePolicies') -or 
-            $processedConfig.ContainsKey('EntraRolePolicies') -or 
-            $processedConfig.ContainsKey('GroupPolicies')
-        )) {
-            $policyResults = New-EasyPIMPolicies -Config $processedConfig -TenantId $TenantId -SubscriptionId $SubscriptionId -PolicyMode $PolicyMode
-        }
-
-        # 5. Process assignments (skip if requested)
+        # 5. Process assignments AFTER policies are confirmed (skip if requested)
         if (-not $SkipAssignments) {
-            $assignmentResults = New-EasyPIMAssignments -Config $processedConfig -TenantId $TenantId -SubscriptionId $SubscriptionId
+            Write-Host "👥 Creating assignments with role policies validated and applied..." -ForegroundColor Cyan
+            $assignmentResults = New-EasyPIMAssignments -Config $processedConfig -TenantId $TenantId -SubscriptionId $SubscriptionId -WhatIf:$WhatIfPreference
         } else {
             Write-Host "⚠️ Skipping assignment creation as requested" -ForegroundColor Yellow
             $assignmentResults = $null
         }
 
         # 6. Display summary
-        Write-EasyPIMSummary -CleanupResults $cleanupResults -AssignmentResults $assignmentResults -PolicyResults $policyResults
+        $effectivePolicyMode = if ($WhatIfPreference) { "validate" } else { "delta" }
+        Write-EasyPIMSummary -CleanupResults $cleanupResults -AssignmentResults $assignmentResults -PolicyResults $policyResults -PolicyMode $effectivePolicyMode
 
         Write-Host "=== EasyPIM orchestration completed successfully ===" -ForegroundColor Green
     }

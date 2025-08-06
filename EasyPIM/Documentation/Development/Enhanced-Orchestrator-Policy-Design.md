@@ -120,7 +120,7 @@ function Initialize-EasyPIMPolicies {
 function New-EasyPIMPolicies {
     param($Config, $TenantId, $SubscriptionId)
     # Apply Azure role policies
-    # Apply Entra role policies  
+    # Apply Entra role policies
     # Apply Group policies
     # Return results summary
 }
