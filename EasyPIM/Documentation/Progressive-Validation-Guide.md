@@ -353,12 +353,66 @@ Multiple principals
 
 ## Step 6 — Azure role policy (inline; Scope is required)
 
+Goal: Introduce your first Azure Role policy while preserving everything validated in Step 5 (ProtectedUsers, Entra role policy templates & assignments). Keep `ProtectedUsers` first for safety.
 
-Write pim-config.json
+### Full context (carried forward + new Azure policy)
+Use this if you maintain a single evolving file. Comments highlight what is NEW in this step.
 
-> **Note:** This config snippet only shows the AzureRoles policy block for Step 6. Policies defined in previous steps (such as EntraRoles or PolicyTemplates) can also be present in the same config file.
+```jsonc
+{
+  // Always first – prevents accidental removals
+  "ProtectedUsers": [
+    "00000000-0000-0000-0000-000000000001" // Breakglass account
+  ],
 
-```json
+  // From Step 5 (abbreviated for clarity)
+  "PolicyTemplates": {
+    "Standard": { "ActivationDuration": "PT8H", "ActivationRequirement": "MultiFactorAuthentication,Justification", "ApprovalRequired": false },
+    "HighSecurity": { "ActivationDuration": "PT2H", "ActivationRequirement": "MultiFactorAuthentication,Justification", "ApprovalRequired": true, "Approvers": [ { "id": "2ab3f204-9c6f-409d-a9bd-6e302a0132db", "description": "IAM_approvers" } ] }
+  },
+  "EntraRoles": {
+    "Policies": {
+      "Guest Inviter": { "Template": "Standard" },
+      "Testrole": { "Template": "Standard" },
+      "User Administrator": { "Template": "HighSecurity" }
+    }
+  },
+  "Assignments": {
+    "EntraRoles": [
+      {
+        "roleName": "User Administrator",
+        "assignments": [
+          { "principalId": "f8b74308-47bf-4764-a31e-634e54c36212", "assignmentType": "Eligible", "justification": "My user Admins" }
+        ]
+      },
+      {
+        "roleName": "Guest Inviter",
+        "assignments": [
+          { "principalId": "99999999-1111-2222-3333-444444444444", "assignmentType": "Eligible", "duration": "P30D", "justification": "Guest onboarding rotation" },
+          { "principalId": "99999999-5555-6666-7777-888888888888", "assignmentType": "Eligible", "permanent": true, "justification": "Primary guest management" }
+        ]
+      }
+    ]
+  },
+
+  // NEW in Step 6
+  "AzureRoles": {
+    "Policies": {
+      "Owner": {
+        "Scope": "/subscriptions/<sub-guid>",
+        "ActivationDuration": "PT1H",
+        "ActivationRequirement": "MultiFactorAuthentication",
+        "ApprovalRequired": false
+      }
+    }
+  }
+}
+```
+
+### Minimal delta snippet
+If you prefer to patch in just the new portion (assumes the earlier sections already exist above this block in your file):
+
+```jsonc
 {
   "AzureRoles": {
     "Policies": {
@@ -369,8 +423,7 @@ Write pim-config.json
         "ApprovalRequired": false
       }
     }
-  },
-  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"]
+  }
 }
 ```
 
