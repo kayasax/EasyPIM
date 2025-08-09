@@ -355,6 +355,8 @@ Multiple principals
 
 Goal: Introduce your first Azure Role policy while preserving everything validated in Step 5 (ProtectedUsers, Entra role policy templates & assignments). Keep `ProtectedUsers` first for safety.
 
+IMPORTANT: Some Azure built‑in roles are treated as protected in the orchestrator and their policies are intentionally not changed for safety (currently: "Owner" and "User Access Administrator"). If you try to target them you will see a [PROTECTED] message and no update occurs. For the first Azure policy example, use a non‑protected role such as "Reader" or "Contributor".
+
 ### Full context (carried forward + new Azure policy)
 Use this if you maintain a single evolving file. Comments highlight what is NEW in this step.
 
@@ -395,10 +397,10 @@ Use this if you maintain a single evolving file. Comments highlight what is NEW 
     ]
   },
 
-  // NEW in Step 6
+  // NEW in Step 6 (inline Azure policy for a NON-PROTECTED role: Reader)
   "AzureRoles": {
     "Policies": {
-      "Owner": {
+      "Reader": {
         "Scope": "/subscriptions/<sub-guid>",
         "ActivationDuration": "PT1H",
         "ActivationRequirement": "MultiFactorAuthentication",
@@ -416,7 +418,7 @@ If you prefer to patch in just the new portion (assumes the earlier sections alr
 {
   "AzureRoles": {
     "Policies": {
-      "Owner": {
+      "Reader": {
         "Scope": "/subscriptions/<sub-guid>",
         "ActivationDuration": "PT1H",
         "ActivationRequirement": "MultiFactorAuthentication",
