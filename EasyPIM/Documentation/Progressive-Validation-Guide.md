@@ -606,14 +606,38 @@ Convert after preview (suggested workflow):
 
 ## Step 9 — Azure assignments (1 Eligible + 1 Active)
 
-Write pim-config.json
+Goal: Add first Azure role assignments without altering existing policies. Everything from Step 7 (or Step 8 if you did the deprecated path) remains; we only append an `Assignments.AzureRoles` block.
 
-```json
+### Diff from previous step (conceptual)
+```diff
+  {
+    "ProtectedUsers": [ "00000000-0000-0000-0000-000000000001" ],
+    "PolicyTemplates": { ... },
+    "EntraRoles": { ... },
+    "Assignments": {              // <— NEW section (already existed for EntraRoles earlier; now adding AzureRoles)
+      "EntraRoles": [ ... ],       // (unchanged if present)
++     "AzureRoles": [
++       {
++         "roleName": "Tag Contributor",
++         "scope": "/subscriptions/<sub-guid>",
++         "assignments": [
++           { "principalId": "33333333-3333-3333-3333-333333333333", "principalType": "Group", "assignmentType": "Eligible", "justification": "Team access" },
++           { "principalId": "44444444-4444-4444-4444-444444444444", "principalType": "User", "assignmentType": "Active", "duration": "PT8H", "justification": "Maintenance window" }
++         ]
++       }
++     ]
+    }
+  }
+```
+
+### Full minimal snippet (only new Azure assignments) 
+Use this if previous sections already exist exactly as-is above in your file.
+```jsonc
 {
   "Assignments": {
     "AzureRoles": [
       {
-  "roleName": "Tag Contributor",
+        "roleName": "Tag Contributor",
         "scope": "/subscriptions/<sub-guid>",
         "assignments": [
           {
@@ -632,8 +656,27 @@ Write pim-config.json
         ]
       }
     ]
-  },
-  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"]
+  }
+}
+```
+
+### Full context example (assignments + ProtectedUsers only)
+If you keep a compact working file focused on assignments delta:
+```jsonc
+{
+  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"],
+  "Assignments": {
+    "AzureRoles": [
+      {
+        "roleName": "Tag Contributor",
+        "scope": "/subscriptions/<sub-guid>",
+        "assignments": [
+          { "principalId": "33333333-3333-3333-3333-333333333333", "principalType": "Group", "assignmentType": "Eligible", "justification": "Team access" },
+          { "principalId": "44444444-4444-4444-4444-444444444444", "principalType": "User", "assignmentType": "Active", "duration": "PT8H", "justification": "Maintenance window" }
+        ]
+      }
+    ]
+  }
 }
 ```
 
