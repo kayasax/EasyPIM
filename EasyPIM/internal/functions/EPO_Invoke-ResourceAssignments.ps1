@@ -86,14 +86,14 @@
         write-host "    ├─ Found $($Assignments.Count) assignments to process"
 
         # Display details for ALL assignments
-    foreach ($assignment in $Assignments) {
+        foreach ($assignment in $Assignments) {
             $principalId = $assignment.PrincipalId
-            $roleName = if ([string]::IsNullOrEmpty($assignment.Rolename)) {
-                $assignment.Role
+            # Robust role name extraction supporting multiple property variants
+            $roleName = $null
+            foreach ($prop in 'RoleName','Rolename','Role','roleName','rolename','role','type','Type') {
+                if ($assignment.PSObject.Properties.Name -contains $prop -and $assignment.$prop) { $roleName = $assignment.$prop; break }
             }
-            else {
-                $assignment.Rolename
-            }
+            if (-not $roleName) { $roleName = '<UnknownRole>' }
 
             # Fix scope display - different formats for different resource types
             $scopeDisplay = ""
@@ -148,11 +148,8 @@
 
         # Robust role name extraction supporting RoleName/Rolename/Role and group role types
         $roleName = $null
-        foreach ($prop in @('Rolename','RoleName','Role','roleName','rolename','role','type','Type','memberType')) {
-            if ($assignment.PSObject.Properties.Name -contains $prop -and $assignment.$prop) {
-                $roleName = $assignment.$prop
-                break
-            }
+        foreach ($prop in @('RoleName','Rolename','Role','roleName','rolename','role','type','Type','memberType')) {
+            if ($assignment.PSObject.Properties.Name -contains $prop -and $assignment.$prop) { $roleName = $assignment.$prop; break }
         }
 
         if (-not $roleName) {
@@ -255,78 +252,38 @@
             }
         } else {
             foreach ($existing in $existingAssignments) {
-                # Add debug output to see what we're comparing (limited verbosity for performance)
                 Write-Verbose "Comparing with existing: $($existing | ConvertTo-Json -Depth 4 -ErrorAction SilentlyContinue)"
 
                 if ($ResourceType -like "Group Role*") {
-                # Debug the first group assignment structure
-                if ($existingAssignments.Count -gt 0 -and $existing -eq $existingAssignments[0]) {
-                    Write-Verbose "First Group Role existing assignment structure:"
-                    Write-Verbose ($existing | ConvertTo-Json -Depth 10 -ErrorAction SilentlyContinue)
-                }
-
-                # For Group roles, we need to check PrincipalId/ID and Type/type
-                $principalMatched = $false
-                $roleMatched = $false
-
-                # Simplified principal ID check - just check for the two common property names
-                if ($existing.PrincipalId -eq $assignment.PrincipalId -or
-                    $existing.principalid -eq $assignment.PrincipalId) {
-                    $principalMatched = $true
-                    Write-Verbose "Principal ID matched in group assignment"
-                }
-
-                # Simplified role name/type check - check only the different property names
-                if ($existing.RoleName -ieq $roleName -or
-                    $existing.Type -ieq $roleName -or
-                    $existing.memberType -ieq $roleName) {
-                    $roleMatched = $true
-                    Write-Verbose "Role/type matched in group assignment (property: $($existing.PSObject.Properties.Name -like '*type*' -or $existing.PSObject.Properties.Name -like '*role*'))"
-                }
-
-                # Match found if both principal and role matched
-                if ($principalMatched -and $roleMatched) {
-                    $found = 1
-                    # Store information about why this matched for display later
-                    $matchReason = if ($null -ne $existing.memberType) {
-                        "memberType='$($existing.memberType)'"
+                    if ($existingAssignments.Count -gt 0 -and $existing -eq $existingAssignments[0]) {
+                        Write-Verbose "First Group Role existing assignment structure:"
+                        Write-Verbose ($existing | ConvertTo-Json -Depth 10 -ErrorAction SilentlyContinue)
                     }
-                    elseif ($null -ne $existing.Type) {
-                        "type='$($existing.Type)'"
-                    }
-                    else {
-                        "role matched"
-                    }
-                    $matchInfo = "principalId='$($existing.principalId)' and $matchReason"
-                    Write-host "Match found for Group Role assignment: $matchInfo"
-                    break
-                }
-            }
-        }
-            else {
-                # Standard comparison for Azure roles and others
-                if (($existing.PrincipalId -eq $assignment.PrincipalId) -and
-                    ($existing.RoleName -ieq $roleName)) {
-                    # If a scope is provided for the assignment, require scope match as well
-                    if ($assignment.PSObject.Properties.Name -contains 'Scope' -or $assignment.PSObject.Properties.Name -contains 'scope') {
-                        $targetScope = if ($assignment.PSObject.Properties.Name -contains 'Scope') { $assignment.Scope } else { $assignment.scope }
-                        $existingScope = $null
-                        foreach ($prop in @('ScopeId','scope','Scope')) {
-                            if ($existing.PSObject.Properties.Name -contains $prop -and $existing.$prop) {
-                                $existingScope = $existing.$prop
-                                break
-                            }
-                        }
 
-                        if ($existingScope -eq $targetScope) {
-                            $found = 1
-                            break
-                        } else {
-                            continue
-                        }
-                    } else {
+                    $principalMatched = ($existing.PrincipalId -eq $assignment.PrincipalId -or $existing.principalid -eq $assignment.PrincipalId)
+                    if ($principalMatched) { Write-Verbose "Principal ID matched in group assignment" }
+
+                    $roleMatched = ($existing.RoleName -ieq $roleName -or $existing.Type -ieq $roleName -or $existing.memberType -ieq $roleName)
+                    if ($roleMatched) { Write-Verbose "Role/type matched in group assignment" }
+
+                    if ($principalMatched -and $roleMatched) {
                         $found = 1
+                        $matchReason = if ($null -ne $existing.memberType) { "memberType='$($existing.memberType)'" } elseif ($null -ne $existing.Type) { "type='$($existing.Type)'" } else { "role matched" }
+                        $matchInfo = "principalId='$($existing.principalId)' and $matchReason"
+                        Write-Host "Match found for Group Role assignment: $matchInfo"
                         break
+                    }
+                }
+                else {
+                    if (($existing.PrincipalId -eq $assignment.PrincipalId) -and ($existing.RoleName -ieq $roleName)) {
+                        if ($assignment.PSObject.Properties.Name -contains 'Scope' -or $assignment.PSObject.Properties.Name -contains 'scope') {
+                            $targetScope = if ($assignment.PSObject.Properties.Name -contains 'Scope') { $assignment.Scope } else { $assignment.scope }
+                            $existingScope = $null
+                            foreach ($prop in @('ScopeId','scope','Scope')) {
+                                if ($existing.PSObject.Properties.Name -contains $prop -and $existing.$prop) { $existingScope = $existing.$prop; break }
+                            }
+                            if ($existingScope -eq $targetScope) { $found = 1; break } else { continue }
+                        } else { $found = 1; break }
                     }
                 }
             }
