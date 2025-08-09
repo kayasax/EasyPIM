@@ -33,11 +33,12 @@ The enhanced `Invoke-EasyPIMOrchestrator` supports comprehensive policy manageme
 Policies live under each domain using a nested Policies block. Use either Template or inline properties.
 
 #### Azure Role Policies (current)
+NOTE: Built-in roles 'Owner' and 'User Access Administrator' are treated as protected by the orchestrator and their policies are skipped (reported as [PROTECTED]). Use a non-protected role such as 'Reader' or 'Contributor' in examples unless explicitly demonstrating the protection behavior.
 ```json
 {
     "AzureRoles": {
         "Policies": {
-            "Owner": {
+            "Reader": {
                 "Scope": "/subscriptions/subscription-id",
                 "ActivationDuration": "PT8H",
                 "ActivationRequirement": "MultiFactorAuthentication,Justification",

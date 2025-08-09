@@ -279,13 +279,15 @@ Inline example:
 
 ### Step 3: Azure Role Policy Configuration
 
+NOTE: The orchestrator treats critical built-in Azure roles 'Owner' and 'User Access Administrator' as protected; it will not modify their policies and will emit a [PROTECTED] message. Use non-protected roles (e.g., 'Reader', 'Contributor') for initial policy rollout examples.
+
 Configure Azure RBAC policies using the supported nested format:
 
 ```json
 {
   "AzureRoles": {
     "Policies": {
-      "Owner": {
+      "Reader": {
         "Scope": "/subscriptions/subscription-id",
         "Template": "HighSecurity"
       },
@@ -299,7 +301,7 @@ Configure Azure RBAC policies using the supported nested format:
   "Assignments": {
     "AzureRoles": [
       {
-        "roleName": "Owner",
+  "roleName": "Reader",
         "scope": "/subscriptions/subscription-id",
         "assignments": [
           {
