@@ -437,17 +437,29 @@ Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId
 
 ## Step 7 — Azure role policy (template)
 
-Write pim-config.json
+Goal: Switch from inline Azure policy definition (Step 6) to a template-based Azure role policy using an existing template (`Standard`). Continue to keep `ProtectedUsers` first. No assignment changes yet.
 
-```json
+### Full context (carried forward + new template-based Azure policy)
+
+```jsonc
 {
+  "ProtectedUsers": [
+    "00000000-0000-0000-0000-000000000001"
+  ],
   "PolicyTemplates": {
-    "Standard": {
-      "ActivationDuration": "PT4H",
-      "ActivationRequirement": "MultiFactorAuthentication",
-      "ApprovalRequired": false
+    // Reuse previously defined templates (abbreviated)
+    "Standard": { "ActivationDuration": "PT8H", "ActivationRequirement": "MultiFactorAuthentication,Justification", "ApprovalRequired": false },
+    "HighSecurity": { "ActivationDuration": "PT2H", "ActivationRequirement": "MultiFactorAuthentication,Justification", "ApprovalRequired": true }
+  },
+  // Existing Entra role policies (abbrev.)
+  "EntraRoles": {
+    "Policies": {
+      "Guest Inviter": { "Template": "Standard" },
+      "tesrole": { "Template": "Standard" },
+      "User Administrator": { "Template": "HighSecurity" }
     }
   },
+  // Azure role policy now referencing template instead of inline properties
   "AzureRoles": {
     "Policies": {
       "Contributor": {
@@ -455,8 +467,23 @@ Write pim-config.json
         "Template": "Standard"
       }
     }
-  },
-  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"]
+  }
+}
+```
+
+### Minimal delta snippet
+If your file already contains `ProtectedUsers`, templates, and Entra policies from prior steps, you can just add/replace this block:
+
+```jsonc
+{
+  "AzureRoles": {
+    "Policies": {
+      "Contributor": {
+        "Scope": "/subscriptions/<sub-guid>",
+        "Template": "Standard"
+      }
+    }
+  }
 }
 ```
 
