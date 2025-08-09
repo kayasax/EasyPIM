@@ -21,7 +21,8 @@ build/output/
 
 # Large temporary / scratch test folders (legacy)
 TEST/
-TESTS/
+# Removed TESTS/ ignore to allow modern lowercase tests/ directory to be versioned
+!tests/validation.json
 
 # Non-production examples (retain README for context)
 examples/
