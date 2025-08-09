@@ -440,7 +440,7 @@ Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId
 Goal: Show the SMALL change from Step 6 (inline Azure policy) to a template-based Azure policy. Everything else from Step 6 stays the same. You have TWO equivalent options:
 
 1. Convert the SAME role (Reader) from inline properties to a template reference.
-2. Keep the original inline Reader policy and ADD a new template-based role (e.g. Contributor) — useful if you want to compare side‑by‑side once.
+2. Keep the original inline Reader policy and ADD a new template-based low-impact role (e.g. Tag Contributor) — useful if you want to compare side‑by‑side once.
 
 Below are both patterns with an explicit, minimal diff so you can “see” the change clearly.
 
@@ -489,7 +489,7 @@ Minimal delta (diff style):
 
 ### B. Add a second template-based role (keep original inline for one step)
 
-If you prefer to SEE both forms once, append only the new role:
+If you prefer to SEE both forms once, append only the new role (using Tag Contributor which has narrower scope than full Contributor):
 ```jsonc
 "AzureRoles": {
   "Policies": {
@@ -499,7 +499,7 @@ If you prefer to SEE both forms once, append only the new role:
       "ActivationRequirement": "MultiFactorAuthentication",
       "ApprovalRequired": false
     },
-    "Contributor": { // NEW template-based
+  "Tag Contributor": { // NEW template-based (low-impact)
       "Scope": "/subscriptions/<sub-guid>",
       "Template": "Standard"
     }
@@ -543,12 +543,12 @@ Option A (replace existing block):
 }
 ```
 
-Option B (append Contributor):
+Option B (append Tag Contributor):
 ```jsonc
 {
   "AzureRoles": {
     "Policies": {
-      "Contributor": { "Scope": "/subscriptions/<sub-guid>", "Template": "Standard" }
+  "Tag Contributor": { "Scope": "/subscriptions/<sub-guid>", "Template": "Standard" }
     }
   }
 }
@@ -593,7 +593,7 @@ Write pim-config.json
   "Assignments": {
     "AzureRoles": [
       {
-        "roleName": "Contributor",
+  "roleName": "Tag Contributor",
         "scope": "/subscriptions/<sub-guid>",
         "assignments": [
           {
@@ -632,7 +632,7 @@ Multiple principals
   "Assignments": {
     "AzureRoles": [
       {
-        "roleName": "Contributor",
+  "roleName": "Tag Contributor",
         "scope": "/subscriptions/<sub-guid>",
         "assignments": [
           { "principalId": "33333333-3333-3333-3333-333333333333", "principalType": "Group", "assignmentType": "Eligible", "justification": "Team access" },
@@ -650,7 +650,7 @@ Multiple principals
 {
   "AzureRoles": [
     {
-      "RoleName": "Contributor",
+  "RoleName": "Tag Contributor",
       "Scope": "/subscriptions/<sub-guid>",
       "PrincipalIds": [
         "33333333-3333-3333-3333-333333333333",
