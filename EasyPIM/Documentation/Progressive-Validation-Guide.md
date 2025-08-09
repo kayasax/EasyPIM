@@ -437,51 +437,118 @@ Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId
 
 ## Step 7 — Azure role policy (template)
 
-Goal: Switch from inline Azure policy definition (Step 6) to a template-based Azure role policy using an existing template (`Standard`). Continue to keep `ProtectedUsers` first. No assignment changes yet.
+Goal: Show the SMALL change from Step 6 (inline Azure policy) to a template-based Azure policy. Everything else from Step 6 stays the same. You have TWO equivalent options:
 
-### Full context (carried forward + new template-based Azure policy)
+1. Convert the SAME role (Reader) from inline properties to a template reference.
+2. Keep the original inline Reader policy and ADD a new template-based role (e.g. Contributor) — useful if you want to compare side‑by‑side once.
 
+Below are both patterns with an explicit, minimal diff so you can “see” the change clearly.
+
+### A. Convert existing inline role (RECOMMENDED simplest path)
+
+Step 6 Azure block (before):
 ```jsonc
-{
-  "ProtectedUsers": [
-    "00000000-0000-0000-0000-000000000001"
-  ],
-  "PolicyTemplates": {
-    // Reuse previously defined templates (abbreviated)
-    "Standard": { "ActivationDuration": "PT8H", "ActivationRequirement": "MultiFactorAuthentication,Justification", "ApprovalRequired": false },
-    "HighSecurity": { "ActivationDuration": "PT2H", "ActivationRequirement": "MultiFactorAuthentication,Justification", "ApprovalRequired": true }
-  },
-  // Existing Entra role policies (abbrev.)
-  "EntraRoles": {
-    "Policies": {
-      "Guest Inviter": { "Template": "Standard" },
-      "tesrole": { "Template": "Standard" },
-      "User Administrator": { "Template": "HighSecurity" }
-    }
-  },
-  // Azure role policy now referencing template instead of inline properties
-  "AzureRoles": {
-    "Policies": {
-      "Contributor": {
-        "Scope": "/subscriptions/<sub-guid>",
-        "Template": "Standard"
-      }
+"AzureRoles": {
+  "Policies": {
+    "Reader": {
+      "Scope": "/subscriptions/<sub-guid>",
+      "ActivationDuration": "PT1H",
+      "ActivationRequirement": "MultiFactorAuthentication",
+      "ApprovalRequired": false
     }
   }
 }
 ```
 
-### Minimal delta snippet
-If your file already contains `ProtectedUsers`, templates, and Entra policies from prior steps, you can just add/replace this block:
+Step 7 replacement (after):
+```jsonc
+"AzureRoles": {
+  "Policies": {
+    "Reader": {
+      "Scope": "/subscriptions/<sub-guid>",
+      "Template": "Standard" // <— inline properties replaced by a template reference
+    }
+  }
+}
+```
 
+Minimal delta (diff style):
+```diff
+  "AzureRoles": {
+    "Policies": {
+      "Reader": {
+        "Scope": "/subscriptions/<sub-guid>",
+-       "ActivationDuration": "PT1H",
+-       "ActivationRequirement": "MultiFactorAuthentication",
+-       "ApprovalRequired": false
++       "Template": "Standard"
+      }
+    }
+  }
+```
+
+### B. Add a second template-based role (keep original inline for one step)
+
+If you prefer to SEE both forms once, append only the new role:
+```jsonc
+"AzureRoles": {
+  "Policies": {
+    "Reader": {  // unchanged inline from Step 6
+      "Scope": "/subscriptions/<sub-guid>",
+      "ActivationDuration": "PT1H",
+      "ActivationRequirement": "MultiFactorAuthentication",
+      "ApprovalRequired": false
+    },
+    "Contributor": { // NEW template-based
+      "Scope": "/subscriptions/<sub-guid>",
+      "Template": "Standard"
+    }
+  }
+}
+```
+
+Later (Step 8 or whenever ready) you can delete the inline Reader block or convert it (Option A) to keep everything template-driven.
+
+### Full context (abbreviated) with Option A applied
+Only unchanged sections are compressed for readability.
+
+```jsonc
+{
+  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"],
+  "PolicyTemplates": {
+    "Standard": { "ActivationDuration": "PT8H", "ActivationRequirement": "MultiFactorAuthentication,Justification", "ApprovalRequired": false },
+    "HighSecurity": { "ActivationDuration": "PT2H", "ActivationRequirement": "MultiFactorAuthentication,Justification", "ApprovalRequired": true }
+  },
+  "EntraRoles": { "Policies": { "Guest Inviter": { "Template": "Standard" }, "Testrole": { "Template": "Standard" }, "User Administrator": { "Template": "HighSecurity" } } },
+  "Assignments": { /* (same as Step 6, omitted for brevity) */ },
+  "AzureRoles": {
+    "Policies": {
+      "Reader": { "Scope": "/subscriptions/<sub-guid>", "Template": "Standard" }
+    }
+  }
+}
+```
+
+### Minimal delta snippet (copy/paste)
+Pick ONE of these depending on Option A or B:
+
+Option A (replace existing block):
 ```jsonc
 {
   "AzureRoles": {
     "Policies": {
-      "Contributor": {
-        "Scope": "/subscriptions/<sub-guid>",
-        "Template": "Standard"
-      }
+      "Reader": { "Scope": "/subscriptions/<sub-guid>", "Template": "Standard" }
+    }
+  }
+}
+```
+
+Option B (append Contributor):
+```jsonc
+{
+  "AzureRoles": {
+    "Policies": {
+      "Contributor": { "Scope": "/subscriptions/<sub-guid>", "Template": "Standard" }
     }
   }
 }
