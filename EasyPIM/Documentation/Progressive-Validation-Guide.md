@@ -560,29 +560,49 @@ Preview (policies only)
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
 ```
 
-## Step 8 — Azure role policy (file/CSV, legacy import)
+## Step 8 — (Optional / Deprecated) Azure role policy via CSV file import
 
-Write pim-config.json
+Status: Deprecated. Skip this step unless you specifically need to bulk‑reapply a previously exported CSV.
 
-```json
+Why it is deprecated:
+- External CSV hides effective settings (harder to review in PRs).
+- Inline / template JSON (Steps 6–7) is clearer and source‑controlled.
+- Protected roles (e.g. Owner, User Access Administrator) should not be managed this way.
+
+When to still use:
+- One‑time migration of historical exports while converting to JSON templates.
+- Audit comparison (export current -> diff -> discard).
+
+Strong recommendation: Move directly from Step 7 to Step 9 unless you have a migration CSV in hand.
+
+Example (safe, non‑privileged role). Replace only if you truly have a legacy CSV:
+
+```jsonc
 {
   "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"],
   "AzureRolePolicies": [
     {
-      "RoleName": "Owner",
+      "RoleName": "Tag Contributor", // previously exported role policy
       "Scope": "/subscriptions/<sub-guid>",
       "PolicySource": "file",
-      "PolicyFile": "C:\\Policies\\azure-owner-policy.csv"
+      "PolicyFile": "C:\\Policies\\tag-contributor-policy.csv"
     }
   ]
 }
 ```
 
-Preview (policies only)
+Preview (policies only) — validation only; consider converting the resulting settings into a template afterwards:
 
 ```powershell
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
 ```
+
+Convert after preview (suggested workflow):
+1. Export current policy (if not already) for traceability.
+2. Run -WhatIf with CSV to confirm it matches expectations.
+3. Translate CSV columns to a PolicyTemplate JSON entry.
+4. Replace AzureRolePolicies block with AzureRoles.Policies using Template.
+5. Delete / archive the CSV.
 
 ## Step 9 — Azure assignments (1 Eligible + 1 Active)
 
