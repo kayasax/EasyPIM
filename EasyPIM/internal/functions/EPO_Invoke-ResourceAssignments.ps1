@@ -3,6 +3,7 @@
     [OutputType([System.Collections.Hashtable])]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "")]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseDeclaredVarsMoreThanAssignments", "")] # Suppress false positive (all counters and params used)
     param (
         [string]$ResourceType,
         [array]$Assignments,
@@ -21,6 +22,11 @@
     $createCounter = 0
     $skipCounter = 0
     $errorCounter = 0
+    # Track planned creations when running in WhatIf (simulation) mode
+    $plannedCreateCounter = 0
+
+    # Cache for principalId -> display name to avoid repeated lookups
+    $principalNameCache = @{}
 
     # Get existing assignments
     try {
@@ -44,13 +50,43 @@
         $existingAssignments = @($existingAssignments)
     }
 
+    # Build fast lookup index for Entra ID role assignments to avoid O(N^2) comparisons
+    $entraIndex = $null
+    if ($ResourceType -like "Entra ID Role*") {
+        $entraIndex = @{}
+        foreach ($ex in $existingAssignments) {
+            # Extract principalId from multiple possible shapes
+            $exPrincipal = $null
+            foreach ($p in 'principal.id','PrincipalId','principalId','principalid') {
+                if ($p -eq 'principal.id' -and $ex.PSObject.Properties.Name -contains 'principal' -and $ex.principal -and $ex.principal.id) { $exPrincipal = $ex.principal.id; break }
+                elseif ($ex.PSObject.Properties.Name -contains $p -and $ex.$p) { $exPrincipal = $ex.$p; break }
+            }
+            if (-not $exPrincipal) { continue }
+
+            # Extract role name from expanded or flat shapes
+            $exRoleName = $null
+            if ($ex.PSObject.Properties.Name -contains 'roleDefinition' -and $ex.roleDefinition -and $ex.roleDefinition.displayName) {
+                $exRoleName = $ex.roleDefinition.displayName
+            } elseif ($ex.PSObject.Properties.Name -contains 'RoleName' -and $ex.RoleName) {
+                $exRoleName = $ex.RoleName
+            } elseif ($ex.PSObject.Properties.Name -contains 'rolename' -and $ex.rolename) {
+                $exRoleName = $ex.rolename
+            }
+            if (-not $exRoleName) { continue }
+
+            $key = ($exPrincipal + '|' + ($exRoleName.ToLower()))
+            if (-not $entraIndex.ContainsKey($key)) { $entraIndex[$key] = $ex }
+        }
+        Write-Verbose "Built Entra assignment index with $($entraIndex.Count) entries"
+    }
+
     # Add debug output for assignments
     if ($Assignments.Count -gt 0) {
         write-host "`n  📋 Processing assignments:"
         write-host "    ├─ Found $($Assignments.Count) assignments to process"
 
         # Display details for ALL assignments
-        foreach ($assignment in $Assignments) {
+    foreach ($assignment in $Assignments) {
             $principalId = $assignment.PrincipalId
             $roleName = if ([string]::IsNullOrEmpty($assignment.Rolename)) {
                 $assignment.Role
@@ -69,14 +105,25 @@
             }
             # For Entra ID roles, no scope is needed
 
-            try {
-                $principalName = (Get-MgUser -UserId $principalId -ErrorAction SilentlyContinue).DisplayName
-                if (-not $principalName) {
-                    $principalName = "Principal-$principalId"
+            # Resolve friendly name (user / group / service principal)
+            $principalName = $null
+            if ($principalNameCache.ContainsKey($principalId)) {
+                $principalName = $principalNameCache[$principalId]
+            } else {
+                try {
+                    $u = Get-MgUser -UserId $principalId -ErrorAction SilentlyContinue
+                    if ($u -and $u.DisplayName) { $principalName = $u.DisplayName }
+                } catch {
+                    Write-Verbose ("Lookup user failed for {0}: {1}" -f $principalId, $_.Exception.Message)
                 }
-            }
-            catch {
-                $principalName = "Principal-$principalId"
+                if (-not $principalName) {
+                    try { $g = Get-MgGroup -GroupId $principalId -ErrorAction SilentlyContinue; if ($g -and $g.DisplayName) { $principalName = $g.DisplayName } } catch { Write-Verbose ("Lookup group failed for {0}: {1}" -f $principalId, $_.Exception.Message) }
+                }
+                if (-not $principalName) {
+                    try { $sp = Get-MgServicePrincipal -ServicePrincipalId $principalId -ErrorAction SilentlyContinue; if ($sp -and $sp.DisplayName) { $principalName = $sp.DisplayName } } catch { Write-Verbose ("Lookup service principal failed for {0}: {1}" -f $principalId, $_.Exception.Message) }
+                }
+                if (-not $principalName) { $principalName = "Principal-$principalId" }
+                $principalNameCache[$principalId] = $principalName
             }
 
             write-host "    ├─ Processing: $principalName with role '$roleName'$scopeDisplay"
@@ -99,11 +146,13 @@
             continue
         }
 
-        $roleName = if ([string]::IsNullOrEmpty($assignment.Rolename)) {
-            $assignment.Role
-        }
-        else {
-            $assignment.Rolename
+        # Robust role name extraction supporting RoleName/Rolename/Role and group role types
+        $roleName = $null
+        foreach ($prop in @('Rolename','RoleName','Role','roleName','rolename','role','type','Type','memberType')) {
+            if ($assignment.PSObject.Properties.Name -contains $prop -and $assignment.$prop) {
+                $roleName = $assignment.$prop
+                break
+            }
         }
 
         if (-not $roleName) {
@@ -112,35 +161,29 @@
             continue
         }
 
-        # Get a friendly name for the principal
-                $principalName = "Principal-$principalId"
-
-        # Try to get a better name for the principal if possible
-        try {
-            # Try to get user information first
+        # Get a friendly name for the principal (single directoryObjects lookup to avoid noisy 404s)
+        # Try cache first
+        if ($principalNameCache.ContainsKey($principalId)) {
+            $principalName = $principalNameCache[$principalId]
+        } else {
+            $principalName = "Principal-$principalId"
             try {
-                $principalObj = Invoke-Graph -Endpoint "/users/$principalId" -Method GET -ErrorAction Stop
-                if ($principalObj) {
-                    $principalName = $principalObj.displayName
-                }
-            }
-            catch {
-                # If not a user, try to get group information
-                try {
-                    $principalGroup = Invoke-Graph -Endpoint "/groups/$principalId" -Method GET -ErrorAction Stop
-                    if ($principalGroup) {
-                        $principalName = $principalGroup.displayName
+                $dirObj = Invoke-Graph -Endpoint "directoryObjects/$principalId" -Method GET -ErrorAction Stop
+                if ($dirObj) {
+                    if ($dirObj.PSObject.Properties.Name -contains 'displayName' -and $dirObj.displayName) {
+                        $principalName = $dirObj.displayName
                     }
                 }
-                catch {
-                    # Just continue with the default name if we can't find either
-                    Write-Verbose "Could not resolve principal name for ID $principalId from users or groups"
-                }
+            } catch {
+                Write-Verbose ("DirectoryObjects lookup failed for {0}: {1}" -f $principalId, $_.Exception.Message)
             }
-        }
-        catch {
-            write-verbose "    ├─ ⚠️ Failed to resolve principal name for ID ${principalId}: $_"
-            # Silently continue with the default name
+            if ($principalName -eq "Principal-$principalId") {
+                # Fallback to specific entity queries
+                try { $u = Get-MgUser -UserId $principalId -ErrorAction SilentlyContinue; if ($u.DisplayName) { $principalName = $u.DisplayName } } catch { Write-Verbose ("Fallback user lookup failed for {0}: {1}" -f $principalId, $_.Exception.Message) }
+                if ($principalName -eq "Principal-$principalId") { try { $g = Get-MgGroup -GroupId $principalId -ErrorAction SilentlyContinue; if ($g.DisplayName) { $principalName = $g.DisplayName } } catch { Write-Verbose ("Fallback group lookup failed for {0}: {1}" -f $principalId, $_.Exception.Message) } }
+                if ($principalName -eq "Principal-$principalId") { try { $sp = Get-MgServicePrincipal -ServicePrincipalId $principalId -ErrorAction SilentlyContinue; if ($sp.DisplayName) { $principalName = $sp.DisplayName } } catch { Write-Verbose ("Fallback service principal lookup failed for {0}: {1}" -f $principalId, $_.Exception.Message) } }
+            }
+            $principalNameCache[$principalId] = $principalName
         }
 
         # Check if principal exists (if not already done in the command map)
@@ -175,8 +218,8 @@
                 }
             }
             catch {
-                Write-StatusWarning "Group $groupId does not exist, skipping all assignments"
-                $results.Skipped += $assignmentsForGroup.Count  # Skipped rather than Failed
+                Write-Host "    ├─ ⚠️ Group $groupId does not exist or is inaccessible, skipping" -ForegroundColor Yellow
+                $skipCounter++
                 continue
             }
         }
@@ -200,48 +243,22 @@
 
         # Check if assignment already exists
         $found = 0
-        foreach ($existing in $existingAssignments) {
-            # Add debug output to see what we're comparing
-            Write-Verbose "Comparing with existing: $($existing | ConvertTo-Json -Depth 10 -ErrorAction SilentlyContinue)"
-
-            # Different comparison for different resource types
-            if ($ResourceType -like "Entra ID Role*") {
-                # Debug: Show the first existing assignment structure to help us understand it
-                if ($existingAssignments.Count -gt 0 -and $existing -eq $existingAssignments[0]) {
-                    Write-Verbose "First Entra ID existing assignment structure:"
-                    Write-Verbose ($existing | ConvertTo-Json -Depth 10 -ErrorAction SilentlyContinue)
-                }
-
-                # The issue is that Graph API properties might have different casing or structure
-                # Try multiple property paths for more robust comparison
-
-                # Check if we're dealing with an expanded object or a basic one
-                if ($existing.PSObject.Properties.Name -contains 'principal') {
-                    Write-Verbose "Comparing expanded Entra object: principal.id=$($existing.principal.id) to $($assignment.PrincipalId)"
-                    Write-Verbose "Comparing expanded Entra object: roleDefinition.displayName=$($existing.roleDefinition.displayName) to $roleName"
-
-                    # Case-insensitive comparison for role names
-                    if (($existing.principal.id -eq $assignment.PrincipalId) -and
-                        ($existing.roleDefinition.displayName -ieq $roleName)) {
-                        $found = 1
-                        Write-Verbose "Match found using Entra ID expanded object comparison"
-                        break
-                    }
-                }
-                else {
-                    # Try standard properties with case-insensitive role name comparison
-                    Write-Verbose "Comparing standard Entra object: PrincipalId=$($existing.PrincipalId) to $($assignment.PrincipalId)"
-                    Write-Verbose "Comparing standard Entra object: RoleName=$($existing.RoleName) to $roleName"
-
-                    if (($existing.PrincipalId -eq $assignment.PrincipalId) -and
-                        ($existing.RoleName -ieq $roleName)) {
-                        $found = 1
-                        Write-Verbose "Match found using Entra ID standard comparison"
-                        break
-                    }
+        if ($ResourceType -like "Entra ID Role*") {
+            if ($entraIndex) {
+                $lookupKey = ($assignment.PrincipalId + '|' + ($roleName.ToLower()))
+                if ($entraIndex.ContainsKey($lookupKey)) {
+                    $found = 1
+                    Write-Verbose "Match found in Entra index for key $lookupKey"
+                } else {
+                    Write-Verbose "No match in Entra index for key $lookupKey"
                 }
             }
-            elseif ($ResourceType -like "Group Role*") {
+        } else {
+            foreach ($existing in $existingAssignments) {
+                # Add debug output to see what we're comparing (limited verbosity for performance)
+                Write-Verbose "Comparing with existing: $($existing | ConvertTo-Json -Depth 4 -ErrorAction SilentlyContinue)"
+
+                if ($ResourceType -like "Group Role*") {
                 # Debug the first group assignment structure
                 if ($existingAssignments.Count -gt 0 -and $existing -eq $existingAssignments[0]) {
                     Write-Verbose "First Group Role existing assignment structure:"
@@ -285,17 +302,39 @@
                     break
                 }
             }
+        }
             else {
                 # Standard comparison for Azure roles and others
                 if (($existing.PrincipalId -eq $assignment.PrincipalId) -and
-                    ($existing.RoleName -eq $roleName)) {
-                    $found = 1
-                    break
+                    ($existing.RoleName -ieq $roleName)) {
+                    # If a scope is provided for the assignment, require scope match as well
+                    if ($assignment.PSObject.Properties.Name -contains 'Scope' -or $assignment.PSObject.Properties.Name -contains 'scope') {
+                        $targetScope = if ($assignment.PSObject.Properties.Name -contains 'Scope') { $assignment.Scope } else { $assignment.scope }
+                        $existingScope = $null
+                        foreach ($prop in @('ScopeId','scope','Scope')) {
+                            if ($existing.PSObject.Properties.Name -contains $prop -and $existing.$prop) {
+                                $existingScope = $existing.$prop
+                                break
+                            }
+                        }
+
+                        if ($existingScope -eq $targetScope) {
+                            $found = 1
+                            break
+                        } else {
+                            continue
+                        }
+                    } else {
+                        $found = 1
+                        break
+                    }
                 }
             }
         }
 
         if ($found -eq 0) {
+            # Count as planned creation up-front (even if WhatIf prevents execution)
+            $plannedCreateCounter++
             # Create a SINGLE parameters hashtable - this is critical
             $params = @{}
 
@@ -371,7 +410,12 @@
 
             # Action description for ShouldProcess with detailed information
             $assignmentDetails = @()
-            $assignmentDetails += "Principal: $principalName ($principalId)"
+            # Show friendly display name inside parentheses when available; keep GUID as primary for traceability
+            if ($principalName -and $principalName -ne "Principal-$principalId") {
+                $assignmentDetails += "Principal: $principalId ($principalName)"
+            } else {
+                $assignmentDetails += "Principal: $principalName ($principalId)"
+            }
             $assignmentDetails += "Role: '$roleName'"
 
             if ($ResourceType -like "Azure Role*") {
@@ -393,7 +437,8 @@
 
             $actionDescription = "Create $ResourceType assignment with details:`n    • $($assignmentDetails -join ' | ')"
 
-            if ($PSCmdlet.ShouldProcess($actionDescription)) {
+            $shouldProcess = $PSCmdlet.ShouldProcess($actionDescription)
+            if ($shouldProcess) {
                 try {
                     # Execute the command
                     $result = & $CommandMap.CreateCmd @params
@@ -453,6 +498,8 @@
                     Write-Host "    │  └─ ❌ Failed to create: $_" -ForegroundColor Red
                     $errorCounter++
                 }
+            } else {
+                Write-Verbose "Simulation only (WhatIf) - not executing create for $principalId / $roleName"
             }
         }
         else {
@@ -483,7 +530,8 @@
     return @{
         Created = $createCounter
         Skipped = $skipCounter
-        Failed  = $errorCounter
+    Failed  = $errorCounter
+    PlannedCreated = $plannedCreateCounter
     }
 }
 

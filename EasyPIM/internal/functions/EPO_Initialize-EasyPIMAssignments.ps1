@@ -43,6 +43,7 @@
                         PrincipalType = $assignment.principalType
                         AssignmentType = $assignment.assignmentType
                         Duration = $assignment.duration
+                        Permanent = $assignment.permanent
                         Justification = if ($assignment.justification) { $assignment.justification } else { $justification }
                     }
 
@@ -76,6 +77,7 @@
                         PrincipalType = $assignment.principalType
                         AssignmentType = $assignment.assignmentType
                         Duration = $assignment.duration
+                        Permanent = $assignment.permanent
                         Justification = if ($assignment.justification) { $assignment.justification } else { $justification }
                     }
 
@@ -103,6 +105,7 @@
                 foreach ($assignment in $roleAssignment.assignments) {
                     # Convert new format to old format for compatibility
                     $expandedAssignment = [PSCustomObject]@{
+                        GroupId = $roleAssignment.groupId
                         GroupName = $roleAssignment.groupName
                         RoleName = $roleAssignment.roleName
                         PrincipalId = if ($assignment.principalId) { $assignment.principalId } else { $assignment.principalName }
@@ -110,6 +113,7 @@
                         PrincipalType = $assignment.principalType
                         AssignmentType = $assignment.assignmentType
                         Duration = $assignment.duration
+                        Permanent = $assignment.permanent
                         Justification = if ($assignment.justification) { $assignment.justification } else { $justification }
                     }
 

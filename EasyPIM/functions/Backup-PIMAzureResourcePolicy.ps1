@@ -37,9 +37,13 @@ function Backup-PIMAzureResourcePolicy {
 
         [Parameter(Position = 2)]
         [System.String]
-        # Filename of the csv to generate
-        $exportFilename
+        # Filename of the csv to generate (legacy, use -path for consistency)
+        $exportFilename,
 
+        [Parameter(Position = 3)]
+        [System.String]
+        # Preferred: Path to the csv to generate (for consistency with other backup functions)
+        $path
     )
     try {
         $script:tenantID = $tenantID
@@ -56,15 +60,23 @@ function Backup-PIMAzureResourcePolicy {
             $exports += get-config $scope $_.Trim()
         }
         $date = get-date -Format FileDateTime
-        if (!($exportFilename)) { $exportFilename = "$script:_LogPath\EXPORTS\BACKUP_$date.csv" }
-        log "exporting to $exportFilename"
-        $exportPath = Split-Path $exportFilename -Parent
+        # Prefer -path if provided, else fallback to -exportFilename, else default
+        $finalPath = $null
+        if ($path) {
+            $finalPath = $path
+        } elseif ($exportFilename) {
+            $finalPath = $exportFilename
+        } else {
+            $finalPath = "$script:_LogPath\EXPORTS\BACKUP_$date.csv"
+        }
+        log "exporting to $finalPath"
+        $exportPath = Split-Path $finalPath -Parent
         #create export folder if no exist
         if ( !(test-path  $exportPath) ) {
             $null = New-Item -ItemType Directory -Path $exportPath -Force
         }
 
-        $exports | Select-Object * | ConvertTo-Csv | out-file $exportFilename
+        $exports | Select-Object * | ConvertTo-Csv | out-file $finalPath
     }
     catch {
         MyCatch $_

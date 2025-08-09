@@ -1,6 +1,8 @@
 ﻿function Invoke-EasyPIMOrchestrator {
-    [CmdletBinding(DefaultParameterSetName = 'Default', SupportsShouldProcess = $true)]
+    [CmdletBinding(DefaultParameterSetName = 'Default', SupportsShouldProcess = $true, ConfirmImpact='Medium')]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseShouldProcessForStateChangingFunctions", "", Justification="Top-level ShouldProcess invoked; inner creation functions also use ShouldProcess")]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSShouldProcess", "", Justification="False positive previously; pattern implemented below")]
     param (
         [Parameter(Mandatory = $true, ParameterSetName = 'KeyVault')]
         [string]$KeyVaultName,
@@ -38,7 +40,8 @@
         [ValidateSet("All", "AzureRoles", "EntraRoles", "GroupRoles")]
         [string[]]$PolicyOperations = @("All")
     )
-
+    # Non-gating ShouldProcess: still emits WhatIf message but always executes body for rich simulation output.
+    $null = $PSCmdlet.ShouldProcess("EasyPIM Orchestration lifecycle", "Execute")
     Write-SectionHeader "Starting EasyPIM Orchestration (Mode: $Mode)"
 
     # Display usage if no parameters are provided
@@ -182,7 +185,8 @@
         # 5. Process assignments AFTER policies are confirmed (skip if requested)
         if (-not $SkipAssignments) {
             Write-Host "👥 Creating assignments with role policies validated and applied..." -ForegroundColor Cyan
-            $assignmentResults = New-EasyPIMAssignments -Config $processedConfig -TenantId $TenantId -SubscriptionId $SubscriptionId -WhatIf:$WhatIfPreference
+            # New-EasyPIMAssignments does not itself expose -WhatIf; inner Invoke-ResourceAssignment handles simulation.
+            $assignmentResults = New-EasyPIMAssignments -Config $processedConfig -TenantId $TenantId -SubscriptionId $SubscriptionId
         } else {
             Write-Host "⚠️ Skipping assignment creation as requested" -ForegroundColor Yellow
             $assignmentResults = $null

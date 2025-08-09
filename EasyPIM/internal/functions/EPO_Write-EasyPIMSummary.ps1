@@ -27,7 +27,11 @@
 
     # Handle assignment results - might be null if assignments were skipped
     if ($null -ne $AssignmentResults) {
+        $planned = if ($AssignmentResults.PSObject.Properties.Name -contains 'PlannedCreated') { $AssignmentResults.PlannedCreated } else { $null }
         Write-Host "│ ✅ Created : $($AssignmentResults.Created)" -ForegroundColor White
+    if ($null -ne $planned) {
+            Write-Host "│ 📝 Planned : $planned" -ForegroundColor White
+        }
         Write-Host "│ ⏭️ Skipped : $($AssignmentResults.Skipped)" -ForegroundColor White
         Write-Host "│ ❌ Failed  : $($AssignmentResults.Failed)" -ForegroundColor White
     } else {

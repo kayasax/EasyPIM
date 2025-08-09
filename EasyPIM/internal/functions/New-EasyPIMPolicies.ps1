@@ -168,26 +168,31 @@ function New-EasyPIMPolicies {
                 }
 
                 # Check activation requirements
+
                 $requirements = @()
                 if ($policy.PSObject.Properties['ActivationRequirement'] -and $policy.ActivationRequirement) {
-                    if ($policy.ActivationRequirement -match 'MFA') { $requirements += 'MFA' }
+                    if ($policy.ActivationRequirement -match 'MultiFactorAuthentication' -or $policy.ActivationRequirement -match 'MFA') { $requirements += 'MultiFactorAuthentication' }
                     if ($policy.ActivationRequirement -match 'Justification') { $requirements += 'Justification' }
                 }
                 $policyDetails += "Requirements: $(if ($requirements) { $requirements -join ', ' } else { 'None' })"
 
-                # Add approval requirement
+                # Add approval requirement and warn if missing approvers
                 if ($policy.PSObject.Properties['ApprovalRequired'] -and $null -ne $policy.ApprovalRequired) {
                     $policyDetails += "Approval Required: $($policy.ApprovalRequired)"
 
-                    if ($policy.ApprovalRequired -and $policy.PSObject.Properties['Approvers'] -and $policy.Approvers) {
-                        $approverList = $policy.Approvers | ForEach-Object {
-                            if ($_.PSObject.Properties['description'] -and $_.PSObject.Properties['id']) {
-                                "$($_.description) ($($_.id))"
-                            } else {
-                                "$_"
+                    if ($policy.ApprovalRequired) {
+                        if ($policy.PSObject.Properties['Approvers'] -and $policy.Approvers) {
+                            $approverList = $policy.Approvers | ForEach-Object {
+                                if ($_.PSObject.Properties['description'] -and $_.PSObject.Properties['id']) {
+                                    "$($_.description) ($($_.id))"
+                                } else {
+                                    "$_"
+                                }
                             }
+                            $policyDetails += "Approvers: $($approverList -join ', ')"
+                        } else {
+                            $policyDetails += "[WARNING: ApprovalRequired is true but no Approvers specified!]"
                         }
-                        $policyDetails += "Approvers: $($approverList -join ', ')"
                     }
                 } else {
                     $policyDetails += "Approval Required: Not specified"

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The enhanced `Invoke-EasyPIMOrchestrator` now supports comprehensive policy management alongside assignment management. This allows you to define and apply PIM policies declaratively through JSON configuration.
+The enhanced `Invoke-EasyPIMOrchestrator` supports comprehensive policy management alongside assignment management. Define and validate PIM policies declaratively through JSON configuration.
 
 ## New Features
 
@@ -13,170 +13,191 @@ The enhanced `Invoke-EasyPIMOrchestrator` now supports comprehensive policy mana
 - **Policy Templates**: Define reusable policy configurations
 - **Multiple Policy Sources**: Support for inline, file, and template-based policies
 
-### 🆕 New Parameters
+### 🆕 Policy-related Parameters
 
 ```powershell
 # Skip policy processing entirely
 -SkipPolicies
 
 # Control which policy types to process
--PolicyOperations @("All"|"AzureRoles"|"EntraRoles"|"GroupRoles")
+-PolicyOperations @("All","AzureRoles","EntraRoles","GroupRoles")
 
-# Control policy application mode
--PolicyMode ("validate"|"delta"|"initial")
+# Use -WhatIf to validate policies without applying changes
+-WhatIf
 ```
 
 ## Configuration Schema
 
-### Policy Sections
+### Policy Sections (current)
 
-#### Azure Role Policies
+Policies live under each domain using a nested Policies block. Use either Template or inline properties.
+
+#### Azure Role Policies (current)
 ```json
-"AzureRolePolicies": [
-    {
-        "RoleName": "Owner",
-        "Scope": "/subscriptions/subscription-id",
-        "PolicySource": "inline",
-        "Policy": {
-            "ActivationDuration": "PT8H",
-            "EnablementRules": ["MultiFactorAuthentication", "Justification"],
-            "ApprovalRequired": true,
-            "Approvers": [
-                {
-                    "id": "group-id",
-                    "description": "Security Team",
-                    "userType": "Group"
-                }
-            ],
-            "AllowPermanentEligibleAssignment": false,
-            "MaximumEligibleAssignmentDuration": "P90D"
+{
+    "AzureRoles": {
+        "Policies": {
+            "Owner": {
+                "Scope": "/subscriptions/subscription-id",
+                "ActivationDuration": "PT8H",
+                "ActivationRequirement": "MultiFactorAuthentication,Justification",
+                "ApprovalRequired": true,
+                "Approvers": [
+                    { "id": "group-id", "description": "Security Team" }
+                ],
+                "AllowPermanentEligibility": false,
+                "MaximumEligibilityDuration": "P90D"
+            }
         }
     }
-]
+}
 ```
 
-#### Entra Role Policies
+Template-based example:
+
 ```json
-"EntraRolePolicies": [
-    {
-        "RoleName": "Security Reader",
-        "PolicySource": "template",
-        "PolicyTemplate": "Standard"
+{
+    "AzureRoles": {
+        "Policies": {
+            "Contributor": {
+                "Scope": "/subscriptions/subscription-id",
+                "Template": "Standard"
+            }
+        }
     }
-]
+}
 ```
 
-#### Group Policies
+#### Entra Role Policies (current)
 ```json
-"GroupPolicies": [
-    {
-        "GroupId": "group-id",
-        "RoleName": "Owner",
-        "PolicySource": "template",
-        "PolicyTemplate": "HighSecurity"
+{
+    "EntraRoles": {
+        "Policies": {
+            "Security Reader": { "Template": "Standard" },
+            "User Administrator": {
+                "ActivationDuration": "PT2H",
+                "ActivationRequirement": "MultiFactorAuthentication,Justification",
+                "ApprovalRequired": true
+            }
+        }
     }
-]
+}
 ```
 
-#### Policy Templates
+#### Group Policies (current)
+Note: Applying group policies is currently limited (validate-only/pending implementation). Include GroupId and RoleName in the policy definition.
+
+```json
+{
+    "GroupRoles": {
+        "Policies": {
+            "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee": {
+                "GroupId": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                "RoleName": "Member",
+                "Template": "Standard"
+            }
+        }
+    }
+}
+```
+
+#### Policy Templates (current)
 ```json
 "PolicyTemplates": {
     "HighSecurity": {
         "ActivationDuration": "PT2H",
-        "EnablementRules": ["MultiFactorAuthentication", "Justification"],
+        "ActivationRequirement": "MultiFactorAuthentication,Justification",
         "ApprovalRequired": true,
         "Approvers": [
             {
                 "id": "5dba24e0-00ef-4c21-9702-7c093a0775eb",
                 "description": "Security Team",
-                "userType": "Group"
+
             }
         ],
-        "AllowPermanentEligibleAssignment": false,
-        "MaximumEligibleAssignmentDuration": "P30D",
-        "Notifications": {
-            "Eligibility": {
-                "Alert": {
-                    "isDefaultRecipientEnabled": true,
-                    "NotificationLevel": "All",
-                    "Recipients": ["security-team@company.com"]
-                }
-            }
+        "AllowPermanentEligibility": false,
+        "MaximumEligibilityDuration": "P30D",
+        "Notification_EligibleAssignment_Alert": {
+            "isDefaultRecipientEnabled": true,
+            "notificationLevel": "All",
+            "Recipients": ["security-team@company.com"]
         }
     },
     "Standard": {
         "ActivationDuration": "PT8H",
-        "EnablementRules": ["MultiFactorAuthentication"],
+        "ActivationRequirement": "MultiFactorAuthentication",
         "ApprovalRequired": false,
         "Approvers": [],
-        "AllowPermanentEligibleAssignment": true,
-        "MaximumEligibleAssignmentDuration": "P90D"
+        "AllowPermanentEligibility": true,
+        "MaximumEligibilityDuration": "P90D"
     },
     "ExecutiveApproval": {
         "ActivationDuration": "PT4H",
-        "EnablementRules": ["MultiFactorAuthentication", "Justification"],
+        "ActivationRequirement": "MultiFactorAuthentication,Justification",
         "ApprovalRequired": true,
         "Approvers": [
             {
                 "id": "7a55ec4d-028e-4ff1-8ee9-93da07b6d5d5",
                 "description": "Executive Team",
-                "userType": "Group"
+
             }
         ],
-        "AllowPermanentEligibleAssignment": false,
-        "MaximumEligibleAssignmentDuration": "P7D"
+        "AllowPermanentEligibility": false,
+        "MaximumEligibilityDuration": "P7D"
     }
 }
 ```
 
 ## Policy Sources
 
-### 1. Inline Policies
+### 1. Inline Policies (current)
 Define policies directly in the JSON configuration:
 ```json
 {
-    "PolicySource": "inline",
-    "Policy": {
-        "ActivationDuration": "PT8H",
-        "EnablementRules": ["MultiFactorAuthentication"]
+    "EntraRoles": {
+        "Policies": {
+            "Security Administrator": {
+                "ActivationDuration": "PT8H",
+                "ActivationRequirement": "MultiFactorAuthentication",
+                "ApprovalRequired": false
+            }
+        }
     }
 }
 ```
 
-### 2. Template Policies
+### 2. Template Policies (current)
 Reference predefined templates:
 ```json
 {
-    "PolicySource": "template",
-    "PolicyTemplate": "HighSecurity"
+    "AzureRoles": {
+        "Policies": {
+            "Owner": { "Scope": "/subscriptions/sub-id", "Template": "HighSecurity" }
+        }
+    }
 }
 ```
 
-### 3. File Policies
-Reference existing CSV policy exports:
+### 3. File Policies (legacy, deprecated path)
+Reference existing CSV policy exports using the legacy section:
 ```json
 {
-    "PolicySource": "file",
-    "PolicyFile": "C:\\path\\to\\policy.csv"
+    "AzureRolePolicies": [
+        {
+            "RoleName": "Owner",
+            "Scope": "/subscriptions/sub-id",
+            "PolicySource": "file",
+            "PolicyFile": "C:\\path\\to\\policy.csv"
+        }
+    ]
 }
 ```
 
-## Policy Modes
+## Policy Execution Semantics
 
-### Validate Mode (Default)
-- Validates configuration without applying changes
-- Reports what would be changed
-- Safe for testing configurations
-
-### Delta Mode
-- Applies only policies that differ from current state
-- Compares with existing policies
-- Recommended for production updates
-
-### Initial Mode
-- Applies all defined policies
-- Overwrites existing policies
-- Use for full policy deployment
+- Use `-WhatIf` to validate policy changes (no writes).
+- Without `-WhatIf`, policies run in delta mode (apply differences).
+- There is no dedicated `-PolicyMode` parameter.
 
 ## Usage Examples
 
@@ -186,9 +207,9 @@ Invoke-EasyPIMOrchestrator `
     -ConfigFilePath "C:\config\enhanced-config.json" `
     -TenantId "your-tenant-id" `
     -SubscriptionId "your-subscription-id" `
-    -PolicyMode "validate" `
     -SkipAssignments `
-    -SkipCleanup
+    -SkipCleanup `
+    -WhatIf
 ```
 
 ### Example 2: Apply Only Azure Role Policies
@@ -198,7 +219,6 @@ Invoke-EasyPIMOrchestrator `
     -TenantId "your-tenant-id" `
     -SubscriptionId "your-subscription-id" `
     -PolicyOperations @("AzureRoles") `
-    -PolicyMode "delta" `
     -SkipAssignments
 ```
 
@@ -207,9 +227,7 @@ Invoke-EasyPIMOrchestrator `
 Invoke-EasyPIMOrchestrator `
     -ConfigFilePath "C:\config\enhanced-config.json" `
     -TenantId "your-tenant-id" `
-    -SubscriptionId "your-subscription-id" `
-    -Mode "delta" `
-    -PolicyMode "delta"
+    -SubscriptionId "your-subscription-id"
 ```
 
 ### Example 4: Skip Policies, Process Only Assignments
@@ -225,26 +243,23 @@ Invoke-EasyPIMOrchestrator `
 
 ### Core Policy Settings
 - `ActivationDuration`: How long activations last (ISO 8601 duration)
-- `EnablementRules`: Array of required actions (MFA, Justification, Ticketing)
+- `ActivationRequirement`: Comma-separated requirements (e.g., "MultiFactorAuthentication,Justification")
 - `ApprovalRequired`: Whether activation requires approval
 - `Approvers`: Array of approver objects
 
 ### Assignment Duration Settings
-- `AllowPermanentEligibleAssignment`: Allow permanent eligible assignments
-- `MaximumEligibleAssignmentDuration`: Maximum duration for eligible assignments
+- `AllowPermanentEligibility`: Allow permanent eligible assignments
+- `MaximumEligibilityDuration`: Maximum duration for eligible assignments
 - `AllowPermanentActiveAssignment`: Allow permanent active assignments
 - `MaximumActiveAssignmentDuration`: Maximum duration for active assignments
 
 ### Notification Settings
-Configure notifications for different events:
-- `Elegibility`: Notifications for eligibility changes
-- `Active`: Notifications for active assignment changes
-- `Activation`: Notifications for role activations
-
-Each notification type supports:
-- `Alert`: Admin notifications
-- `Assignee`: User notifications
-- `Approvers`: Approver notifications
+Configure notifications using named blocks (examples):
+- `Notification_EligibleAssignment_Alert`
+- `Notification_EligibleAssignment_Assignee`
+- `Notification_EligibleAssignment_Approver`
+- `Notification_ActiveAssignment_Alert`
+- `Notification_Activation_Alert`
 
 ### Approver Configuration
 Define approvers for policy templates and inline policies:
@@ -254,7 +269,7 @@ Define approvers for policy templates and inline policies:
     {
         "id": "group-or-user-id",
         "description": "Human-readable description",
-        "userType": "Group|User"
+
     }
 ]
 ```
@@ -274,7 +289,7 @@ Define approvers for policy templates and inline policies:
 ### 1. Start with Validation
 Always test configurations in validation mode first:
 ```powershell
--PolicyMode "validate"
+Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\\Config\\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf
 ```
 
 ### 2. Use Policy Templates
@@ -283,31 +298,31 @@ Create reusable templates for consistent policy application:
 "PolicyTemplates": {
     "HighPrivilege": {
         "ActivationDuration": "PT2H",
-        "EnablementRules": ["MultiFactorAuthentication", "Justification"],
+    "ActivationRequirement": "MultiFactorAuthentication,Justification",
         "ApprovalRequired": true,
         "Approvers": [
             {
                 "id": "security-team-group-id",
                 "description": "Security Team",
-                "userType": "Group"
+
             }
         ]
     },
     "Standard": {
         "ActivationDuration": "PT8H",
-        "EnablementRules": ["MultiFactorAuthentication"],
+    "ActivationRequirement": "MultiFactorAuthentication",
         "ApprovalRequired": false,
         "Approvers": []
     },
     "ExecutiveLevel": {
         "ActivationDuration": "PT4H",
-        "EnablementRules": ["MultiFactorAuthentication", "Justification"],
+    "ActivationRequirement": "MultiFactorAuthentication,Justification",
         "ApprovalRequired": true,
         "Approvers": [
             {
-                "id": "executive-team-group-id",
-                "description": "Executive Team",
-                "userType": "Group"
+        "id": "executive-team-group-id",
+        "description": "Executive Team",
+
             }
         ],
         "Notifications": {
@@ -371,8 +386,8 @@ Test with WhatIf to see what would change:
 Existing configurations continue to work unchanged. To add policies:
 
 1. Add policy sections to your JSON
-2. Test with `-PolicyMode "validate"`
-3. Apply with `-PolicyMode "delta"`
+2. Validate with `-WhatIf`
+3. Apply (delta is default when not using `-WhatIf`)
 
 ## Security Considerations
 

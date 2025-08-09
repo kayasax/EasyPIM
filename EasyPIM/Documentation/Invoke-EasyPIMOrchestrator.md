@@ -60,7 +60,7 @@ Before using the orchestrator, ensure you have:
 
 ## Configuration File Structure
 
-The configuration file follows a JSON structure with these key sections:
+The configuration file follows a JSON structure with these key sections (legacy arrays are supported; the unified `Assignments` block is recommended going forward):
 - AzureRoles: Eligible assignments for Azure RBAC roles
 - AzureRolesActive: Active assignments for Azure RBAC roles
 - EntraIDRoles: Eligible assignments for Entra ID directory roles
@@ -69,7 +69,7 @@ The configuration file follows a JSON structure with these key sections:
 - GroupRolesActive: Active assignments for Group roles
 - ProtectedUsers: Users that will never be removed in any mode
 
-### Configuration sample: 
+### Configuration sample:
 ```json
 {
   "AzureRoles": [
@@ -182,6 +182,9 @@ To assign the same role to multiple principals on the same scope with identical 
 ## Running in Different Modes
 
 The orchestrator supports two operating modes:
+
+Note on policies:
+- Policies don’t have a separate PolicyMode parameter. When you pass -WhatIf, policies run in validation (no changes). Without -WhatIf, policies apply in delta mode.
 
 ### Delta Mode (Default)
 

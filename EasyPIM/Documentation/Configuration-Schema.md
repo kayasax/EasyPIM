@@ -25,6 +25,8 @@ Policy templates allow reusable policy configurations across multiple roles.
     "TemplateName": {
       "ActivationDuration": "string (ISO 8601 duration, e.g., 'PT2H')",
       "ActivationRequirement": "string (comma-separated: 'MultiFactorAuthentication', 'Justification')",
+  // Accepted values (case-sensitive): "None", "MultiFactorAuthentication", "Justification", "Ticketing"
+  // Multiple values must be comma-separated with exact casing
       "ApprovalRequired": "boolean",
       "AllowPermanentEligibility": "boolean",
       "MaximumEligibilityDuration": "string (ISO 8601 duration, e.g., 'P30D')",
@@ -39,6 +41,46 @@ Policy templates allow reusable policy configurations across multiple roles.
       "AuthenticationContext_Enabled": "boolean",
       "AuthenticationContext_Value": "string",
       "Notification_EligibleAssignment_Alert": {
+        "isDefaultRecipientEnabled": "string ('true' or 'false')",
+        "notificationLevel": "string ('All', 'Critical', etc.)",
+        "Recipients": ["string (email addresses)"]
+      },
+      "Notification_EligibleAssignment_Assignee": {
+        "isDefaultRecipientEnabled": "string ('true' or 'false')",
+        "notificationLevel": "string ('All', 'Critical', etc.)",
+        "Recipients": ["string (email addresses)"]
+      },
+      "Notification_EligibleAssignment_Approver": {
+        "isDefaultRecipientEnabled": "string ('true' or 'false')",
+        "notificationLevel": "string ('All', 'Critical', etc.)",
+        "Recipients": ["string (email addresses)"]
+      },
+      "Notification_ActiveAssignment_Alert": {
+        "isDefaultRecipientEnabled": "string ('true' or 'false')",
+        "notificationLevel": "string ('All', 'Critical', etc.)",
+        "Recipients": ["string (email addresses)"]
+      },
+      "Notification_ActiveAssignment_Assignee": {
+        "isDefaultRecipientEnabled": "string ('true' or 'false')",
+        "notificationLevel": "string ('All', 'Critical', etc.)",
+        "Recipients": ["string (email addresses)"]
+      },
+      "Notification_ActiveAssignment_Approver": {
+        "isDefaultRecipientEnabled": "string ('true' or 'false')",
+        "notificationLevel": "string ('All', 'Critical', etc.)",
+        "Recipients": ["string (email addresses)"]
+      },
+      "Notification_Activation_Alert": {
+        "isDefaultRecipientEnabled": "string ('true' or 'false')",
+        "notificationLevel": "string ('All', 'Critical', etc.)",
+        "Recipients": ["string (email addresses)"]
+      },
+      "Notification_Activation_Assignee": {
+        "isDefaultRecipientEnabled": "string ('true' or 'false')",
+        "notificationLevel": "string ('All', 'Critical', etc.)",
+        "Recipients": ["string (email addresses)"]
+      },
+      "Notification_Activation_Approver": {
         "isDefaultRecipientEnabled": "string ('true' or 'false')",
         "notificationLevel": "string ('All', 'Critical', etc.)",
         "Recipients": ["string (email addresses)"]
@@ -178,6 +220,14 @@ Policy templates allow reusable policy configurations across multiple roles.
 - **Years**: `P1Y` (1 year)
 
 ### Azure AD Object IDs
+### Activation Requirement Values
+- Accepted values are case-sensitive and must match exactly:
+  - None
+  - MultiFactorAuthentication
+  - Justification
+  - Ticketing
+- You can combine multiple values separated by commas, for example: "MultiFactorAuthentication,Justification"
+
 - **Format**: `12345678-1234-1234-1234-123456789012`
 - **Source**: Azure AD portal, PowerShell (`Get-AzADUser`, `Get-AzADGroup`), Graph API
 - **Never use**: Email addresses, display names, UPNs

@@ -1,8 +1,50 @@
-LOGS
-TEST
-TESTS
-EXPORTS
+############################
+# EasyPIM Git Ignore
+# Cleanup enhancements (items 1,3,11,12): ignore logs/exports/artifacts, enforce text normalization
+############################
+
+# Runtime / diagnostic logs
+LOGS/
+*.ps1.log
+*.log
+
+# Exported data (retain curated samples via whitelist below)
+EXPORTS/
+
+# Test run outputs
+TestResults/
+coverage/
+
+# Build / publish artifacts
+publish/
+build/output/
+
+# Large temporary / scratch test folders (legacy)
+TEST/
+TESTS/
+
+# Non-production examples (retain README for context)
+examples/
+!examples/README.md
+
+# CSV exports by default (whitelist config & doc samples)
 *.csv
-TestResults
-publish
+!EasyPIM/config/*.json
+!EasyPIM/Documentation/**/sample*.csv
+
+# Session memory file (do not commit persistent AI session state)
 session_starter.md
+
+# Local Pester cache / transient files
+tests/*.cache
+*.Coverage.xml
+
+# OS / editor noise
+*.swp
+*.DS_Store
+Thumbs.db
+
+# PowerShell build artifact leftovers
+*.psd1.tmp
+
+# Ensure newline normalization (see .gitattributes)
