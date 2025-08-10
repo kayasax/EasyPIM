@@ -17,7 +17,7 @@ A safe, step-by-step plan to exercise the orchestrator and policies in a real te
 10. Step 9 — Azure assignments (1 Eligible + 1 Active)
 11. Step 10 — Optional: Groups (Policies + Assignments)
 12. Step 11 — Apply changes (remove -WhatIf)
-  - Step 11c — Use the Same Config from Azure Key Vault (Optional)
+  - Step 11.1 — Use the Same Config from Azure Key Vault (Optional)
 13. Step 12 — (Optional, Destructive) Reconcile with initial mode
 14. Step 13 — Automatic Principal Validation (Safety Gate)
 15. Step 14 — Comprehensive policy validation (all options)
@@ -951,7 +951,7 @@ Apply assignments
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -SkipPolicies
 ```
 
-### Step 11c — Use the Same Config from Azure Key Vault (Optional)
+### Step 11.1 — Use the Same Config from Azure Key Vault (Optional)
 
 Centralize the orchestrator configuration by storing the exact JSON in an Azure Key Vault secret.
 
