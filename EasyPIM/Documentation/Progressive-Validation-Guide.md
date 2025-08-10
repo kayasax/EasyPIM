@@ -1,7 +1,12 @@
 > By default, `Backup-PIMAzureResourcePolicy` works at the subscription level. If you want to back up policies at a different scope, you can use the `-scope` parameter instead of `-subscriptionID`.
 # EasyPIM Progressive Validation Runbook
 
-A safe, step-by-step plan to validate the orchestrator and policies in a real tenant. Each step includes a minimal JSON and a preview (-WhatIf) run before applying.
+A safe, step-by-step plan to exercise the orchestrator and policies in a real tenant. Each step includes a minimal JSON and a preview (-WhatIf) run before applying.
+
+> Assignment Modes Snapshot
+> - `delta` (default): Add / update only. No deletions. Items that are NOT in your config remain and are reported as `WouldRemove (delta)` in summaries for awareness.
+> - `initial`: Full reconcile (destructive). Removes any assignment not declared (except those whose principalId is in `ProtectedUsers`). Always run first with `-WhatIf` and confirm `ProtectedUsers`.
+> - Policies: Mode impacts only assignment pruning; policy application logic is the same (or simulated with `-WhatIf`).
 
 ## Prerequisites
 
@@ -353,7 +358,7 @@ Multiple principals
 
 ## Step 6 — Azure role policy (inline; Scope is required)
 
-Goal: Introduce your first Azure Role policy while preserving everything validated in Step 5 (ProtectedUsers, Entra role policy templates & assignments). Keep `ProtectedUsers` first for safety.
+Goal: Introduce your first Azure Role policy while preserving everything proven in Step 5 (ProtectedUsers, Entra role policy templates & assignments). Keep `ProtectedUsers` first for safety.
 
 IMPORTANT: Some Azure built‑in roles are treated as protected in the orchestrator and their policies are intentionally not changed for safety (currently: "Owner" and "User Access Administrator"). If you try to target them you will see a [PROTECTED] message and no update occurs. For the first Azure policy example, use a non‑protected role such as "Reader" or "Contributor".
 
@@ -630,7 +635,7 @@ Goal: Add first Azure role assignments without altering existing policies. Every
   }
 ```
 
-### Full minimal snippet (only new Azure assignments) 
+### Full minimal snippet (only new Azure assignments)
 Use this if previous sections already exist exactly as-is above in your file.
 ```jsonc
 {
@@ -726,14 +731,101 @@ Multiple principals
 }
 ```
 
-## Step 10 — Optional: Groups
+## Step 10 — Optional: Groups (Policies + Assignments)
 
-Policies for groups are validate-only right now. You can still test assignments.
+Group policies ARE supported (Get-PIMGroupPolicy / Set-PIMGroupPolicy). The orchestrator resolves group policies via `GroupRoles.Policies` (preferred) or the deprecated `GroupPolicies` / `Policies.Groups` formats. We'll DEFINE a minimal policy first, then add assignments referencing it. This mirrors the security-first approach: establish guardrails (policy) before granting access (assignments).
 
-Write pim-config.json
+> NOTE: In `GroupRoles.Policies` you may use either the group GUID (treated as `GroupId`) or a readable display name key (treated as `GroupName`). The orchestrator will resolve `GroupName` to `GroupId` at runtime. For production/stable configs prefer GUIDs to avoid ambiguity when duplicate or renamed groups exist. Assignments still require an explicit `groupId` field.
+
+> QUICK NOTE (Auto‑Deferral): If a Group policy targets a group that is not yet PIM‑eligible (e.g. on‑premises synced or not onboarded), the orchestrator now DEFERS that policy instead of failing. It records status `DeferredNotEligible`, proceeds with the rest of the run, then automatically retries those deferred group policies after the assignment phase. The final summary prints a `DEFERRED GROUP POLICIES` block showing Applied / Still Not Eligible / Failed counts. To resolve a persistent `Still Not Eligible` state: (1) ensure the group is a cloud security group (not synced or M365 type unsupported), (2) enable PIM for the group in the portal (preview blade), then re-run the orchestrator. No action needed if the group becomes eligible mid‑run; the retry will apply it.
+
+### Context Recap (Where We Are Before Adding Groups)
+Your config already contains (abbreviated):
+```jsonc
+{
+  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"],
+  "PolicyTemplates": { "Standard": { /* PT2H activation etc. */ }, "HighSecurity": { /* approval + MFA */ } },
+  "EntraRoles": { "Policies": { "User Administrator": { "Template": "HighSecurity" }, "Guest Inviter": { "Template": "Standard" } } },
+  "AzureRoles": { "Policies": { "Reader": { /* inline minimal */ }, "Tag Contributor": { "Template": "Standard", "Scope": "/subscriptions/<sub>" } } },
+  "Assignments": { /* Entra + Azure role assignments already previewed earlier */ }
+}
+```
+We now introduce Group policies/assignments incrementally.
+
+Flow in this step:
+1. 10.1 Minimal inline policy only (no assignments) — WhatIf with -SkipAssignments
+2. 10.2 Add assignments referencing that policy — WhatIf with -SkipPolicies
+3. 10.3 (Optional) Introduce a reusable template
+
+### 10.1 Minimal Group Policy (inline, no assignments yet)
+
+Write pim-config.json (policy only + ProtectedUsers – kept FIRST for visibility)
 
 ```json
 {
+  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"],
+  "GroupRoles": {
+    "Policies": {
+      "MyPilotGroup": {
+        "Member": {
+          "ActivationDuration": "PT4H",
+          "ActivationRequirement": ["Justification"]
+        }
+      }
+    }
+  }
+}
+```
+
+Preview (policies only)
+
+```powershell
+Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
+```
+
+Apply (after preview) — delta is the default change mode; no special flag needed for standard incremental runs:
+
+```powershell
+Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -SkipAssignments
+```
+
+### 10.2 Add Assignments (policy already previewed)
+
+Instead of a diff (harder to copy), here are clean before / after examples plus an appendable fragment.
+
+Before (policies only):
+
+```json
+{
+  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"],
+  "GroupRoles": {
+    "Policies": {
+      "MyPilotGroup": {
+        "Member": {
+          "ActivationDuration": "PT4H",
+          "ActivationRequirement": ["Justification"]
+        }
+      }
+    }
+  }
+}
+```
+
+After (assignments added – note comma before "Assignments"):
+
+```json
+{
+  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"],
+  "GroupRoles": {
+    "Policies": {
+      "MyPilotGroup": {
+        "Member": {
+          "ActivationDuration": "PT4H",
+          "ActivationRequirement": ["Justification"]
+        }
+      }
+    }
+  },
   "Assignments": {
     "Groups": [
       {
@@ -749,16 +841,81 @@ Write pim-config.json
         ]
       }
     ]
-  },
-  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"]
+  }
 }
 ```
 
-Preview (assignments only)
+Appendable fragment (paste just above the final closing brace of your existing JSON, ensuring the preceding block ends with a comma):
 
-```powershell
-Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipPolicies
+```jsonc
+  "Assignments": {
+    "Groups": [
+      {
+        "groupId": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+        "roleName": "Member",
+        "assignments": [
+          {
+            "principalId": "55555555-5555-5555-5555-555555555555",
+            "principalType": "User",
+            "assignmentType": "Eligible",
+            "justification": "Project team"
+          }
+        ]
+      }
+    ]
+  }
 ```
+
+
+
+  Preview (assignments only):
+
+  ```powershell
+  Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipPolicies
+  ```
+
+  Apply assignments (after validation):
+
+  ```powershell
+  Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -SkipPolicies
+  ```
+
+  ✅ Validation Outcome Guidance
+
+  After a successful run with `-SkipPolicies` (and without errors in principal validation), you have effectively validated Step 10.2 of this guide: assignments referencing previously previewed policies can be processed independently. At this point you should see:
+  - Principal validation summary (0 missing)
+  - Assignment creation or delta summary (Added / Kept / WouldRemove counts)
+  - No policy mutation messages (because policies were skipped)
+
+  If results differ:
+  - Missing principals: fix object IDs before proceeding further.
+  - Unexpected removals in delta mode: re‑check Mode parameter (should be `delta`) and any ProtectedUsers settings.
+  - 400/403 errors: rerun with `-Verbose` and inspect enriched error lines for Graph/ARM codes.
+  ### 10.3 Template (Optional)
+
+```diff
+  "PolicyTemplates": {
+    "Standard": { ... },
++   "GroupStandard": {
++     "ActivationDuration": "PT4H",
++     "ActivationRequirement": ["Justification"],
++     "ApprovalRequired": false
++   }
+  }
+
+  "GroupRoles": {
+    "Policies": {
+      "MyPilotGroup": {
+-       "Member": { "ActivationDuration": "PT4H", "ActivationRequirement": ["Justification"] }
++       "Member": { "Template": "GroupStandard" }
+      }
+    }
+  }
+```
+
+Result: cleaner reuse; future tweaks centralized.
+
+NOTE: Deprecated formats (`GroupPolicies` array or nested `Policies.Groups`) still load with a warning; migrate to `GroupRoles.Policies` for forward compatibility.
 
 ## Step 11 — Apply changes (remove -WhatIf)
 
@@ -773,6 +930,72 @@ Apply assignments
 ```powershell
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -SkipPolicies
 ```
+
+### Step 11c — Use the Same Config from Azure Key Vault (Optional)
+
+Centralize the orchestrator configuration by storing the exact JSON in an Azure Key Vault secret.
+
+1. Create / select Key Vault (one-time):
+  ```powershell
+  az keyvault create -n <kv-name> -g <resource-group>
+  ```
+2. Upload JSON (plain text file):
+  ```powershell
+  az keyvault secret set --vault-name <kv-name> --name EasyPIM-Config --file C:\Config\pim-config.json
+  ```
+3. Preview assignments (skip policies already applied):
+  ```powershell
+  Invoke-EasyPIMOrchestrator -KeyVaultName <kv-name> -SecretName EasyPIM-Config -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipPolicies
+  ```
+4. Apply:
+  ```powershell
+  Invoke-EasyPIMOrchestrator -KeyVaultName <kv-name> -SecretName EasyPIM-Config -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -SkipPolicies
+  ```
+
+Notes:
+- Same schema as file; no transformation.
+- Rotate by overwriting secret; callers just rerun.
+- Keep size within Key Vault secret limits.
+- CI: assign managed identity secret get permission.
+
+Troubleshooting:
+- Truncated/invalid: ensure plain UTF-8, no BOM, not base64.
+- Access denied: verify RBAC/Access Policy includes get secret.
+- Parse error: `az keyvault secret show --vault-name <kv-name> --name EasyPIM-Config --query value -o tsv | ConvertFrom-Json`.
+
+### Step 11b — (Optional, Destructive) Reconcile with initial mode
+
+Use this ONLY when you intend to remove every assignment not explicitly declared (except `ProtectedUsers`). Always run a -WhatIf preview first.
+
+Preview destructive reconcile:
+```powershell
+Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -Mode initial -WhatIf -SkipPolicies
+```
+
+Execute (destructive):
+```powershell
+Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -Mode initial -SkipPolicies -Confirm:$false
+```
+
+WARNING:
+- This will remove any assignment not in your config.
+- Ensure `ProtectedUsers` contains all break‑glass / critical accounts.
+- Review `WouldRemove (delta)` counts from prior delta runs to understand impact.
+
+### Step 11c — Automatic Principal Validation (Safety Gate)
+The orchestrator now ALWAYS validates all referenced principals (users, groups, service principals) and role‑assignable status for groups before any changes. If issues are detected it aborts before policies or assignments are processed.
+
+Benefits:
+* Prevents misleading "Created" outputs caused by placeholder GUIDs.
+* Catches non role‑assignable groups before assignment attempts.
+* Produces a concise invalid principal summary without touching assignments or policies.
+
+If validation fails:
+1. Replace placeholder or removed object IDs with real ones.
+2. (Optional) For groups: if you plan classic privileged directory role use outside this orchestrator, you may still choose to set them role-assignable; it's not required for orchestrator processing.
+3. Remove or comment obsolete principals, then re-run.
+
+If you genuinely need to ignore a transient missing ID, temporarily comment it out (future enhancement may add an override switch).
 
 ---
 
@@ -790,7 +1013,11 @@ Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId
 
 ## Step 12 — Comprehensive policy validation (all options)
 
-This step validates every main policy lever in a single run: durations, approvers, authentication context, and full notification matrix. Run with -WhatIf to preview safely.
+This step previews every main policy lever in a single run: durations, approvers, authentication context, and full notification matrix.
+
+### 12.1 Entra role full-feature policy (preview with -WhatIf)
+
+Run with -WhatIf to preview safely; no separate validation mode flag is required.
 
 Entra role (inline policy with all options)
 
@@ -806,12 +1033,11 @@ Entra role (inline policy with all options)
         "Approvers": [
           { "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "description": "PIM Approver 1" },
           { "id": "ffffffff-1111-2222-3333-444444444444", "description": "PIM Approver Group" }
-        ],
-        "AllowPermanentEligibility": false,
-        "MaximumEligibilityDuration": "P90D",
-        "AllowPermanentActiveAssignment": false,
-        "MaximumActiveAssignmentDuration": "P30D",
-        "AuthenticationContext_Enabled": true,
+          {
+            "principalId": "55555555-5555-5555-5555-555555555555",
+            "assignmentType": "Eligible",
+            "justification": "Project team"
+          }
         "AuthenticationContext_Value": "c1:HighRiskOperations",
         "Notifications": {
           "Eligibility": {
@@ -843,7 +1069,8 @@ Preview (policies only)
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
 ```
 
-Azure role (inline policy with all options; Scope required)
+### 12.2 Azure role full-feature policy (preview with -WhatIf)
+Inline policy with all options; Scope required.
 
 ```json
 {
