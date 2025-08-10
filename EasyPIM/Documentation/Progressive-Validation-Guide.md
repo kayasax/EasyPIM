@@ -963,7 +963,7 @@ Troubleshooting:
 - Access denied: verify RBAC/Access Policy includes get secret.
 - Parse error: `az keyvault secret show --vault-name <kv-name> --name EasyPIM-Config --query value -o tsv | ConvertFrom-Json`.
 
-### Step 11b — (Optional, Destructive) Reconcile with initial mode
+### Step 12 — (Optional, Destructive) Reconcile with initial mode
 
 Use this ONLY when you intend to remove every assignment not explicitly declared (except `ProtectedUsers`). Always run a -WhatIf preview first.
 
@@ -982,7 +982,7 @@ WARNING:
 - Ensure `ProtectedUsers` contains all break‑glass / critical accounts.
 - Review `WouldRemove (delta)` counts from prior delta runs to understand impact.
 
-### Step 11c — Automatic Principal Validation (Safety Gate)
+### Step 13 — Automatic Principal Validation (Safety Gate)
 The orchestrator now ALWAYS validates all referenced principals (users, groups, service principals) and role‑assignable status for groups before any changes. If issues are detected it aborts before policies or assignments are processed.
 
 Benefits:
