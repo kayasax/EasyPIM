@@ -3,6 +3,26 @@
 
 A safe, step-by-step plan to exercise the orchestrator and policies in a real tenant. Each step includes a minimal JSON and a preview (-WhatIf) run before applying.
 
+## Table of Contents
+
+1. Step 0 — Backup current policies (once)
+2. Step 1 — Minimal config: ProtectedUsers only
+3. Step 2 — Entra role policy (inline)
+4. Step 3 — Entra role policy (template)
+5. Step 4 — Entra role policy (file/CSV, legacy import) [DEPRECATED]
+6. Step 5 — Entra role assignments (multiple assignments per role supported)
+7. Step 6 — Azure role policy (inline; Scope is required)
+8. Step 7 — Azure role policy (template)
+9. Step 8 — (Optional / Deprecated) Azure role policy via CSV file import
+10. Step 9 — Azure assignments (1 Eligible + 1 Active)
+11. Step 10 — Optional: Groups (Policies + Assignments)
+12. Step 11 — Apply changes (remove -WhatIf)
+  - Step 11c — Use the Same Config from Azure Key Vault (Optional)
+13. Step 12 — (Optional, Destructive) Reconcile with initial mode
+14. Step 13 — Automatic Principal Validation (Safety Gate)
+15. Step 14 — Comprehensive policy validation (all options)
+
+
 > Assignment Modes Snapshot
 > - `delta` (default): Add / update only. No deletions. Items that are NOT in your config remain and are reported as `WouldRemove (delta)` in summaries for awareness.
 > - `initial`: Full reconcile (destructive). Removes any assignment not declared (except those whose principalId is in `ProtectedUsers`). Always run first with `-WhatIf` and confirm `ProtectedUsers`.
@@ -1011,7 +1031,7 @@ If you genuinely need to ignore a transient missing ID, temporarily comment it o
 - See `EasyPIM-Orchestrator-Complete-Tutorial.md` for end-to-end context
 - See `Configuration-Schema.md` for the full schema and field definitions
 
-## Step 12 — Comprehensive policy validation (all options)
+## Step 14 — Comprehensive policy validation (all options)
 
 This step previews every main policy lever in a single run: durations, approvers, authentication context, and full notification matrix.
 
