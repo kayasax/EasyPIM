@@ -17,10 +17,10 @@ A safe, step-by-step plan to exercise the orchestrator and policies in a real te
 10. Step 9 — Azure assignments (1 Eligible + 1 Active)
 11. Step 10 — Optional: Groups (Policies + Assignments)
 12. Step 11 — Apply changes (remove -WhatIf)
-  - Step 11.1 — Use the Same Config from Azure Key Vault (Optional)
-13. Step 12 — (Optional, Destructive) Reconcile with initial mode
-14. Step 13 — Automatic Principal Validation (Safety Gate)
-15. Step 14 — Comprehensive policy validation (all options)
+13. Step 12 — Use the Same Config from Azure Key Vault (Optional)
+14. Step 13 — (Optional, Destructive) Reconcile with initial mode
+15. Step 14 — Automatic Principal Validation (Safety Gate)
+16. Step 15 — Comprehensive policy validation (all options)
 
 
 > Assignment Modes Snapshot
@@ -951,7 +951,7 @@ Apply assignments
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -SkipPolicies
 ```
 
-### Step 11.1 — Use the Same Config from Azure Key Vault (Optional)
+## Step 12 — Use the Same Config from Azure Key Vault (Optional)
 
 Centralize the orchestrator configuration by storing the exact JSON in an Azure Key Vault secret.
 
@@ -983,7 +983,7 @@ Troubleshooting:
 - Access denied: verify RBAC/Access Policy includes get secret.
 - Parse error: `az keyvault secret show --vault-name <kv-name> --name EasyPIM-Config --query value -o tsv | ConvertFrom-Json`.
 
-### Step 12 — (Optional, Destructive) Reconcile with initial mode
+### Step 13 — (Optional, Destructive) Reconcile with initial mode
 
 Use this ONLY when you intend to remove every assignment not explicitly declared (except `ProtectedUsers`). Always run a -WhatIf preview first.
 
@@ -1002,7 +1002,7 @@ WARNING:
 - Ensure `ProtectedUsers` contains all break‑glass / critical accounts.
 - Review `WouldRemove (delta)` counts from prior delta runs to understand impact.
 
-### Step 13 — Automatic Principal Validation (Safety Gate)
+### Step 14 — Automatic Principal Validation (Safety Gate)
 The orchestrator now ALWAYS validates all referenced principals (users, groups, service principals) and role‑assignable status for groups before any changes. If issues are detected it aborts before policies or assignments are processed.
 
 Benefits:
@@ -1031,7 +1031,7 @@ If you genuinely need to ignore a transient missing ID, temporarily comment it o
 - See `EasyPIM-Orchestrator-Complete-Tutorial.md` for end-to-end context
 - See `Configuration-Schema.md` for the full schema and field definitions
 
-## Step 14 — Comprehensive policy validation (all options)
+## Step 15 — Comprehensive policy validation (all options)
 
 This step previews every main policy lever in a single run: durations, approvers, authentication context, and full notification matrix.
 
