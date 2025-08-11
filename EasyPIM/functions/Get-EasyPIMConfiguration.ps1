@@ -66,6 +66,11 @@ function Get-EasyPIMConfiguration {
             $jsonString = Get-Content -Path $ConfigFilePath -Raw
         }
 
+        # Normalize: strip supported // and /* */ comments if helper exists
+        if (Get-Command -Name Remove-JsonComments -ErrorAction SilentlyContinue) {
+            $jsonString = $jsonString | Remove-JsonComments
+        }
+
         # Convert JSON to PSCustomObject and return it directly
         # The newer orchestrator functions work with PSCustomObjects
         $result = $jsonString | ConvertFrom-Json

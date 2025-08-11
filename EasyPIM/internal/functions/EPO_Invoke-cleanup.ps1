@@ -3,6 +3,8 @@ $script:keptCounter = 0
 $script:removeCounter = 0
 $script:skipCounter = 0
 $script:protectedCounter = 0
+$script:wouldRemoveCounter = 0
+$script:wouldRemoveDetails = @()
 
 # Define protected roles at script level
 $script:protectedRoles = @(
@@ -22,7 +24,7 @@ function Invoke-Cleanup {
         [hashtable]$ApiInfo,
         [array]$ProtectedUsers,
         [Parameter(Mandatory = $false)]
-        [ValidateSet('Initial', 'Delta')]
+        [ValidateSet('Initial', 'Delta', 'initial', 'delta')]
         [string]$Mode = 'Delta',
         [Parameter(Mandatory = $false)]
         [ref]$KeptCounter,
@@ -37,6 +39,8 @@ function Invoke-Cleanup {
     $script:removeCounter = 0
     $script:skipCounter = 0
     $script:protectedCounter = 0
+    $script:wouldRemoveCounter = 0
+    $script:wouldRemoveDetails = @()
 
     #region Prevent duplicate calls
     if (-not $script:ProcessedCleanups) { $script:ProcessedCleanups = @{} }
@@ -61,8 +65,10 @@ function Invoke-Cleanup {
     Write-Host "│ Processing $ResourceType $Mode Cleanup" -ForegroundColor Cyan
     Write-Host "└────────────────────────────────────────────────────┘`n" -ForegroundColor Cyan
 
-    # Display initial warning for Initial mode
-    if ($Mode -eq 'Initial') {
+    # Normalize mode casing
+    $normalizedMode = $Mode.ToLowerInvariant()
+    # Display initial warning for initial mode
+    if ($normalizedMode -eq 'initial') {
         Write-Host "`n┌────────────────────────────────────────────────────┐" -ForegroundColor Yellow
         Write-Host "│ ⚠️ CAUTION: POTENTIALLY DESTRUCTIVE OPERATION" -ForegroundColor Yellow
         Write-Host "└────────────────────────────────────────────────────┘`n" -ForegroundColor Yellow
@@ -76,10 +82,12 @@ function Invoke-Cleanup {
         Write-Host "---`n" -ForegroundColor Yellow
 
         # Global confirmation for Initial mode
-        $operationDescription = "Initial cleanup mode - remove ALL assignments not in configuration"
+    $operationDescription = "Initial cleanup mode - remove ALL assignments not in configuration"
         $operationTarget = "PIM assignments across Azure, Entra ID, and Groups"
 
-        if (-not $PSCmdlet.ShouldProcess($operationTarget, $operationDescription)) {
+        $initialProceed = $PSCmdlet.ShouldProcess($operationTarget, $operationDescription)
+        # In -WhatIf preview we want to continue to enumerate to surface WouldRemove items
+        if (-not $initialProceed -and -not $WhatIfPreference) {
             Write-Output "Operation cancelled by user."
             return
         }
@@ -320,7 +328,9 @@ function Invoke-Cleanup {
                     "Principal-$principalId"
                 }
 
-                Write-Host "`n  Processing: $principalName" -ForegroundColor White
+                # Include principalId (object ID) to facilitate quick copy/paste into ProtectedUsers list
+                $principalDisplay = if ($principalId) { "$principalName [$principalId]" } else { $principalName }
+                Write-Host "`n  Processing: $principalDisplay" -ForegroundColor White
                 Write-Host "    ├─ Role: $roleName" -ForegroundColor Gray
                 if ($scope) {
                     Write-Host "    ├─ Scope: $scope" -ForegroundColor Gray
@@ -419,37 +429,47 @@ function Invoke-Cleanup {
                     continue
                 }
 
-                # Remove assignment
-                Write-Host "    └─ 🗑️ Not in config - removing..." -ForegroundColor Magenta
+                # Delta mode: never remove, only mark as would remove
+                if ($normalizedMode -eq 'delta') {
+                    Write-Host "    └─ 🛈 Not in config - would remove in 'initial' mode (delta = add/update only)" -ForegroundColor DarkYellow
+                    $script:wouldRemoveCounter++
+                    $script:wouldRemoveDetails += [pscustomobject]@{ PrincipalId=$principalId; RoleName=$roleName; Scope=$scope; PrincipalName=$principalName; ResourceType=$ResourceType; Mode='delta' }
+                    continue
+                }
+
+                # Initial mode: If running with -WhatIf, treat as preview (do NOT call remove) and record would remove
+                if ($normalizedMode -eq 'initial' -and $WhatIfPreference) {
+                    Write-Host "    └─ 🗑️ Not in config - WOULD remove (initial preview)" -ForegroundColor Magenta
+                    $script:wouldRemoveCounter++
+                    $script:wouldRemoveDetails += [pscustomobject]@{ PrincipalId=$principalId; RoleName=$roleName; Scope=$scope; PrincipalName=$principalName; ResourceType=$ResourceType; Mode='initial-preview' }
+                    continue
+                }
+
+                # Initial mode actual removal (no -WhatIf)
+                Write-Host "    └─ 🗑️ Not in config - removing (initial mode)..." -ForegroundColor Magenta
                 if ($PSCmdlet.ShouldProcess("Remove $ResourceType assignment for $principalName with role '$roleName'")) {
                     try {
                         if ($config.GroupBased) {
-                            # For groups, we need to use groupId and memberType
                             & $config.RemoveCmd -TenantId $ApiInfo.TenantId -GroupId $assignment.id.Split('_')[0] -PrincipalId $principalId -type $roleName
                         }
                         else {
-                            # For Azure and Entra roles, use RoleName
                             $params = @{
                                 TenantId = $ApiInfo.TenantId
                                 PrincipalId = $principalId
                                 RoleName = $roleName
                             }
-                            if ($scope) {
-                                $params.Scope = $scope
-                            }
+                            if ($scope) { $params.Scope = $scope }
                             & $config.RemoveCmd @params
                         }
-
                         $script:removeCounter++
                         Write-Host "       ✓ Removed successfully" -ForegroundColor Green
                     }
                     catch {
                         Write-Host "       ❌ Failed to remove: $_" -ForegroundColor Red
                     }
-                }
-                else {
+                } else {
                     $script:skipCounter++
-                    Write-Host "       ⏭️ Removal skipped (WhatIf mode)" -ForegroundColor DarkYellow
+                    Write-Host "       ⏭️ Removal skipped (ShouldProcess declined)" -ForegroundColor DarkYellow
                 }
             }
         }
@@ -465,17 +485,23 @@ function Invoke-Cleanup {
     Write-Host "│ 🗑️ Removed:   $script:removeCounter" -ForegroundColor White
     Write-Host "│ ⏭️ Skipped:   $script:skipCounter" -ForegroundColor White
     Write-Host "│ 🛡️ Protected: $script:protectedCounter" -ForegroundColor White
+    if ($script:wouldRemoveCounter -gt 0) {
+        $label = if ($normalizedMode -eq 'delta') { 'WouldRemove (delta)' } elseif ($WhatIfPreference) { 'WouldRemove (initial preview)' } else { 'WouldRemove' }
+    Write-Host "│ 🛈 ${label}: $script:wouldRemoveCounter" -ForegroundColor White
+    }
     Write-Host "└────────────────────────────────────────────────────┘" -ForegroundColor Cyan
 
     if ($KeptCounter) { $KeptCounter.Value = $script:keptCounter }
     if ($RemoveCounter) { $RemoveCounter.Value = $script:removeCounter }
     if ($SkipCounter) { $SkipCounter.Value = $script:skipCounter }
 
-    return @{
-        ResourceType = $ResourceType;
-        KeptCount = $script:keptCounter;
-        RemovedCount = $script:removeCounter;
-        SkippedCount = $script:skipCounter;
+    return [pscustomobject]@{
+        ResourceType = $ResourceType
+        KeptCount = $script:keptCounter
+        RemovedCount = $script:removeCounter
+        SkippedCount = $script:skipCounter
         ProtectedCount = $script:protectedCounter
+        WouldRemoveCount = $script:wouldRemoveCounter
+        WouldRemoveDetails = $script:wouldRemoveDetails
     }
 }

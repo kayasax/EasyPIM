@@ -11,6 +11,23 @@ Packed with more than 30 cmdlets, EasyPIM leverages the ARM and Graph APIs compl
 
 Quick start: Progressive validation runbook → `EasyPIM/Documentation/Progressive-Validation-Guide.md`
 
+### Orchestrator Modes (Assignments)
+`delta` (default) now performs only additive / update operations for assignments (no removals). Any existing assignments not represented in your configuration are reported in the summary as `WouldRemove (delta)` but are left intact. Use this mode for safe iterative rollout.
+
+`initial` performs full reconciliation: assignments not present in the configuration (and not listed under `ProtectedUsers`) are removed. Always review a `-WhatIf` run first and ensure `ProtectedUsers` is populated before using this mode.
+
+Policies are always applied (or validated with `-WhatIf`) regardless of mode; modes affect assignment pruning only.
+
+NEW: Preview removal export
+- Use `-WouldRemoveExportPath <folder-or-file>` with `-WhatIf` to generate a JSON (or CSV if the path ends in .csv) containing every assignment that would be removed in an `initial` reconcile. The file is written even during preview for audit and peer review.
+```pwsh
+Invoke-EasyPIMOrchestrator -ConfigFilePath .\pim-config.json -TenantId <tenant> -SubscriptionId <sub> -Mode initial -WhatIf -WouldRemoveExportPath .\LOGS
+```
+Result example: `LOGS/EasyPIM-WouldRemove-20250811T134338.json`
+
+### Automatic principal validation
+The orchestrator now ALWAYS validates that every `principalId` / `groupId` exists (and that groups used for Entra role assignments are role‑assignable) before doing any policy or assignment work. If any invalid or non role‑assignable objects are found the run aborts with a summary so you can correct the IDs.
+
 ## Key features
 :boom: Support editing multiple roles at once
 :boom: Copy settings from one role to another

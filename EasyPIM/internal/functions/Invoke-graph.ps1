@@ -80,8 +80,13 @@ function invoke-graph {
 
         Write-Verbose "uri = $uri"
 
-        if ( $null -eq (get-mgcontext) -or ( (get-mgcontext).TenantId -ne $script:tenantID ) ) {
-            Write-Verbose ">> Connecting to Azure with tenantID $script:tenantID"
+        # Resolve tenantId from multiple potential scopes (module script scope, global, environment) to support external validator scripts
+        $tenantPref = $script:tenantID
+        if(-not $tenantPref -and $global:tenantID){ $tenantPref = $global:tenantID }
+        if(-not $tenantPref -and $env:TENANTID){ $tenantPref = $env:TENANTID }
+        if(-not $tenantPref){ Write-Verbose "No tenantID resolved; proceeding will likely fail authentication" }
+        if ( $null -eq (get-mgcontext) -or ( (get-mgcontext).TenantId -ne $tenantPref ) ) {
+            Write-Verbose ">> Connecting to Azure with tenantID $tenantPref"
             $scopes = @(
                 "RoleManagementPolicy.ReadWrite.Directory",
                 "PrivilegedAccess.ReadWrite.AzureAD",
@@ -93,7 +98,7 @@ function invoke-graph {
                 "AuditLog.Read.All",
                 "Directory.Read.All")
 
-            Connect-MgGraph -Tenant $script:tenantID -Scopes $scopes -NoWelcome
+            if($tenantPref){ Connect-MgGraph -Tenant $tenantPref -Scopes $scopes -NoWelcome } else { Connect-MgGraph -Scopes $scopes -NoWelcome }
         }
 
         # Handle pagination if needed (for GET requests only)
@@ -106,23 +111,44 @@ function invoke-graph {
                 Write-Verbose "Fetching data from: $currentUri"
 
                 try {
-                    $response = Invoke-MgGraphRequest -Uri $currentUri -Method $Method
+                    $response = Invoke-MgGraphRequest -Uri $currentUri -Method $Method -ErrorAction Stop
                 }
                 catch {
-                    # Handle Graph API errors properly
-                    if ($_.Exception.Response.StatusCode) {
-                        $statusCode = $_.Exception.Response.StatusCode
-                        $errorMessage = $_.Exception.Message
-                        if (Get-Command log -ErrorAction SilentlyContinue) {
-                            log "Graph API error: $statusCode - $errorMessage"
-                        } else {
-                            Write-Verbose "Graph API error: $statusCode - $errorMessage"
+                    $statusCode = $null; $errorMessage = $_.Exception.Message; $detailReason = $null; $detailCode = $null; $rawBody = $null; $reqId=$null; $clientReqId=$null
+                    try { $statusCode = $_.Exception.Response.StatusCode } catch {}
+                    try {
+                        if ($_.Exception.Response -and $_.Exception.Response.Headers) {
+                            $reqId = $_.Exception.Response.Headers["request-id"]
+                            if (-not $reqId) { $reqId = $_.Exception.Response.Headers["x-ms-request-id"] }
+                            $clientReqId = $_.Exception.Response.Headers["client-request-id"]
                         }
-                        throw "Graph API request failed: $statusCode - $errorMessage"
+                    } catch {}
+                    # Try read response body (GraphServiceException sometimes exposes Content stream)
+                    try {
+                        if ($_.Exception.Response -and $_.Exception.Response.Content) {
+                            $stream = $_.Exception.Response.Content.ReadAsStream()
+                            if ($stream.CanSeek) { $stream.Position = 0 }
+                            $reader = New-Object System.IO.StreamReader($stream)
+                            $rawBody = $reader.ReadToEnd()
+                        }
+                    } catch {}
+                    if (-not $rawBody) { try { $rawBody = $_.ErrorDetails.Message } catch {} }
+                    if ($rawBody -and $script:EasyPIM_FullGraphError) {
+                        Write-Verbose ("Full Graph error body: {0}" -f ($rawBody.Length -gt 4000 ? ($rawBody.Substring(0,4000) + '…') : $rawBody))
                     }
-                    else {
-                        throw $_
+                    if ($rawBody) {
+                        try {
+                            $parsed = $rawBody | ConvertFrom-Json -ErrorAction SilentlyContinue
+                            if ($parsed.error) { $detailReason = $parsed.error.message; $detailCode = $parsed.error.code }
+                        } catch {}
                     }
+                    $composed = "Graph API request failed: $statusCode - $errorMessage";
+                    if ($detailCode -or $detailReason) { $composed += " | code=$detailCode reason=$detailReason" }
+                    elseif ($rawBody) { $snippet = ($rawBody -replace '\s+',' '); if ($snippet.Length -gt 180) { $snippet = $snippet.Substring(0,180) + '…' }; $composed += " | raw=$snippet" }
+                    if ($reqId) { $composed += " | requestId=$reqId" }
+                    if ($clientReqId) { $composed += " | clientRequestId=$clientReqId" }
+                    if (Get-Command log -ErrorAction SilentlyContinue) { log $composed } else { Write-Verbose $composed }
+                    throw $composed
                 }
 
                 # Check for error response (when using SkipHttpErrorCheck, errors come as response objects)
@@ -170,10 +196,10 @@ function invoke-graph {
             # For non-GET methods or when pagination is disabled
             try {
                 if ( $body -ne "") {
-                    $response = Invoke-MgGraphRequest -Uri "$uri" -Method $Method -Body $body
+                    $response = Invoke-MgGraphRequest -Uri "$uri" -Method $Method -Body $body -ErrorAction Stop
                 }
                 else {
-                    $response = Invoke-MgGraphRequest -Uri "$uri" -Method $Method
+                    $response = Invoke-MgGraphRequest -Uri "$uri" -Method $Method -ErrorAction Stop
                 }
 
                 # Check for error response
@@ -191,20 +217,41 @@ function invoke-graph {
                 return $response
             }
             catch {
-                # Handle Graph API errors properly
-                if ($_.Exception.Response.StatusCode) {
-                    $statusCode = $_.Exception.Response.StatusCode
-                    $errorMessage = $_.Exception.Message
-                    if (Get-Command log -ErrorAction SilentlyContinue) {
-                        log "Graph API error: $statusCode - $errorMessage"
-                    } else {
-                        Write-Verbose "Graph API error: $statusCode - $errorMessage"
+                $statusCode = $null; $errorMessage = $_.Exception.Message; $detailReason = $null; $detailCode = $null; $rawBody = $null; $reqId=$null; $clientReqId=$null
+                try { $statusCode = $_.Exception.Response.StatusCode } catch {}
+                try {
+                    if ($_.Exception.Response -and $_.Exception.Response.Headers) {
+                        $reqId = $_.Exception.Response.Headers["request-id"]
+                        if (-not $reqId) { $reqId = $_.Exception.Response.Headers["x-ms-request-id"] }
+                        $clientReqId = $_.Exception.Response.Headers["client-request-id"]
                     }
-                    throw "Graph API request failed: $statusCode - $errorMessage"
+                } catch {}
+                # Try read response body for detailed Graph error
+                try {
+                    if ($_.Exception.Response -and $_.Exception.Response.Content) {
+                        $stream = $_.Exception.Response.Content.ReadAsStream(); if ($stream.CanSeek) { $stream.Position = 0 }
+                        $reader = New-Object System.IO.StreamReader($stream)
+                        $rawBody = $reader.ReadToEnd()
+                    }
+                } catch {}
+                if (-not $rawBody) { try { $rawBody = $_.ErrorDetails.Message } catch {} }
+                if ($rawBody -and $script:EasyPIM_FullGraphError) {
+                    Write-Verbose ("Full Graph error body: {0}" -f ($rawBody.Length -gt 4000 ? ($rawBody.Substring(0,4000) + '…') : $rawBody))
                 }
-                else {
-                    throw $_
+                if ($rawBody) {
+                    try {
+                        $parsed = $rawBody | ConvertFrom-Json -ErrorAction SilentlyContinue
+                        if ($parsed.error) { $detailReason = $parsed.error.message; $detailCode = $parsed.error.code }
+                    } catch {}
                 }
+                $composed = "Graph API request failed: $statusCode - $errorMessage";
+                if ($detailCode -or $detailReason) { $composed += " | code=$detailCode reason=$detailReason" }
+                elseif ($rawBody) { $snippet = ($rawBody -replace '\s+',' '); if ($snippet.Length -gt 180) { $snippet = $snippet.Substring(0,180) + '…' }; $composed += " | raw=$snippet" }
+                if ($reqId) { $composed += " | requestId=$reqId" }
+                if ($clientReqId) { $composed += " | clientRequestId=$clientReqId" }
+                if ($Method -ne 'GET' -and $body) { $b = ($body -replace '\s+',' '); if ($b.Length -gt 160) { $b = $b.Substring(0,160) + '…' }; $composed += " | reqBody=$b" }
+                if (Get-Command log -ErrorAction SilentlyContinue) { log $composed } else { Write-Verbose $composed }
+                throw $composed
             }
         }
     }

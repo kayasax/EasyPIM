@@ -27,6 +27,31 @@
 
     # Cache for principalId -> display name to avoid repeated lookups
     $principalNameCache = @{}
+    # Cache for groupId -> display name (for Group Role assignments / group scope display)
+    $groupNameCache = @{}
+
+    # Pre-populate group display names if this is a group role assignment batch
+    if ($ResourceType -like "Group Role*" -and $Assignments -and $Assignments.Count -gt 0) {
+        $uniqueGroupIds = $Assignments | Where-Object { $_.PSObject.Properties.Name -contains 'GroupId' -and $_.GroupId } | Select-Object -ExpandProperty GroupId -Unique
+        foreach ($gid in $uniqueGroupIds) {
+            if (-not $groupNameCache.ContainsKey($gid)) {
+                $display = $null
+                try {
+                    # Prefer direct group lookup (fewer permissions than generic directoryObjects if already consented)
+                    $g = Get-MgGroup -GroupId $gid -ErrorAction SilentlyContinue
+                    if ($g -and $g.DisplayName) { $display = $g.DisplayName }
+                    if (-not $display) {
+                        $dir = Invoke-Graph -Endpoint "directoryObjects/$gid" -Method GET -ErrorAction SilentlyContinue
+                        if ($dir -and $dir.PSObject.Properties.Name -contains 'displayName' -and $dir.displayName) { $display = $dir.displayName }
+                    }
+                } catch {
+                    Write-Verbose "Group display name lookup failed for ${gid}: $($_.Exception.Message)"
+                }
+                if (-not $display) { $display = $gid } # Fallback to GUID
+                $groupNameCache[$gid] = $display
+            }
+        }
+    }
 
     # Get existing assignments
     try {
@@ -101,7 +126,8 @@
                 $scopeDisplay = " on scope $($assignment.Scope)"
             }
             elseif ($ResourceType -like "Group*" -and $assignment.GroupId) {
-                $scopeDisplay = " in group $($assignment.GroupId)"
+                $gDisp = if ($groupNameCache.ContainsKey($assignment.GroupId) -and $groupNameCache[$assignment.GroupId] -ne $assignment.GroupId) { " ($($groupNameCache[$assignment.GroupId]))" } else { "" }
+                $scopeDisplay = " in group $($assignment.GroupId)$gDisp"
             }
             # For Entra ID roles, no scope is needed
 
@@ -226,7 +252,8 @@
             " on scope $($assignment.Scope)"
         }
         elseif ($ResourceType -like "Group*" -and $assignment.GroupId) {
-            " in group $($assignment.GroupId)"
+            $gDisp = if ($groupNameCache.ContainsKey($assignment.GroupId) -and $groupNameCache[$assignment.GroupId] -ne $assignment.GroupId) { " ($($groupNameCache[$assignment.GroupId]))" } else { "" }
+            " in group $($assignment.GroupId)$gDisp"
         }
         else {
             ""
@@ -254,28 +281,42 @@
             foreach ($existing in $existingAssignments) {
                 Write-Verbose "Comparing with existing: $($existing | ConvertTo-Json -Depth 4 -ErrorAction SilentlyContinue)"
 
+                # Normalize existing principalId (support multiple property casings / shapes)
+                $existingPrincipalId = $null
+                foreach ($p in 'PrincipalId','principalId','principalid','principal.id') {
+                    if ($p -eq 'principal.id' -and $existing.PSObject.Properties.Name -contains 'principal' -and $existing.principal -and $existing.principal.id) { $existingPrincipalId = $existing.principal.id; break }
+                    elseif ($existing.PSObject.Properties.Name -contains $p -and $existing.$p) { $existingPrincipalId = $existing.$p; break }
+                }
+                # Normalize existing role name
+                $existingRoleName = $null
+                foreach ($r in 'RoleName','rolename','roleName','Role','role','Type','type','memberType','RoleDefinitionDisplayName') {
+                    if ($existing.PSObject.Properties.Name -contains $r -and $existing.$r) { $existingRoleName = $existing.$r; break }
+                }
+
+                if (-not $existingPrincipalId -or -not $existingRoleName) { continue }
+
                 if ($ResourceType -like "Group Role*") {
                     if ($existingAssignments.Count -gt 0 -and $existing -eq $existingAssignments[0]) {
                         Write-Verbose "First Group Role existing assignment structure:"
                         Write-Verbose ($existing | ConvertTo-Json -Depth 10 -ErrorAction SilentlyContinue)
                     }
 
-                    $principalMatched = ($existing.PrincipalId -eq $assignment.PrincipalId -or $existing.principalid -eq $assignment.PrincipalId)
+                    $principalMatched = ($existingPrincipalId -eq $assignment.PrincipalId)
                     if ($principalMatched) { Write-Verbose "Principal ID matched in group assignment" }
 
-                    $roleMatched = ($existing.RoleName -ieq $roleName -or $existing.Type -ieq $roleName -or $existing.memberType -ieq $roleName)
+                    $roleMatched = ($existingRoleName -ieq $roleName)
                     if ($roleMatched) { Write-Verbose "Role/type matched in group assignment" }
 
                     if ($principalMatched -and $roleMatched) {
                         $found = 1
                         $matchReason = if ($null -ne $existing.memberType) { "memberType='$($existing.memberType)'" } elseif ($null -ne $existing.Type) { "type='$($existing.Type)'" } else { "role matched" }
-                        $matchInfo = "principalId='$($existing.principalId)' and $matchReason"
+                        $matchInfo = "principalId='$existingPrincipalId' and $matchReason"
                         Write-Host "Match found for Group Role assignment: $matchInfo"
                         break
                     }
                 }
                 else {
-                    if (($existing.PrincipalId -eq $assignment.PrincipalId) -and ($existing.RoleName -ieq $roleName)) {
+                    if ($existingPrincipalId -eq $assignment.PrincipalId -and $existingRoleName -ieq $roleName) {
                         if ($assignment.PSObject.Properties.Name -contains 'Scope' -or $assignment.PSObject.Properties.Name -contains 'scope') {
                             $targetScope = if ($assignment.PSObject.Properties.Name -contains 'Scope') { $assignment.Scope } else { $assignment.scope }
                             $existingScope = $null
@@ -290,8 +331,8 @@
         }
 
         if ($found -eq 0) {
-            # Count as planned creation up-front (even if WhatIf prevents execution)
-            $plannedCreateCounter++
+            # Only count as planned when running in WhatIf (simulation) mode
+            if ($WhatIfPreference) { $plannedCreateCounter++ }
             # Create a SINGLE parameters hashtable - this is critical
             $params = @{}
 
@@ -379,7 +420,8 @@
                 $assignmentDetails += "Scope: $($assignment.Scope)"
             }
             elseif ($ResourceType -like "Group*") {
-                $assignmentDetails += "Group: $($assignment.GroupId)"
+                $gDisp = if ($groupNameCache.ContainsKey($assignment.GroupId) -and $groupNameCache[$assignment.GroupId] -ne $assignment.GroupId) { " ($($groupNameCache[$assignment.GroupId]))" } else { "" }
+                $assignmentDetails += "Group: $($assignment.GroupId)$gDisp"
             }
 
             $assignmentDetails += "Assignment Type: $(if ($ResourceType -like '*eligible*') { 'Eligible' } else { 'Active' })"
@@ -484,12 +526,13 @@
     Write-Host "└────────────────────────────────────────────────────┘"
 
     # Return the counters in a structured format without writing the summary (it will be handled by EPO_New-Assignment.ps1)
-    return @{
+    $ret = @{
         Created = $createCounter
         Skipped = $skipCounter
-    Failed  = $errorCounter
-    PlannedCreated = $plannedCreateCounter
+        Failed  = $errorCounter
     }
+    if ($WhatIfPreference -and $plannedCreateCounter -gt 0) { $ret.PlannedCreated = $plannedCreateCounter }
+    return $ret
 }
 
 # Create an alias for backward compatibility

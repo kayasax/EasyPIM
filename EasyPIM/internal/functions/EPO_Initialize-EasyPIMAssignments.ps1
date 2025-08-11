@@ -97,11 +97,19 @@
             Write-Verbose "🔄 Expanded $($Config.Assignments.EntraRoles.Count) Entra role configs from Assignments block into $($processedConfig.EntraIDRoles.Count) eligible and $($processedConfig.EntraIDRolesActive.Count) active assignments"
         }
 
-        # Process Assignments.GroupRoles if present
+        # Process Assignments.GroupRoles (preferred) OR Assignments.Groups (alias) if present
+        $groupAssignmentsBlock = $null
         if ($Config.Assignments.PSObject.Properties['GroupRoles'] -and $Config.Assignments.GroupRoles) {
+            $groupAssignmentsBlock = $Config.Assignments.GroupRoles
+        } elseif ($Config.Assignments.PSObject.Properties['Groups'] -and $Config.Assignments.Groups) {
+            Write-Verbose "⚙️ Using Assignments.Groups (alias) for group role assignments"
+            $groupAssignmentsBlock = $Config.Assignments.Groups
+        }
+
+        if ($groupAssignmentsBlock) {
             $expandedGroupRoles = @()
             $expandedGroupRolesActive = @()
-            foreach ($roleAssignment in $Config.Assignments.GroupRoles) {
+            foreach ($roleAssignment in $groupAssignmentsBlock) {
                 foreach ($assignment in $roleAssignment.assignments) {
                     # Convert new format to old format for compatibility
                     $expandedAssignment = [PSCustomObject]@{
@@ -130,7 +138,8 @@
             if ($expandedGroupRolesActive.Count -gt 0) {
                 $processedConfig.GroupRolesActive = $expandedGroupRolesActive
             }
-            Write-Verbose "🔄 Expanded $($Config.Assignments.GroupRoles.Count) Group role configs from Assignments block into $($processedConfig.GroupRoles.Count) eligible and $($processedConfig.GroupRolesActive.Count) active assignments"
+            $grpCount = $groupAssignmentsBlock.Count
+            Write-Verbose "🔄 Expanded $grpCount group role configs from Assignments block into $($processedConfig.GroupRoles.Count) eligible and $($processedConfig.GroupRolesActive.Count) active assignments"
         }
     }
 

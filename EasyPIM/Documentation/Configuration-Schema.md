@@ -10,7 +10,7 @@ This document defines the complete schema for EasyPIM configuration files, inclu
   "PolicyTemplates": { /* Policy Templates Object */ },
   "EntraRoles": { /* Entra Roles Configuration */ },
   "AzureRoles": { /* Azure Roles Configuration */ },
-  "Groups": { /* Groups Configuration */ },
+  "GroupRoles": { /* Group Role Policies Configuration */ },
   "Assignments": { /* Assignments Configuration */ }
 }
 ```
@@ -133,27 +133,42 @@ Policy templates allow reusable policy configurations across multiple roles.
 }
 ```
 
-## Groups Configuration
+## Group Role Policies Configuration
 
-### Policy Configuration
+The preferred section name is `GroupRoles`. Each key under `Policies` can be either:
+- A GUID (interpreted as `GroupId` directly), or
+- A non-GUID string (interpreted as `GroupName`, resolved to `GroupId` at runtime).
+
+Policies are defined per group role (`Member` / `Owner`). You can mix inline settings and template references.
+
+> Recommendation: Use readable names only during early validation. Switch to stable GUIDs for production to avoid ambiguity if a display name is duplicated or changed.
+
+### Policy Configuration (per group)
 ```json
 {
-  "Groups": {
+  "GroupRoles": {
     "Policies": {
-      "GroupId": {
-        "RoleName": "string (required - role within the group)",
-        // Option 1: Use Template
-        "Template": "string (template name from PolicyTemplates)",
-
-        // Option 2: Inline Policy
-        "ActivationDuration": "string",
-        "ActivationRequirement": "string",
-        // ... other policy properties
+      "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee": {
+        "Member": {
+          "Template": "Standard"
+        },
+        "Owner": {
+          "ActivationDuration": "PT4H",
+          "ActivationRequirement": "Justification"
+        }
+      },
+      "MyReadableGroupName": {
+        "Member": {
+          "ActivationDuration": "PT2H",
+          "ActivationRequirement": "MultiFactorAuthentication,Justification"
+        }
       }
     }
   }
 }
 ```
+
+Inline role policy objects accept the same properties as templates (ActivationDuration, ActivationRequirement, ApprovalRequired, notification blocks, etc.).
 
 ## Assignments Configuration
 

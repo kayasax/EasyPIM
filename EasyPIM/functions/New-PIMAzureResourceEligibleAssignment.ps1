@@ -124,10 +124,17 @@ function New-PIMAzureResourceEligibleAssignment {
             }
         }
 
-        # if Duration is not provided we will take the maxium value from the role setting
+        # Duration handling with normalization & policy validation
         if (!($PSBoundParameters.Keys.Contains('duration'))) {
-            $duration = $config.MaximumActiveAssignmentDuration
+            $duration = $config.MaximumEligibleAssignmentDuration
+        } else {
+            $normalized = Normalize-IsoDuration -Duration $duration
+            $duration = $normalized
+            try { $reqTs = [System.Xml.XmlConvert]::ToTimeSpan($duration) } catch { throw "Duration '$duration' cannot be parsed: $($_.Exception.Message)" }
+            $policyTs = $null; if($config.MaximumEligibleAssignmentDuration){ try{ $policyTs=[System.Xml.XmlConvert]::ToTimeSpan($config.MaximumEligibleAssignmentDuration) } catch {} }
+            if($policyTs -and $reqTs -gt $policyTs -and -not $permanent){ throw "Requested eligible assignment duration '$duration' exceeds policy maximum '$($config.MaximumEligibleAssignmentDuration)' for role $rolename." }
         }
+        if($duration -and $duration -match '^P[0-9]+[HMS]$'){ $duration = Normalize-IsoDuration -Duration $duration }
         write-verbose "assignement duration will be : $duration"
 
         if (!($PSBoundParameters.Keys.Contains('justification'))) {

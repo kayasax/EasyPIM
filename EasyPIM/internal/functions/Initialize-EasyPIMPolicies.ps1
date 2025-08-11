@@ -205,28 +205,55 @@ function Initialize-EasyPIMPolicies {
             Write-Verbose "Processing GroupRoles.Policies section"
             $processedConfig.GroupPolicies = @()
 
-            foreach ($groupName in $Config.GroupRoles.Policies.PSObject.Properties.Name) {
-                $policyContent = $Config.GroupRoles.Policies.$groupName
+            foreach ($groupKey in $Config.GroupRoles.Policies.PSObject.Properties.Name) {
+                $groupNode = $Config.GroupRoles.Policies.$groupKey
 
-                # Determine if this is a template reference or inline policy
-                if ($policyContent.PSObject.Properties['Template'] -and $policyContent.Template) {
-                    # Template reference
-                    $policyDefinition = [PSCustomObject]@{
-                        GroupName = $groupName
-                        PolicySource = "template"
-                        Template = $policyContent.Template
-                    }
-                } else {
-                    # Inline policy - treat the content directly as the policy
-                    $policyDefinition = [PSCustomObject]@{
-                        GroupName = $groupName
-                        PolicySource = "inline"
-                        Policy = $policyContent
+                $isGuid = $false
+                if ($groupKey -match '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') { $isGuid = $true }
+
+                foreach ($roleProp in $groupNode.PSObject.Properties) {
+                    $roleName = $roleProp.Name
+                    if ($roleName -in @('Member','Owner')) {
+                        $roleContent = $roleProp.Value
+
+                        if ($roleContent.PSObject.Properties['Template'] -and $roleContent.Template) {
+                            if ($isGuid) {
+                                $policyDefinition = [PSCustomObject]@{
+                                    PolicySource = 'template'
+                                    Template     = $roleContent.Template
+                                    RoleName     = $roleName
+                                    GroupId      = $groupKey
+                                }
+                            } else {
+                                $policyDefinition = [PSCustomObject]@{
+                                    PolicySource = 'template'
+                                    Template     = $roleContent.Template
+                                    RoleName     = $roleName
+                                    GroupName    = $groupKey
+                                }
+                            }
+                        } else {
+                            if ($isGuid) {
+                                $policyDefinition = [PSCustomObject]@{
+                                    PolicySource = 'inline'
+                                    Policy       = $roleContent
+                                    RoleName     = $roleName
+                                    GroupId      = $groupKey
+                                }
+                            } else {
+                                $policyDefinition = [PSCustomObject]@{
+                                    PolicySource = 'inline'
+                                    Policy       = $roleContent
+                                    RoleName     = $roleName
+                                    GroupName    = $groupKey
+                                }
+                            }
+                        }
+
+                        $processedPolicy = Resolve-PolicyConfiguration -PolicyDefinition $policyDefinition -Templates $policyTemplates -PolicyType 'Group'
+                        $processedConfig.GroupPolicies += $processedPolicy
                     }
                 }
-
-                $processedPolicy = Resolve-PolicyConfiguration -PolicyDefinition $policyDefinition -Templates $policyTemplates -PolicyType "Group"
-                $processedConfig.GroupPolicies += $processedPolicy
             }
 
             Write-Verbose "Processed $($processedConfig.GroupPolicies.Count) Group policies from GroupRoles.Policies"
@@ -309,8 +336,8 @@ function Resolve-PolicyConfiguration {
             }
         }
         "Group" {
-            if (-not $PolicyDefinition.GroupId) {
-                throw "Group policy missing required property: GroupId"
+            if (-not $PolicyDefinition.GroupId -and -not $PolicyDefinition.GroupName) {
+                throw "Group policy missing required property: GroupId or GroupName"
             }
             if (-not $PolicyDefinition.RoleName) {
                 throw "Group policy missing required property: RoleName"

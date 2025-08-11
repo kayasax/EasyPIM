@@ -21,6 +21,7 @@ A safe, step-by-step plan to exercise the orchestrator and policies in a real te
 14. Step 13 — (Optional, Destructive) Reconcile with initial mode
 15. Step 14 — Automatic Principal Validation (Safety Gate)
 16. Step 15 — Comprehensive policy validation (all options)
+17. Step 16 — (Optional) CI/CD automation (GitHub Actions + Key Vault)
 
 
 > Assignment Modes Snapshot
@@ -983,7 +984,7 @@ Troubleshooting:
 - Access denied: verify RBAC/Access Policy includes get secret.
 - Parse error: `az keyvault secret show --vault-name <kv-name> --name EasyPIM-Config --query value -o tsv | ConvertFrom-Json`.
 
-### Step 13 — (Optional, Destructive) Reconcile with initial mode
+## Step 13 — (Optional, Destructive) Reconcile with initial mode
 
 Use this ONLY when you intend to remove every assignment not explicitly declared (except `ProtectedUsers`). Always run a -WhatIf preview first.
 
@@ -992,17 +993,121 @@ Preview destructive reconcile:
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -Mode initial -WhatIf -SkipPolicies
 ```
 
-Execute (destructive):
+Execute (destructive) ONLY after validating preview:
 ```powershell
-Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -Mode initial -SkipPolicies -Confirm:$false
+Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -Mode initial -SkipPolicies
+```
+<div style="background:#ffecec;border:2px solid #ff4d4f;padding:16px;border-radius:6px;">
+  <strong style="color:#d8000c;font-size:1.05em;">⚠️ DESTRUCTIVE MODE WARNING (Step 13)</strong>
+  <ul style="margin-top:8px;">
+    <li><strong>All assignments NOT declared in your config will be REMOVED</strong> (except principals listed under <code>ProtectedUsers</code>).</li>
+    <li>Verify <code>ProtectedUsers</code> includes every break‑glass / critical account before proceeding.</li>
+    <li>Review prior delta runs: investigate any <code>WouldRemove (delta)</code> items you are not expecting.</li>
+  </ul>
+  <p style="margin-top:8px;">
+    <em>Best practice:</em> Run at least once with <code>-WhatIf</code>, capture the summary for audit, and (optionally) perform a fresh backup (Step 0) immediately before executing the destructive apply.
+  </p>
+</div>
+
+<!-- Fallback (plain markdown) if HTML rendering is stripped:
+**DESTRUCTIVE MODE WARNING (Step 13)**
+* All assignments NOT declared in your config will be REMOVED (except ProtectedUsers).
+* Verify ProtectedUsers contains every break-glass / critical account.
+* Review prior delta runs for any unexpected `WouldRemove (delta)` entries.
+* Run once with -WhatIf and take a backup first.
+-->
+
+### What WOULD Be Removed? (-Mode initial -WhatIf example)
+
+When you run an initial (destructive) reconcile with `-WhatIf`, the orchestrator now enumerates everything it **would** delete so you can validate safely before executing. Below is an illustrative sample output (truncated) from a preview run:
+
+```text
+───────────────────────────────────────────────────────────────────────────────┐
+│ CLEANUP OPERATIONS
+├───────────────────────────────────────────────────────────────────────────────┤
+│ ✅ Kept    : 4
+│ 🗑️ Removed : 0
+│ 🛈 WouldRemove: 10
+│    - AcrPull  /subscriptions/<sub-guid> f53bf02e-c703-40ab-b5cb-af0d546bc2c4
+│    - Key Vault Secrets Officer /subscriptions/<sub-guid>/resourceGroups/RG-PIMTEST/providers/Microsoft.KeyVault/vaults/KVPIM 9f2aacfc-8c80-41a7-ba07-121e0cb29757
+│    - Storage Blob Data Owner /subscriptions/<sub-guid>/resourceGroups/cloud-shell-storage-westeurope/providers/Microsoft.Storage/storageAccounts/devsample1 e54e29a4-5c6f-47a6-a5d7-7d555f77fb41
+│    - Storage Blob Data Owner /subscriptions/<sub-guid>/resourceGroups/cloud-shell-storage-westeurope/providers/Microsoft.Storage/storageAccounts/devsample2 d2a829da-a0aa-4dab-9cee-a468285d101b
+│    - Storage Queue Data Contributor /subscriptions/<sub-guid>/resourceGroups/cloud-shell-storage-westeurope/providers/Microsoft.Storage/storageAccounts/devsample1 e54e29a4-5c6f-47a6-a5d7-7d555f77fb41
+│    ... (+5 more)
+│ ⏭️ Skipped : 8
+│ 🛡️ Protected: 10
+└───────────────────────────────────────────────────────────────────────────────┘
 ```
 
-WARNING:
-- This will remove any assignment not in your config.
-- Ensure `ProtectedUsers` contains all break‑glass / critical accounts.
-- Review `WouldRemove (delta)` counts from prior delta runs to understand impact.
+### Export the Full WouldRemove List (Audit / Peer Review)
 
-### Step 14 — Automatic Principal Validation (Safety Gate)
+You can export the complete set of preview removals for offline review or change‑control attachment using the new `-WouldRemoveExportPath` parameter.
+
+Scenarios:
+- Attach the JSON to a CAB / change ticket
+- Diff two consecutive preview runs
+- Manually whitelist unexpected principals before executing destructive mode
+
+Usage (directory path – auto‑generates timestamped filename):
+```powershell
+Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -Mode initial -WhatIf -WouldRemoveExportPath C:\Logs\PIMPreview
+```
+Result (example):
+```
+📤 Exported WouldRemove list (10 item(s)) to: C:\Logs\PIMPreview\EasyPIM-WouldRemove-20250811T134338.json
+```
+
+Usage (explicit file path – extension controls format):
+```powershell
+Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -Mode initial -WhatIf -WouldRemoveExportPath C:\Logs\preview.csv
+```
+- If the path ends with `.csv` a CSV is produced; any other (or no) extension defaults to JSON.
+- File is written even under `-WhatIf` (safe preview) so you always have an artifact.
+- An empty export (`[]` or headers only) means no deletions are projected.
+
+Sample JSON entry:
+```json
+{
+  "PrincipalId": "f53bf02e-c703-40ab-b5cb-af0d546bc2c4",
+  "PrincipalName": "Adam Warlock",
+  "RoleName": "AcrPull",
+  "Scope": "/subscriptions/<sub-guid>",
+  "ResourceType": "Azure Role eligible",
+  "Mode": "initial-preview"
+}
+```
+
+Recommended review checklist before executing destructive apply:
+1. Confirm every removal candidate is truly unintended or should be purged.
+2. Verify no break‑glass / emergency accounts appear (if so add them to `ProtectedUsers`).
+3. Re‑run preview until the export list matches expected deltas.
+4. (Optional) Commit the export file to a secure audit repository.
+
+Then proceed without `-WhatIf` when satisfied.
+
+Legend / interpretation:
+
+* Kept – Assignments declared in config (no action needed)
+* Removed – Assignments actually removed in a non-`-WhatIf` destructive run (always 0 during preview)
+* WouldRemove – Assignments NOT in config that would be deleted if you re-run without `-WhatIf`
+  * The list shows the first few (role name, scope, principal objectId). Full list retained in memory.
+* Skipped – Items intentionally ignored (e.g., unsupported type, already compliant, or safety exclusions)
+* Protected – Assignments whose principals are in `ProtectedUsers` (never removed)
+
+Checklist before removing `-WhatIf`:
+1. Review every WouldRemove entry – confirm each is genuinely obsolete.
+2. Add any missing but still required assignments to the config (they will then move from WouldRemove → Kept on the next preview).
+3. Ensure all break‑glass / critical accounts are in `ProtectedUsers` (they'll appear under Protected, not WouldRemove).
+4. (Optional) Capture this preview output for audit/change record.
+5. Re-run the same command once more with `-WhatIf` to confirm no unexpected drift just before execution.
+
+Then execute using the destructive command (without `-WhatIf`) only after you are satisfied.
+
+> Delta mode note: In `delta` mode nothing is deleted; such items would instead surface as `WouldRemove (delta)` to keep you aware of potential cleanup candidates without any risk.
+
+
+
+## Step 14 — Automatic Principal Validation (Safety Gate)
 The orchestrator now ALWAYS validates all referenced principals (users, groups, service principals) and role‑assignable status for groups before any changes. If issues are detected it aborts before policies or assignments are processed.
 
 Benefits:
@@ -1035,7 +1140,7 @@ If you genuinely need to ignore a transient missing ID, temporarily comment it o
 
 This step previews every main policy lever in a single run: durations, approvers, authentication context, and full notification matrix.
 
-### 12.1 Entra role full-feature policy (preview with -WhatIf)
+### 15.1 Entra role full-feature policy (preview with -WhatIf)
 
 Run with -WhatIf to preview safely; no separate validation mode flag is required.
 
@@ -1089,7 +1194,7 @@ Preview (policies only)
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
 ```
 
-### 12.2 Azure role full-feature policy (preview with -WhatIf)
+### 15.2 Azure role full-feature policy (preview with -WhatIf)
 Inline policy with all options; Scope required.
 
 ```json
@@ -1146,3 +1251,119 @@ Notes
 - AuthenticationContext_* is supported for both Entra and Azure role policies.
 - Approvers array accepts user or group object IDs; ApprovalRequired must be true for approvers to apply.
 - The -WhatIf output prints durations, requirements, approvers count, authentication context (if enabled), and counts Notification_* settings.
+
+## Step 16 — (Optional) CI/CD automation (GitHub Actions + Key Vault)
+
+Goal: Run the orchestrator automatically (or on demand) using the JSON config stored in Azure Key Vault.
+
+Reality check (Key Vault change triggers): GitHub Actions cannot natively subscribe to Key Vault secret change events. To be truly event‑driven you need an Azure component (Event Grid -> Logic App / Azure Function) that calls the GitHub REST API (repository_dispatch) or invokes an Azure DevOps pipeline. Below we give (1) a pragmatic scheduled/on‑demand workflow and (2) an advanced event pattern outline.
+
+### 16.1 Basic GitHub Actions workflow (manual + scheduled)
+
+Add a workflow file (e.g. `.github/workflows/easypim.yml`). Uses OIDC (preferred) so you DO NOT store client secrets in GitHub. Create an Entra App Registration with federated credentials (subject = repo / workflow) granting it appropriate RBAC (Key Vault get secret + PIM policy/role assignment rights).
+
+Minimal permissions required for the service principal / managed identity used by the workflow:
+* Key Vault: get (secret)
+* Graph / Azure RBAC: whatever your interactive runs required (e.g., RoleManagement.ReadWrite.Directory, Directory.AccessAsUser.All if using app + user context, or RBAC role assignments at subscription for Azure role policy/assignment operations)
+* (Optional) Logging / Monitor permissions if you rely on diagnostics
+
+Example workflow (WhatIf by default; set input apply=true to execute):
+
+```yaml
+name: EasyPIM Orchestrator
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Set to true to apply (omit -WhatIf)"
+        required: false
+        default: "false"
+  schedule:
+    - cron: '15 2 * * *'  # Daily 02:15 UTC drift check (delta mode)
+
+env:
+  KEYVAULT_NAME: kv-name-here
+  SECRET_NAME: EasyPIM-Config
+  TENANT_ID: 00000000-0000-0000-0000-000000000000
+  SUBSCRIPTION_ID: 00000000-0000-0000-0000-000000000000
+
+permissions:
+  id-token: write   # for OIDC
+  contents: read
+
+jobs:
+  orchestrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          tenant-id: ${{ env.TENANT_ID }}
+          subscription-id: ${{ env.SUBSCRIPTION_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}  # Federated credential configured in Entra ID
+
+      - name: (Optional) Azure CLI version
+        run: az version
+
+      - name: Import EasyPIM module and run orchestrator
+        shell: pwsh
+        run: |
+          Import-Module ./EasyPIM/EasyPIM.psd1 -Force -Verbose
+          $apply = ('${{ github.event.inputs.apply }}' -eq 'true')
+          $common = @('-KeyVaultName', $env:KEYVAULT_NAME, '-SecretName', $env:SECRET_NAME, '-TenantId', $env:TENANT_ID, '-SubscriptionId', $env:SUBSCRIPTION_ID, '-Mode', 'delta')
+          if (-not $apply) { $common += '-WhatIf' }
+          # Policy changes usually stable by this stage; skipping policies accelerates drift check
+          $common += '-SkipPolicies'
+          Write-Host "Running: Invoke-EasyPIMOrchestrator $($common -join ' ')"
+          Invoke-EasyPIMOrchestrator @common
+
+      - name: Upload log (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: EasyPIM-Log
+          path: LOGS/*.log
+```
+
+Usage:
+1. Configure repository secret `AZURE_CLIENT_ID` with the App Registration's client ID (no secret needed with OIDC).
+2. Set env values (TENANT_ID, SUBSCRIPTION_ID, KEYVAULT_NAME) in workflow or replace with repository/environment secrets.
+3. Manually dispatch (Actions tab) — default is WhatIf.
+4. Re‑run with apply=true once validated.
+
+Why `-SkipPolicies`? After policies are stabilized (Steps 1‑15), routine runs often only check assignments drift. Remove the switch if you also want policy drift detection.
+
+Optional enhancements:
+* Add a second job that parses the summary output and fails if unexpected WouldRemove counts exceed a threshold.
+* Post results to Teams / Slack via a webhook step.
+* Cache Az PowerShell modules if you add them (currently pure REST/Graph calls inside module so not required).
+
+### 16.2 Advanced event-driven trigger (Key Vault change)
+
+Key ingredients:
+1. Enable Key Vault events to Event Grid (secret near-expiration & new version events supported).
+2. Create a Logic App (HTTP triggered by Event Grid subscription) or Azure Function.
+3. Within Logic App/Function call GitHub REST API `POST /repos/:owner/:repo/dispatches` with a token/scoped PAT to fire `repository_dispatch` event (define a workflow that listens to `repository_dispatch` and uses the same job as 16.1).
+4. Optionally include payload (e.g., `{ "event_type": "easypim-config-updated", "client_payload": { "secretVersion": "..." } }`).
+
+Pros: Near real-time orchestration after config change. Cons: More moving parts (PAT management unless using GitHub App), extra Azure resources.
+
+Security & governance tips:
+* Principle of least privilege: the federated identity only needs Key Vault get + role / directory rights necessary for operations.
+* Use delta mode in automation; reserve initial mode for controlled / manual change windows.
+* Consider a pre‑flight job that just does `-WhatIf` and requires manual approval (environment protection rules) before an apply job executes.
+* Log retention: ship LOGS/*.log to Log Analytics or Storage for historical audit.
+
+Rollback strategy:
+* Because delta mode never deletes undeclared assignments, an accidental config regression will not remove existing assignments (they appear as WouldRemove). Investigate before switching to initial mode.
+* Maintain a known-good backup secret (e.g., EasyPIM-Config-Previous) to re-point quickly.
+
+Drift detection pattern:
+* Daily scheduled run with -WhatIf collects WouldRemove / Add / Update counts.
+* If counts exceed thresholds, open an issue automatically (GitHub CLI step) for investigation.
+
+That concludes the optional automation layer; adapt scope as your governance matures.

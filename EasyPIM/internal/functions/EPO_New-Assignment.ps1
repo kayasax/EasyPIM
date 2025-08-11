@@ -33,14 +33,16 @@
     # Always invoke inner function so WhatIf still shows detailed assignment info
     $azureResult = Invoke-ResourceAssignment -ResourceType "Azure Role eligible" -Assignments $Config.AzureRoles -CommandMap $commandMap
 
-    $planned = if ($azureResult -is [hashtable] -and $azureResult.ContainsKey('PlannedCreated')) { [int]$azureResult['PlannedCreated'] } elseif ($azureResult.PSObject.Properties.Name -contains 'PlannedCreated') { $azureResult.PlannedCreated } else { 0 }
-    Write-Summary -Category "Azure Role Eligible Assignments" -Created $azureResult.Created -Skipped $azureResult.Skipped -Failed $azureResult.Failed -PlannedCreated $planned
+    $planned = if ($WhatIfPreference -and $azureResult -is [hashtable] -and $azureResult.ContainsKey('PlannedCreated')) { [int]$azureResult['PlannedCreated'] } elseif ($WhatIfPreference -and $azureResult.PSObject.Properties.Name -contains 'PlannedCreated') { $azureResult.PlannedCreated } else { 0 }
+    Write-Summary -Category "Azure Role Eligible Assignments" -Created $azureResult.Created -Skipped $azureResult.Skipped -Failed $azureResult.Failed -PlannedCreated ($planned)
 
     $results.Created += $azureResult.Created
     $results.Skipped += $azureResult.Skipped
     $results.Failed += $azureResult.Failed
-    if ($azureResult -is [hashtable] -and $azureResult.ContainsKey('PlannedCreated')) { $results.PlannedCreated += [int]$azureResult['PlannedCreated'] }
-    elseif ($azureResult.PSObject.Properties.Name -contains 'PlannedCreated') { $results.PlannedCreated += [int]$azureResult.PlannedCreated }
+    if ($WhatIfPreference) {
+        if ($azureResult -is [hashtable] -and $azureResult.ContainsKey('PlannedCreated')) { $results.PlannedCreated += [int]$azureResult['PlannedCreated'] }
+        elseif ($azureResult.PSObject.Properties.Name -contains 'PlannedCreated') { $results.PlannedCreated += [int]$azureResult.PlannedCreated }
+    }
     }
 
     # Process Azure Role active assignments
@@ -51,8 +53,8 @@
 
     $azureActiveResult = Invoke-ResourceAssignment -ResourceType "Azure Role active" -Assignments $Config.AzureRolesActive -CommandMap $commandMap
 
-    $planned = if ($azureActiveResult -is [hashtable] -and $azureActiveResult.ContainsKey('PlannedCreated')) { [int]$azureActiveResult['PlannedCreated'] } elseif ($azureActiveResult.PSObject.Properties.Name -contains 'PlannedCreated') { $azureActiveResult.PlannedCreated } else { 0 }
-    Write-Summary -Category "Azure Role Active Assignments" -Created $azureActiveResult.Created -Skipped $azureActiveResult.Skipped -Failed $azureActiveResult.Failed -PlannedCreated $planned
+    $planned = if ($WhatIfPreference -and $azureActiveResult -is [hashtable] -and $azureActiveResult.ContainsKey('PlannedCreated')) { [int]$azureActiveResult['PlannedCreated'] } elseif ($WhatIfPreference -and $azureActiveResult.PSObject.Properties.Name -contains 'PlannedCreated') { $azureActiveResult.PlannedCreated } else { 0 }
+    Write-Summary -Category "Azure Role Active Assignments" -Created $azureActiveResult.Created -Skipped $azureActiveResult.Skipped -Failed $azureActiveResult.Failed -PlannedCreated ($planned)
 
     $results.Created += $azureActiveResult.Created
     $results.Skipped += $azureActiveResult.Skipped

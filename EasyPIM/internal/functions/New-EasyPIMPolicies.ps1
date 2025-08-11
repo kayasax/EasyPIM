@@ -60,6 +60,7 @@ function New-EasyPIMPolicies {
             Successful = 0
             Failed = 0
             Skipped = 0
+            RolesNotFound = 0
         }
     }
 
@@ -120,10 +121,26 @@ function New-EasyPIMPolicies {
                                 Write-Host "  [PROTECTED] Protected Azure role '$($policyDef.RoleName)' - policy change blocked for security" -ForegroundColor Yellow
                             } else {
                                 $results.Summary.Successful++
+                                $resolved = $policyDef.ResolvedPolicy
+                                # Build compact summary of key settings
+                                if ($resolved) {
+                                    $act = $resolved.ActivationDuration
+                                    $reqs = @()
+                                    if ($resolved.ActivationRequirement -match 'MFA') { $reqs += 'MFA' }
+                                    if ($resolved.ActivationRequirement -match 'Justification') { $reqs += 'Justification' }
+                                    $reqsTxt = if ($reqs) { $reqs -join '+' } else { 'None' }
+                                    $appr = if ($resolved.ApprovalRequired) { "Yes($($resolved.Approvers.Count) approvers)" } else { 'No' }
+                                    $elig = $resolved.MaximumEligibilityDuration
+                                    $permElig = if ($resolved.AllowPermanentEligibility) { 'Allowed' } else { 'No' }
+                                    $actMax = $resolved.MaximumActiveAssignmentDuration
+                                    $permAct = if ($resolved.AllowPermanentActiveAssignment) { 'Allowed' } else { 'No' }
+                                    $notifCount = ($resolved.PSObject.Properties | Where-Object { $_.Name -like 'Notification_*' }).Count
+                                    $summary = "Activation=$act Requirements=$reqsTxt Approval=$appr Elig=$elig PermElig=$permElig Active=$actMax PermActive=$permAct Notifications=$notifCount"
+                                } else { $summary = '' }
                                 if ($PolicyMode -eq "validate") {
-                                    Write-Host "  [OK] Validated policy for role '$($policyDef.RoleName)' at scope '$($policyDef.Scope)' (no changes applied)" -ForegroundColor Green
+                                    Write-Host "  [OK] Validated policy for role '$($policyDef.RoleName)' at scope '$($policyDef.Scope)' (no changes applied) $summary" -ForegroundColor Green
                                 } else {
-                                    Write-Host "  [OK] Applied policy for role '$($policyDef.RoleName)' at scope '$($policyDef.Scope)'" -ForegroundColor Green
+                                    Write-Host "  [OK] Applied policy for role '$($policyDef.RoleName)' at scope '$($policyDef.Scope)' $summary" -ForegroundColor Green
                                 }
                             }
                         }
@@ -147,6 +164,25 @@ function New-EasyPIMPolicies {
 
         # Process Entra Role Policies
         if ($Config.PSObject.Properties['EntraRolePolicies'] -and $Config.EntraRolePolicies -and $Config.EntraRolePolicies.Count -gt 0) {
+            # Pre-validate each Entra role exists so warnings surface even under -WhatIf / validation
+            foreach ($policyDef in $Config.EntraRolePolicies) {
+                try {
+                    if (-not $policyDef.PSObject.Properties['RoleName'] -or [string]::IsNullOrWhiteSpace($policyDef.RoleName)) { continue }
+                    $endpoint = "roleManagement/directory/roleDefinitions?`$filter=displayName eq '$($policyDef.RoleName)'"
+                    $resp = invoke-graph -Endpoint $endpoint
+                    $found = $false
+                    if ($resp.value -and $resp.value.Count -gt 0) { $found = $true }
+                    if (-not $found) {
+                        Write-Warning "Entra role '$($policyDef.RoleName)' not found - policy will be skipped. Correct the name to apply this policy."
+                        if (-not $policyDef.PSObject.Properties['_RoleNotFound']) { $policyDef | Add-Member -NotePropertyName _RoleNotFound -NotePropertyValue $true -Force } else { $policyDef._RoleNotFound = $true }
+                        $results.Summary.RolesNotFound++
+                    } else {
+                        if (-not $policyDef.PSObject.Properties['_RoleNotFound']) { $policyDef | Add-Member -NotePropertyName _RoleNotFound -NotePropertyValue $false -Force } else { $policyDef._RoleNotFound = $false }
+                    }
+                } catch {
+                    Write-Warning "Failed to validate Entra role '$($policyDef.RoleName)': $($_.Exception.Message)"
+                }
+            }
             # Build detailed WhatIf message for Entra Role Policies
             $whatIfDetails = @()
             foreach ($policyDef in $Config.EntraRolePolicies) {
@@ -156,9 +192,9 @@ function New-EasyPIMPolicies {
                     $policy = $policyDef
                 }
 
-                $policyDetails = @(
-                    "Role: '$($policyDef.RoleName)'"
-                )
+                $roleLabel = if ($policyDef.PSObject.Properties['_RoleNotFound'] -and $policyDef._RoleNotFound) { "Role: '$($policyDef.RoleName)' [NOT FOUND - SKIPPED]" } else { "Role: '$($policyDef.RoleName)'" }
+
+                $policyDetails = @( $roleLabel )
 
                 # Add activation duration
                 if ($policy.PSObject.Properties['ActivationDuration'] -and $policy.ActivationDuration) {
@@ -222,6 +258,12 @@ function New-EasyPIMPolicies {
                 Write-Host "[PROC] Processing Entra Role Policies..." -ForegroundColor Cyan
 
                 foreach ($policyDef in $Config.EntraRolePolicies) {
+                    if ($policyDef.PSObject.Properties['_RoleNotFound'] -and $policyDef._RoleNotFound) {
+                        # Record skipped not found entry
+                        $results.EntraRolePolicies += [PSCustomObject]@{ RoleName = $policyDef.RoleName; Status = 'SkippedRoleNotFound'; Mode = $PolicyMode; Details = 'Role displayName not found during pre-validation' }
+                        $results.Summary.Skipped++
+                        continue
+                    }
                     $results.Summary.TotalProcessed++
 
                     try {
@@ -234,10 +276,25 @@ function New-EasyPIMPolicies {
                             Write-Host "  [PROTECTED] Protected role '$($policyDef.RoleName)' - policy change blocked for security" -ForegroundColor Yellow
                         } else {
                             $results.Summary.Successful++
+                            $resolved = $policyDef.ResolvedPolicy
+                            if ($resolved) {
+                                $act = $resolved.ActivationDuration
+                                $reqs = @()
+                                if ($resolved.ActivationRequirement -match 'MFA') { $reqs += 'MFA' }
+                                if ($resolved.ActivationRequirement -match 'Justification') { $reqs += 'Justification' }
+                                $reqsTxt = if ($reqs) { $reqs -join '+' } else { 'None' }
+                                $appr = if ($resolved.ApprovalRequired) { "Yes($($resolved.Approvers.Count) approvers)" } else { 'No' }
+                                $elig = $resolved.MaximumEligibilityDuration
+                                $permElig = if ($resolved.AllowPermanentEligibility) { 'Allowed' } else { 'No' }
+                                $actMax = $resolved.MaximumActiveAssignmentDuration
+                                $permAct = if ($resolved.AllowPermanentActiveAssignment) { 'Allowed' } else { 'No' }
+                                $notifCount = ($resolved.PSObject.Properties | Where-Object { $_.Name -like 'Notification_*' }).Count
+                                $summary = "Activation=$act Requirements=$reqsTxt Approval=$appr Elig=$elig PermElig=$permElig Active=$actMax PermActive=$permAct Notifications=$notifCount"
+                            } else { $summary = '' }
                             if ($PolicyMode -eq "validate") {
-                                Write-Host "  [OK] Validated policy for Entra role '$($policyDef.RoleName)' (no changes applied)" -ForegroundColor Green
+                                Write-Host "  [OK] Validated policy for Entra role '$($policyDef.RoleName)' (no changes applied) $summary" -ForegroundColor Green
                             } else {
-                                Write-Host "  [OK] Applied policy for Entra role '$($policyDef.RoleName)'" -ForegroundColor Green
+                                Write-Host "  [OK] Applied policy for Entra role '$($policyDef.RoleName)' $summary" -ForegroundColor Green
                             }
                         }
                     }
@@ -254,7 +311,12 @@ function New-EasyPIMPolicies {
                 foreach ($line in $whatIfDetails) {
                     Write-Host "   $line" -ForegroundColor Yellow
                 }
+                # Count all as skipped due to WhatIf, but they may also include not found roles already counted in RolesNotFound
                 $results.Summary.Skipped += $Config.EntraRolePolicies.Count
+                # Add explicit entries for not found roles so caller can see statuses programmatically
+                foreach ($policyDef in $Config.EntraRolePolicies | Where-Object { $_.PSObject.Properties['_RoleNotFound'] -and $_._RoleNotFound }) {
+                    $results.EntraRolePolicies += [PSCustomObject]@{ RoleName = $policyDef.RoleName; Status = 'SkippedRoleNotFound'; Mode = $PolicyMode; Details = 'Role displayName not found during pre-validation' }
+                }
             }
         }
 
@@ -308,10 +370,25 @@ function New-EasyPIMPolicies {
                             Write-Host "  [PROTECTED] Protected Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' - policy change blocked for security" -ForegroundColor Yellow
                         } else {
                             $results.Summary.Successful++
+                            $resolved = $policyDef.ResolvedPolicy
+                            if ($resolved) {
+                                $act = $resolved.ActivationDuration
+                                $reqs = @()
+                                if ($resolved.ActivationRequirement -match 'MFA') { $reqs += 'MFA' }
+                                if ($resolved.ActivationRequirement -match 'Justification') { $reqs += 'Justification' }
+                                $reqsTxt = if ($reqs) { $reqs -join '+' } else { 'None' }
+                                $appr = if ($resolved.ApprovalRequired) { "Yes($($resolved.Approvers.Count) approvers)" } else { 'No' }
+                                $elig = $resolved.MaximumEligibilityDuration
+                                $permElig = if ($resolved.AllowPermanentEligibility) { 'Allowed' } else { 'No' }
+                                $actMax = $resolved.MaximumActiveAssignmentDuration
+                                $permAct = if ($resolved.AllowPermanentActiveAssignment) { 'Allowed' } else { 'No' }
+                                $notifCount = ($resolved.PSObject.Properties | Where-Object { $_.Name -like 'Notification_*' }).Count
+                                $summary = "Activation=$act Requirements=$reqsTxt Approval=$appr Elig=$elig PermElig=$permElig Active=$actMax PermActive=$permAct Notifications=$notifCount"
+                            } else { $summary = '' }
                             if ($PolicyMode -eq "validate") {
-                                Write-Host "  [OK] Validated policy for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' (no changes applied)" -ForegroundColor Green
+                                Write-Host "  [OK] Validated policy for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' (no changes applied) $summary" -ForegroundColor Green
                             } else {
-                                Write-Host "  [OK] Applied policy for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)'" -ForegroundColor Green
+                                Write-Host "  [OK] Applied policy for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' $summary" -ForegroundColor Green
                             }
                         }
                     }
@@ -376,6 +453,8 @@ function Set-AzureRolePolicy {
         [Parameter(Mandatory = $true)]
         [string]$Mode
     )
+    # Direct apply always used (legacy CSV path removed)
+
 
     Write-Verbose "Applying Azure role policy for $($PolicyDefinition.RoleName) at $($PolicyDefinition.Scope)"
 
@@ -436,31 +515,59 @@ function Set-AzureRolePolicy {
         }
     }
 
-    # Convert policy to CSV format and create temporary file
-    $csvData = ConvertTo-PolicyCSV -Policy $PolicyDefinition.ResolvedPolicy -PolicyType "AzureRole" -RoleName $PolicyDefinition.RoleName -Scope $PolicyDefinition.Scope
-    $tempCsvPath = [System.IO.Path]::GetTempFileName() + ".csv"
-
+    # Retrieve existing policy to capture correct PolicyID (roleManagementPolicies GUID) so PATCH hits the right resource
     try {
-        $csvData | Export-Csv -Path $tempCsvPath -NoTypeInformation
+        $existing = Get-PIMAzureResourcePolicy -tenantID $TenantId -subscriptionID $SubscriptionId -rolename $PolicyDefinition.RoleName -ErrorAction Stop
+        if ($existing -and $existing.PolicyID) {
+            if (-not $PolicyDefinition.PSObject.Properties['PolicyID']) { $PolicyDefinition | Add-Member -NotePropertyName PolicyID -NotePropertyValue $existing.PolicyID -Force } else { $PolicyDefinition.PolicyID = $existing.PolicyID }
+            if ($existing.roleID -and -not $PolicyDefinition.PSObject.Properties['roleID']) { $PolicyDefinition | Add-Member -NotePropertyName roleID -NotePropertyValue $existing.roleID -Force }
+        } else {
+            Write-Verbose "Existing Azure role policy ID not found for $($PolicyDefinition.RoleName); will fallback to scope path (may fail to PATCH)."
+        }
+    } catch { Write-Verbose "Failed to resolve existing Azure policy ID: $($_.Exception.Message)" }
 
-        if ($PSCmdlet.ShouldProcess("Azure role policy for $($PolicyDefinition.RoleName)", "Apply policy")) {
-            # Use existing Import-PIMAzureResourcePolicy function
-            Import-PIMAzureResourcePolicy -tenantID $TenantId -path $tempCsvPath
+    Write-Verbose "[Policy][Azure] Building rules in-memory for $($PolicyDefinition.RoleName)"
+        $resolved = $PolicyDefinition.ResolvedPolicy
+        if (-not $resolved) { $resolved = $PolicyDefinition }
+
+        # Fallback: copy key properties from top-level definition if they didn't survive template resolution
+        $propFallbacks = 'ActivationDuration','ActivationRequirement','ActiveAssignmentRequirement','AuthenticationContext_Enabled','AuthenticationContext_Value','ApprovalRequired','Approvers','MaximumEligibilityDuration','AllowPermanentEligibility','MaximumActiveAssignmentDuration','AllowPermanentActiveAssignment'
+        foreach ($pn in $propFallbacks) {
+            if (-not ($resolved.PSObject.Properties[$pn]) -and $PolicyDefinition.PSObject.Properties[$pn]) {
+                try { $resolved | Add-Member -NotePropertyName $pn -NotePropertyValue $PolicyDefinition.$pn -Force } catch { $resolved.$pn = $PolicyDefinition.$pn }
+                Write-Verbose "[DirectApply][Fallback] Injected missing property '$pn' from top-level definition for role $($PolicyDefinition.RoleName)"
+            }
         }
 
-        return @{
-            RoleName = $PolicyDefinition.RoleName
-            Scope = $PolicyDefinition.Scope
-            Status = "Applied"
-            Mode = $Mode
+        $rules = @()
+        if ($resolved.PSObject.Properties['ActivationDuration'] -and $resolved.ActivationDuration) { $rules += Set-ActivationDuration $resolved.ActivationDuration }
+        if ($resolved.PSObject.Properties['ActivationRequirement']) { $rules += Set-ActivationRequirement $resolved.ActivationRequirement }
+        if ($resolved.PSObject.Properties['ActiveAssignmentRequirement']) { $rules += Set-ActiveAssignmentRequirement $resolved.ActiveAssignmentRequirement }
+        if ($resolved.PSObject.Properties['AuthenticationContext_Enabled'] -and $resolved.AuthenticationContext_Enabled) { $rules += Set-AuthenticationContext $resolved.AuthenticationContext_Enabled $resolved.AuthenticationContext_Value }
+        if ($resolved.PSObject.Properties['ApprovalRequired'] -or $resolved.PSObject.Properties['Approvers']) { $rules += Set-Approval $resolved.ApprovalRequired $resolved.Approvers }
+        if ($resolved.PSObject.Properties['MaximumEligibilityDuration'] -or $resolved.PSObject.Properties['AllowPermanentEligibility']) { $rules += Set-EligibilityAssignment $resolved.MaximumEligibilityDuration $resolved.AllowPermanentEligibility }
+        if ($resolved.PSObject.Properties['MaximumActiveAssignmentDuration'] -or $resolved.PSObject.Properties['AllowPermanentActiveAssignment']) { $rules += Set-ActiveAssignment $resolved.MaximumActiveAssignmentDuration $resolved.AllowPermanentActiveAssignment }
+        # Notifications (only add if present to minimize churn)
+        foreach ($n in $resolved.PSObject.Properties | Where-Object { $_.Name -like 'Notification_*' }) {
+            switch ($n.Name) {
+                'Notification_EligibleAssignment_Alert' { $rules += Set-Notification_EligibleAssignment_Alert $n.Value }
+                'Notification_EligibleAssignment_Assignee' { $rules += Set-Notification_EligibleAssignment_Assignee $n.Value }
+                'Notification_EligibleAssignment_Approver' { $rules += Set-Notification_EligibleAssignment_Approver $n.Value }
+                'Notification_ActiveAssignment_Alert' { $rules += Set-Notification_ActiveAssignment_Alert $n.Value }
+                'Notification_ActiveAssignment_Assignee' { $rules += Set-Notification_ActiveAssignment_Assignee $n.Value }
+                'Notification_ActiveAssignment_Approver' { $rules += Set-Notification_ActiveAssignment_Approver $n.Value }
+                'Notification_Activation_Alert' { $rules += Set-Notification_Activation_Alert $n.Value }
+                'Notification_Activation_Assignee' { $rules += Set-Notification_Activation_Assignee $n.Value }
+                'Notification_Activation_Approver' { $rules += Set-Notification_Activation_Approver $n.Value }
+            }
         }
-    }
-    finally {
-        # Clean up temporary file
-        if (Test-Path $tempCsvPath) {
-            Remove-Item $tempCsvPath -Force
+        $bodyRules = $rules -join ","
+    Write-Verbose "[Policy][Azure] Rule objects count: $($rules.Count)"
+        if ($PSCmdlet.ShouldProcess("Azure role policy for $($PolicyDefinition.RoleName)", "PATCH policy")) {
+            if (-not $PolicyDefinition.PolicyID) { Write-Verbose '[Policy][Azure] Missing PolicyID - attempting re-fetch'; try { $existing = Get-PIMAzureResourcePolicy -tenantID $TenantId -subscriptionID $SubscriptionId -rolename $PolicyDefinition.RoleName -ErrorAction Stop; if ($existing.PolicyID){$PolicyDefinition.PolicyID=$existing.PolicyID} } catch { Write-Verbose "[Policy][Azure] Re-fetch failed: $($_.Exception.Message)" } }
+            if ($PolicyDefinition.PolicyID) { Update-Policy $PolicyDefinition.PolicyID $bodyRules } else { throw "Azure apply failed: No PolicyID for role $($PolicyDefinition.RoleName)" }
         }
-    }
+    return @{ RoleName=$PolicyDefinition.RoleName; Scope=$PolicyDefinition.Scope; Status='Applied'; Mode=$Mode }
 }
 
 function Set-EntraRolePolicy {
@@ -555,30 +662,54 @@ function Set-EntraRolePolicy {
         }
     }
 
-    # Convert policy to CSV format and create temporary file
-    $csvData = ConvertTo-PolicyCSV -Policy $PolicyDefinition.ResolvedPolicy -PolicyType "EntraRole" -RoleName $PolicyDefinition.RoleName
-    $tempCsvPath = [System.IO.Path]::GetTempFileName() + ".csv"
+    # Build and PATCH in-memory for Entra roles.
+    $resolved = $PolicyDefinition.ResolvedPolicy
+    if (-not $resolved) { $resolved = $PolicyDefinition }
 
-    try {
-        $csvData | Export-Csv -Path $tempCsvPath -NoTypeInformation
-
-        if ($PSCmdlet.ShouldProcess("Entra role policy for $($PolicyDefinition.RoleName)", "Apply policy")) {
-            # Use existing Import-PIMEntraRolePolicy function
-            Import-PIMEntraRolePolicy -tenantID $TenantId -path $tempCsvPath
-        }
-
-        return @{
-            RoleName = $PolicyDefinition.RoleName
-            Status = "Applied"
-            Mode = $Mode
+    # Copy critical properties if missing
+    $propFallbacks = 'ActivationDuration','ActivationRequirement','ActiveAssignmentRequirement','AuthenticationContext_Enabled','AuthenticationContext_Value','ApprovalRequired','Approvers','MaximumEligibilityDuration','AllowPermanentEligibility','MaximumActiveAssignmentDuration','AllowPermanentActiveAssignment'
+    foreach ($pn in $propFallbacks) {
+        if (-not ($resolved.PSObject.Properties[$pn]) -and $PolicyDefinition.PSObject.Properties[$pn]) {
+            try { $resolved | Add-Member -NotePropertyName $pn -NotePropertyValue $PolicyDefinition.$pn -Force } catch { $resolved.$pn = $PolicyDefinition.$pn }
         }
     }
-    finally {
-        # Clean up temporary file
-        if (Test-Path $tempCsvPath) {
-            Remove-Item $tempCsvPath -Force
+
+    $rules = @()
+    if ($resolved.PSObject.Properties['ActivationDuration'] -and $resolved.ActivationDuration) { $rules += Set-ActivationDuration $resolved.ActivationDuration -EntraRole }
+    if ($resolved.PSObject.Properties['ActivationRequirement']) { $rules += Set-ActivationRequirement $resolved.ActivationRequirement -EntraRole }
+    if ($resolved.PSObject.Properties['ActiveAssignmentRequirement']) { $rules += Set-ActiveAssignmentRequirement $resolved.ActiveAssignmentRequirement -EntraRole }
+    if ($resolved.PSObject.Properties['AuthenticationContext_Enabled'] -and $resolved.AuthenticationContext_Enabled) { $rules += Set-AuthenticationContext $resolved.AuthenticationContext_Enabled $resolved.AuthenticationContext_Value -EntraRole }
+    if ($resolved.PSObject.Properties['ApprovalRequired'] -or $resolved.PSObject.Properties['Approvers']) { $rules += Set-Approval $resolved.ApprovalRequired $resolved.Approvers -EntraRole }
+    if ($resolved.PSObject.Properties['MaximumEligibilityDuration'] -or $resolved.PSObject.Properties['AllowPermanentEligibility']) { $rules += Set-EligibilityAssignment $resolved.MaximumEligibilityDuration $resolved.AllowPermanentEligibility -EntraRole }
+    if ($resolved.PSObject.Properties['MaximumActiveAssignmentDuration'] -or $resolved.PSObject.Properties['AllowPermanentActiveAssignment']) { $rules += Set-ActiveAssignment $resolved.MaximumActiveAssignmentDuration $resolved.AllowPermanentActiveAssignment -EntraRole }
+    foreach ($n in $resolved.PSObject.Properties | Where-Object { $_.Name -like 'Notification_*' }) {
+        switch ($n.Name) {
+            'Notification_EligibleAssignment_Alert' { $rules += Set-Notification_EligibleAssignment_Alert $n.Value -EntraRole }
+            'Notification_EligibleAssignment_Assignee' { $rules += Set-Notification_EligibleAssignment_Assignee $n.Value -EntraRole }
+            'Notification_EligibleAssignment_Approver' { $rules += Set-Notification_EligibleAssignment_Approver $n.Value -EntraRole }
+            'Notification_ActiveAssignment_Alert' { $rules += Set-Notification_ActiveAssignment_Alert $n.Value -EntraRole }
+            'Notification_ActiveAssignment_Assignee' { $rules += Set-Notification_ActiveAssignment_Assignee $n.Value -EntraRole }
+            'Notification_ActiveAssignment_Approver' { $rules += Set-Notification_ActiveAssignment_Approver $n.Value -EntraRole }
+            'Notification_Activation_Alert' { $rules += Set-Notification_Activation_Alert $n.Value -EntraRole }
+            'Notification_Activation_Assignee' { $rules += Set-Notification_Activation_Assignee $n.Value -EntraRole }
+            'Notification_Activation_Approver' { $rules += Set-Notification_Activation_Approver $n.Value -EntraRole }
         }
     }
+    $bodyRules = $rules -join ','
+    Write-Verbose "[Policy][Entra] Rule objects count: $($rules.Count)"
+    if ($PSCmdlet.ShouldProcess("Entra role policy for $($PolicyDefinition.RoleName)", "PATCH policy")) {
+        # Need current PolicyID (roleManagementPolicies ID for the directoryRole)
+        try {
+            $existing = Get-PIMEntraRolePolicy -tenantID $TenantId -rolename $PolicyDefinition.RoleName -ErrorAction Stop
+            if ($existing -and $existing.PolicyID) { $PolicyDefinition | Add-Member -NotePropertyName PolicyID -NotePropertyValue $existing.PolicyID -Force }
+        } catch { Write-Verbose "[Policy][Entra] Failed to resolve PolicyID: $($_.Exception.Message)" }
+        if ($PolicyDefinition.PSObject.Properties['PolicyID'] -and $PolicyDefinition.PolicyID) {
+            Update-Policy $PolicyDefinition.PolicyID $bodyRules
+        } else {
+            throw "Entra apply failed: No PolicyID for role $($PolicyDefinition.RoleName)"
+        }
+    }
+    return @{ RoleName=$PolicyDefinition.RoleName; Status='Applied'; Mode=$Mode }
 }
 
 function Set-GroupPolicy {
@@ -608,34 +739,161 @@ function Set-GroupPolicy {
         [string]$TenantId,
 
         [Parameter(Mandatory = $true)]
-        [string]$Mode
+        [string]$Mode,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$SkipEligibilityCheck
     )
 
-    Write-Verbose "Applying Group policy for Group $($PolicyDefinition.GroupId) role $($PolicyDefinition.RoleName)"
-
-    if ($Mode -eq "validate") {
-        Write-Verbose "Validation mode: Policy would be applied for Group '$($PolicyDefinition.GroupId)' role '$($PolicyDefinition.RoleName)'"
-        return @{
-            GroupId = $PolicyDefinition.GroupId
-            RoleName = $PolicyDefinition.RoleName
-            Status = "Validated"
-            Mode = $Mode
+    # Resolve GroupId if only GroupName provided
+    if (-not $PolicyDefinition.GroupId -and $PolicyDefinition.GroupName) {
+        try {
+            # Lookup group by displayName directly (URL encoding not required for simple equal filter)
+            $endpoint = "groups?`$filter=displayName eq '$($PolicyDefinition.GroupName)'"
+            $resp = invoke-graph -Endpoint $endpoint
+            if ($resp.value -and $resp.value.Count -ge 1) {
+                $PolicyDefinition | Add-Member -NotePropertyName GroupId -NotePropertyValue $resp.value[0].id -Force
+            } else {
+                throw "Unable to resolve GroupName '$($PolicyDefinition.GroupName)' to an Id"
+            }
+        } catch {
+            Write-Warning "GroupName resolution failed: $($_.Exception.Message)"
         }
     }
 
-    # Note: Group policy import may need additional implementation
-    # For now, we'll use Set-PIMGroupPolicy if available
-    if ($PSCmdlet.ShouldProcess("Group policy for $($PolicyDefinition.GroupId) role $($PolicyDefinition.RoleName)", "Apply policy")) {
-        Write-Warning "Group policy application is not yet fully implemented. Policy would be applied for Group '$($PolicyDefinition.GroupId)' role '$($PolicyDefinition.RoleName)'"
+    Write-Verbose "Applying Group policy for Group $($PolicyDefinition.GroupId ?? $PolicyDefinition.GroupName) role $($PolicyDefinition.RoleName)"
+
+    # Eligibility pre-check (skip for validate mode or if explicitly bypassed)
+    if ($Mode -ne 'validate' -and -not $SkipEligibilityCheck) {
+        if (-not $PolicyDefinition.GroupId) {
+            Write-Warning "Cannot check eligibility without GroupId for group name '$($PolicyDefinition.GroupName)'"
+        } else {
+            $eligible = $true
+            try { $eligible = Test-GroupEligibleForPIM -GroupId $PolicyDefinition.GroupId } catch { Write-Verbose "Eligibility check failed: $($_.Exception.Message)" }
+            if (-not $eligible) {
+                if (-not $script:EasyPIM_DeferredGroupPolicies) { $script:EasyPIM_DeferredGroupPolicies = @() }
+                # Store minimal data needed to retry later
+                $script:EasyPIM_DeferredGroupPolicies += [PSCustomObject]@{
+                    GroupId          = $PolicyDefinition.GroupId
+                    GroupName        = $PolicyDefinition.GroupName
+                    RoleName         = $PolicyDefinition.RoleName
+                    ResolvedPolicy   = $PolicyDefinition.ResolvedPolicy
+                    OriginalPolicy   = $PolicyDefinition
+                }
+                Write-Warning "Deferring Group policy for $($PolicyDefinition.GroupId) role $($PolicyDefinition.RoleName) - group not PIM-eligible yet"
+                return @{ GroupId = $PolicyDefinition.GroupId; RoleName = $PolicyDefinition.RoleName; Status = 'DeferredNotEligible'; Mode = $Mode }
+            }
+        }
     }
+
+    if ($Mode -eq "validate") {
+        Write-Verbose "Validation mode: Policy would be applied for Group '$($PolicyDefinition.GroupId ?? $PolicyDefinition.GroupName)' role '$($PolicyDefinition.RoleName)'"
+        return @{ GroupId = $PolicyDefinition.GroupId; RoleName = $PolicyDefinition.RoleName; Status = 'Validated'; Mode = $Mode }
+    }
+
+    # Build parameters for Set-PIMGroupPolicy from resolved policy
+    $resolved = if ($PolicyDefinition.ResolvedPolicy) { $PolicyDefinition.ResolvedPolicy } else { $PolicyDefinition }
+
+    # Normalize: map EnablementRules -> ActivationRequirement if needed
+    if (-not ($resolved.PSObject.Properties['ActivationRequirement']) -and $resolved.PSObject.Properties['EnablementRules'] -and $resolved.EnablementRules) {
+        try { $resolved | Add-Member -NotePropertyName ActivationRequirement -NotePropertyValue $resolved.EnablementRules -Force } catch { $resolved.ActivationRequirement = $resolved.EnablementRules }
+        Write-Verbose "[GroupPolicy][Normalize] Added ActivationRequirement from EnablementRules for Group $($PolicyDefinition.GroupId) role $($PolicyDefinition.RoleName)"
+    }
+    # Normalize duration alias
+    if (-not ($resolved.PSObject.Properties['ActivationDuration']) -and $resolved.PSObject.Properties['Duration'] -and $resolved.Duration) {
+        try { $resolved | Add-Member -NotePropertyName ActivationDuration -NotePropertyValue $resolved.Duration -Force } catch { $resolved.ActivationDuration = $resolved.Duration }
+        Write-Verbose "[GroupPolicy][Normalize] Added ActivationDuration from Duration for Group $($PolicyDefinition.GroupId) role $($PolicyDefinition.RoleName)"
+    }
+
+    $setParams = @{
+        tenantID = $TenantId
+        groupID  = @($PolicyDefinition.GroupId)
+        type     = $PolicyDefinition.RoleName.ToLower()
+    }
+    foreach ($prop in $resolved.PSObject.Properties) {
+        switch ($prop.Name) {
+            'ActivationDuration' { if ($prop.Value) { $setParams.ActivationDuration = $prop.Value } }
+            'ActivationRequirement' { if ($prop.Value) { $setParams.ActivationRequirement = $prop.Value } }
+            'ActiveAssignmentRequirement' { if ($prop.Value) { $setParams.ActiveAssignmentRequirement = $prop.Value } }
+            'AuthenticationContext_Enabled' { $setParams.AuthenticationContext_Enabled = $prop.Value }
+            'AuthenticationContext_Value' { $setParams.AuthenticationContext_Value = $prop.Value }
+            'ApprovalRequired' { $setParams.ApprovalRequired = $prop.Value }
+            'Approvers' { $setParams.Approvers = $prop.Value }
+            'MaximumEligibilityDuration' { $setParams.MaximumEligibilityDuration = $prop.Value }
+            'AllowPermanentEligibility' { $setParams.AllowPermanentEligibility = $prop.Value }
+            'MaximumActiveAssignmentDuration' { $setParams.MaximumActiveAssignmentDuration = $prop.Value }
+            'AllowPermanentActiveAssignment' { $setParams.AllowPermanentActiveAssignment = $prop.Value }
+            default { if ($prop.Name -like 'Notification_*') { $setParams[$prop.Name] = $prop.Value } }
+        }
+    }
+
+    $status = 'Applied'
+    if ($PSCmdlet.ShouldProcess("Group policy for $($PolicyDefinition.GroupId) role $($PolicyDefinition.RoleName)", "Apply policy")) {
+        if (Get-Command -Name Set-PIMGroupPolicy -ErrorAction SilentlyContinue) {
+            try {
+                Write-Verbose ("[Policy][Group] Calling Set-PIMGroupPolicy with params: " + (($setParams.GetEnumerator() | ForEach-Object { $_.Key + '=' + ($_.Value -join ',') }) -join ' '))
+                Set-PIMGroupPolicy @setParams -Verbose:$VerbosePreference | Out-Null
+            } catch {
+                Write-Warning "Set-PIMGroupPolicy failed: $($_.Exception.Message)"; $status='Failed'
+            }
+        } else { Write-Warning 'Set-PIMGroupPolicy cmdlet not found.'; $status='CmdletMissing' }
+    } else { $status='Skipped' }
 
     return @{
         GroupId = $PolicyDefinition.GroupId
         RoleName = $PolicyDefinition.RoleName
-        Status = "Pending Implementation"
+        Status = $status
         Mode = $Mode
     }
 }
+
+    function Invoke-DeferredGroupPolicies {
+        <#
+        .SYNOPSIS
+            Attempts to apply any group policies previously deferred due to group not being PIM-eligible.
+        .DESCRIPTION
+            Re-tests eligibility and applies policies. Summarizes outcomes.
+        #>
+        [CmdletBinding(SupportsShouldProcess = $true)]
+        param(
+            [Parameter(Mandatory=$true)][string]$TenantId,
+            [Parameter(Mandatory=$false)][string]$Mode = 'delta'
+        )
+        if (-not $script:EasyPIM_DeferredGroupPolicies -or $script:EasyPIM_DeferredGroupPolicies.Count -eq 0) { return $null }
+
+        Write-Host "🔁 Retrying deferred Group policies (count: $($script:EasyPIM_DeferredGroupPolicies.Count))" -ForegroundColor Cyan
+        $applied=0;$stillDeferred=0;$failed=0
+        $results=@()
+        foreach ($p in $script:EasyPIM_DeferredGroupPolicies) {
+            $eligible=$false
+            try { $eligible = Test-GroupEligibleForPIM -GroupId $p.GroupId } catch { Write-Verbose "Retry eligibility check failed: $($_.Exception.Message)" }
+            if (-not $eligible) {
+                Write-Host "  ⏳ Still not eligible: $($p.GroupId) ($($p.RoleName))" -ForegroundColor Yellow
+                $stillDeferred++
+                $results += [PSCustomObject]@{ GroupId=$p.GroupId; RoleName=$p.RoleName; Status='StillNotEligible' }
+                continue
+            }
+            $policyDef = [PSCustomObject]@{
+                GroupId = $p.GroupId
+                GroupName = $p.GroupName
+                RoleName = $p.RoleName
+                ResolvedPolicy = $p.ResolvedPolicy
+            }
+            try {
+                $res = Set-GroupPolicy -PolicyDefinition $policyDef -TenantId $TenantId -Mode $Mode -SkipEligibilityCheck -WhatIf:$WhatIfPreference
+                $results += [PSCustomObject]@{ GroupId=$p.GroupId; RoleName=$p.RoleName; Status=$res.Status }
+                if ($res.Status -eq 'Applied') { $applied++ } else { $failed++ }
+            } catch {
+                Write-Warning "Deferred apply failed for $($p.GroupId): $($_.Exception.Message)"
+                $failed++
+                $results += [PSCustomObject]@{ GroupId=$p.GroupId; RoleName=$p.RoleName; Status='FailedRetry' }
+            }
+        }
+        Write-Host "🔁 Deferred Group Policy Summary: Applied=$applied, StillNotEligible=$stillDeferred, Failed=$failed" -ForegroundColor Cyan
+        # Clear collection to avoid duplicate attempts next run
+        $script:EasyPIM_DeferredGroupPolicies = @()
+        return [PSCustomObject]@{ Applied=$applied; StillNotEligible=$stillDeferred; Failed=$failed; Details=$results }
+    }
 
 function ConvertTo-PolicyCSV {
     <#
@@ -697,14 +955,24 @@ function ConvertTo-PolicyCSV {
                 $response = invoke-graph -Endpoint $endpoint
                 $policyID = $response.value.policyID
             }
+            else {
+                Write-Warning "Entra role '$RoleName' not found (skipping policy). No Graph enumeration performed to preserve performance. Correct the name to apply a policy.";
+                return [PSCustomObject]@{ RoleName=$RoleName; Status='SkippedRoleNotFound'; Reason='Role displayName not found'; Mode='lookup' }
+            }
         }
         catch {
             Write-Warning "Failed to lookup role ID and policy ID for '$RoleName': $($_.Exception.Message)"
         }
     }
     elseif ($PolicyType -eq "AzureRole" -and $Scope) {
-        # For Azure roles, the PolicyID is the scope
-        $policyID = $Scope
+        if ($Policy.PSObject.Properties['PolicyID'] -and $Policy.PolicyID) {
+            $policyID = $Policy.PolicyID
+        } elseif ($Policy.PSObject.Properties['policyID'] -and $Policy.policyID) {
+            $policyID = $Policy.policyID
+        } else {
+            # Fallback - legacy behavior (may not be valid for PATCH)
+            $policyID = $Scope
+        }
     }
 
     # Create CSV row object with safe property access matching the expected format
@@ -713,7 +981,9 @@ function ConvertTo-PolicyCSV {
         roleID = $roleID
         PolicyID = $policyID
         ActivationDuration = if ($Policy.PSObject.Properties['ActivationDuration']) { $Policy.ActivationDuration } else { "PT8H" }
-        EnablementRules = if ($Policy.PSObject.Properties['ActivationRequirement'] -and $Policy.ActivationRequirement) { $Policy.ActivationRequirement } else { "" }
+        EnablementRules = if ($Policy.PSObject.Properties['ActivationRequirement'] -and $Policy.ActivationRequirement) {
+            if ($Policy.ActivationRequirement -is [System.Collections.IEnumerable] -and -not ($Policy.ActivationRequirement -is [string])) { ($Policy.ActivationRequirement | ForEach-Object { "$_" }) -join ',' } else { $Policy.ActivationRequirement }
+        } else { "" }
         AuthenticationContext_Enabled = if ($Policy.PSObject.Properties['AuthenticationContext_Enabled'] -and $null -ne $Policy.AuthenticationContext_Enabled) { $Policy.AuthenticationContext_Enabled.ToString() } else { "False" }
         AuthenticationContext_Value = if ($Policy.PSObject.Properties['AuthenticationContext_Value']) { $Policy.AuthenticationContext_Value } else { "" }
         ApprovalRequired = if ($Policy.PSObject.Properties['ApprovalRequired'] -and $null -ne $Policy.ApprovalRequired) { $Policy.ApprovalRequired.ToString() } else { "False" }
@@ -793,47 +1063,45 @@ function ConvertTo-PolicyCSV {
 
         # Eligibility notifications
         if ($notifications.Eligibility) {
-            $csvRow | Add-Member -NotePropertyName "Notification_Eligibility_Alert_isDefaultRecipientEnabled" -NotePropertyValue $notifications.Eligibility.Alert.isDefaultRecipientEnabled.ToString()
-            $csvRow | Add-Member -NotePropertyName "Notification_Eligibility_Alert_NotificationLevel" -NotePropertyValue $notifications.Eligibility.Alert.NotificationLevel
-            $csvRow | Add-Member -NotePropertyName "Notification_Eligibility_Alert_Recipients" -NotePropertyValue ($notifications.Eligibility.Alert.Recipients -join ',')
-
-            $csvRow | Add-Member -NotePropertyName "Notification_Eligibility_Assignee_isDefaultRecipientEnabled" -NotePropertyValue $notifications.Eligibility.Assignee.isDefaultRecipientEnabled.ToString()
-            $csvRow | Add-Member -NotePropertyName "Notification_Eligibility_Assignee_NotificationLevel" -NotePropertyValue $notifications.Eligibility.Assignee.NotificationLevel
-            $csvRow | Add-Member -NotePropertyName "Notification_Eligibility_Assignee_Recipients" -NotePropertyValue ($notifications.Eligibility.Assignee.Recipients -join ',')
-
-            $csvRow | Add-Member -NotePropertyName "Notification_Eligibility_Approvers_isDefaultRecipientEnabled" -NotePropertyValue $notifications.Eligibility.Approvers.isDefaultRecipientEnabled.ToString()
-            $csvRow | Add-Member -NotePropertyName "Notification_Eligibility_Approvers_NotificationLevel" -NotePropertyValue $notifications.Eligibility.Approvers.NotificationLevel
-            $csvRow | Add-Member -NotePropertyName "Notification_Eligibility_Approvers_Recipients" -NotePropertyValue ($notifications.Eligibility.Approvers.Recipients -join ',')
+            # Helper to set or add property
+            function SetOrAddProp([object]$obj,[string]$name,[object]$value){ if(-not ($obj.PSObject.Properties.Match($name))){ $obj | Add-Member -NotePropertyName $name -NotePropertyValue $value } else { $obj.$name = $value } }
+            SetOrAddProp $csvRow 'Notification_Eligibility_Alert_isDefaultRecipientEnabled' ($notifications.Eligibility.Alert.isDefaultRecipientEnabled.ToString())
+            SetOrAddProp $csvRow 'Notification_Eligibility_Alert_NotificationLevel' ($notifications.Eligibility.Alert.NotificationLevel)
+            SetOrAddProp $csvRow 'Notification_Eligibility_Alert_Recipients' (($notifications.Eligibility.Alert.Recipients -join ','))
+            SetOrAddProp $csvRow 'Notification_Eligibility_Assignee_isDefaultRecipientEnabled' ($notifications.Eligibility.Assignee.isDefaultRecipientEnabled.ToString())
+            SetOrAddProp $csvRow 'Notification_Eligibility_Assignee_NotificationLevel' ($notifications.Eligibility.Assignee.NotificationLevel)
+            SetOrAddProp $csvRow 'Notification_Eligibility_Assignee_Recipients' (($notifications.Eligibility.Assignee.Recipients -join ','))
+            SetOrAddProp $csvRow 'Notification_Eligibility_Approvers_isDefaultRecipientEnabled' ($notifications.Eligibility.Approvers.isDefaultRecipientEnabled.ToString())
+            SetOrAddProp $csvRow 'Notification_Eligibility_Approvers_NotificationLevel' ($notifications.Eligibility.Approvers.NotificationLevel)
+            SetOrAddProp $csvRow 'Notification_Eligibility_Approvers_Recipients' (($notifications.Eligibility.Approvers.Recipients -join ','))
         }
 
         # Active notifications
         if ($notifications.Active) {
-            $csvRow | Add-Member -NotePropertyName "Notification_Active_Alert_isDefaultRecipientEnabled" -NotePropertyValue $notifications.Active.Alert.isDefaultRecipientEnabled.ToString()
-            $csvRow | Add-Member -NotePropertyName "Notification_Active_Alert_NotificationLevel" -NotePropertyValue $notifications.Active.Alert.NotificationLevel
-            $csvRow | Add-Member -NotePropertyName "Notification_Active_Alert_Recipients" -NotePropertyValue ($notifications.Active.Alert.Recipients -join ',')
-
-            $csvRow | Add-Member -NotePropertyName "Notification_Active_Assignee_isDefaultRecipientEnabled" -NotePropertyValue $notifications.Active.Assignee.isDefaultRecipientEnabled.ToString()
-            $csvRow | Add-Member -NotePropertyName "Notification_Active_Assignee_NotificationLevel" -NotePropertyValue $notifications.Active.Assignee.NotificationLevel
-            $csvRow | Add-Member -NotePropertyName "Notification_Active_Assignee_Recipients" -NotePropertyValue ($notifications.Active.Assignee.Recipients -join ',')
-
-            $csvRow | Add-Member -NotePropertyName "Notification_Active_Approvers_isDefaultRecipientEnabled" -NotePropertyValue $notifications.Active.Approvers.isDefaultRecipientEnabled.ToString()
-            $csvRow | Add-Member -NotePropertyName "Notification_Active_Approvers_NotificationLevel" -NotePropertyValue $notifications.Active.Approvers.NotificationLevel
-            $csvRow | Add-Member -NotePropertyName "Notification_Active_Approvers_Recipients" -NotePropertyValue ($notifications.Active.Approvers.Recipients -join ',')
+            function SetOrAddProp2([object]$obj,[string]$name,[object]$value){ if(-not ($obj.PSObject.Properties.Match($name))){ $obj | Add-Member -NotePropertyName $name -NotePropertyValue $value } else { $obj.$name = $value } }
+            SetOrAddProp2 $csvRow 'Notification_Active_Alert_isDefaultRecipientEnabled' ($notifications.Active.Alert.isDefaultRecipientEnabled.ToString())
+            SetOrAddProp2 $csvRow 'Notification_Active_Alert_NotificationLevel' ($notifications.Active.Alert.NotificationLevel)
+            SetOrAddProp2 $csvRow 'Notification_Active_Alert_Recipients' (($notifications.Active.Alert.Recipients -join ','))
+            SetOrAddProp2 $csvRow 'Notification_Active_Assignee_isDefaultRecipientEnabled' ($notifications.Active.Assignee.isDefaultRecipientEnabled.ToString())
+            SetOrAddProp2 $csvRow 'Notification_Active_Assignee_NotificationLevel' ($notifications.Active.Assignee.NotificationLevel)
+            SetOrAddProp2 $csvRow 'Notification_Active_Assignee_Recipients' (($notifications.Active.Assignee.Recipients -join ','))
+            SetOrAddProp2 $csvRow 'Notification_Active_Approvers_isDefaultRecipientEnabled' ($notifications.Active.Approvers.isDefaultRecipientEnabled.ToString())
+            SetOrAddProp2 $csvRow 'Notification_Active_Approvers_NotificationLevel' ($notifications.Active.Approvers.NotificationLevel)
+            SetOrAddProp2 $csvRow 'Notification_Active_Approvers_Recipients' (($notifications.Active.Approvers.Recipients -join ','))
         }
 
         # Activation notifications
         if ($notifications.Activation) {
-            $csvRow | Add-Member -NotePropertyName "Notification_Activation_Alert_isDefaultRecipientEnabled" -NotePropertyValue $notifications.Activation.Alert.isDefaultRecipientEnabled.ToString()
-            $csvRow | Add-Member -NotePropertyName "Notification_Activation_Alert_NotificationLevel" -NotePropertyValue $notifications.Activation.Alert.NotificationLevel
-            $csvRow | Add-Member -NotePropertyName "Notification_Activation_Alert_Recipients" -NotePropertyValue ($notifications.Activation.Alert.Recipients -join ',')
-
-            $csvRow | Add-Member -NotePropertyName "Notification_Activation_Assignee_isDefaultRecipientEnabled" -NotePropertyValue $notifications.Activation.Assignee.isDefaultRecipientEnabled.ToString()
-            $csvRow | Add-Member -NotePropertyName "Notification_Activation_Assignee_NotificationLevel" -NotePropertyValue $notifications.Activation.Assignee.NotificationLevel
-            $csvRow | Add-Member -NotePropertyName "Notification_Activation_Assignee_Recipients" -NotePropertyValue ($notifications.Activation.Assignee.Recipients -join ',')
-
-            $csvRow | Add-Member -NotePropertyName "Notification_Activation_Approvers_isDefaultRecipientEnabled" -NotePropertyValue $notifications.Activation.Approvers.isDefaultRecipientEnabled.ToString()
-            $csvRow | Add-Member -NotePropertyName "Notification_Activation_Approvers_NotificationLevel" -NotePropertyValue $notifications.Activation.Approvers.NotificationLevel
-            $csvRow | Add-Member -NotePropertyName "Notification_Activation_Approvers_Recipients" -NotePropertyValue ($notifications.Activation.Approvers.Recipients -join ',')
+            function SetOrAddProp3([object]$obj,[string]$name,[object]$value){ if(-not ($obj.PSObject.Properties.Match($name))){ $obj | Add-Member -NotePropertyName $name -NotePropertyValue $value } else { $obj.$name = $value } }
+            SetOrAddProp3 $csvRow 'Notification_Activation_Alert_isDefaultRecipientEnabled' ($notifications.Activation.Alert.isDefaultRecipientEnabled.ToString())
+            SetOrAddProp3 $csvRow 'Notification_Activation_Alert_NotificationLevel' ($notifications.Activation.Alert.NotificationLevel)
+            SetOrAddProp3 $csvRow 'Notification_Activation_Alert_Recipients' (($notifications.Activation.Alert.Recipients -join ','))
+            SetOrAddProp3 $csvRow 'Notification_Activation_Assignee_isDefaultRecipientEnabled' ($notifications.Activation.Assignee.isDefaultRecipientEnabled.ToString())
+            SetOrAddProp3 $csvRow 'Notification_Activation_Assignee_NotificationLevel' ($notifications.Activation.Assignee.NotificationLevel)
+            SetOrAddProp3 $csvRow 'Notification_Activation_Assignee_Recipients' (($notifications.Activation.Assignee.Recipients -join ','))
+            SetOrAddProp3 $csvRow 'Notification_Activation_Approver_isDefaultRecipientEnabled' ($notifications.Activation.Approvers.isDefaultRecipientEnabled.ToString())
+            SetOrAddProp3 $csvRow 'Notification_Activation_Approver_NotificationLevel' ($notifications.Activation.Approvers.NotificationLevel)
+            SetOrAddProp3 $csvRow 'Notification_Activation_Approver_Recipients' (($notifications.Activation.Approvers.Recipients -join ','))
         }
     }
 

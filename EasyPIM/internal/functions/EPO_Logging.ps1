@@ -120,7 +120,7 @@ function Write-Summary {
     Write-Host "│ SUMMARY: $Category" -ForegroundColor Cyan
     Write-Host "├───────────────────────────────────────────────────────────────────────────────┤" -ForegroundColor Cyan
     Write-Host "│ ✅ Created : $Created" -ForegroundColor White
-    if ($PlannedCreated -ge 0) {
+    if ($PlannedCreated -gt 0 -and $WhatIfPreference) {
         Write-Host "│ 📝 Planned : $PlannedCreated" -ForegroundColor White
     }
     Write-Host "│ ⏭️ Skipped : $Skipped" -ForegroundColor White
