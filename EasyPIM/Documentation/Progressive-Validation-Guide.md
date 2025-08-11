@@ -986,6 +986,32 @@ Troubleshooting:
 
 ## Step 13 — (Optional, Destructive) Reconcile with initial mode
 
+### What WOULD Be Removed? (-Mode initial -WhatIf example)
+
+When you run an initial (destructive) reconcile with `-WhatIf`, the orchestrator enumerates everything it **would** delete so you can validate safely before executing. Preview this FIRST so you know the scale of change before reading further.
+
+Illustrative sample output (truncated):
+
+```text
+───────────────────────────────────────────────────────────────────────────────┐
+│ CLEANUP OPERATIONS
+├───────────────────────────────────────────────────────────────────────────────┤
+│ ✅ Kept    : 4
+│ 🗑️ Removed : 0
+│ 🛈 WouldRemove: 10
+│    - AcrPull  /subscriptions/<sub-guid> f53bf02e-c703-40ab-b5cb-af0d546bc2c4
+│    - Key Vault Secrets Officer /subscriptions/<sub-guid>/resourceGroups/RG-PIMTEST/providers/Microsoft.KeyVault/vaults/KVPIM 9f2aacfc-8c80-41a7-ba07-121e0cb29757
+│    - Storage Blob Data Owner /subscriptions/<sub-guid>/resourceGroups/cloud-shell-storage-westeurope/providers/Microsoft.Storage/storageAccounts/devsample1 e54e29a4-5c6f-47a6-a5d7-7d555f77fb41
+│    - Storage Blob Data Owner /subscriptions/<sub-guid>/resourceGroups/cloud-shell-storage-westeurope/providers/Microsoft.Storage/storageAccounts/devsample2 d2a829da-a0aa-4dab-9cee-a468285d101b
+│    - Storage Queue Data Contributor /subscriptions/<sub-guid>/resourceGroups/cloud-shell-storage-westeurope/providers/Microsoft.Storage/storageAccounts/devsample1 e54e29a4-5c6f-47a6-a5d7-7d555f77fb41
+│    ... (+5 more)
+│ ⏭️ Skipped : 8
+│ 🛡️ Protected: 10
+└───────────────────────────────────────────────────────────────────────────────┘
+```
+
+Use the "Export the Full WouldRemove List" subsection below to capture the complete set for audit before proceeding.
+
 Use this ONLY when you intend to remove every assignment not explicitly declared (except `ProtectedUsers`). Always run a -WhatIf preview first.
 
 Preview destructive reconcile:
@@ -1016,28 +1042,6 @@ Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId
 * Review prior delta runs for any unexpected `WouldRemove (delta)` entries.
 * Run once with -WhatIf and take a backup first.
 -->
-
-### What WOULD Be Removed? (-Mode initial -WhatIf example)
-
-When you run an initial (destructive) reconcile with `-WhatIf`, the orchestrator now enumerates everything it **would** delete so you can validate safely before executing. Below is an illustrative sample output (truncated) from a preview run:
-
-```text
-───────────────────────────────────────────────────────────────────────────────┐
-│ CLEANUP OPERATIONS
-├───────────────────────────────────────────────────────────────────────────────┤
-│ ✅ Kept    : 4
-│ 🗑️ Removed : 0
-│ 🛈 WouldRemove: 10
-│    - AcrPull  /subscriptions/<sub-guid> f53bf02e-c703-40ab-b5cb-af0d546bc2c4
-│    - Key Vault Secrets Officer /subscriptions/<sub-guid>/resourceGroups/RG-PIMTEST/providers/Microsoft.KeyVault/vaults/KVPIM 9f2aacfc-8c80-41a7-ba07-121e0cb29757
-│    - Storage Blob Data Owner /subscriptions/<sub-guid>/resourceGroups/cloud-shell-storage-westeurope/providers/Microsoft.Storage/storageAccounts/devsample1 e54e29a4-5c6f-47a6-a5d7-7d555f77fb41
-│    - Storage Blob Data Owner /subscriptions/<sub-guid>/resourceGroups/cloud-shell-storage-westeurope/providers/Microsoft.Storage/storageAccounts/devsample2 d2a829da-a0aa-4dab-9cee-a468285d101b
-│    - Storage Queue Data Contributor /subscriptions/<sub-guid>/resourceGroups/cloud-shell-storage-westeurope/providers/Microsoft.Storage/storageAccounts/devsample1 e54e29a4-5c6f-47a6-a5d7-7d555f77fb41
-│    ... (+5 more)
-│ ⏭️ Skipped : 8
-│ 🛡️ Protected: 10
-└───────────────────────────────────────────────────────────────────────────────┘
-```
 
 ### Export the Full WouldRemove List (Audit / Peer Review)
 
