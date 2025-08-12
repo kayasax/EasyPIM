@@ -239,7 +239,7 @@ Inherited assignments are role assignments that come from a higher scope, such a
 ### From Local Configuration File
 
 Delta mode (default):
-`Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "11111111-1111-1111-1111-111111111111" -SubscriptionId "22222222-2222-2222-2222-222222222222" -Mode "initial"`
+`Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "11111111-1111-1111-1111-111111111111" -SubscriptionId "22222222-2222-2222-2222-222222222222"`
 
 Initial mode:
 `Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "11111111-1111-1111-1111-111111111111" -SubscriptionId "22222222-2222-2222-2222-222222222222" -Mode "initial"`
