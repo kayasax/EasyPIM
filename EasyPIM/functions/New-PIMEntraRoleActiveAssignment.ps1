@@ -83,7 +83,8 @@ function New-PIMEntraRoleActiveAssignment {
         $script:tenantID = $tenantID
 
     #1 resolve principal object (groups no longer blocked if not role-assignable)
-    Write-Verbose "[ActiveAssign] principalID parameter raw='$principalID' length=$([string]::IsNullOrEmpty($principalID) ? 0 : $principalID.Length)"
+    $principalIdLen = if ([string]::IsNullOrEmpty($principalID)) { 0 } else { $principalID.Length }
+    Write-Verbose "[ActiveAssign] principalID parameter raw='$principalID' length=$principalIdLen"
     $endpoint = "directoryObjects/$principalID"
     $response = invoke-graph -Endpoint $endpoint
         # If principal is a group, sanity check isAssignableToRole unless user opts out
