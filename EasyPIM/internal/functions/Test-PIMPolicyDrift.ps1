@@ -219,7 +219,12 @@ Approver count drift is also flagged when ApprovalRequired=true.
             } catch { Write-Warning "Group resolution failed for '$($p.GroupName)': $($_.Exception.Message)" }
         }
         $gid = $p.GroupId
-        if (-not $gid) { $script:results += [pscustomobject]@{ Type='Group'; Name=$p.RoleName; Target=($p.GroupName ? $p.GroupName : '(unknown)'); Status='Error'; Differences='Missing GroupId' }; $script:driftCount++; continue }
+        if (-not $gid) {
+            $targetGroupRef = if ($p.GroupName) { $p.GroupName } else { '(unknown)' }
+            $script:results += [pscustomobject]@{ Type='Group'; Name=$p.RoleName; Target=$targetGroupRef; Status='Error'; Differences='Missing GroupId' }
+            $script:driftCount++
+            continue
+        }
         try {
             $live = Get-PIMGroupPolicy -tenantID $TenantId -groupID $gid -type ($p.RoleName.ToLower()) -ErrorAction Stop
             if ($live -is [System.Collections.IEnumerable] -and -not ($live -is [string])) { $live = @($live)[0] }
