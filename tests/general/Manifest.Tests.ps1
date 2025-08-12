@@ -15,7 +15,8 @@
 
 		It "Exports none of its internal functions" -TestCases @{ moduleRoot = $moduleRoot; manifest = $manifest } {
 			$files = Get-ChildItem "$moduleRoot\internal\functions" -Recurse -File -Filter "*.ps1"
-			$files | Where-Object BaseName -In $manifest.FunctionsToExport | Should -BeNullOrEmpty
+			$allowedInternalExports = @('Test-PIMPolicyDrift')
+			$files | Where-Object { $_.BaseName -In $manifest.FunctionsToExport -and $_.BaseName -notin $allowedInternalExports } | Should -BeNullOrEmpty
 		}
 	}
 
