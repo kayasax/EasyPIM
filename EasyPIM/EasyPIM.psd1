@@ -107,7 +107,8 @@ FunctionsToExport = @(
     'Copy-PIMAzureResourceEligibleAssignment',
     'Copy-PIMEntraRoleEligibleAssignment',
     'Invoke-EasyPIMOrchestrator',
-    'Get-EasyPIMConfiguration'
+    'Get-EasyPIMConfiguration',
+    'Test-PIMPolicyDrift'
 )
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
@@ -158,6 +159,7 @@ v1.9.0 Release Notes:
 - Environment variable integration ($env:TENANTID, $env:SUBSCRIPTIONID)
 
 🔧 ENHANCEMENTS:
+ - Exported drift verification function Test-PIMPolicyDrift (previously internal) for direct module usage (object output + CI friendly FailOnDrift option via wrapper script)
 - Robust error handling with graceful failure recovery
 - CSV import compatibility between Azure and Entra role formats
 - PowerShell 5.1 compatibility improvements
