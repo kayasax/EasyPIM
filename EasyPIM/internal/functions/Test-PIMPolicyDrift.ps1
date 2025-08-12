@@ -123,6 +123,24 @@ Approver count drift is also flagged when ApprovalRequired=true.
     $liveNameMap = @{ 'ActivationRequirement'='EnablementRules'; 'MaximumEligibilityDuration'='MaximumEligibleAssignmentDuration'; 'AllowPermanentEligibility'='AllowPermanentEligibleAssignment' }
     $script:results=@(); $script:driftCount=0
 
+    function Convert-RequirementValue {
+        param([string]$Value)
+        if (-not $Value) { return '' }
+        $v = $Value.Trim()
+        if ($v -eq '') { return '' }
+        if ($v -match '^(none|null|no(ne)?requirements?)$') { return '' }
+        # Split on comma / semicolon
+        $tokens = $v -split '[,;]+' | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+        $norm = foreach ($t in $tokens) {
+            switch -Regex ($t) {
+                '^(mfa|multifactorauthentication)$' { 'MFA'; break }
+                '^(justification)$' { 'Justification'; break }
+                default { $t }
+            }
+        }
+        ($norm | Sort-Object -Unique) -join ','
+    }
+
     function Compare-Policy {
         param([string]$Type,[string]$Name,[object]$Expected,[object]$Live,[string]$ExtraId=$null,[int]$ApproverCountExpected=$null)
         $differences=@()
@@ -132,7 +150,18 @@ Approver count drift is also flagged when ApprovalRequired=true.
                 $liveVal=$null; if ($Live -and $Live.PSObject -and $Live.PSObject.Properties[$liveProp]) { $liveVal=$Live.$liveProp }
                 if ($exp -is [System.Collections.IEnumerable] -and -not ($exp -is [string])) { $exp = ($exp | ForEach-Object { "$_" }) -join ',' }
                 if ($liveVal -is [System.Collections.IEnumerable] -and -not ($liveVal -is [string])) { $liveVal = ($liveVal | ForEach-Object { "$_" }) -join ',' }
-                if ("$exp" -ne "$liveVal") { $differences += ("{0}: expected='{1}' actual='{2}'" -f $f,$exp,$liveVal) }
+                if ($f -eq 'ActivationRequirement' -or $f -eq 'ActiveAssignmentRequirement') {
+                    $expNorm  = Convert-RequirementValue $exp
+                    $liveNorm = Convert-RequirementValue $liveVal
+                    if ($expNorm -ne $liveNorm) {
+                        $displayExp  = if ($null -eq $exp -or $exp -eq '' -or $exp -eq 'None') { 'None' } else { $exp }
+                        $displayLive = if ($null -eq $liveVal -or $liveVal -eq '' -or $liveVal -eq 'None') { 'None' } else { $liveVal }
+                        $differences += ("{0}: expected='{1}' actual='{2}'" -f $f,$displayExp,$displayLive)
+                    }
+                }
+                else {
+                    if ("$exp" -ne "$liveVal") { $differences += ("{0}: expected='{1}' actual='{2}'" -f $f,$exp,$liveVal) }
+                }
             }
         }
         if ($null -ne $ApproverCountExpected -and $Expected.PSObject.Properties['ApprovalRequired'] -and $Expected.ApprovalRequired) {
