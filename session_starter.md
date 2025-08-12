@@ -1,3 +1,4 @@
+| 2025-08-11 | Step 13 (destructive reconcile) validated: safety preview, export, and AU skip logic confirmed. |
 # 🧠 AI Session Starter: Project Memory
 
 This file serves as the persistent memory for the AI assistant across sessions in this workspace. It should be updated regularly to reflect the current state, goals, and progress of the project.

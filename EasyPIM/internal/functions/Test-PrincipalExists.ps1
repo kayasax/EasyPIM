@@ -38,7 +38,7 @@ function Test-PrincipalExists {
     catch {
         # If 404 treat as not existing silently
         $statusCode = $null
-        try { $statusCode = $_.Exception.Response.StatusCode } catch {}
+    try { $statusCode = $_.Exception.Response.StatusCode } catch { Write-Verbose "Suppressed status code extraction: $($_.Exception.Message)" }
         if ($statusCode -and ($statusCode.Value__ -eq 404 -or $statusCode -eq 404)) {
             Write-Verbose "Principal $PrincipalId does not exist (404)"
             $script:principalCache[$PrincipalId] = $false

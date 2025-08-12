@@ -1,5 +1,5 @@
-# Internal helper: Normalize-IsoDuration
-function Normalize-IsoDuration {
+# Internal helper: Convert-IsoDuration (renamed from Normalize-IsoDuration for approved verb)
+function Convert-IsoDuration {
     [CmdletBinding()]
     param(
         [string]$Duration,

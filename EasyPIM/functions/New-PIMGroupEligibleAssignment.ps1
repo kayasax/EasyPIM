@@ -106,13 +106,13 @@ function New-PIMGroupEligibleAssignment {
         if (!($PSBoundParameters.Keys.Contains('duration'))) {
             $duration = $config.MaximumEligibleAssignmentDuration
         } else {
-            $normalized = Normalize-IsoDuration -Duration $duration
+            $normalized = Convert-IsoDuration -Duration $duration
             $duration = $normalized
             try { $reqTs = [System.Xml.XmlConvert]::ToTimeSpan($duration) } catch { throw "Duration '$duration' cannot be parsed: $($_.Exception.Message)" }
-            $policyTs = $null; if($config.MaximumEligibleAssignmentDuration){ try{ $policyTs=[System.Xml.XmlConvert]::ToTimeSpan($config.MaximumEligibleAssignmentDuration) } catch {} }
+            $policyTs = $null; if($config.MaximumEligibleAssignmentDuration){ try{ $policyTs=[System.Xml.XmlConvert]::ToTimeSpan($config.MaximumEligibleAssignmentDuration) } catch { Write-Verbose "Suppressed MaximumEligibleAssignmentDuration parse: $($_.Exception.Message)" } }
             if($policyTs -and $reqTs -gt $policyTs -and -not $permanent){ throw "Requested eligible assignment duration '$duration' exceeds policy maximum '$($config.MaximumEligibleAssignmentDuration)' for group role $type." }
         }
-        if($duration -and $duration -match '^P[0-9]+[HMS]$'){ $duration = Normalize-IsoDuration -Duration $duration }
+    if($duration -and $duration -match '^P[0-9]+[HMS]$'){ $duration = Convert-IsoDuration -Duration $duration }
         write-verbose "assignement duration will be : $duration"
 
         if (!($PSBoundParameters.Keys.Contains('justification'))) {

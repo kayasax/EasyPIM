@@ -77,6 +77,7 @@ function New-PIMEntraRoleEligibleAssignment {
     #1 resolve principal object (groups no longer blocked if not role-assignable)
     $endpoint = "directoryObjects/$principalID"
     $response = invoke-graph -Endpoint $endpoint
+    if($response -and $response.'@odata.type') { Write-Verbose "[EligibleAssign] Resolved principal type: $($response.'@odata.type')" }
         if ($PSBoundParameters.Keys.Contains('startDateTime')) {
             $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime().addseconds(30) -f "yyyy-MM-ddTHH:mm:ssZ"
         }
@@ -99,15 +100,15 @@ function New-PIMEntraRoleEligibleAssignment {
         if (!($PSBoundParameters.Keys.Contains('duration'))) {
             $duration = $config.MaximumEligibleAssignmentDuration
         } else {
-            $normalized = Normalize-IsoDuration -Duration $duration
+            $normalized = Convert-IsoDuration -Duration $duration
             $duration = $normalized
             $reqTs = [System.Xml.XmlConvert]::ToTimeSpan($duration)
-            $policyTs = $null; if($config.MaximumEligibleAssignmentDuration){ try{ $policyTs=[System.Xml.XmlConvert]::ToTimeSpan($config.MaximumEligibleAssignmentDuration) } catch {} }
+            $policyTs = $null; if($config.MaximumEligibleAssignmentDuration){ try{ $policyTs=[System.Xml.XmlConvert]::ToTimeSpan($config.MaximumEligibleAssignmentDuration) } catch { Write-Verbose "Suppressed MaximumEligibleAssignmentDuration parse: $($_.Exception.Message)" } }
             if($policyTs -and $reqTs -gt $policyTs -and -not $permanent){
                 throw "Requested eligible assignment duration '$duration' exceeds policy maximum '$($config.MaximumEligibleAssignmentDuration)' for role $rolename. Remove -Duration to use the maximum or choose a smaller value."
             }
         }
-        if($duration -and $duration -match '^P[0-9]+[HMS]$'){ $duration = Normalize-IsoDuration -Duration $duration }
+    if($duration -and $duration -match '^P[0-9]+[HMS]$'){ $duration = Convert-IsoDuration -Duration $duration }
         write-verbose "assignement duration will be : $duration"
 
         if (!($PSBoundParameters.Keys.Contains('justification'))) {

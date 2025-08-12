@@ -1064,44 +1064,44 @@ function ConvertTo-PolicyCSV {
         # Eligibility notifications
         if ($notifications.Eligibility) {
             # Helper to set or add property
-            function SetOrAddProp([object]$obj,[string]$name,[object]$value){ if(-not ($obj.PSObject.Properties.Match($name))){ $obj | Add-Member -NotePropertyName $name -NotePropertyValue $value } else { $obj.$name = $value } }
-            SetOrAddProp $csvRow 'Notification_Eligibility_Alert_isDefaultRecipientEnabled' ($notifications.Eligibility.Alert.isDefaultRecipientEnabled.ToString())
-            SetOrAddProp $csvRow 'Notification_Eligibility_Alert_NotificationLevel' ($notifications.Eligibility.Alert.NotificationLevel)
-            SetOrAddProp $csvRow 'Notification_Eligibility_Alert_Recipients' (($notifications.Eligibility.Alert.Recipients -join ','))
-            SetOrAddProp $csvRow 'Notification_Eligibility_Assignee_isDefaultRecipientEnabled' ($notifications.Eligibility.Assignee.isDefaultRecipientEnabled.ToString())
-            SetOrAddProp $csvRow 'Notification_Eligibility_Assignee_NotificationLevel' ($notifications.Eligibility.Assignee.NotificationLevel)
-            SetOrAddProp $csvRow 'Notification_Eligibility_Assignee_Recipients' (($notifications.Eligibility.Assignee.Recipients -join ','))
-            SetOrAddProp $csvRow 'Notification_Eligibility_Approvers_isDefaultRecipientEnabled' ($notifications.Eligibility.Approvers.isDefaultRecipientEnabled.ToString())
-            SetOrAddProp $csvRow 'Notification_Eligibility_Approvers_NotificationLevel' ($notifications.Eligibility.Approvers.NotificationLevel)
-            SetOrAddProp $csvRow 'Notification_Eligibility_Approvers_Recipients' (($notifications.Eligibility.Approvers.Recipients -join ','))
+            function SetOrAddProp { param([Parameter(Mandatory)][object]$Object,[Parameter(Mandatory)][string]$Name,[Parameter(Mandatory)][object]$Value) if(-not ($Object.PSObject.Properties.Match($Name))){ $Object | Add-Member -NotePropertyName $Name -NotePropertyValue $Value } else { $Object.$Name = $Value } }
+            SetOrAddProp -Object $csvRow -Name 'Notification_Eligibility_Alert_isDefaultRecipientEnabled' -Value ($notifications.Eligibility.Alert.isDefaultRecipientEnabled.ToString())
+            SetOrAddProp -Object $csvRow -Name 'Notification_Eligibility_Alert_NotificationLevel' -Value ($notifications.Eligibility.Alert.NotificationLevel)
+            SetOrAddProp -Object $csvRow -Name 'Notification_Eligibility_Alert_Recipients' -Value (($notifications.Eligibility.Alert.Recipients -join ','))
+            SetOrAddProp -Object $csvRow -Name 'Notification_Eligibility_Assignee_isDefaultRecipientEnabled' -Value ($notifications.Eligibility.Assignee.isDefaultRecipientEnabled.ToString())
+            SetOrAddProp -Object $csvRow -Name 'Notification_Eligibility_Assignee_NotificationLevel' -Value ($notifications.Eligibility.Assignee.NotificationLevel)
+            SetOrAddProp -Object $csvRow -Name 'Notification_Eligibility_Assignee_Recipients' -Value (($notifications.Eligibility.Assignee.Recipients -join ','))
+            SetOrAddProp -Object $csvRow -Name 'Notification_Eligibility_Approvers_isDefaultRecipientEnabled' -Value ($notifications.Eligibility.Approvers.isDefaultRecipientEnabled.ToString())
+            SetOrAddProp -Object $csvRow -Name 'Notification_Eligibility_Approvers_NotificationLevel' -Value ($notifications.Eligibility.Approvers.NotificationLevel)
+            SetOrAddProp -Object $csvRow -Name 'Notification_Eligibility_Approvers_Recipients' -Value (($notifications.Eligibility.Approvers.Recipients -join ','))
         }
 
         # Active notifications
         if ($notifications.Active) {
-            function SetOrAddProp2([object]$obj,[string]$name,[object]$value){ if(-not ($obj.PSObject.Properties.Match($name))){ $obj | Add-Member -NotePropertyName $name -NotePropertyValue $value } else { $obj.$name = $value } }
-            SetOrAddProp2 $csvRow 'Notification_Active_Alert_isDefaultRecipientEnabled' ($notifications.Active.Alert.isDefaultRecipientEnabled.ToString())
-            SetOrAddProp2 $csvRow 'Notification_Active_Alert_NotificationLevel' ($notifications.Active.Alert.NotificationLevel)
-            SetOrAddProp2 $csvRow 'Notification_Active_Alert_Recipients' (($notifications.Active.Alert.Recipients -join ','))
-            SetOrAddProp2 $csvRow 'Notification_Active_Assignee_isDefaultRecipientEnabled' ($notifications.Active.Assignee.isDefaultRecipientEnabled.ToString())
-            SetOrAddProp2 $csvRow 'Notification_Active_Assignee_NotificationLevel' ($notifications.Active.Assignee.NotificationLevel)
-            SetOrAddProp2 $csvRow 'Notification_Active_Assignee_Recipients' (($notifications.Active.Assignee.Recipients -join ','))
-            SetOrAddProp2 $csvRow 'Notification_Active_Approvers_isDefaultRecipientEnabled' ($notifications.Active.Approvers.isDefaultRecipientEnabled.ToString())
-            SetOrAddProp2 $csvRow 'Notification_Active_Approvers_NotificationLevel' ($notifications.Active.Approvers.NotificationLevel)
-            SetOrAddProp2 $csvRow 'Notification_Active_Approvers_Recipients' (($notifications.Active.Approvers.Recipients -join ','))
+            function SetOrAddProp2 { param([Parameter(Mandatory)][object]$Object,[Parameter(Mandatory)][string]$Name,[Parameter(Mandatory)][object]$Value) if(-not ($Object.PSObject.Properties.Match($Name))){ $Object | Add-Member -NotePropertyName $Name -NotePropertyValue $Value } else { $Object.$Name = $Value } }
+            SetOrAddProp2 -Object $csvRow -Name 'Notification_Active_Alert_isDefaultRecipientEnabled' -Value ($notifications.Active.Alert.isDefaultRecipientEnabled.ToString())
+            SetOrAddProp2 -Object $csvRow -Name 'Notification_Active_Alert_NotificationLevel' -Value ($notifications.Active.Alert.NotificationLevel)
+            SetOrAddProp2 -Object $csvRow -Name 'Notification_Active_Alert_Recipients' -Value (($notifications.Active.Alert.Recipients -join ','))
+            SetOrAddProp2 -Object $csvRow -Name 'Notification_Active_Assignee_isDefaultRecipientEnabled' -Value ($notifications.Active.Assignee.isDefaultRecipientEnabled.ToString())
+            SetOrAddProp2 -Object $csvRow -Name 'Notification_Active_Assignee_NotificationLevel' -Value ($notifications.Active.Assignee.NotificationLevel)
+            SetOrAddProp2 -Object $csvRow -Name 'Notification_Active_Assignee_Recipients' -Value (($notifications.Active.Assignee.Recipients -join ','))
+            SetOrAddProp2 -Object $csvRow -Name 'Notification_Active_Approvers_isDefaultRecipientEnabled' -Value ($notifications.Active.Approvers.isDefaultRecipientEnabled.ToString())
+            SetOrAddProp2 -Object $csvRow -Name 'Notification_Active_Approvers_NotificationLevel' -Value ($notifications.Active.Approvers.NotificationLevel)
+            SetOrAddProp2 -Object $csvRow -Name 'Notification_Active_Approvers_Recipients' -Value (($notifications.Active.Approvers.Recipients -join ','))
         }
 
         # Activation notifications
         if ($notifications.Activation) {
-            function SetOrAddProp3([object]$obj,[string]$name,[object]$value){ if(-not ($obj.PSObject.Properties.Match($name))){ $obj | Add-Member -NotePropertyName $name -NotePropertyValue $value } else { $obj.$name = $value } }
-            SetOrAddProp3 $csvRow 'Notification_Activation_Alert_isDefaultRecipientEnabled' ($notifications.Activation.Alert.isDefaultRecipientEnabled.ToString())
-            SetOrAddProp3 $csvRow 'Notification_Activation_Alert_NotificationLevel' ($notifications.Activation.Alert.NotificationLevel)
-            SetOrAddProp3 $csvRow 'Notification_Activation_Alert_Recipients' (($notifications.Activation.Alert.Recipients -join ','))
-            SetOrAddProp3 $csvRow 'Notification_Activation_Assignee_isDefaultRecipientEnabled' ($notifications.Activation.Assignee.isDefaultRecipientEnabled.ToString())
-            SetOrAddProp3 $csvRow 'Notification_Activation_Assignee_NotificationLevel' ($notifications.Activation.Assignee.NotificationLevel)
-            SetOrAddProp3 $csvRow 'Notification_Activation_Assignee_Recipients' (($notifications.Activation.Assignee.Recipients -join ','))
-            SetOrAddProp3 $csvRow 'Notification_Activation_Approver_isDefaultRecipientEnabled' ($notifications.Activation.Approvers.isDefaultRecipientEnabled.ToString())
-            SetOrAddProp3 $csvRow 'Notification_Activation_Approver_NotificationLevel' ($notifications.Activation.Approvers.NotificationLevel)
-            SetOrAddProp3 $csvRow 'Notification_Activation_Approver_Recipients' (($notifications.Activation.Approvers.Recipients -join ','))
+            function SetOrAddProp3 { param([Parameter(Mandatory)][object]$Object,[Parameter(Mandatory)][string]$Name,[Parameter(Mandatory)][object]$Value) if(-not ($Object.PSObject.Properties.Match($Name))){ $Object | Add-Member -NotePropertyName $Name -NotePropertyValue $Value } else { $Object.$Name = $Value } }
+            SetOrAddProp3 -Object $csvRow -Name 'Notification_Activation_Alert_isDefaultRecipientEnabled' -Value ($notifications.Activation.Alert.isDefaultRecipientEnabled.ToString())
+            SetOrAddProp3 -Object $csvRow -Name 'Notification_Activation_Alert_NotificationLevel' -Value ($notifications.Activation.Alert.NotificationLevel)
+            SetOrAddProp3 -Object $csvRow -Name 'Notification_Activation_Alert_Recipients' -Value (($notifications.Activation.Alert.Recipients -join ','))
+            SetOrAddProp3 -Object $csvRow -Name 'Notification_Activation_Assignee_isDefaultRecipientEnabled' -Value ($notifications.Activation.Assignee.isDefaultRecipientEnabled.ToString())
+            SetOrAddProp3 -Object $csvRow -Name 'Notification_Activation_Assignee_NotificationLevel' -Value ($notifications.Activation.Assignee.NotificationLevel)
+            SetOrAddProp3 -Object $csvRow -Name 'Notification_Activation_Assignee_Recipients' -Value (($notifications.Activation.Assignee.Recipients -join ','))
+            SetOrAddProp3 -Object $csvRow -Name 'Notification_Activation_Approver_isDefaultRecipientEnabled' -Value ($notifications.Activation.Approvers.isDefaultRecipientEnabled.ToString())
+            SetOrAddProp3 -Object $csvRow -Name 'Notification_Activation_Approver_NotificationLevel' -Value ($notifications.Activation.Approvers.NotificationLevel)
+            SetOrAddProp3 -Object $csvRow -Name 'Notification_Activation_Approver_Recipients' -Value (($notifications.Activation.Approvers.Recipients -join ','))
         }
     }
 

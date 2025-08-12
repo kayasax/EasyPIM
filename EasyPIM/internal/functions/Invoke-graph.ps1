@@ -82,7 +82,10 @@ function invoke-graph {
 
         # Resolve tenantId from multiple potential scopes (module script scope, global, environment) to support external validator scripts
         $tenantPref = $script:tenantID
-        if(-not $tenantPref -and $global:tenantID){ $tenantPref = $global:tenantID }
+        if(-not $tenantPref){
+            $gv = Get-Variable -Name tenantID -Scope Global -ErrorAction SilentlyContinue
+            if($gv){ $tenantPref = $gv.Value }
+        }
         if(-not $tenantPref -and $env:TENANTID){ $tenantPref = $env:TENANTID }
         if(-not $tenantPref){ Write-Verbose "No tenantID resolved; proceeding will likely fail authentication" }
         if ( $null -eq (get-mgcontext) -or ( (get-mgcontext).TenantId -ne $tenantPref ) ) {
@@ -115,14 +118,14 @@ function invoke-graph {
                 }
                 catch {
                     $statusCode = $null; $errorMessage = $_.Exception.Message; $detailReason = $null; $detailCode = $null; $rawBody = $null; $reqId=$null; $clientReqId=$null
-                    try { $statusCode = $_.Exception.Response.StatusCode } catch {}
+                    try { $statusCode = $_.Exception.Response.StatusCode } catch { Write-Verbose "Suppressed status code extraction: $($_.Exception.Message)" }
                     try {
                         if ($_.Exception.Response -and $_.Exception.Response.Headers) {
                             $reqId = $_.Exception.Response.Headers["request-id"]
                             if (-not $reqId) { $reqId = $_.Exception.Response.Headers["x-ms-request-id"] }
                             $clientReqId = $_.Exception.Response.Headers["client-request-id"]
                         }
-                    } catch {}
+                    } catch { Write-Verbose "Suppressed header extraction: $($_.Exception.Message)" }
                     # Try read response body (GraphServiceException sometimes exposes Content stream)
                     try {
                         if ($_.Exception.Response -and $_.Exception.Response.Content) {
@@ -131,8 +134,8 @@ function invoke-graph {
                             $reader = New-Object System.IO.StreamReader($stream)
                             $rawBody = $reader.ReadToEnd()
                         }
-                    } catch {}
-                    if (-not $rawBody) { try { $rawBody = $_.ErrorDetails.Message } catch {} }
+                    } catch { Write-Verbose "Suppressed body stream read: $($_.Exception.Message)" }
+                    if (-not $rawBody) { try { $rawBody = $_.ErrorDetails.Message } catch { Write-Verbose "Suppressed ErrorDetails read: $($_.Exception.Message)" } }
                     if ($rawBody -and $script:EasyPIM_FullGraphError) {
                         Write-Verbose ("Full Graph error body: {0}" -f ($rawBody.Length -gt 4000 ? ($rawBody.Substring(0,4000) + '…') : $rawBody))
                     }
@@ -140,7 +143,7 @@ function invoke-graph {
                         try {
                             $parsed = $rawBody | ConvertFrom-Json -ErrorAction SilentlyContinue
                             if ($parsed.error) { $detailReason = $parsed.error.message; $detailCode = $parsed.error.code }
-                        } catch {}
+                        } catch { Write-Verbose "Suppressed error body JSON parse: $($_.Exception.Message)" }
                     }
                     $composed = "Graph API request failed: $statusCode - $errorMessage";
                     if ($detailCode -or $detailReason) { $composed += " | code=$detailCode reason=$detailReason" }
@@ -218,14 +221,14 @@ function invoke-graph {
             }
             catch {
                 $statusCode = $null; $errorMessage = $_.Exception.Message; $detailReason = $null; $detailCode = $null; $rawBody = $null; $reqId=$null; $clientReqId=$null
-                try { $statusCode = $_.Exception.Response.StatusCode } catch {}
+                try { $statusCode = $_.Exception.Response.StatusCode } catch { Write-Verbose "Suppressed status code extraction: $($_.Exception.Message)" }
                 try {
                     if ($_.Exception.Response -and $_.Exception.Response.Headers) {
                         $reqId = $_.Exception.Response.Headers["request-id"]
                         if (-not $reqId) { $reqId = $_.Exception.Response.Headers["x-ms-request-id"] }
                         $clientReqId = $_.Exception.Response.Headers["client-request-id"]
                     }
-                } catch {}
+                } catch { Write-Verbose "Suppressed header extraction: $($_.Exception.Message)" }
                 # Try read response body for detailed Graph error
                 try {
                     if ($_.Exception.Response -and $_.Exception.Response.Content) {
@@ -233,8 +236,8 @@ function invoke-graph {
                         $reader = New-Object System.IO.StreamReader($stream)
                         $rawBody = $reader.ReadToEnd()
                     }
-                } catch {}
-                if (-not $rawBody) { try { $rawBody = $_.ErrorDetails.Message } catch {} }
+                } catch { Write-Verbose "Suppressed body stream read: $($_.Exception.Message)" }
+                if (-not $rawBody) { try { $rawBody = $_.ErrorDetails.Message } catch { Write-Verbose "Suppressed ErrorDetails read: $($_.Exception.Message)" } }
                 if ($rawBody -and $script:EasyPIM_FullGraphError) {
                     Write-Verbose ("Full Graph error body: {0}" -f ($rawBody.Length -gt 4000 ? ($rawBody.Substring(0,4000) + '…') : $rawBody))
                 }
@@ -242,7 +245,7 @@ function invoke-graph {
                     try {
                         $parsed = $rawBody | ConvertFrom-Json -ErrorAction SilentlyContinue
                         if ($parsed.error) { $detailReason = $parsed.error.message; $detailCode = $parsed.error.code }
-                    } catch {}
+                    } catch { Write-Verbose "Suppressed error body JSON parse: $($_.Exception.Message)" }
                 }
                 $composed = "Graph API request failed: $statusCode - $errorMessage";
                 if ($detailCode -or $detailReason) { $composed += " | code=$detailCode reason=$detailReason" }

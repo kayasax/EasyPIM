@@ -10,4 +10,4 @@ foreach ($file in Get-ChildItem -Path "$PSScriptRoot/internal/scripts" -Filter *
     . $file.FullName
 }
 
-## Note: All internal helper functions (including Normalize-IsoDuration) are loaded from internal/functions/*.
+## Note: All internal helper functions (including Convert-IsoDuration, formerly Normalize-IsoDuration) are loaded from internal/functions/*.

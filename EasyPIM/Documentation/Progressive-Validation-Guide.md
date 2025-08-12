@@ -1,4 +1,3 @@
-> By default, `Backup-PIMAzureResourcePolicy` works at the subscription level. If you want to back up policies at a different scope, you can use the `-scope` parameter instead of `-subscriptionID`.
 # EasyPIM Progressive Validation Runbook
 
 A safe, step-by-step plan to exercise the orchestrator and policies in a real tenant. Each step includes a minimal JSON and a preview (-WhatIf) run before applying.
@@ -19,15 +18,10 @@ A safe, step-by-step plan to exercise the orchestrator and policies in a real te
 12. Step 11 — Apply changes (remove -WhatIf)
 13. Step 12 — Use the Same Config from Azure Key Vault (Optional)
 14. Step 13 — (Optional, Destructive) Reconcile with initial mode
-15. Step 14 — Automatic Principal Validation (Safety Gate)
-16. Step 15 — Comprehensive policy validation (all options)
-17. Step 16 — (Optional) CI/CD automation (GitHub Actions + Key Vault)
+15. Step 14 — Comprehensive policy validation (all options)
+16. Step 15 — (Optional) CI/CD automation (GitHub Actions + Key Vault)
+17. Appendix — Tips & Safety Gates
 
-
-> Assignment Modes Snapshot
-> - `delta` (default): Add / update only. No deletions. Items that are NOT in your config remain and are reported as `WouldRemove (delta)` in summaries for awareness.
-> - `initial`: Full reconcile (destructive). Removes any assignment not declared (except those whose principalId is in `ProtectedUsers`). Always run first with `-WhatIf` and confirm `ProtectedUsers`.
-> - Policies: Mode impacts only assignment pruning; policy application logic is the same (or simulated with `-WhatIf`).
 
 ## Prerequisites
 
@@ -43,6 +37,8 @@ Tip: Keep one file and replace/append sections as you move through steps.
 
 > **Note:** This step may take up to an hour depending on the number of roles and policies in your tenant.
 
+> By default, `Backup-PIMAzureResourcePolicy` works at the subscription level. If you want to back up policies at a different scope, you can use the `-scope` parameter instead of `-subscriptionID`.
+
 Commands
 
 ```powershell
@@ -53,12 +49,31 @@ Backup-PIMAzureResourcePolicy -tenantID $env:TenantID -subscriptionID $env:Subsc
 
 ## Step 1 — Minimal config: ProtectedUsers only
 
+Goal: Establish a safety baseline that guarantees your break‑glass / critical principals can never be removed by later reconciliation steps (especially Step 13 initial mode). `ProtectedUsers` is a hard exclusion list used by cleanup logic: any assignment held by these object IDs is always preserved (reported as Protected, never Removed / WouldRemove). Start with ONLY this section so you can preview the orchestration pipeline and principal validation without risking unintended deletions.
+
+What to include:
+* Break‑glass emergency access accounts (cloud‑only preferred, strong MFA)
+* Core IAM / security operations groups or service principals that must retain standing access while you transition
+* Accounts required to fix the system if later steps misconfigure policies
+
+What NOT to include (anti‑patterns):
+* Large generic groups (bloats permanent access and reduces visibility)
+* Expired / personal test accounts (defeats cleanup objectives)
+* Every admin in the tenant (use assignments + policies instead)
+
+Best practices:
+1. Keep the list short (aim for 1–5 principals).
+2. Use GUIDs (object IDs) not display names to avoid ambiguity.
+3. Revisit periodically; remove stale entries once confidence is high.
+4. Never run initial (destructive) mode until this list is validated in a -WhatIf preview.
+
 Write pim-config.json
 
 ```json
 {
   "ProtectedUsers": [
-    "00000000-0000-0000-0000-000000000001"
+    "00000000-0000-0000-0000-000000000001",//break glass account objectID
+    "00000000-0000-0000-0000-000000000002"//IAM admins Group obejctID
   ]
 }
 ```
@@ -97,6 +112,7 @@ Write pim-config.json (always keep `ProtectedUsers` first; you can add comments 
   }
 }
 ```
+This example above uses only a subset of available options. Refer to [Step 14](#step-14--comprehensive-policy-validation-all-options) for the complete list of supported options.
 
 Preview (policies only)
 
@@ -106,6 +122,38 @@ Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId
 
 ## Step 3 — Entra role policy (template)
 
+Why templates? A PolicyTemplate lets you define a reusable policy profile once (durations, requirements, approvals, notifications, auth context, limits) and then reference it by name under multiple roles. Benefits:
+* DRY & consistency – one edit propagates everywhere (e.g., change ActivationRequirement in Standard template and every role using it updates next run).
+* Safer iteration – you preview a single template change impact across all roles (-WhatIf) before applying.
+* Clear diffs – PRs show a small change in one template block instead of many duplicated inline edits.
+* Easier promotion – copy a vetted template set from test → prod without hunting per‑role tweaks.
+* Guardrails – high‑risk roles point to a hardened template (HighSecurity) while low‑risk roles stay on Standard.
+
+Override strategy (important): The current engine resolves either a Template OR an inline policy for a role; it does NOT merge a template plus per‑role overrides field‑by‑field. To “override” for a specific role you simply stop using the Template reference and replace it with a full inline block for that role. (Future enhancement could add partial overlay, but today it is a switch, not a merge.)
+
+Practical pattern:
+1. Start with templates for 90% of roles (Standard / HighSecurity, etc.).
+2. If one role needs a deviation (e.g., shorter ActivationDuration), replace its `{ "Template": "Standard" }` with a full inline policy object and adjust only the differing fields (you can copy the template contents as a starting point).
+3. If later the deviation is no longer needed, revert back to the template reference to rejoin centralized management.
+
+Example override (template → inline):
+```diff
+  "EntraRoles": {
+    "Policies": {
+      "User Administrator": {
+-       "Template": "HighSecurity"
++       "ActivationDuration": "PT1H",              // shortened for this role only
++       "ActivationRequirement": "MultiFactorAuthentication,Justification",
++       "ApprovalRequired": true,
++       "Approvers": [ { "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "description": "PIM Approver 1" } ],
++       "AuthenticationContext_Enabled": true,
++       "AuthenticationContext_Value": "c1:HighRiskOperations"
+      }
+    }
+  }
+```
+
+Tip: Keep the number of distinct templates small; too many templates = implicit inline sprawl.
 
 Write pim-config.json
 
@@ -118,7 +166,7 @@ Write pim-config.json
   "PolicyTemplates": {
     // Default/normal template for most roles
     "Standard": {
-      "ActivationDuration": "PT2H",
+      "ActivationDuration": "PT8H",
       "ActivationRequirement": "MultiFactorAuthentication,Justification",
       "ApprovalRequired": false
     },
@@ -901,17 +949,6 @@ Appendable fragment (paste just above the final closing brace of your existing J
   Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -SkipPolicies
   ```
 
-  ✅ Validation Outcome Guidance
-
-  After a successful run with `-SkipPolicies` (and without errors in principal validation), you have effectively validated Step 10.2 of this guide: assignments referencing previously previewed policies can be processed independently. At this point you should see:
-  - Principal validation summary (0 missing)
-  - Assignment creation or delta summary (Added / Kept / WouldRemove counts)
-  - No policy mutation messages (because policies were skipped)
-
-  If results differ:
-  - Missing principals: fix object IDs before proceeding further.
-  - Unexpected removals in delta mode: re‑check Mode parameter (should be `delta`) and any ProtectedUsers settings.
-  - 400/403 errors: rerun with `-Verbose` and inspect enriched error lines for Graph/ARM codes.
   ### 10.3 Template (Optional)
 
 ```diff
@@ -939,6 +976,8 @@ Result: cleaner reuse; future tweaks centralized.
 NOTE: Deprecated formats (`GroupPolicies` array or nested `Policies.Groups`) still load with a warning; migrate to `GroupRoles.Policies` for forward compatibility.
 
 ## Step 11 — Apply changes (remove -WhatIf)
+
+> **Safety Note:** By default the orchestrator operates in **delta** mode. That means it will create or update the assignments/policies you declare but it will **not delete** existing assignments that are absent from the config. Only new (or changed) items are acted on, so there is no risk of breaking existing access at this step. Destructive cleanup requires explicitly running Step 13 with `-Mode initial` (and ideally a prior `-WhatIf`).
 
 Apply policies
 
@@ -985,7 +1024,26 @@ Troubleshooting:
 - Parse error: `az keyvault secret show --vault-name <kv-name> --name EasyPIM-Config --query value -o tsv | ConvertFrom-Json`.
 
 ## Step 13 — (Optional, Destructive) Reconcile with initial mode
+> **Pre-Execution Backup Recommended:** Step 0 only backed up policies. Before running a destructive initial reconcile you should also snapshot CURRENT assignments so you can restore or justify removals. Export (or at least list to CSV) each assignment category:
+> - Entra role eligible: `Get-PIMEntraRoleEligibleAssignment -tenantID <tenant>`
+> - Entra role active: `Get-PIMEntraRoleActiveAssignment -tenantID <tenant>`
+> - Azure role eligible: `Get-PIMAzureResourceEligibleAssignment -tenantID <tenant> -subscriptionID <sub>`
+> - Azure role active: `Get-PIMAzureResourceActiveAssignment -tenantID <tenant> -subscriptionID <sub>`
+> - (If used) Group eligible: `Get-PIMGroupEligibleAssignment -tenantID <tenant>`
+> - (If used) Group active: `Get-PIMGroupActiveAssignment -tenantID <tenant>`
+>
+> Example quick export (PowerShell):
+> ```powershell
+> # Module updated: Get-*Assignment cmdlets now emit clean objects (no leading count string), so you can pipe directly.
+> Get-PIMEntraRoleEligibleAssignment -tenantID $tid | Export-Csv -Path C:\Logs\EntraEligible-BeforeInitial.csv -NoTypeInformation
+>
+> Get-PIMEntraRoleActiveAssignment -tenantID $tid | Export-Csv -Path C:\Logs\EntraActive-BeforeInitial.csv -NoTypeInformation
+>
+> Get-PIMAzureResourceEligibleAssignment -tenantID $tid -subscriptionID $sub | Export-Csv -Path C:\Logs\AzureEligible-BeforeInitial.csv -NoTypeInformation
+> ```
+> Keep these artifacts with the WouldRemove export for audit / rollback.
 
+Use this mode ONLY when you intend to remove every assignment not explicitly declared (except `ProtectedUsers`). Always run a -WhatIf preview first.
 ### What WOULD Be Removed? (-Mode initial -WhatIf example)
 
 When you run an initial (destructive) reconcile with `-WhatIf`, the orchestrator enumerates everything it **would** delete so you can validate safely before executing. Preview this FIRST so you know the scale of change before reading further.
@@ -1012,36 +1070,13 @@ Illustrative sample output (truncated):
 
 Use the "Export the Full WouldRemove List" subsection below to capture the complete set for audit before proceeding.
 
-Use this ONLY when you intend to remove every assignment not explicitly declared (except `ProtectedUsers`). Always run a -WhatIf preview first.
 
 Preview destructive reconcile:
 ```powershell
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -Mode initial -WhatIf -SkipPolicies
 ```
 
-Execute (destructive) ONLY after validating preview:
-```powershell
-Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -Mode initial -SkipPolicies
-```
-<div style="background:#ffecec;border:2px solid #ff4d4f;padding:16px;border-radius:6px;">
-  <strong style="color:#d8000c;font-size:1.05em;">⚠️ DESTRUCTIVE MODE WARNING (Step 13)</strong>
-  <ul style="margin-top:8px;">
-    <li><strong>All assignments NOT declared in your config will be REMOVED</strong> (except principals listed under <code>ProtectedUsers</code>).</li>
-    <li>Verify <code>ProtectedUsers</code> includes every break‑glass / critical account before proceeding.</li>
-    <li>Review prior delta runs: investigate any <code>WouldRemove (delta)</code> items you are not expecting.</li>
-  </ul>
-  <p style="margin-top:8px;">
-    <em>Best practice:</em> Run at least once with <code>-WhatIf</code>, capture the summary for audit, and (optionally) perform a fresh backup (Step 0) immediately before executing the destructive apply.
-  </p>
-</div>
 
-<!-- Fallback (plain markdown) if HTML rendering is stripped:
-**DESTRUCTIVE MODE WARNING (Step 13)**
-* All assignments NOT declared in your config will be REMOVED (except ProtectedUsers).
-* Verify ProtectedUsers contains every break-glass / critical account.
-* Review prior delta runs for any unexpected `WouldRemove (delta)` entries.
-* Run once with -WhatIf and take a backup first.
--->
 
 ### Export the Full WouldRemove List (Audit / Peer Review)
 
@@ -1109,42 +1144,40 @@ Then execute using the destructive command (without `-WhatIf`) only after you ar
 
 > Delta mode note: In `delta` mode nothing is deleted; such items would instead surface as `WouldRemove (delta)` to keep you aware of potential cleanup candidates without any risk.
 
+<div style="background:#ffecec;border:2px solid #ff4d4f;padding:16px;border-radius:6px;">
+  <strong style="color:#d8000c;font-size:1.05em;">⚠️ DESTRUCTIVE MODE WARNING (Step 13)</strong>
+  <ul style="margin-top:8px;">
+    <li><strong>All assignments NOT declared in your config will be REMOVED</strong> (except principals listed under <code>ProtectedUsers</code>).</li>
+    <li>Verify <code>ProtectedUsers</code> includes every break‑glass / critical account before proceeding.</li>
+    <li>Review prior delta runs: investigate any <code>WouldRemove (delta)</code> items you are not expecting.</li>
+  </ul>
+  <p style="margin-top:8px;">
+    <em>Best practice:</em> Run at least once with <code>-WhatIf</code>, capture the summary for audit, and (optionally) perform a fresh backup (top of Step 13) immediately before executing the destructive apply.
+  </p>
+</div>
 
+<!-- Fallback (plain markdown) if HTML rendering is stripped:
+**DESTRUCTIVE MODE WARNING (Step 13)**
+* All assignments NOT declared in your config will be REMOVED (except ProtectedUsers).
+* Verify ProtectedUsers contains every break-glass / critical account.
+* Review prior delta runs for any unexpected `WouldRemove (delta)` entries.
+* Run once with -WhatIf and take a backup first.
+-->
+Execute (destructive) ONLY after validating preview:
+```powershell
+Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -Mode initial -SkipPolicies
+```
 
-## Step 14 — Automatic Principal Validation (Safety Gate)
-The orchestrator now ALWAYS validates all referenced principals (users, groups, service principals) and role‑assignable status for groups before any changes. If issues are detected it aborts before policies or assignments are processed.
-
-Benefits:
-* Prevents misleading "Created" outputs caused by placeholder GUIDs.
-* Catches non role‑assignable groups before assignment attempts.
-* Produces a concise invalid principal summary without touching assignments or policies.
-
-If validation fails:
-1. Replace placeholder or removed object IDs with real ones.
-2. (Optional) For groups: if you plan classic privileged directory role use outside this orchestrator, you may still choose to set them role-assignable; it's not required for orchestrator processing.
-3. Remove or comment obsolete principals, then re-run.
-
-If you genuinely need to ignore a transient missing ID, temporarily comment it out (future enhancement may add an override switch).
 
 ---
 
-## Verification Tips
 
-- ActivationRequirement values are case-sensitive: `None`, `MultiFactorAuthentication`, `Justification`, `Ticketing` (combine with commas)
-- Azure policies require `Scope`; Entra policies are directory-wide
-- AU-scoped Entra cleanup isn’t automatic; remove manually if needed
-- Keep break-glass accounts in `ProtectedUsers` at all times
 
-## References
-
-- See `EasyPIM-Orchestrator-Complete-Tutorial.md` for end-to-end context
-- See `Configuration-Schema.md` for the full schema and field definitions
-
-## Step 15 — Comprehensive policy validation (all options)
+## Step 14 — Comprehensive policy validation (all options)
 
 This step previews every main policy lever in a single run: durations, approvers, authentication context, and full notification matrix.
 
-### 15.1 Entra role full-feature policy (preview with -WhatIf)
+### 14.1 Entra role full-feature policy (preview with -WhatIf)
 
 Run with -WhatIf to preview safely; no separate validation mode flag is required.
 
@@ -1198,7 +1231,7 @@ Preview (policies only)
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
 ```
 
-### 15.2 Azure role full-feature policy (preview with -WhatIf)
+### 14.2 Azure role full-feature policy (preview with -WhatIf)
 Inline policy with all options; Scope required.
 
 ```json
@@ -1218,7 +1251,7 @@ Inline policy with all options; Scope required.
         ],
         "AllowPermanentEligibility": false,
         "MaximumEligibilityDuration": "P180D",
-        "AllowPermanentActiveAssignment": false,
+        c,
         "MaximumActiveAssignmentDuration": "P14D",
         "Notifications": {
           "Eligibility": {
@@ -1256,13 +1289,13 @@ Notes
 - Approvers array accepts user or group object IDs; ApprovalRequired must be true for approvers to apply.
 - The -WhatIf output prints durations, requirements, approvers count, authentication context (if enabled), and counts Notification_* settings.
 
-## Step 16 — (Optional) CI/CD automation (GitHub Actions + Key Vault)
+## Step 15 — (Optional) CI/CD automation (GitHub Actions + Key Vault)
 
 Goal: Run the orchestrator automatically (or on demand) using the JSON config stored in Azure Key Vault.
 
 Reality check (Key Vault change triggers): GitHub Actions cannot natively subscribe to Key Vault secret change events. To be truly event‑driven you need an Azure component (Event Grid -> Logic App / Azure Function) that calls the GitHub REST API (repository_dispatch) or invokes an Azure DevOps pipeline. Below we give (1) a pragmatic scheduled/on‑demand workflow and (2) an advanced event pattern outline.
 
-### 16.1 Basic GitHub Actions workflow (manual + scheduled)
+### 15.1 Basic GitHub Actions workflow (manual + scheduled)
 
 Add a workflow file (e.g. `.github/workflows/easypim.yml`). Uses OIDC (preferred) so you DO NOT store client secrets in GitHub. Create an Entra App Registration with federated credentials (subject = repo / workflow) granting it appropriate RBAC (Key Vault get secret + PIM policy/role assignment rights).
 
@@ -1339,14 +1372,14 @@ Usage:
 3. Manually dispatch (Actions tab) — default is WhatIf.
 4. Re‑run with apply=true once validated.
 
-Why `-SkipPolicies`? After policies are stabilized (Steps 1‑15), routine runs often only check assignments drift. Remove the switch if you also want policy drift detection.
+Why `-SkipPolicies`? After policies are stabilized (Steps 1‑14), routine runs often only check assignments drift. Remove the switch if you also want policy drift detection.
 
 Optional enhancements:
 * Add a second job that parses the summary output and fails if unexpected WouldRemove counts exceed a threshold.
 * Post results to Teams / Slack via a webhook step.
 * Cache Az PowerShell modules if you add them (currently pure REST/Graph calls inside module so not required).
 
-### 16.2 Advanced event-driven trigger (Key Vault change)
+### 15.2 Advanced event-driven trigger (Key Vault change)
 
 Key ingredients:
 1. Enable Key Vault events to Event Grid (secret near-expiration & new version events supported).
@@ -1371,3 +1404,32 @@ Drift detection pattern:
 * If counts exceed thresholds, open an issue automatically (GitHub CLI step) for investigation.
 
 That concludes the optional automation layer; adapt scope as your governance matures.
+
+## Appendix: Tips & Safety Gates
+
+### Automatic Principal Validation (Safety Gate)
+The orchestrator now ALWAYS validates all referenced principals (users, groups, service principals) and role‑assignable status for groups before any changes. If issues are detected it aborts before policies or assignments are processed.
+
+**Benefits:**
+- Prevents misleading "Created" outputs caused by placeholder GUIDs.
+- Catches non role‑assignable groups before assignment attempts.
+- Produces a concise invalid principal summary without touching assignments or policies.
+
+If validation fails:
+1. Replace placeholder or removed object IDs with real ones.
+2. (Optional) For groups: if you plan classic privileged directory role use outside this orchestrator, you may still choose to set them role-assignable; it's not required for orchestrator processing.
+3. Remove or comment obsolete principals, then re-run.
+
+If you genuinely need to ignore a transient missing ID, temporarily comment it out (future enhancement may add an override switch).
+
+### Verification Tips
+
+- ActivationRequirement values are case-sensitive: `None`, `MultiFactorAuthentication`, `Justification`, `Ticketing` (combine with commas)
+- Azure policies require `Scope`; Entra policies are directory-wide
+- AU-scoped Entra cleanup isn’t automatic; remove manually if needed
+- Keep break-glass accounts in `ProtectedUsers` at all times
+
+### References
+
+- See `EasyPIM-Orchestrator-Complete-Tutorial.md` for end-to-end context
+- See `Configuration-Schema.md` for the full schema and field definitions

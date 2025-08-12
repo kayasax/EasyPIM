@@ -258,14 +258,18 @@ function Invoke-EasyPIMOrchestrator {
                 if ($script:principalObjectCache -and $script:principalObjectCache.ContainsKey($principalIdIter)) {
                     $obj = $script:principalObjectCache[$principalIdIter]
                 } else {
-                    try { $obj = Invoke-Graph -Endpoint "directoryObjects/$principalIdIter" -ErrorAction Stop } catch {}
+                    try { $obj = Invoke-Graph -Endpoint "directoryObjects/$principalIdIter" -ErrorAction Stop } catch {
+                        Write-Verbose "Suppressed directory object fetch failure for ${principalIdIter}: $($_.Exception.Message)"
+                    }
                 }
                 if ($obj -and $obj.'@odata.type') { $type = $obj.'@odata.type' }
                 if ($type -eq '#microsoft.graph.group') {
                     try {
                         $g = Get-MgGroup -GroupId $principalIdIter -Property Id,DisplayName -ErrorAction SilentlyContinue
                         if ($g) { $displayName = $g.DisplayName }
-                    } catch {}
+                    } catch {
+                        Write-Verbose "Suppressed group lookup failure for ${principalIdIter}: $($_.Exception.Message)"
+                    }
                 }
             }
             $validationResults += [pscustomobject]@{ PrincipalId = $principalIdIter; Exists = $exists; Type = $type; DisplayName = $displayName }

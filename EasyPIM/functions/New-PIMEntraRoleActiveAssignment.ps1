@@ -89,7 +89,7 @@ function New-PIMEntraRoleActiveAssignment {
         # If principal is a group, sanity check isAssignableToRole unless user opts out
         if (-not $SkipGroupRoleAssignableCheck) {
             $isGroup = $false
-            try { if ($response.'@odata.type' -and $response.'@odata.type' -match 'group') { $isGroup = $true } } catch {}
+            try { if ($response.'@odata.type' -and $response.'@odata.type' -match 'group') { $isGroup = $true } } catch { Write-Verbose "Suppressed principal type detection: $($_.Exception.Message)" }
             if ($isGroup) {
                 Write-Verbose "Performing role-assignable check for group principalID='$principalID'"
                 $g = $null; $groupFetchError = $null
@@ -122,7 +122,7 @@ function New-PIMEntraRoleActiveAssignment {
         # local helper to parse ISO 8601 durations like P30D, PT8H, PT2H30M etc.
         function ConvertFrom-ISO8601Duration([string]$iso) {
             if (-not $iso) { return $null }
-            try { return [System.Xml.XmlConvert]::ToTimeSpan($iso) } catch { }
+            try { return [System.Xml.XmlConvert]::ToTimeSpan($iso) } catch { Write-Verbose "Suppressed ISO8601 duration parse failure: $($_.Exception.Message)" }
             return $null
         }
         function Format-TimeSpanHuman([TimeSpan]$ts) {
@@ -230,6 +230,6 @@ function New-PIMEntraRoleActiveAssignment {
 
     }
     catch {
-        Mycatch $_
+        MyCatch $_
     }
 }

@@ -121,8 +121,9 @@ function Get-PIMEntraRoleActiveAssignment {
         # No need for PowerShell filtering for userPrincipalName since it's resolved to object ID
         # and filtered efficiently at the Graph API level
 
-        Write-Output "$($resu.Count) $rolename active assignment(s) found for tenant $tenantID"
-        return $resu
+    # Emit count as informational host output (not part of pipeline) to keep CSV exports clean
+    Write-Host "$($resu.Count) $rolename active assignment(s) found for tenant $tenantID" -ForegroundColor Cyan
+    return $resu
     }
     catch {
         MyCatch $_

@@ -5,6 +5,7 @@ $script:skipCounter = 0
 $script:protectedCounter = 0
 $script:wouldRemoveCounter = 0
 $script:wouldRemoveDetails = @()
+$script:failedCounter = 0
 
 # Define protected roles at script level
 $script:protectedRoles = @(
@@ -31,8 +32,11 @@ function Invoke-Cleanup {
         [Parameter(Mandatory = $false)]
         [ref]$RemoveCounter,
         [Parameter(Mandatory = $false)]
-        [ref]$SkipCounter
+        [ref]$SkipCounter,
+        [Parameter(Mandatory = $false)]
+        [bool]$AllowDuplicateCleanup = $true
     )
+
 
     # Reset script counters at beginning of function call
     $script:keptCounter = 0
@@ -41,25 +45,29 @@ function Invoke-Cleanup {
     $script:protectedCounter = 0
     $script:wouldRemoveCounter = 0
     $script:wouldRemoveDetails = @()
+    $script:failedCounter = 0
 
-    #region Prevent duplicate calls
-    if (-not $script:ProcessedCleanups) { $script:ProcessedCleanups = @{} }
 
-    $uniqueKey = "$ResourceType-$Mode"
-    if ($ApiInfo.GroupId) { $uniqueKey += "-$($ApiInfo.GroupId)" }
+    #region Prevent duplicate calls (now opt-in)
+    if (-not $AllowDuplicateCleanup) {
+        if (-not $script:ProcessedCleanups) { $script:ProcessedCleanups = @{} }
 
-    if ($script:ProcessedCleanups.ContainsKey($uniqueKey)) {
-        Write-Host "`n⚠️ Cleanup for '$ResourceType' ($Mode mode) already processed - skipping duplicate call`n" -ForegroundColor Yellow
-        return @{
-            ResourceType = $ResourceType;
-            KeptCount = 0;
-            RemovedCount = 0;
-            SkippedCount = 0;
-            ProtectedCount = 0
+        $uniqueKey = "$ResourceType-$Mode"
+        if ($ApiInfo.GroupId) { $uniqueKey += "-$($ApiInfo.GroupId)" }
+
+        if ($script:ProcessedCleanups.ContainsKey($uniqueKey)) {
+            Write-Host "`n⚠️ Cleanup for '$ResourceType' ($Mode mode) already processed - skipping duplicate call`n" -ForegroundColor Yellow
+            return @{
+                ResourceType = $ResourceType;
+                KeptCount = 0;
+                RemovedCount = 0;
+                SkippedCount = 0;
+                ProtectedCount = 0
+            }
         }
-    }
 
-    $script:ProcessedCleanups[$uniqueKey] = (Get-Date)
+        $script:ProcessedCleanups[$uniqueKey] = (Get-Date)
+    }
 
     Write-Host "`n┌────────────────────────────────────────────────────┐" -ForegroundColor Cyan
     Write-Host "│ Processing $ResourceType $Mode Cleanup" -ForegroundColor Cyan
@@ -447,6 +455,23 @@ function Invoke-Cleanup {
 
                 # Initial mode actual removal (no -WhatIf)
                 Write-Host "    └─ 🗑️ Not in config - removing (initial mode)..." -ForegroundColor Magenta
+                # Detect AU-based assignment (scope contains '/administrativeUnits/' or assignment has AU marker)
+
+                $isAU = $false
+                # Detect AU by directoryScopeId property (Entra role assignments)
+                if ($assignment.PSObject.Properties.Name -contains "directoryScopeId" -and $assignment.directoryScopeId -match "/administrativeUnits/") {
+                    $isAU = $true
+                }
+                # Fallback: also check scope string if present
+                if ($scope -and $scope -match "/administrativeUnits/") { $isAU = $true }
+                if ($assignment.PSObject.Properties.Name -contains "AdministrativeUnitId") { $isAU = $true }
+
+                if ($isAU) {
+                    Write-Host "       ⚠️ Removal of AU-based assignments is not yet implemented. Skipping." -ForegroundColor Yellow
+                    $script:skipCounter++
+                    continue
+                }
+
                 if ($PSCmdlet.ShouldProcess("Remove $ResourceType assignment for $principalName with role '$roleName'")) {
                     try {
                         if ($config.GroupBased) {
@@ -466,6 +491,7 @@ function Invoke-Cleanup {
                     }
                     catch {
                         Write-Host "       ❌ Failed to remove: $_" -ForegroundColor Red
+                        $script:failedCounter++
                     }
                 } else {
                     $script:skipCounter++
@@ -483,6 +509,7 @@ function Invoke-Cleanup {
     Write-Host "├────────────────────────────────────────────────────┤" -ForegroundColor Cyan
     Write-Host "│ ✅ Kept:      $script:keptCounter" -ForegroundColor White
     Write-Host "│ 🗑️ Removed:   $script:removeCounter" -ForegroundColor White
+    Write-Host "│ ❌ Failed:    $script:failedCounter" -ForegroundColor White
     Write-Host "│ ⏭️ Skipped:   $script:skipCounter" -ForegroundColor White
     Write-Host "│ 🛡️ Protected: $script:protectedCounter" -ForegroundColor White
     if ($script:wouldRemoveCounter -gt 0) {
@@ -499,6 +526,7 @@ function Invoke-Cleanup {
         ResourceType = $ResourceType
         KeptCount = $script:keptCounter
         RemovedCount = $script:removeCounter
+        FailedCount = $script:failedCounter
         SkippedCount = $script:skipCounter
         ProtectedCount = $script:protectedCounter
         WouldRemoveCount = $script:wouldRemoveCounter
