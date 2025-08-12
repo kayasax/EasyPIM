@@ -137,7 +137,9 @@ function invoke-graph {
                     } catch { Write-Verbose "Suppressed body stream read: $($_.Exception.Message)" }
                     if (-not $rawBody) { try { $rawBody = $_.ErrorDetails.Message } catch { Write-Verbose "Suppressed ErrorDetails read: $($_.Exception.Message)" } }
                     if ($rawBody -and $script:EasyPIM_FullGraphError) {
-                        Write-Verbose ("Full Graph error body: {0}" -f ($rawBody.Length -gt 4000 ? ($rawBody.Substring(0,4000) + '…') : $rawBody))
+                        $displayBody = $rawBody
+                        if ($rawBody.Length -gt 4000) { $displayBody = $rawBody.Substring(0,4000) + '…' }
+                        Write-Verbose ("Full Graph error body: {0}" -f $displayBody)
                     }
                     if ($rawBody) {
                         try {
@@ -239,7 +241,9 @@ function invoke-graph {
                 } catch { Write-Verbose "Suppressed body stream read: $($_.Exception.Message)" }
                 if (-not $rawBody) { try { $rawBody = $_.ErrorDetails.Message } catch { Write-Verbose "Suppressed ErrorDetails read: $($_.Exception.Message)" } }
                 if ($rawBody -and $script:EasyPIM_FullGraphError) {
-                    Write-Verbose ("Full Graph error body: {0}" -f ($rawBody.Length -gt 4000 ? ($rawBody.Substring(0,4000) + '…') : $rawBody))
+                    $displayBody = $rawBody
+                    if ($rawBody.Length -gt 4000) { $displayBody = $rawBody.Substring(0,4000) + '…' }
+                    Write-Verbose ("Full Graph error body: {0}" -f $displayBody)
                 }
                 if ($rawBody) {
                     try {
