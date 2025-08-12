@@ -1384,6 +1384,88 @@ Minimal permissions required for the service principal / managed identity used b
 * Graph / Azure RBAC: whatever your interactive runs required (e.g., RoleManagement.ReadWrite.Directory, Directory.AccessAsUser.All if using app + user context, or RBAC role assignments at subscription for Azure role policy/assignment operations)
 * (Optional) Logging / Monitor permissions if you rely on diagnostics
 
+#### 15.1.0 Why OIDC instead of a client secret?
+Federated (OIDC) credentials eliminate static secrets and rotate automatically per job. GitHub exchanges its ephemeral OIDC token directly for an Azure AD access token. No secret storage, no rotation toil, scoped per branch / workflow subject.
+
+#### 15.1.1 App Registration & Federated Credential Setup (CLI)
+```bash
+# Create (or reuse) the app registration
+APP_ID=$(az ad app create --display-name "easyPIM-GitHub-OIDC" --query appId -o tsv)
+
+# Create service principal to allow RBAC assignments
+az ad sp create --id $APP_ID
+
+# Add federated credential bound to a specific branch (main)
+ORG=<github-org-or-user>
+REPO=<repo-name>
+BRANCH=main
+az ad app federated-credential create \
+  --id $APP_ID \
+  --parameters '{
+    "name": "gh-branch-main",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "subject": "repo:'"$ORG"'/'"$REPO"':ref:refs/heads/'"$BRANCH"'",
+    "audiences": ["api://AzureADTokenExchange"]
+  }'
+
+# (Optional) PR wide subject: repo:$ORG/$REPO:pull_request
+
+# Assign Key Vault secret read
+KV_NAME=<kv-name>
+RG=<kv-rg>
+SUB=<subscription-guid>
+KV_ID=$(az resource show -g $RG -n $KV_NAME --resource-type Microsoft.KeyVault/vaults --query id -o tsv)
+az role assignment create --assignee $APP_ID --role "Key Vault Secrets User" --scope $KV_ID
+
+# Assign Azure RBAC for resource role policy/assignment operations
+az role assignment create --assignee $APP_ID --role "User Access Administrator" --scope /subscriptions/$SUB
+
+# (Directory) Add Graph application permissions (portal or manifest), then consent:
+# RoleManagement.ReadWrite.Directory, Directory.Read.All, Group.Read.All (if group policies)
+az ad app permission admin-consent --id $APP_ID
+```
+
+Subject formats:
+* Branch: `repo:ORG/REPO:ref:refs/heads/<branch>`
+* Tag: `repo:ORG/REPO:ref:refs/tags/<tag>`
+* Pull Request: `repo:ORG/REPO:pull_request`
+* Environment: `repo:ORG/REPO:environment:<environment-name>`
+
+#### 15.1.2 Permission Matrix (minimal)
+| Layer | Permission / Role | Purpose | Notes |
+|-------|-------------------|---------|-------|
+| Key Vault | Key Vault Secrets User | Read config secret | List optional if name known |
+| Subscription | User Access Administrator | Manage Azure role assignments / PIM settings | Prefer narrower scope (MG/ResourceGroup) if possible |
+| Directory | Privileged Role Administrator | Manage Entra (AAD) role PIM policies/assignments | Avoid Global Administrator |
+| Graph App Perm | RoleManagement.ReadWrite.Directory | Modify PIM role settings | Requires admin consent |
+| Graph App Perm | Directory.Read.All | Lookup principals | Mandatory for validation |
+| Graph App Perm | Group.Read.All | Group PIM policies | Only if group policies used |
+| Optional | AuditLog.Read.All | Enhanced diagnostics | Optional |
+
+If you cannot grant PRA: operate assignment-only by omitting policy-changing permissions and skip policy drift or treat it informational.
+
+#### 15.1.3 Promotion pattern for config changes
+1. Author change -> store in Key Vault as `EasyPIM-Config-Next`.
+2. PR workflow references that secret in WhatIf mode.
+3. After approval, copy value into `EasyPIM-Config` and manually dispatch apply run.
+
+#### 15.1.4 Optional drift gate job
+Add a preceding job running `Test-PIMPolicyDrift -PassThru` (and optionally `-FailOnDrift` once available) to block apply if unexpected drift present. Use GitHub Environments for manual approval.
+
+#### 15.1.5 Safety quick list
+* Scheduled runs: always delta + WhatIf.
+* Manual apply: protected branch / environment, reviewers required.
+* Maintain `ProtectedUsers` list.
+* Keep automation identity scoped (branch subjects) to prevent unreviewed forks from applying.
+
+#### 15.1.6 Observability
+Archive LOGS/*.log (artifact) or forward to Log Analytics (data collector API) for retention & queries.
+
+#### 15.1.7 Failure handling
+Let non‑zero exit fail the job. Add a final notification step with `if: failure()` to post drift summary to Teams/Slack.
+
+---
+
 Example workflow (WhatIf by default; set input apply=true to execute):
 
 ```yaml
