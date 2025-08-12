@@ -761,7 +761,8 @@ function Set-GroupPolicy {
         }
     }
 
-    Write-Verbose "Applying Group policy for Group $($PolicyDefinition.GroupId ?? $PolicyDefinition.GroupName) role $($PolicyDefinition.RoleName)"
+    $groupRef = if ($PolicyDefinition.GroupId) { $PolicyDefinition.GroupId } else { $PolicyDefinition.GroupName }
+    Write-Verbose "Applying Group policy for Group $groupRef role $($PolicyDefinition.RoleName)"
 
     # Eligibility pre-check (skip for validate mode or if explicitly bypassed)
     if ($Mode -ne 'validate' -and -not $SkipEligibilityCheck) {
@@ -787,7 +788,8 @@ function Set-GroupPolicy {
     }
 
     if ($Mode -eq "validate") {
-        Write-Verbose "Validation mode: Policy would be applied for Group '$($PolicyDefinition.GroupId ?? $PolicyDefinition.GroupName)' role '$($PolicyDefinition.RoleName)'"
+    $groupRefValidate = if ($PolicyDefinition.GroupId) { $PolicyDefinition.GroupId } else { $PolicyDefinition.GroupName }
+    Write-Verbose "Validation mode: Policy would be applied for Group '$groupRefValidate' role '$($PolicyDefinition.RoleName)'"
         return @{ GroupId = $PolicyDefinition.GroupId; RoleName = $PolicyDefinition.RoleName; Status = 'Validated'; Mode = $Mode }
     }
 
