@@ -1175,16 +1175,67 @@ Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId
 
 ## Step 14 — Comprehensive policy validation (all options)
 
-This step previews every main policy lever in a single run: durations, approvers, authentication context, and full notification matrix.
+This step validates that every major policy lever is understood and renders correctly: activation & eligibility durations, *active* vs *eligible* enablement rules, authentication context, approvers, permanent eligibility flags, and the full three‑phase notification matrix (Eligibility, Active, Activation). It also introduces a reusable template that captures all options.
 
-### 14.1 Entra role full-feature policy (preview with -WhatIf)
+### Common Fields Reference
+Key fields you can set (some may not be relevant to all resource types):
+- ActivationDuration, MaximumActiveAssignmentDuration
+- MaximumEligibilityDuration
+- ActivationRequirement (enablement rules for an eligible activation)
+- ActiveAssignmentRequirement (enablement rules to directly hold an Active assignment)
+- ApprovalRequired + Approvers (array of objects with id + optional description)
+- AllowPermanentEligibility, AllowPermanentActiveAssignment
+- AuthenticationContext_Enabled + AuthenticationContext_Value (conditional access auth context)
+- Notifications (Eligibility / Active / Activation each with Alert / Assignee / Approvers blocks)
 
-Run with -WhatIf to preview safely; no separate validation mode flag is required.
+> Tip: Put rarely changed full option sets into a template and reference them; only break out into inline when you truly need a one‑off deviation.
 
-Entra role (inline policy with all options)
-
-```json
+### 14.0 AllOptions template (drop-in example)
+```jsonc
 {
+  "PolicyTemplates": {
+    "AllOptions": {
+      "ActivationDuration": "PT4H",
+      "ActivationRequirement": "MultiFactorAuthentication,Justification,Ticketing",
+      "ActiveAssignmentRequirement": "MultiFactorAuthentication,Justification",
+      "ApprovalRequired": true,
+      "Approvers": [
+        { "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "description": "PIM Approver 1" },
+        { "id": "ffffffff-1111-2222-3333-444444444444", "description": "Approver Group" }
+      ],
+      "AllowPermanentEligibility": false,
+      "AllowPermanentActiveAssignment": false,
+      "MaximumEligibilityDuration": "P180D",
+      "MaximumActiveAssignmentDuration": "P30D",
+      "AuthenticationContext_Enabled": true,
+      "AuthenticationContext_Value": "c1:HighRiskOperations",
+      "Notifications": {
+        "Eligibility": {
+          "Alert":     { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
+          "Assignee":  { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
+          "Approvers": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-approvers@contoso.com"] }
+        },
+        "Active": {
+          "Alert":     { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
+          "Assignee":  { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
+          "Approvers": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-approvers@contoso.com"] }
+        },
+        "Activation": {
+          "Alert":     { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
+          "Assignee":  { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
+          "Approvers": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-approvers@contoso.com"] }
+        }
+      }
+    }
+  }
+}
+```
+
+### 14.1 Entra role full-feature policy (inline)
+Use -WhatIf first; this example is inline (not using the template) to show every property together.
+```jsonc
+{
+  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"],
   "EntraRoles": {
     "Policies": {
       "User Administrator": {
@@ -1194,48 +1245,46 @@ Entra role (inline policy with all options)
         "ApprovalRequired": true,
         "Approvers": [
           { "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "description": "PIM Approver 1" },
-          { "id": "ffffffff-1111-2222-3333-444444444444", "description": "PIM Approver Group" }
-          {
-            "principalId": "55555555-5555-5555-5555-555555555555",
-            "assignmentType": "Eligible",
-            "justification": "Project team"
-          }
+          { "id": "ffffffff-1111-2222-3333-444444444444", "description": "Approver Group" }
+        ],
+        "AllowPermanentEligibility": false,
+        "AllowPermanentActiveAssignment": false,
+        "MaximumEligibilityDuration": "P180D",
+        "MaximumActiveAssignmentDuration": "P30D",
+        "AuthenticationContext_Enabled": true,
         "AuthenticationContext_Value": "c1:HighRiskOperations",
         "Notifications": {
           "Eligibility": {
-            "Alert": { "isDefaultRecipientEnabled": true,  "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
-            "Assignee": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
+            "Alert":     { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
+            "Assignee":  { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
             "Approvers": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-approvers@contoso.com"] }
           },
           "Active": {
-            "Alert": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
-            "Assignee": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
+            "Alert":     { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
+            "Assignee":  { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
             "Approvers": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-approvers@contoso.com"] }
           },
           "Activation": {
-            "Alert": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
-            "Assignee": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
+            "Alert":     { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
+            "Assignee":  { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
             "Approvers": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-approvers@contoso.com"] }
           }
         }
       }
     }
-  },
-  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"]
+  }
 }
 ```
-
-Preview (policies only)
-
+Preview (policies only):
 ```powershell
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
 ```
 
-### 14.2 Azure role full-feature policy (preview with -WhatIf)
-Inline policy with all options; Scope required.
-
-```json
+### 14.2 Azure role full-feature policy (inline)
+Scope is mandatory. ActiveAssignmentRequirement maps to Enablement rules for permanent/active assignment.
+```jsonc
 {
+  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"],
   "AzureRoles": {
     "Policies": {
       "Contributor": {
@@ -1243,51 +1292,82 @@ Inline policy with all options; Scope required.
         "ActivationDuration": "PT4H",
         "ActivationRequirement": "MultiFactorAuthentication,Justification",
         "ActiveAssignmentRequirement": "MultiFactorAuthentication",
-  "AuthenticationContext_Enabled": true,
-  "AuthenticationContext_Value": "c1:HighRiskOperations",
         "ApprovalRequired": true,
-        "Approvers": [
-          { "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "description": "PIM Approver 1" }
-        ],
+        "Approvers": [ { "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "description": "PIM Approver 1" } ],
         "AllowPermanentEligibility": false,
+        "AllowPermanentActiveAssignment": false,
         "MaximumEligibilityDuration": "P180D",
-        c,
         "MaximumActiveAssignmentDuration": "P14D",
+        "AuthenticationContext_Enabled": true,
+        "AuthenticationContext_Value": "c1:HighRiskOperations",
         "Notifications": {
           "Eligibility": {
-            "Alert": { "isDefaultRecipientEnabled": true,  "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
-            "Assignee": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
+            "Alert":     { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
+            "Assignee":  { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
             "Approvers": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-approvers@contoso.com"] }
           },
           "Active": {
-            "Alert": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
-            "Assignee": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
+            "Alert":     { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
+            "Assignee":  { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
             "Approvers": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-approvers@contoso.com"] }
           },
           "Activation": {
-            "Alert": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
-            "Assignee": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
+            "Alert":     { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
+            "Assignee":  { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
             "Approvers": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-approvers@contoso.com"] }
           }
         }
       }
     }
-  },
-  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"]
+  }
 }
 ```
-
-Preview (policies only)
-
+Preview (policies only):
 ```powershell
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
 ```
 
-Notes
-- ActivationRequirement values are case-sensitive and comma-separated when combining.
-- AuthenticationContext_* is supported for both Entra and Azure role policies.
-- Approvers array accepts user or group object IDs; ApprovalRequired must be true for approvers to apply.
-- The -WhatIf output prints durations, requirements, approvers count, authentication context (if enabled), and counts Notification_* settings.
+### 14.3 Group role full-feature policy (inline)
+For group member/owner PIM policies (example for Member role):
+```jsonc
+{
+  "GroupRoles": {
+    "Policies": {
+      "<group-object-id>": {
+        "Member": {
+          "ActivationDuration": "PT4H",
+          "ActivationRequirement": ["Justification"],
+          "ApprovalRequired": true,
+          "Approvers": [ { "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "description": "Group PIM Approver" } ],
+          "MaximumEligibilityDuration": "P180D",
+          "MaximumActiveAssignmentDuration": "P30D"
+        }
+      }
+    }
+  }
+}
+```
+
+### 14.4 Using the AllOptions template
+Instead of repeating full blocks, reference the template and (if needed) override by replacing Template with an inline object.
+```jsonc
+{
+  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"],
+  "PolicyTemplates": {
+    "AllOptions": { /* (paste from 14.0) */ }
+  },
+  "EntraRoles": { "Policies": { "User Administrator": { "Template": "AllOptions" }, "Privileged Role Administrator": { "Template": "AllOptions" } } },
+  "AzureRoles": { "Policies": { "Contributor": { "Scope": "/subscriptions/<sub-guid>", "Template": "AllOptions" } } }
+}
+```
+
+### Notes
+* ActivationRequirement & ActiveAssignmentRequirement values are case‑sensitive and comma separated (avoid spaces unless inside list items array form).
+* Approvers only used when ApprovalRequired = true.
+* AuthenticationContext_* (if enabled) requires the referenced auth context to exist.
+* Group policies currently do not support AuthenticationContext_*.
+* Use Verify-PIMPolicies.ps1 or Test-PIMPolicyDrift to audit drift after applying.
+* Keep templates minimal; AllOptions is illustrative — real production templates often exclude rarely used features.
 
 ## Step 15 — (Optional) CI/CD automation (GitHub Actions + Key Vault)
 
