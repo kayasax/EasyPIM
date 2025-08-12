@@ -38,7 +38,8 @@ function Import-PIMAzureResourcePolicy {
         if ($PSCmdlet.ShouldProcess($path, "Importing policy from")) {
             import-setting $Path
         }
-        Log "Success, exiting."
+        # Mute noisy success banner
+        Log "Success, exiting." -noEcho
     }
     catch {
         Mycatch $_

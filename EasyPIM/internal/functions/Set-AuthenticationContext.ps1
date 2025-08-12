@@ -21,33 +21,33 @@
 
 #>
 function Set-AuthenticationContext($authenticationContext_Enabled, $authenticationContext_Value, [switch]$entraRole) {
-    write-verbose "Set-AuthenticationContext : $($authenticationContext_Enabled), $($authenticationContext_Value)"
+    Write-Verbose "Set-AuthenticationContext : Enabled=$authenticationContext_Enabled RawValue='$authenticationContext_Value'"
 
-
+    # Normalize value (allow formats like 'c1' or 'c1:HighRiskOperations')
+    $normalizedValue = $authenticationContext_Value
+    if ($normalizedValue) { $normalizedValue = $normalizedValue.Trim() }
+    if ($normalizedValue -and $normalizedValue.Contains(':')) { $normalizedValue = ($normalizedValue.Split(':')[0]).Trim() }
 
     if ($true -eq $authenticationContext_Enabled) {
         $enabled = "true"
-        if ($authenticationContext_Value -eq "None" -or $authenticationContext_Value.length -eq 0) {
-            Throw "AuthenticationContext_Value cannot be null or empty if AuthenticationContext_Enabled is true"
-        }
-        if ( ([regex]::match($authenticationContext_Value, "c[0-9]{1,2}$").success -eq $false)) {
-            Throw "AuthenticationContext_Value must be in the format c1 - c99"
-        }
-    }
-    else { $enabled = "false" }
+        if (-not $normalizedValue -or $normalizedValue -eq 'None') { Throw "AuthenticationContext_Value cannot be null or empty if AuthenticationContext_Enabled is true" }
+        if (-not [regex]::Match($normalizedValue,'^c([1-9]|[1-9][0-9])$').Success) { Throw "AuthenticationContext_Value must be 'c1' - 'c99' (optionally with ':Label' in config)" }
+    } else { $enabled = "false" }
+
+    $claimValue = if ($enabled -eq 'true') { $normalizedValue } else { '' }
 
     $properties = '{
-	"id": "AuthenticationContext_EndUser_Assignment",
-	"ruleType": "RoleManagementPolicyAuthenticationContextRule",
-	"isEnabled": '+ $enabled + ',
-	"claimValue": "'+ $authenticationContext_Value + '",
-	"target": {
-		"caller": "EndUser",
-		"operations": [
-			"All"
-		],
-		"level": "Assignment"
-	}
+    "id": "AuthenticationContext_EndUser_Assignment",
+    "ruleType": "RoleManagementPolicyAuthenticationContextRule",
+    "isEnabled": '+ $enabled + ',
+    "claimValue": "'+ $claimValue + '",
+    "target": {
+        "caller": "EndUser",
+        "operations": [
+            "All"
+        ],
+        "level": "Assignment"
+    }
 }'
 
     if ($entraRole) {
@@ -56,7 +56,7 @@ function Set-AuthenticationContext($authenticationContext_Enabled, $authenticati
             "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyAuthenticationContextRule",
             "id": "AuthenticationContext_EndUser_Assignment",
             "isEnabled": '+ $enabled + ',
-            "claimValue": "'+ $authenticationContext_Value + '",
+            "claimValue": "'+ $claimValue + '",
             "target": {
                 "caller": "EndUser",
                 "operations": [

@@ -123,10 +123,17 @@ function New-PIMAzureResourceActiveAssignment {
         }
     }
 
-    # if Duration is not provided we will take the maxium value from the role setting
+    # Duration handling with normalization & policy validation
     if(!($PSBoundParameters.Keys.Contains('duration'))){
         $duration = $config.MaximumActiveAssignmentDuration
+    } else {
+    $normalized = Convert-IsoDuration -Duration $duration
+        $duration = $normalized
+        try { $reqTs = [System.Xml.XmlConvert]::ToTimeSpan($duration) } catch { throw "Duration '$duration' cannot be parsed: $($_.Exception.Message)" }
+    $policyTs = $null; if($config.MaximumActiveAssignmentDuration){ try{ $policyTs=[System.Xml.XmlConvert]::ToTimeSpan($config.MaximumActiveAssignmentDuration) } catch { Write-Verbose "Suppressed MaximumActiveAssignmentDuration parse: $($_.Exception.Message)" } }
+        if($policyTs -and $reqTs -gt $policyTs -and -not $permanent){ throw "Requested active assignment duration '$duration' exceeds policy maximum '$($config.MaximumActiveAssignmentDuration)' for role $rolename." }
     }
+    if($duration -and $duration -match '^P[0-9]+[HMS]$'){ $duration = Convert-IsoDuration -Duration $duration }
     write-verbose "assignement duration will be : $duration"
 
     if (!($PSBoundParameters.Keys.Contains('justification'))) {

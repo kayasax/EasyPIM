@@ -1,5 +1,5 @@
 ﻿function New-EasyPIMAssignments {
-    [CmdletBinding(SupportsShouldProcess=$true)]
+    [CmdletBinding()]  # ShouldProcess handled at orchestrator & inner assignment level
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "")]
     [OutputType([PSCustomObject])]
     param (
@@ -14,11 +14,14 @@
     )
 
     Write-SectionHeader "Processing Assignments"
+    # Assignment batch orchestration (inner functions handle ShouldProcess/-WhatIf)
+    # No ShouldProcess here (handled by orchestrator and Invoke-ResourceAssignment per assignment)
 
     $results = [PSCustomObject]@{
         Created = 0
         Skipped = 0
         Failed = 0
+    PlannedCreated = 0
     }
 
     # Process Azure Role eligible assignments
@@ -27,13 +30,19 @@
 
         $commandMap = New-CommandMap -ResourceType 'AzureRoleEligible' -TenantId $TenantId -SubscriptionId $SubscriptionId -FirstAssignment $Config.AzureRoles[0]
 
-        $azureResult = Invoke-ResourceAssignment -ResourceType "Azure Role eligible" -Assignments $Config.AzureRoles -CommandMap $commandMap
+    # Always invoke inner function so WhatIf still shows detailed assignment info
+    $azureResult = Invoke-ResourceAssignment -ResourceType "Azure Role eligible" -Assignments $Config.AzureRoles -CommandMap $commandMap
 
-        Write-Summary -Category "Azure Role Eligible Assignments" -Created $azureResult.Created -Skipped $azureResult.Skipped -Failed $azureResult.Failed
+    $planned = if ($WhatIfPreference -and $azureResult -is [hashtable] -and $azureResult.ContainsKey('PlannedCreated')) { [int]$azureResult['PlannedCreated'] } elseif ($WhatIfPreference -and $azureResult.PSObject.Properties.Name -contains 'PlannedCreated') { $azureResult.PlannedCreated } else { 0 }
+    Write-Summary -Category "Azure Role Eligible Assignments" -Created $azureResult.Created -Skipped $azureResult.Skipped -Failed $azureResult.Failed -PlannedCreated ($planned)
 
-        $results.Created += $azureResult.Created
-        $results.Skipped += $azureResult.Skipped
-        $results.Failed += $azureResult.Failed
+    $results.Created += $azureResult.Created
+    $results.Skipped += $azureResult.Skipped
+    $results.Failed += $azureResult.Failed
+    if ($WhatIfPreference) {
+        if ($azureResult -is [hashtable] -and $azureResult.ContainsKey('PlannedCreated')) { $results.PlannedCreated += [int]$azureResult['PlannedCreated'] }
+        elseif ($azureResult.PSObject.Properties.Name -contains 'PlannedCreated') { $results.PlannedCreated += [int]$azureResult.PlannedCreated }
+    }
     }
 
     # Process Azure Role active assignments
@@ -42,13 +51,16 @@
 
         $commandMap = New-CommandMap -ResourceType 'AzureRoleActive' -TenantId $TenantId -SubscriptionId $SubscriptionId -FirstAssignment $Config.AzureRolesActive[0]
 
-        $azureActiveResult = Invoke-ResourceAssignment -ResourceType "Azure Role active" -Assignments $Config.AzureRolesActive -CommandMap $commandMap
+    $azureActiveResult = Invoke-ResourceAssignment -ResourceType "Azure Role active" -Assignments $Config.AzureRolesActive -CommandMap $commandMap
 
-        Write-Summary -Category "Azure Role Active Assignments" -Created $azureActiveResult.Created -Skipped $azureActiveResult.Skipped -Failed $azureActiveResult.Failed
+    $planned = if ($WhatIfPreference -and $azureActiveResult -is [hashtable] -and $azureActiveResult.ContainsKey('PlannedCreated')) { [int]$azureActiveResult['PlannedCreated'] } elseif ($WhatIfPreference -and $azureActiveResult.PSObject.Properties.Name -contains 'PlannedCreated') { $azureActiveResult.PlannedCreated } else { 0 }
+    Write-Summary -Category "Azure Role Active Assignments" -Created $azureActiveResult.Created -Skipped $azureActiveResult.Skipped -Failed $azureActiveResult.Failed -PlannedCreated ($planned)
 
-        $results.Created += $azureActiveResult.Created
-        $results.Skipped += $azureActiveResult.Skipped
-        $results.Failed += $azureActiveResult.Failed
+    $results.Created += $azureActiveResult.Created
+    $results.Skipped += $azureActiveResult.Skipped
+    $results.Failed += $azureActiveResult.Failed
+    if ($azureActiveResult -is [hashtable] -and $azureActiveResult.ContainsKey('PlannedCreated')) { $results.PlannedCreated += [int]$azureActiveResult['PlannedCreated'] }
+    elseif ($azureActiveResult.PSObject.Properties.Name -contains 'PlannedCreated') { $results.PlannedCreated += [int]$azureActiveResult.PlannedCreated }
     }
 
     # Process Entra ID Role eligible assignments
@@ -57,13 +69,16 @@
 
         $commandMap = New-CommandMap -ResourceType 'EntraRoleEligible' -TenantId $TenantId -FirstAssignment $Config.EntraIDRoles[0]
 
-        $entraResult = Invoke-ResourceAssignment -ResourceType "Entra ID Role eligible" -Assignments $Config.EntraIDRoles -CommandMap $commandMap
+    $entraResult = Invoke-ResourceAssignment -ResourceType "Entra ID Role eligible" -Assignments $Config.EntraIDRoles -CommandMap $commandMap
 
-        Write-Summary -Category "Entra ID Role Eligible Assignments" -Created $entraResult.Created -Skipped $entraResult.Skipped -Failed $entraResult.Failed
+    $planned = if ($entraResult -is [hashtable] -and $entraResult.ContainsKey('PlannedCreated')) { [int]$entraResult['PlannedCreated'] } elseif ($entraResult.PSObject.Properties.Name -contains 'PlannedCreated') { $entraResult.PlannedCreated } else { 0 }
+    Write-Summary -Category "Entra ID Role Eligible Assignments" -Created $entraResult.Created -Skipped $entraResult.Skipped -Failed $entraResult.Failed -PlannedCreated $planned
 
-        $results.Created += $entraResult.Created
-        $results.Skipped += $entraResult.Skipped
-        $results.Failed += $entraResult.Failed
+    $results.Created += $entraResult.Created
+    $results.Skipped += $entraResult.Skipped
+    $results.Failed += $entraResult.Failed
+    if ($entraResult -is [hashtable] -and $entraResult.ContainsKey('PlannedCreated')) { $results.PlannedCreated += [int]$entraResult['PlannedCreated'] }
+    elseif ($entraResult.PSObject.Properties.Name -contains 'PlannedCreated') { $results.PlannedCreated += [int]$entraResult.PlannedCreated }
     }
 
     # Process Entra ID Role active assignments
@@ -86,11 +101,14 @@
 
             $entraActiveResult = Invoke-ResourceAssignment -ResourceType "Entra ID Role active" -Assignments $validAssignments -CommandMap $commandMap
 
-            Write-Summary -Category "Entra ID Role Active Assignments" -Created $entraActiveResult.Created -Skipped $entraActiveResult.Skipped -Failed $entraActiveResult.Failed
+            $planned = if ($entraActiveResult -is [hashtable] -and $entraActiveResult.ContainsKey('PlannedCreated')) { [int]$entraActiveResult['PlannedCreated'] } elseif ($entraActiveResult.PSObject.Properties.Name -contains 'PlannedCreated') { $entraActiveResult.PlannedCreated } else { 0 }
+            Write-Summary -Category "Entra ID Role Active Assignments" -Created $entraActiveResult.Created -Skipped $entraActiveResult.Skipped -Failed $entraActiveResult.Failed -PlannedCreated $planned
 
             $results.Created += $entraActiveResult.Created
             $results.Skipped += $entraActiveResult.Skipped
             $results.Failed += $entraActiveResult.Failed
+            if ($entraActiveResult -is [hashtable] -and $entraActiveResult.ContainsKey('PlannedCreated')) { $results.PlannedCreated += [int]$entraActiveResult['PlannedCreated'] }
+            elseif ($entraActiveResult.PSObject.Properties.Name -contains 'PlannedCreated') { $results.PlannedCreated += [int]$entraActiveResult.PlannedCreated }
         }
     }
 
@@ -131,29 +149,34 @@
             $groupResult = Invoke-ResourceAssignment -ResourceType "Group Role eligible ($groupId)" -Assignments $groupAssignments -CommandMap $commandMap
 
             # Add this summary call if it's missing
-            Write-Summary -Category "Group Role Eligible Assignments ($groupId)" -Created $groupResult.Created -Skipped $groupResult.Skipped -Failed $groupResult.Failed
+            $planned = if ($groupResult -is [hashtable] -and $groupResult.ContainsKey('PlannedCreated')) { [int]$groupResult['PlannedCreated'] } elseif ($groupResult.PSObject.Properties.Name -contains 'PlannedCreated') { $groupResult.PlannedCreated } else { 0 }
+            Write-Summary -Category "Group Role Eligible Assignments ($groupId)" -Created $groupResult.Created -Skipped $groupResult.Skipped -Failed $groupResult.Failed -PlannedCreated $planned
 
             # Update results
             $results.Created += $groupResult.Created
             $results.Skipped += $groupResult.Skipped
             $results.Failed += $groupResult.Failed
+            if ($groupResult -is [hashtable] -and $groupResult.ContainsKey('PlannedCreated')) { $results.PlannedCreated += [int]$groupResult['PlannedCreated'] }
+            elseif ($groupResult.PSObject.Properties.Name -contains 'PlannedCreated') { $results.PlannedCreated += [int]$groupResult.PlannedCreated }
         }
     }
 
     # Process Group Role active assignments
     if ($Config.GroupRolesActive -and $Config.GroupRolesActive.Count -gt 0) {
-        $groupRoleActiveResults = New-GroupRoleAssignments -Assignments $Config.GroupRolesActive -TenantId $TenantId -IsActive $true
+    $groupRoleActiveResults = New-GroupRoleAssignments -Assignments $Config.GroupRolesActive -TenantId $TenantId -IsActive $true
 
-        $results.Created += $groupRoleActiveResults.Created
-        $results.Skipped += $groupRoleActiveResults.Skipped
-        $results.Failed += $groupRoleActiveResults.Failed
+    $results.Created += $groupRoleActiveResults.Created
+    $results.Skipped += $groupRoleActiveResults.Skipped
+    $results.Failed += $groupRoleActiveResults.Failed
+    if ($groupRoleActiveResults.PSObject.Properties.Name -contains 'PlannedCreated') { $results.PlannedCreated += $groupRoleActiveResults.PlannedCreated }
     }
 
     return $results
 }
 
 function New-GroupRoleAssignments {
-    [CmdletBinding(SupportsShouldProcess=$true)]
+    [CmdletBinding()]  # ShouldProcess handled by orchestrator and inner assignment function
+        [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseShouldProcessForStateChangingFunctions", "Justification: Uses inner Invoke-ResourceAssignment for ShouldProcess")]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "")]
     [OutputType([PSCustomObject])]
     param (
@@ -169,11 +192,13 @@ function New-GroupRoleAssignments {
 
     $roleType = if ($IsActive) { "Active" } else { "Eligible" }
     Write-SectionHeader "Processing Group Role $roleType Assignments"
+    # No ShouldProcess here
 
     $results = [PSCustomObject]@{
         Created = 0
         Skipped = 0
         Failed = 0
+        PlannedCreated = 0
     }
 
     # Group roles by GroupId to minimize API calls
@@ -198,15 +223,17 @@ function New-GroupRoleAssignments {
         $commandMap = New-CommandMap -ResourceType $resourceType -TenantId $TenantId -FirstAssignment $assignmentsForGroup[0]
 
         # Process assignments for this group
-        $groupResult = Invoke-ResourceAssignment -ResourceType "Group Role $roleType ($groupId)" -Assignments $assignmentsForGroup -CommandMap $commandMap
+    $groupResult = Invoke-ResourceAssignment -ResourceType "Group Role $roleType ($groupId)" -Assignments $assignmentsForGroup -CommandMap $commandMap
 
-        $results.Created += $groupResult.Created
-        $results.Skipped += $groupResult.Skipped
-        $results.Failed += $groupResult.Failed
+    $results.Created += $groupResult.Created
+    $results.Skipped += $groupResult.Skipped
+    $results.Failed += $groupResult.Failed
+    if ($groupResult.PSObject.Properties.Name -contains 'PlannedCreated') { $results.PlannedCreated += $groupResult.PlannedCreated }
     }
 
     # Display summary for this type of group assignments
-    Write-Summary -Category "Group Role $roleType Assignments (Total)" -Created $results.Created -Skipped $results.Skipped -Failed $results.Failed
+    $plannedTotal = if ($results.PSObject.Properties.Name -contains 'PlannedCreated') { $results.PlannedCreated } else { -1 }
+    Write-Summary -Category "Group Role $roleType Assignments (Total)" -Created $results.Created -Skipped $results.Skipped -Failed $results.Failed -PlannedCreated $plannedTotal
 
     return $results
 }

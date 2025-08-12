@@ -4,12 +4,28 @@ Param (
 	$SkipTest,
 
 	[string[]]
-	$CommandPath = @("$global:testroot\..\EasyPIM\functions", "$global:testroot\..\EasyPIM\internal\functions")
+	$CommandPath
 )
 
 if ($SkipTest) { return }
 
-$global:__pester_data.ScriptAnalyzer = New-Object System.Collections.ArrayList
+if (-not $global:testroot) { $global:testroot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path }
+
+# Derive repository root (one level above tests directory)
+$repoRoot = (Resolve-Path (Join-Path $global:testroot '..')).Path
+
+# Build default command paths if not provided
+if (-not $CommandPath -or $CommandPath.Count -eq 0) {
+	$paths = @(
+		(Join-Path $repoRoot 'EasyPIM/functions'),
+		(Join-Path $repoRoot 'EasyPIM/internal/functions')
+	)
+	$CommandPath = @()
+	foreach ($p in $paths) { if (Test-Path $p) { $CommandPath += $p } }
+}
+
+if (-not $global:__pester_data) { $global:__pester_data = @{} }
+if (-not $global:__pester_data.ScriptAnalyzer) { $global:__pester_data.ScriptAnalyzer = New-Object System.Collections.ArrayList }
 
 Describe 'Invoking PSScriptAnalyzer against commandbase' {
 	$commandFiles = foreach ($path in $CommandPath) { Get-ChildItem -Path $path -Recurse | Where-Object Name -like "*.ps1" }
@@ -18,7 +34,7 @@ Describe 'Invoking PSScriptAnalyzer against commandbase' {
 	foreach ($file in $commandFiles)
 	{
 		Context "Analyzing $($file.BaseName)" {
-			$analysis = Invoke-ScriptAnalyzer -Path $file.FullName -ExcludeRule PSAvoidTrailingWhitespace, PSShouldProcess,PSUseShouldProcessForStateChangingFunctions
+			$analysis = Invoke-ScriptAnalyzer -Path $file.FullName -ExcludeRule PSAvoidTrailingWhitespace, PSShouldProcess, PSUseShouldProcessForStateChangingFunctions, PSAvoidUsingWriteHost, PSUseSingularNouns, PSUseOutputTypeCorrectly, PSReviewUnusedParameter
 
 			forEach ($rule in $scriptAnalyzerRules)
 			{

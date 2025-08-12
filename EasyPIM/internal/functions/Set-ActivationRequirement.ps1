@@ -17,60 +17,64 @@
 
 #>
 function Set-ActivationRequirement($ActivationRequirement, [switch]$entraRole) {
-    write-verbose "Set-ActivationRequirement : $($ActivationRequirement.length)"
-    if (($ActivationRequirement -eq "None") -or ($ActivationRequirement[0].length -eq 0 )) {
-        #if none or a null array
-        write-verbose "requirement is nul"
-        $enabledRules = "[],"
-    }
-    else {
-        write-verbose "requirement is NOT nul"
-        $formatedRules = '['
+        Write-Verbose "Set-ActivationRequirement : $($ActivationRequirement.length)"
 
-        $ActivationRequirement | ForEach-Object {
-            $formatedRules += '"'
-            $formatedRules += "$_"
-            $formatedRules += '",'
+                # Normalise to string[] (split comma-separated strings, preserve arrays)
+                if ($null -eq $ActivationRequirement) { $ActivationRequirement = @() }
+                elseif ($ActivationRequirement -is [string]) {
+                        if ($ActivationRequirement -match ',') { $ActivationRequirement = ($ActivationRequirement -split ',') } else { $ActivationRequirement = @($ActivationRequirement) }
+                }
+                elseif (-not ($ActivationRequirement -is [System.Collections.IEnumerable])) { $ActivationRequirement = @($ActivationRequirement) }
+
+        # Empty or explicit None -> empty array
+        if ($ActivationRequirement.Count -eq 0 -or ($ActivationRequirement.Count -eq 1 -and ($ActivationRequirement[0] -eq '' -or $ActivationRequirement[0] -eq 'None'))) {
+                Write-Verbose 'Activation requirement is empty/None'
+                $enabledRulesJson = '[]'
         }
-        #remove last comma
-        $formatedRules = $formatedRules -replace “.$”
+        else {
+                # Trim whitespace and filter empties
+                $clean = $ActivationRequirement | Where-Object { $_ -and $_.Trim().Length -gt 0 } | ForEach-Object { $_.Trim() }
+                # Build each quoted element first to avoid operator precedence issues with -join
+                $ruleItems = $clean | ForEach-Object { '"{0}"' -f $_ }
+                $enabledRulesJson = '[' + ($ruleItems -join ',') + ']'
+        }
 
-        $formatedRules += "],"
-        $enabledRules = $formatedRules
-        #Write-Verbose "************* $enabledRules "
-    }
-
-    $properties = '{
-                "enabledRules": '+ $enabledRules + '
-                "id": "Enablement_EndUser_Assignment",
-                "ruleType": "RoleManagementPolicyEnablementRule",
-                "target": {
-                    "caller": "EndUser",
-                    "operations": [
-                        "All"
-                    ],
-                    "level": "Assignment",
-                    "targetObjects": [],
-                    "inheritableSettings": [],
-                    "enforcedSettings": []
+        # Build common JSON fragment. We return a single rule object; callers join objects with commas.
+                if ($entraRole) {
+                                # Using single-quoted here-string to avoid unintended interpolation; we manually inject $enabledRulesJson after.
+                                $properties = @'
+{
+        "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyEnablementRule",
+        "enabledRules": __ENABLED_RULES_PLACEHOLDER__,
+        "id": "Enablement_EndUser_Assignment",
+        "target": {
+                "caller": "EndUser",
+                "operations": [ "All" ],
+                "level": "Assignment",
+                "inheritableSettings": [],
+                "enforcedSettings": []
+        }
+}
+'@
                 }
-            }'
-    if ($entraRole) {
-                $properties = '
-               {
-                "@odata.type" : "#microsoft.graph.unifiedRoleManagementPolicyEnablementRule",
-                "enabledRules": '+ $enabledRules + '
-                "id": "Enablement_EndUser_Assignment",
-                "target": {
-                    "caller": "EndUser",
-                    "operations": [
-                        "All"
-                    ],
-                    "level": "Assignment",
-                    "inheritableSettings": [],
-                    "enforcedSettings": []
+                else {
+                                $properties = @'
+{
+        "enabledRules": __ENABLED_RULES_PLACEHOLDER__,
+        "id": "Enablement_EndUser_Assignment",
+        "ruleType": "RoleManagementPolicyEnablementRule",
+        "target": {
+                "caller": "EndUser",
+                "operations": [ "All" ],
+                "level": "Assignment",
+                "targetObjects": [],
+                "inheritableSettings": [],
+                "enforcedSettings": []
+        }
+}
+'@
                 }
-            }'
-            }
-    return $properties
+                # Inject the enabled rules JSON (kept outside the here-string to avoid escaping complexity)
+                $properties = $properties -replace '__ENABLED_RULES_PLACEHOLDER__', $enabledRulesJson
+        return $properties
 }

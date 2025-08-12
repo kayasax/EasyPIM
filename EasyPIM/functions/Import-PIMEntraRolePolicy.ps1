@@ -37,7 +37,8 @@ function Import-PIMEntraRolePolicy {
     if ($PSCmdlet.ShouldProcess($path, "Importing policy from")) {
         Import-EntraRoleSettings $Path
     }
-    Log "Success, exiting."
+    # Mute noisy success banner (still logged to file silently)
+    Log "Success, exiting." -noEcho
     }
     catch {
         Mycatch $_

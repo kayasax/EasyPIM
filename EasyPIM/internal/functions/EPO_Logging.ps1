@@ -110,13 +110,19 @@ function Write-Summary {
         [int]$Skipped,
 
         [Parameter(Mandatory = $true)]
-        [int]$Failed
+        [int]$Failed,
+
+        [Parameter()]
+        [int]$PlannedCreated = -1
     )
 
     Write-Host "`n┌───────────────────────────────────────────────────────────────────────────────┐" -ForegroundColor Cyan
     Write-Host "│ SUMMARY: $Category" -ForegroundColor Cyan
     Write-Host "├───────────────────────────────────────────────────────────────────────────────┤" -ForegroundColor Cyan
     Write-Host "│ ✅ Created : $Created" -ForegroundColor White
+    if ($PlannedCreated -gt 0 -and $WhatIfPreference) {
+        Write-Host "│ 📝 Planned : $PlannedCreated" -ForegroundColor White
+    }
     Write-Host "│ ⏭️ Skipped : $Skipped" -ForegroundColor White
     Write-Host "│ ❌ Failed  : $Failed" -ForegroundColor White
     Write-Host "└───────────────────────────────────────────────────────────────────────────────┘" -ForegroundColor Cyan

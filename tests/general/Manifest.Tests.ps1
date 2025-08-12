@@ -15,7 +15,14 @@
 
 		It "Exports none of its internal functions" -TestCases @{ moduleRoot = $moduleRoot; manifest = $manifest } {
 			$files = Get-ChildItem "$moduleRoot\internal\functions" -Recurse -File -Filter "*.ps1"
-			$files | Where-Object BaseName -In $manifest.FunctionsToExport | Should -BeNullOrEmpty
+			# Filter out shim placeholder files that do NOT actually declare a function of the same name
+			$actualInternalFunctionFiles = foreach ($f in $files) {
+				$bn = $f.BaseName
+				if ($manifest.FunctionsToExport -notcontains $bn) { continue }
+				$content = (Get-Content -Path $f.FullName -Raw -ErrorAction SilentlyContinue)
+				if ($content -match "function\s+$bn\b") { $f }
+			}
+			$actualInternalFunctionFiles | Should -BeNullOrEmpty
 		}
 	}
 

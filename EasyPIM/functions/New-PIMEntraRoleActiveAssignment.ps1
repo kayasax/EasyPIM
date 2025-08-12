@@ -67,22 +67,73 @@ function New-PIMEntraRoleActiveAssignment {
 
         [switch]
         # the assignment will not expire
-        $permanent
+    $permanent,
+
+    [switch]
+    # skip validation that group principals must be role-assignable (original check was removed; reintroduced as optional guard for clearer errors)
+    $SkipGroupRoleAssignableCheck,
+
+    [switch]
+    # emit full request body to verbose for troubleshooting (avoid in normal runs)
+    $DebugGraphPayload
 
     )
 
     try {
         $script:tenantID = $tenantID
 
-        #1 check if the principal ID is a group, if yes confirm it is role-assignable
-        $endpoint = "directoryObjects/$principalID"
-        $response = invoke-graph -Endpoint $endpoint
-        #$response
-
-        if ($response."@odata.type" -eq "#microsoft.graph.group" -and $response.isAssignableToRole -ne "True") {
-
-            throw "ERROR : The group $principalID is not role-assignable, exiting"
-
+    #1 resolve principal object (groups no longer blocked if not role-assignable)
+    $principalIdLen = if ([string]::IsNullOrEmpty($principalID)) { 0 } else { $principalID.Length }
+    Write-Verbose "[ActiveAssign] principalID parameter raw='$principalID' length=$principalIdLen"
+    $endpoint = "directoryObjects/$principalID"
+    $response = invoke-graph -Endpoint $endpoint
+        # If principal is a group, sanity check isAssignableToRole unless user opts out
+        if (-not $SkipGroupRoleAssignableCheck) {
+            $isGroup = $false
+            try { if ($response.'@odata.type' -and $response.'@odata.type' -match 'group') { $isGroup = $true } } catch { Write-Verbose "Suppressed principal type detection: $($_.Exception.Message)" }
+            if ($isGroup) {
+                Write-Verbose "Performing role-assignable check for group principalID='$principalID'"
+                $g = $null; $groupFetchError = $null
+                # Explicit interpolation to avoid accidental empty/omitted ID
+                $grpEndpoint = "groups/$($principalID)?`$select=id,displayName,isAssignableToRole"
+                Write-Verbose "Group fetch endpoint = $grpEndpoint"
+                try { $g = invoke-graph -Endpoint $grpEndpoint -Method GET -ErrorAction Stop } catch { $groupFetchError = $_ }
+                if ($groupFetchError) {
+                    Write-Verbose "Could not fetch group for role-assignable validation (continuing without enforcement): $($groupFetchError.Exception.Message)"
+                } else {
+                    # Determine presence of property without triggering analyzer false positive on null comparison
+                    $hasProp = [bool]($g.PSObject.Properties.Name -contains 'isAssignableToRole')
+                    if (-not $hasProp) {
+                        Write-Verbose "isAssignableToRole missing in v1.0 response – retrying with beta endpoint for confirmation"
+                        try { $gBeta = invoke-graph -Endpoint $grpEndpoint -Method GET -version beta -ErrorAction Stop } catch { $gBeta = $null }
+                        if ($gBeta -and $gBeta.PSObject.Properties['isAssignableToRole']) { $g = $gBeta; $hasProp=$true; Write-Verbose "Beta endpoint returned isAssignableToRole=$($g.isAssignableToRole)" }
+                    }
+                    if ($hasProp) {
+                        if ($g.isAssignableToRole -ne $true) {
+                            throw "Group '$($g.displayName)' ($principalID) has isAssignableToRole=$($g.isAssignableToRole) and cannot receive directory role active assignments. Recreate as a role-assignable group (isAssignableToRole=true) or bypass with -SkipGroupRoleAssignableCheck (request will likely 400)."
+                        } else {
+                            Write-Verbose "Group $($g.displayName) is role-assignable (isAssignableToRole=true)."
+                        }
+                    } else {
+                        Write-Warning "Unable to confirm role-assignable status (isAssignableToRole property absent in v1.0 and beta). Proceeding assuming role-assignable; use -SkipGroupRoleAssignableCheck to suppress this lookup."
+                    }
+                }
+            }
+        }
+        # local helper to parse ISO 8601 durations like P30D, PT8H, PT2H30M etc.
+        function ConvertFrom-ISO8601Duration([string]$iso) {
+            if (-not $iso) { return $null }
+            try { return [System.Xml.XmlConvert]::ToTimeSpan($iso) } catch { Write-Verbose "Suppressed ISO8601 duration parse failure: $($_.Exception.Message)" }
+            return $null
+        }
+        function Format-TimeSpanHuman([TimeSpan]$ts) {
+            if (-not $ts) { return '' }
+            if ($ts.Days -ge 1 -and $ts.Hours -eq 0 -and $ts.Minutes -eq 0) { return "$($ts.Days)d" }
+            if ($ts.Days -ge 1) { return "$($ts.Days)d $($ts.Hours)h" }
+            if ($ts.TotalHours -ge 1 -and $ts.Minutes -eq 0) { return "$([int]$ts.TotalHours)h" }
+            if ($ts.TotalHours -ge 1) { return "$([int]$ts.TotalHours)h $($ts.Minutes)m" }
+            if ($ts.Minutes -ge 1) { return "$($ts.Minutes)m" }
+            return "$([math]::Round($ts.TotalSeconds))s"
         }
         if ($PSBoundParameters.Keys.Contains('startDateTime')) {
             $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime() -f "yyyy-MM-ddTHH:mm:ssZ"
@@ -93,6 +144,9 @@ function New-PIMEntraRoleActiveAssignment {
         write-verbose "Calculated date time start is $startDateTime"
         # 2 get role settings:
         $config = Get-PIMEntraRolePolicy -tenantID $tenantID -rolename $rolename
+        if ($config) {
+            Write-Verbose ("Policy snapshot: ActiveReq='{0}' EnablementRules='{1}' AllowPermActive={2} MaxActive={3} ActivationDuration={4}" -f $config.ActiveAssignmentRequirement,$config.EnablementRules,$config.AllowPermanentActiveAssignment,$config.MaximumActiveAssignmentDuration,$config.ActivationDuration)
+        }
 
         #if permanent assignement is requested check this is allowed in the rule
         if ($permanent) {
@@ -101,11 +155,38 @@ function New-PIMEntraRoleActiveAssignment {
             }
         }
 
-        # if Duration is not provided we will take the maxium value from the role setting
+        # Determine applicable policy maxima
+        $policyMaxActive = $config.MaximumActiveAssignmentDuration
+        $policyActivationMax = $config.ActivationDuration  # end-user activation (may also be enforced)
+        # if Duration is not provided we will take the maximum active assignment value
         if (!($PSBoundParameters.Keys.Contains('duration'))) {
-            $duration = $config.MaximumActiveAssignmentDuration
+            $duration = $policyMaxActive
+        } else {
+            # user specified a duration: validate against both policy maxima (whichever is lower and defined)
+            $reqIso = $duration
+            $reqTs = ConvertFrom-ISO8601Duration $reqIso
+            $activeTs = ConvertFrom-ISO8601Duration $policyMaxActive
+            $activationTs = ConvertFrom-ISO8601Duration $policyActivationMax
+            $effectiveLimitTs = $null; $effectiveLimitIso = $null; $origin = $null
+            if ($activeTs -and $activationTs) {
+                if ($activeTs -le $activationTs) { $effectiveLimitTs = $activeTs; $effectiveLimitIso = $policyMaxActive; $origin = 'MaximumActiveAssignmentDuration' }
+                else { $effectiveLimitTs = $activationTs; $effectiveLimitIso = $policyActivationMax; $origin = 'ActivationDuration' }
+            } elseif ($activeTs) { $effectiveLimitTs = $activeTs; $effectiveLimitIso = $policyMaxActive; $origin = 'MaximumActiveAssignmentDuration' }
+            elseif ($activationTs) { $effectiveLimitTs = $activationTs; $effectiveLimitIso = $policyActivationMax; $origin = 'ActivationDuration' }
+            if ($reqTs -and $effectiveLimitTs -and $reqTs -gt $effectiveLimitTs -and -not $permanent) {
+                $humanReq = Format-TimeSpanHuman $reqTs
+                $humanMax = Format-TimeSpanHuman $effectiveLimitTs
+                throw "Requested active assignment duration '$reqIso' ($humanReq) exceeds policy limit '$effectiveLimitIso' ($humanMax) sourced from $origin for role $rolename. Remove -Duration to use the maximum or choose a smaller value."
+            }
         }
-        write-verbose "assignement duration will be : $duration"
+        Write-Verbose ("Duration selection: requested='{0}' | MaxActive='{1}' | Activation='{2}' => using='{3}'" -f $duration,$policyMaxActive,$policyActivationMax,$duration)
+        # Normalize non-standard short ISO8601 forms like P1H -> PT1H (Graph expects the 'T' when time components present)
+        if ($duration -match '^P[0-9]+[HMS]$') {
+            $normalized = ($duration -replace '^P','PT')
+            Write-Verbose "Normalizing duration '$duration' -> '$normalized' for Graph compliance"
+            $duration = $normalized
+        }
+        Write-Verbose "assignement duration will be : $duration"
 
         if (!($PSBoundParameters.Keys.Contains('justification'))) {
             $justification = "Approved from EasyPIM module by  $($(get-azcontext).account)"
@@ -138,11 +219,18 @@ function New-PIMEntraRoleActiveAssignment {
 }
 
 '
-        $endpoint = "roleManagement/directory/roleAssignmentScheduleRequests/"
-        invoke-graph -Endpoint $endpoint -Method "POST" -body $body
+    # Allow environment variable to force full Graph error capture without passing switch everywhere
+    if ($env:EASYPIM_DEBUG -eq '1') { $script:EasyPIM_FullGraphError = $true; Write-Verbose "EASYPIM_DEBUG=1 -> enabling full Graph error body capture" }
+    if ($DebugGraphPayload) {
+        Write-Verbose "Graph request body:`n$body"
+        # enable full error body capture downstream
+        $script:EasyPIM_FullGraphError = $true
+    }
+    $endpoint = "roleManagement/directory/roleAssignmentScheduleRequests/"
+    invoke-graph -Endpoint $endpoint -Method "POST" -body $body
 
     }
     catch {
-        Mycatch $_
+        MyCatch $_
     }
 }

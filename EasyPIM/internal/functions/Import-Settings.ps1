@@ -15,7 +15,8 @@
         Homepage: https://github.com/kayasax/EasyPIM
      #>
 function Import-Setting ($path) {
-    log "Importing setting from $path"
+    # Mute console output for import banner
+    log "Importing setting from $path" -noEcho
     if (!(test-path $path)) {
         throw "Operation failed, file $path cannot be found"
     }
