@@ -4,23 +4,23 @@ A safe, step-by-step plan to exercise the orchestrator and policies in a real te
 
 ## Table of Contents
 
-1. Step 0 — Backup current policies (once)
-2. Step 1 — Minimal config: ProtectedUsers only
-3. Step 2 — Entra role policy (inline)
-4. Step 3 — Entra role policy (template)
-5. Step 4 — Entra role policy (file/CSV, legacy import) [DEPRECATED]
-6. Step 5 — Entra role assignments (multiple assignments per role supported)
-7. Step 6 — Azure role policy (inline; Scope is required)
-8. Step 7 — Azure role policy (template)
-9. Step 8 — (Optional / Deprecated) Azure role policy via CSV file import
-10. Step 9 — Azure assignments (1 Eligible + 1 Active)
-11. Step 10 — Optional: Groups (Policies + Assignments)
-12. Step 11 — Apply changes (remove -WhatIf)
-13. Step 12 — Use the Same Config from Azure Key Vault (Optional)
-14. Step 13 — (Optional, Destructive) Reconcile with initial mode
-15. Step 14 — Comprehensive policy validation (all options)
-16. Step 15 — (Optional) CI/CD automation (GitHub Actions + Key Vault)
-17. Appendix — Tips & Safety Gates
+1. [Step 0 — Backup current policies (once)](#step-0)
+2. [Step 1 — Minimal config: ProtectedUsers only](#step-1)
+3. [Step 2 — Entra role policy (inline)](#step-2)
+4. [Step 3 — Entra role policy (template)](#step-3)
+5. [Step 4 — Entra role policy (file/CSV, legacy import) \[DEPRECATED\]](#step-4)
+6. [Step 5 — Entra role assignments (multiple assignments per role supported)](#step-5)
+7. [Step 6 — Azure role policy (inline; Scope is required)](#step-6)
+8. [Step 7 — Azure role policy (template)](#step-7)
+9. [Step 8 — (Optional / Deprecated) Azure role policy via CSV file import](#step-8)
+10. [Step 9 — Azure assignments (1 Eligible + 1 Active)](#step-9)
+11. [Step 10 — Optional: Groups (Policies + Assignments)](#step-10)
+12. [Step 11 — Apply changes (remove -WhatIf)](#step-11)
+13. [Step 12 — Use the Same Config from Azure Key Vault (Optional)](#step-12)
+14. [Step 13 — (Optional, Destructive) Reconcile with initial mode](#step-13)
+15. [Step 14 — Comprehensive policy validation (all options)](#step-14)
+16. [Step 15 — (Optional) CI/CD automation (GitHub Actions + Key Vault)](#step-15)
+17. [Appendix — Tips & Safety Gates](#appendix)
 
 
 ## Prerequisites
@@ -33,6 +33,7 @@ A safe, step-by-step plan to exercise the orchestrator and policies in a real te
 Tip: Keep one file and replace/append sections as you move through steps.
 
 
+<a id="step-0"></a>
 ## Step 0 — Backup current policies (once)
 
 > **Note:** This step may take up to an hour depending on the number of roles and policies in your tenant.
@@ -47,6 +48,7 @@ Backup-PIMEntraRolePolicy -tenantID $env:TenantID -path C:\Temp\pimentrapolicyba
 Backup-PIMAzureResourcePolicy -tenantID $env:TenantID -subscriptionID $env:SubscriptionID -path C:\Temp\pimazureresourcepolicybackup.csv
 ```
 
+<a id="step-1"></a>
 ## Step 1 — Minimal config: ProtectedUsers only
 
 Goal: Establish a safety baseline that guarantees your break‑glass / critical principals can never be removed by later reconciliation steps (especially Step 13 initial mode). `ProtectedUsers` is a hard exclusion list used by cleanup logic: any assignment held by these object IDs is always preserved (reported as Protected, never Removed / WouldRemove). Start with ONLY this section so you can preview the orchestration pipeline and principal validation without risking unintended deletions.
@@ -84,6 +86,7 @@ Preview
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf
 ```
 
+<a id="step-2"></a>
 ## Step 2 — Entra role policy (inline)
 
 
@@ -120,6 +123,7 @@ Preview (policies only)
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
 ```
 
+<a id="step-3"></a>
 ## Step 3 — Entra role policy (template)
 
 Why templates? A PolicyTemplate lets you define a reusable policy profile once (durations, requirements, approvals, notifications, auth context, limits) and then reference it by name under multiple roles. Benefits:
@@ -218,6 +222,7 @@ Preview (policies only)
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
 ```
 
+<a id="step-4"></a>
 ## Step 4 — Entra role policy (file/CSV, legacy import) [DEPRECATED]
 
 > **Deprecated:** The `EntraRolePolicies` array with `PolicySource`/`PolicyFile` is a legacy import pattern and will be removed in a future release. Prefer the nested `EntraRoles.Policies` block with `Template` or inline properties for new configurations.
@@ -255,6 +260,7 @@ Preview (policies only)
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
 ```
 
+<a id="step-5"></a>
 ## Step 5 — Entra role assignments (multiple assignments per role supported)
 
 Note: The orchestrator supports multiple assignments per role in the Assignments block. Provide an array of assignment objects; each will be processed individually.
@@ -425,6 +431,7 @@ Multiple principals
 }
 ```
 
+<a id="step-6"></a>
 ## Step 6 — Azure role policy (inline; Scope is required)
 
 Goal: Introduce your first Azure Role policy while preserving everything proven in Step 5 (ProtectedUsers, Entra role policy templates & assignments). Keep `ProtectedUsers` first for safety.
@@ -509,6 +516,7 @@ Preview (policies only)
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
 ```
 
+<a id="step-7"></a>
 ## Step 7 — Azure role policy (template)
 
 Goal: Show the SMALL change from Step 6 (inline Azure policy) to a template-based Azure policy. Everything else from Step 6 stays the same. You have TWO equivalent options:
@@ -634,6 +642,7 @@ Preview (policies only)
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
 ```
 
+<a id="step-8"></a>
 ## Step 8 — (Optional / Deprecated) Azure role policy via CSV file import
 
 Status: Deprecated. Skip this step unless you specifically need to bulk‑reapply a previously exported CSV.
@@ -678,6 +687,7 @@ Convert after preview (suggested workflow):
 4. Replace AzureRolePolicies block with AzureRoles.Policies using Template.
 5. Delete / archive the CSV.
 
+<a id="step-9"></a>
 ## Step 9 — Azure assignments (1 Eligible + 1 Active)
 
 Goal: Add first Azure role assignments without altering existing policies. Everything from Step 7 (or Step 8 if you did the deprecated path) remains; we only append an `Assignments.AzureRoles` block.
@@ -800,6 +810,7 @@ Multiple principals
 }
 ```
 
+<a id="step-10"></a>
 ## Step 10 — Optional: Groups (Policies + Assignments)
 
 Group policies ARE supported (Get-PIMGroupPolicy / Set-PIMGroupPolicy). The orchestrator resolves group policies via `GroupRoles.Policies` (preferred) or the deprecated `GroupPolicies` / `Policies.Groups` formats. We'll DEFINE a minimal policy first, then add assignments referencing it. This mirrors the security-first approach: establish guardrails (policy) before granting access (assignments).
@@ -975,6 +986,7 @@ Result: cleaner reuse; future tweaks centralized.
 
 NOTE: Deprecated formats (`GroupPolicies` array or nested `Policies.Groups`) still load with a warning; migrate to `GroupRoles.Policies` for forward compatibility.
 
+<a id="step-11"></a>
 ## Step 11 — Apply changes (remove -WhatIf)
 
 > **Safety Note:** By default the orchestrator operates in **delta** mode. That means it will create or update the assignments/policies you declare but it will **not delete** existing assignments that are absent from the config. Only new (or changed) items are acted on, so there is no risk of breaking existing access at this step. Destructive cleanup requires explicitly running Step 13 with `-Mode initial` (and ideally a prior `-WhatIf`).
@@ -991,6 +1003,7 @@ Apply assignments
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -SkipPolicies
 ```
 
+<a id="step-12"></a>
 ## Step 12 — Use the Same Config from Azure Key Vault (Optional)
 
 Centralize the orchestrator configuration by storing the exact JSON in an Azure Key Vault secret.
@@ -1023,6 +1036,7 @@ Troubleshooting:
 - Access denied: verify RBAC/Access Policy includes get secret.
 - Parse error: `az keyvault secret show --vault-name <kv-name> --name EasyPIM-Config --query value -o tsv | ConvertFrom-Json`.
 
+<a id="step-13"></a>
 ## Step 13 — (Optional, Destructive) Reconcile with initial mode
 > **Pre-Execution Backup Recommended:** Step 0 only backed up policies. Before running a destructive initial reconcile you should also snapshot CURRENT assignments so you can restore or justify removals. Export (or at least list to CSV) each assignment category:
 > - Entra role eligible: `Get-PIMEntraRoleEligibleAssignment -tenantID <tenant>`
@@ -1173,6 +1187,7 @@ Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId
 
 
 
+<a id="step-14"></a>
 ## Step 14 — Comprehensive policy validation (all options)
 
 This step validates that every major policy lever is understood and renders correctly: activation & eligibility durations, *active* vs *eligible* enablement rules, authentication context, approvers, permanent eligibility flags, and the full three‑phase notification matrix (Eligibility, Active, Activation). It also introduces a reusable template that captures all options.
@@ -1369,9 +1384,12 @@ Instead of repeating full blocks, reference the template and (if needed) overrid
 * Use Verify-PIMPolicies.ps1 or Test-PIMPolicyDrift to audit drift after applying.
 * Keep templates minimal; AllOptions is illustrative — real production templates often exclude rarely used features.
 
-## Step 15 — (Optional) CI/CD automation (GitHub Actions + Key Vault)
+<a id="step-15"></a>
+## Step 15 — (Optional) CI/CD automation (GitHub Actions + Key Vault) [WORK IN PROGRESS]
 
 Goal: Run the orchestrator automatically (or on demand) using the JSON config stored in Azure Key Vault.
+
+> This step is under developement and not tested!
 
 Reality check (Key Vault change triggers): GitHub Actions cannot natively subscribe to Key Vault secret change events. To be truly event‑driven you need an Azure component (Event Grid -> Logic App / Azure Function) that calls the GitHub REST API (repository_dispatch) or invokes an Azure DevOps pipeline. Below we give (1) a pragmatic scheduled/on‑demand workflow and (2) an advanced event pattern outline.
 
@@ -1567,6 +1585,7 @@ Drift detection pattern:
 
 That concludes the optional automation layer; adapt scope as your governance matures.
 
+<a id="appendix"></a>
 ## Appendix: Tips & Safety Gates
 
 ### Automatic Principal Validation (Safety Gate)
