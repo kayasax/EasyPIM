@@ -9,10 +9,6 @@ param(
 if (-not (Get-Command Test-PIMPolicyDrift -ErrorAction SilentlyContinue)) {
     $modulePath = Join-Path (Resolve-Path (Join-Path $PSScriptRoot '..')).Path 'EasyPIM' 'EasyPIM.psd1'
     try { Import-Module $modulePath -ErrorAction Stop } catch { throw "Failed to import module from ${modulePath}: $($_.Exception.Message)" }
-    if (-not (Get-Command Test-PIMPolicyDrift -ErrorAction SilentlyContinue)) {
-        $fnPath = Join-Path (Resolve-Path (Join-Path $PSScriptRoot '..')).Path 'EasyPIM' 'internal' 'functions' 'Test-PIMPolicyDrift.ps1'
-        if (Test-Path $fnPath) { . $fnPath }
-    }
 }
 
 Write-Host "🔍 (Test Harness) Verifying PIM policies from config: $ConfigPath" -ForegroundColor Cyan
