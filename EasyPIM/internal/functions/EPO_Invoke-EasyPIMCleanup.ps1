@@ -39,7 +39,13 @@
     Write-Verbose "[Cleanup Debug] Entering Invoke-EasyPIMCleanup (Mode=$Mode WhatIf=$WhatIfPreference TenantId=$TenantId SubscriptionId=$SubscriptionId)"
     Write-Verbose "[Cleanup Debug] Post-ShouldProcess reached - beginning per-resource evaluation"
     try {
-        Write-Verbose "[Cleanup Debug] Input arrays -> AzureRoles=$($Config.AzureRoles?.Count) AzureRolesActive=$($Config.AzureRolesActive?.Count) EntraIDRoles=$($Config.EntraIDRoles?.Count) EntraIDRolesActive=$($Config.EntraIDRolesActive?.Count) GroupRoles=$($Config.GroupRoles?.Count) GroupRolesActive=$($Config.GroupRolesActive?.Count)"
+        $dbgAzElig = if ($Config.AzureRoles) { $Config.AzureRoles.Count } else { 0 }
+        $dbgAzAct  = if ($Config.AzureRolesActive) { $Config.AzureRolesActive.Count } else { 0 }
+        $dbgEntraElig = if ($Config.EntraIDRoles) { $Config.EntraIDRoles.Count } else { 0 }
+        $dbgEntraAct  = if ($Config.EntraIDRolesActive) { $Config.EntraIDRolesActive.Count } else { 0 }
+        $dbgGrpElig = if ($Config.GroupRoles) { $Config.GroupRoles.Count } else { 0 }
+        $dbgGrpAct  = if ($Config.GroupRolesActive) { $Config.GroupRolesActive.Count } else { 0 }
+        Write-Verbose "[Cleanup Debug] Input arrays -> AzureRoles=$dbgAzElig AzureRolesActive=$dbgAzAct EntraIDRoles=$dbgEntraElig EntraIDRolesActive=$dbgEntraAct GroupRoles=$dbgGrpElig GroupRolesActive=$dbgGrpAct"
     } catch { Write-Verbose "[Cleanup Debug] Failed to enumerate input counts: $($_.Exception.Message)" }
 
     # Diagnostic: show counts of each assignment array prior to invoking per-resource cleanup

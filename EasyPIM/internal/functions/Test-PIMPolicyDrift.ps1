@@ -189,7 +189,8 @@ Approver count drift is also flagged when ApprovalRequired=true.
             try {
                 $live = Get-PIMAzureResourcePolicy -tenantID $TenantId -subscriptionID $SubscriptionId -rolename $p.RoleName -ErrorAction Stop
                 if ($live -is [System.Collections.IEnumerable] -and -not ($live -is [string])) { $live = @($live)[0] }
-                Compare-Policy -Type 'AzureRole' -Name $p.RoleName -Expected $r -Live $live -ExtraId $p.Scope -ApproverCountExpected ($r.Approvers?.Count)
+                $approverCount = if ($r.Approvers) { $r.Approvers.Count } else { $null }
+                Compare-Policy -Type 'AzureRole' -Name $p.RoleName -Expected $r -Live $live -ExtraId $p.Scope -ApproverCountExpected $approverCount
             } catch { $script:results += [pscustomobject]@{ Type='AzureRole'; Name=$p.RoleName; Target=$p.Scope; Status='Error'; Differences=$_.Exception.Message }; $script:driftCount++ }
         }
     }
@@ -201,7 +202,8 @@ Approver count drift is also flagged when ApprovalRequired=true.
             $live = Get-PIMEntraRolePolicy -tenantID $TenantId -rolename $p.RoleName -ErrorAction Stop
             if ($live -is [System.Collections.IEnumerable] -and -not ($live -is [string])) { $live = @($live)[0] }
             if (-not $live) { throw "Live policy returned null for role '$($p.RoleName)'" }
-            Compare-Policy -Type 'EntraRole' -Name $p.RoleName -Expected $r -Live $live -ApproverCountExpected ($r.Approvers?.Count)
+            $approverCount = if ($r.Approvers) { $r.Approvers.Count } else { $null }
+            Compare-Policy -Type 'EntraRole' -Name $p.RoleName -Expected $r -Live $live -ApproverCountExpected $approverCount
         } catch { $script:results += [pscustomobject]@{ Type='EntraRole'; Name=$p.RoleName; Target='/'; Status='Error'; Differences=$_.Exception.Message }; $script:driftCount++ }
     }
 
@@ -221,7 +223,8 @@ Approver count drift is also flagged when ApprovalRequired=true.
         try {
             $live = Get-PIMGroupPolicy -tenantID $TenantId -groupID $gid -type ($p.RoleName.ToLower()) -ErrorAction Stop
             if ($live -is [System.Collections.IEnumerable] -and -not ($live -is [string])) { $live = @($live)[0] }
-            Compare-Policy -Type 'Group' -Name $p.RoleName -Expected $r -Live $live -ExtraId $gid -ApproverCountExpected ($r.Approvers?.Count)
+            $approverCount = if ($r.Approvers) { $r.Approvers.Count } else { $null }
+            Compare-Policy -Type 'Group' -Name $p.RoleName -Expected $r -Live $live -ExtraId $gid -ApproverCountExpected $approverCount
         } catch { $script:results += [pscustomobject]@{ Type='Group'; Name=$p.RoleName; Target=$gid; Status='Error'; Differences=$_.Exception.Message }; $script:driftCount++ }
     }
 
