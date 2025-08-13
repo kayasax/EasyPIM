@@ -2,8 +2,8 @@
 
 EasyPIM is a PowerShell module created to help you manage Microsof Privileged Identity Management (PIM) either working with Entra ID, Azure RBAC or groups.  
 Packed with more than 30 cmdlets, EasyPIM leverages the ARM and Graph APIs complexity to let you configure PIM **Azure Resources**, **Entra Roles** and **groups** settings and assignments in a simple way .  
-🆕 V1.9 Improves our Invoke-EasyPIMOrchestrator, you go-to way if you want to manage you PIM model from a config file.
-Check out our step-by-step guide: [https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)
+🆕 V1.9 Improves our Invoke-EasyPIMOrchestrator, you go-to way if you want to manage you PIM model from a config file.  
+Check out our :  [step-by-step guide](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)
 
 [![PSGallery Version](https://img.shields.io/powershellgallery/v/easypim.svg?style=flat&logo=powershell&label=PSGallery%20Version)](https://www.powershellgallery.com/packages/easypim) [![PSGallery Downloads](https://img.shields.io/powershellgallery/dt/easypim.svg?style=flat&logo=powershell&label=PSGallery%20Downloads)](https://www.powershellgallery.com/packages/easypim)
 
@@ -12,14 +12,14 @@ Check out our step-by-step guide: [https://github.com/kayasax/EasyPIM/wiki/Invok
 Quick start: Progressive validation runbook → `EasyPIM/Documentation/Progressive-Validation-Guide.md`
 
 ## Key features
-:boom: Support editing multiple roles at once
-:boom: Copy settings from one role to another
-:boom: Copy eligible assignments from one user to another
-:boom: Export role settings to csv
-:boom: Import role settings from csv
-:boom: Backup all roles
-:boom: New in V1.6 get PIM activity reporting
-:boom: New in V1.7 Approve/Deny pending requests
+:boom: Support editing multiple roles at once  
+:boom: Copy settings from one role to another  
+:boom: Copy eligible assignments from one user to another  
+:boom: Export role settings to csv  
+:boom: Import role settings from csv  
+:boom: Backup all roles  
+:boom: New in V1.6 get PIM activity reporting  
+:boom: New in V1.7 Approve/Deny pending requests  
 :fire: V1.8.1 Invoke-EasyPIMOrchestrator :fire: [more info](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator)
 
 With the export function you can now edit your PIM settings in Excel then import back your changes :wink:
