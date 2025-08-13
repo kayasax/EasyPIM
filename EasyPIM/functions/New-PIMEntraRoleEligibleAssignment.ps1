@@ -65,9 +65,13 @@ function New-PIMEntraRoleEligibleAssignment {
         # justification (will be auto generated if not provided)
         $justification,
 
-        [switch]
-        # the assignment will not expire
-        $permanent
+    [switch]
+    # the assignment will not expire
+    $permanent,
+
+    [switch]
+    # skip validation that group principals are role-assignable (mirrors active assignment cmdlet)
+    $SkipGroupRoleAssignableCheck
 
     )
 
@@ -78,6 +82,35 @@ function New-PIMEntraRoleEligibleAssignment {
     $endpoint = "directoryObjects/$principalID"
     $response = invoke-graph -Endpoint $endpoint
     if($response -and $response.'@odata.type') { Write-Verbose "[EligibleAssign] Resolved principal type: $($response.'@odata.type')" }
+    if(-not $SkipGroupRoleAssignableCheck){
+        $isGroup = $false
+        try { if ($response.'@odata.type' -and $response.'@odata.type' -match 'group') { $isGroup = $true } } catch { Write-Verbose "Suppressed principal type detection: $($_.Exception.Message)" }
+        if($isGroup){
+            Write-Verbose "Performing role-assignable check (eligible) for group principalID='$principalID'"
+            $g = $null; $groupFetchError = $null
+            $grpEndpoint = "groups/$($principalID)?`$select=id,displayName,isAssignableToRole"
+            Write-Verbose "Group fetch endpoint (eligible) = $grpEndpoint"
+            try { $g = invoke-graph -Endpoint $grpEndpoint -Method GET -ErrorAction Stop } catch { $groupFetchError = $_ }
+            if($groupFetchError){
+                Write-Verbose "Could not fetch group for role-assignable validation (eligible): $($groupFetchError.Exception.Message)"
+            } else {
+                $hasProp = [bool]($g.PSObject.Properties.Name -contains 'isAssignableToRole')
+                if(-not $hasProp){
+                    Write-Verbose "isAssignableToRole missing in v1.0 response (eligible) – retrying with beta endpoint"
+                    try { $gBeta = invoke-graph -Endpoint $grpEndpoint -Method GET -version beta -ErrorAction Stop } catch { $gBeta = $null }
+                    if ($gBeta -and $gBeta.PSObject.Properties['isAssignableToRole']) { $g = $gBeta; $hasProp = $true; Write-Verbose "Beta endpoint (eligible) returned isAssignableToRole=$($g.isAssignableToRole)" }
+                }
+                if($hasProp){
+                    if ($g.isAssignableToRole -is [bool]) {
+                        if(-not $g.isAssignableToRole){
+                            throw "Group '$($g.displayName)' ($principalID) has isAssignableToRole=false and cannot receive directory role eligible assignments. Create a role-assignable group (isAssignableToRole=true) or bypass with -SkipGroupRoleAssignableCheck (request likely to 400)."
+                        } else { Write-Verbose "Group $($g.displayName) confirmed role-assignable (isAssignableToRole=true) for eligible." }
+                    } else { Write-Verbose "isAssignableToRole present but not boolean (eligible) value='$($g.isAssignableToRole)'" }
+                } else {
+                    Write-Verbose "Role-assignable status not returned (eligible, property absent after beta retry). Assuming allowed; specify -SkipGroupRoleAssignableCheck to skip probe." }
+            }
+        }
+    }
         if ($PSBoundParameters.Keys.Contains('startDateTime')) {
             $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime().addseconds(30) -f "yyyy-MM-ddTHH:mm:ssZ"
         }
