@@ -1,3 +1,0 @@
-This placeholder replaces the former internal Test-PIMPolicyDrift.ps1.
-The function is now public only (functions/Test-PIMPolicyDrift.ps1).
-Internal directory must not contain a file named Test-PIMPolicyDrift.ps1.

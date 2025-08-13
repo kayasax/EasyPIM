@@ -109,13 +109,18 @@ function New-PIMEntraRoleActiveAssignment {
                         if ($gBeta -and $gBeta.PSObject.Properties['isAssignableToRole']) { $g = $gBeta; $hasProp=$true; Write-Verbose "Beta endpoint returned isAssignableToRole=$($g.isAssignableToRole)" }
                     }
                     if ($hasProp) {
-                        if ($g.isAssignableToRole -ne $true) {
-                            throw "Group '$($g.displayName)' ($principalID) has isAssignableToRole=$($g.isAssignableToRole) and cannot receive directory role active assignments. Recreate as a role-assignable group (isAssignableToRole=true) or bypass with -SkipGroupRoleAssignableCheck (request will likely 400)."
+                        if ($g.isAssignableToRole -is [bool]) {
+                            if (-not $g.isAssignableToRole) {
+                                throw "Group '$($g.displayName)' ($principalID) has isAssignableToRole=false and cannot receive directory role active assignments. Create a new role-assignable group (isAssignableToRole=true) or bypass with -SkipGroupRoleAssignableCheck (request likely to 400)."
+                            } else {
+                                Write-Verbose "Group $($g.displayName) confirmed role-assignable (isAssignableToRole=true)."
+                            }
                         } else {
-                            Write-Verbose "Group $($g.displayName) is role-assignable (isAssignableToRole=true)."
+                            Write-Verbose "isAssignableToRole present but not boolean (value='$($g.isAssignableToRole)') — treating as inconclusive."
                         }
                     } else {
-                        Write-Warning "Unable to confirm role-assignable status (isAssignableToRole property absent in v1.0 and beta). Proceeding assuming role-assignable; use -SkipGroupRoleAssignableCheck to suppress this lookup."
+                        # Downgrade previous warning to verbose to reduce noise; true false absence usually means non-security group or insufficient permissions
+                        Write-Verbose "Role-assignable status not returned (property absent after beta retry). Assuming allowed; specify -SkipGroupRoleAssignableCheck to skip this probe entirely."
                     }
                 }
             }
