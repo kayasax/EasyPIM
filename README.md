@@ -1,15 +1,12 @@
+[![PSGallery Version](https://img.shields.io/powershellgallery/v/easypim.svg?style=flat&logo=powershell&label=PSGallery%20Version)](https://www.powershellgallery.com/packages/easypim) [![PSGallery Downloads](https://img.shields.io/powershellgallery/dt/easypim.svg?style=flat&logo=powershell&label=PSGallery%20Downloads)](https://www.powershellgallery.com/packages/easypim)
+
 ## Introduction
 
 EasyPIM is a PowerShell module created to help you manage Microsof Privileged Identity Management (PIM) either working with Entra ID, Azure RBAC or groups.  
 Packed with more than 30 cmdlets, EasyPIM leverages the ARM and Graph APIs complexity to let you configure PIM **Azure Resources**, **Entra Roles** and **groups** settings and assignments in a simple way .  
+
 🆕 V1.9 Improves our Invoke-EasyPIMOrchestrator, your go-to way if you want to manage your PIM model from a config file.  
-Check out our :  [step-by-step guide](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)
-
-[![PSGallery Version](https://img.shields.io/powershellgallery/v/easypim.svg?style=flat&logo=powershell&label=PSGallery%20Version)](https://www.powershellgallery.com/packages/easypim) [![PSGallery Downloads](https://img.shields.io/powershellgallery/dt/easypim.svg?style=flat&logo=powershell&label=PSGallery%20Downloads)](https://www.powershellgallery.com/packages/easypim)
-
-🗒️Change log: [https://github.com/kayasax/EasyPIM/wiki/Changelog](https://github.com/kayasax/EasyPIM/wiki/Changelog)
-
-Quick start: Progressive validation runbook → `EasyPIM/Documentation/Progressive-Validation-Guide.md`
+**Check out our :  [step-by-step guide](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)**
 
 ## Key features
 :boom: Support editing multiple roles at once  
@@ -24,8 +21,8 @@ Quick start: Progressive validation runbook → `EasyPIM/Documentation/Progressi
 
 With the export function you can now edit your PIM settings in Excel then import back your changes :wink:
 
-## Use cases
-Discover how EasyPIM answers to common challenges [Use cases](https://github.com/kayasax/EasyPIM/wiki/Use-Cases)
+🗒️Change log: [https://github.com/kayasax/EasyPIM/wiki/Changelog](https://github.com/kayasax/EasyPIM/wiki/Changelog)
+
 
 ## Installation
 This module is available on the PowerShell gallery: [https://www.powershellgallery.com/packages/EasyPIM](https://www.powershellgallery.com/packages/EasyPIM), install it with:
@@ -79,10 +76,15 @@ $r=Show-PIMReport -tenantID $tenantID
 New-PIMEntraRoleActiveAssignment -tenantID $tenantID -rolename "testrole" -principalID $groupID
 ```
 
-
-
-
 More samples available in the [documentation](https://github.com/kayasax/EasyPIM/wiki/Documentation)
+
+##🗒️Change log: [https://github.com/kayasax/EasyPIM/wiki/Changelog](https://github.com/kayasax/EasyPIM/wiki/Changelog)
+
+## Documentation
+[documentation](https://github.com/kayasax/EasyPIM/wiki/Documentation)
+
+## Use cases
+Discover how EasyPIM answers to common challenges [Use cases](https://github.com/kayasax/EasyPIM/wiki/Use-Cases)
 
 ## Requirement
 * Az.Accounts module
@@ -96,5 +98,4 @@ The PIM API for Azure resource roles is developed on top of the Azure Resource M
                 "PrivilegedAssignmentSchedule.ReadWrite.AzureADGroup",
                 "PrivilegedAccess.ReadWrite.AzureADGroup"
 
-## Documentation
-[documentation](https://github.com/kayasax/EasyPIM/wiki/Documentation)
+
