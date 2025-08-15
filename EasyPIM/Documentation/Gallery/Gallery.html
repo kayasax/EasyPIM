@@ -3,18 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <title>EasyPIM Gallery</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@2.7.1/css/lightgallery-bundle.min.css">
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    .gallery { display: flex; flex-wrap: wrap; gap: 10px; }
-    .gallery img { width: 300px; border: 1px solid #ccc; border-radius: 4px; }
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    h1 { text-align: center; }
+    .gallery { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
+    .gallery-item { width: 250px; }
+    .gallery-item img { width: 100%; border-radius: 5px; }
+    .caption { text-align: center; margin-top: 5px; font-size: 14px; }
   </style>
 </head>
 <body>
   <h1>📸 EasyPIM Gallery</h1>
-  <div class="gallery">
-    <img src="../images/screenshot1.png" alt="Screenshot 1">
-    <img src="../images/screenshot2.png" alt="Screenshot 2">
-    <!-- Add more images as needed -->
+  <div id="lightgallery" class="gallery">
+    {% for item in site.data.gallery %}
+    <div class="gallery-item" data-lg-size="1406-1390">
+      <a href="{{ '/EasyPIM/Documentation/Gallery/images/' | append: item.filename | relative_url }}">
+        <img src="{{ '/EasyPIM/Documentation/Gallery/images/' | append: item.filename | relative_url }}" alt="{{ item.title }}" />
+      </a>
+      <div class="caption"><strong>{{ item.title }}</strong><br>{{ item.description }}</div>
+    </div>
+    {% endfor %}
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.1/lightgallery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.1/plugins/zoom/lg-zoom.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.1/plugins/thumbnail/lg-thumbnail.min.js"></script>
+  <script>
+    lightGallery(document.getElementById('lightgallery'), {
+      plugins: [lgZoom, lgThumbnail],
+      speed: 500,
+      thumbnail: true
+    });
+  </script>
 </body>
 </html>
