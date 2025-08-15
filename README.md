@@ -23,6 +23,7 @@ With the export function you can now edit your PIM settings in Excel then import
 
 🗒️Change log: [https://github.com/kayasax/EasyPIM/wiki/Changelog](https://github.com/kayasax/EasyPIM/wiki/Changelog)
 
+[📸 View the EasyPIM Gallery](gallery.html)
 
 ## Installation
 This module is available on the PowerShell gallery: [https://www.powershellgallery.com/packages/EasyPIM](https://www.powershellgallery.com/packages/EasyPIM), install it with:
