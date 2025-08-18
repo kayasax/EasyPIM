@@ -42,6 +42,18 @@ function Import-EntraRoleSettings  {
         $activeAssignmentRequirements = $_.ActiveAssignmentRequirement.Split(',')
         $rules += Set-ActiveAssignmentRequirement $activeAssignmentRequirements -entraRole
 
+        # Authentication Context (Issue #121): map CSV -> rule for Entra roles
+        # Safely coerce CSV string to boolean and pass through value (supports formats like "c1" or "c1:Label")
+        if ($_.PSObject.Properties['AuthenticationContext_Enabled']) {
+            $authEnabledRaw = $_.AuthenticationContext_Enabled
+            $authEnabled = $false
+            if ($null -ne $authEnabledRaw -and $authEnabledRaw.ToString().Trim() -ne '') {
+                try { $authEnabled = [System.Convert]::ToBoolean($authEnabledRaw) } catch { $authEnabled = $false }
+            }
+            $authValue = if ($_.PSObject.Properties['AuthenticationContext_Value']) { $_.AuthenticationContext_Value } else { $null }
+            $rules += Set-AuthenticationContext $authEnabled $authValue -entraRole
+        }
+
        # $approvers = @()
        # $approvers += $_.approvers
 
@@ -113,7 +125,7 @@ function Import-EntraRoleSettings  {
             "notificationLevel"         = $_.Notification_Activation_Approver_notificationLevel;
             "Recipients"                = $_.Notification_Activation_Approver_Recipients.split(',')
         }
-        $rules += Set-Notification_Activation_Approver $Notification_Activation_Approver -entraRole
+    $rules += Set-Notification_Activation_Approver $Notification_Activation_Approver -entraRole
         <#
         #>
 

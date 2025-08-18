@@ -155,6 +155,7 @@ The EasyPIM module provides comprehensive PIM management capabilities. The proje
 | 2025-08-06 | **API COMPATIBILITY FIXED**: Resolved MFA/MultiFactorAuthentication API compatibility issue. Template now uses correct "MultiFactorAuthentication" value instead of "MFA" shorthand. |
 | 2025-08-06 | **ORCHESTRATOR FLOW CORRECTED**: Successfully implemented proper execution order (policies → cleanup → assignments) to ensure assignments comply with established role policies. Fixed Import-PIMAzureResourcePolicy parameter issue. Complete workflow now operates correctly with compliance messaging. |
 | 2025-08-06 | **CRITICAL SYNTAX ERROR RESOLVED**: Fixed corrupted comment block in New-EasyPIMPolicies.ps1 that was causing CI/CD failures. Balanced braces and verified PowerShell syntax validation. Build process now completes successfully. v1.9.0 release unblocked! |
+| 2025-08-11 | Created branch fix/issue-121-authentication-context-import. Implemented AuthenticationContext mapping in Import-EntraRoleSettings (and Azure Import-Settings for parity). Added Pester tests to validate Set-AuthenticationContext rule generation from CSV. |
 
 ---
 
