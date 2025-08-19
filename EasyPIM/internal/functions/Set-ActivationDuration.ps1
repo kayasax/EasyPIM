@@ -39,7 +39,7 @@ function Set-ActivationDuration ($ActivationDuration, [switch]$entraRole) {
            {
             "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyExpirationRule",
             "id": "Expiration_EndUser_Assignment",
-            "isExpirationRequired": "true",
+            "isExpirationRequired": true,
             "maximumDuration": "'+ $ActivationDuration + '",
             "target": {
 

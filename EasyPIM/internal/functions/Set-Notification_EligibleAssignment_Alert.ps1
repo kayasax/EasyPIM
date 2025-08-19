@@ -67,7 +67,7 @@ if($EntraRole){
         "target": {
             "caller": "Admin",
             "operations": [
-                "all"
+                "All"
             ],
             "level": "Eligibility",
             "inheritableSettings": [],

@@ -180,7 +180,15 @@ function Set-PIMEntraRolePolicy {
             }
 
             if ($PSBoundParameters.Keys.Contains('ActivationRequirement')) {
-                $rules += Set-ActivationRequirement $ActivationRequirement -EntraRole
+                $ar = $ActivationRequirement
+                # If Authentication Context is being enabled in the same patch, remove MFA to avoid conflict
+                if ($PSBoundParameters.Keys.Contains('AuthenticationContext_Enabled') -and ($AuthenticationContext_Enabled -eq $true)) {
+                    if ($ar -and ($ar -contains 'MultiFactorAuthentication')) {
+                        Write-Verbose "Removing 'MultiFactorAuthentication' from Enablement_EndUser_Assignment because Authentication Context is enabled (avoids MfaAndAcrsConflict)"
+                        $ar = @($ar | Where-Object { $_ -ne 'MultiFactorAuthentication' })
+                    }
+                }
+                $rules += Set-ActivationRequirement $ar -EntraRole
             }
 
             if ($PSBoundParameters.Keys.Contains('ActiveAssignmentRequirement')) {
@@ -191,6 +199,17 @@ function Set-PIMEntraRolePolicy {
                     $AuthenticationContext_Value = $null
                 }
                 $rules += Set-AuthenticationContext $AuthenticationContext_Enabled $AuthenticationContext_Value -entraRole
+                # If caller didn't pass ActivationRequirement, but current config enforces MFA,
+                # proactively remove MFA to prevent MfaAndAcrsConflict when enabling Authentication Context.
+                if ($AuthenticationContext_Enabled -eq $true -and -not $PSBoundParameters.Keys.Contains('ActivationRequirement')) {
+                    $currentEnablement = @()
+                    if ($script:config.EnablementRules) { $currentEnablement = ($script:config.EnablementRules -split ',') }
+                    if ($currentEnablement -contains 'MultiFactorAuthentication') {
+                        Write-Verbose "Current policy has 'MultiFactorAuthentication' enabled; adding Enablement_EndUser_Assignment without MFA to avoid conflict with Authentication Context."
+                        $filtered = @($currentEnablement | Where-Object { $_ -ne 'MultiFactorAuthentication' })
+                        $rules += Set-ActivationRequirement $filtered -EntraRole
+                    }
+                }
             }
 
             # Approval and approvers

@@ -4,7 +4,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.9.0'
+ModuleVersion = '1.9.1'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -147,33 +147,23 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = @'
-v1.9.0 Release Notes:
+    ReleaseNotes = @'
+v1.9.1 Release Notes:
 
-🚀 MAJOR FEATURE: Policy Orchestrator System
-- New Invoke-EasyPIMOrchestrator cmdlet for comprehensive PIM management
-- Unified configuration format supporting Azure Roles, Entra Roles, and Groups
-- Policy templates and inheritance system for reusable configurations
-- Corrected execution flow: policies → cleanup → assignments for compliance
-- WhatIf support for validation before applying changes
-- Environment variable integration ($env:TENANTID, $env:SUBSCRIPTIONID)
+✨ Authentication Context parity and reliability
+- Added Authentication Context rule support across Set-*, Export/Import, and copy flows for Entra roles
+- Implemented guard to automatically remove MFA from EndUser enablement when Authentication Context is enabled to avoid Graph conflict (MfaAndAcrsConflict)
 
-🔧 ENHANCEMENTS:
- - Exported drift verification function Test-PIMPolicyDrift (previously internal) for direct module usage (object output + CI friendly FailOnDrift option via wrapper script)
-- Robust error handling with graceful failure recovery
-- CSV import compatibility between Azure and Entra role formats
-- PowerShell 5.1 compatibility improvements
-- Enhanced assignment processing with detailed progress reporting
-- Comprehensive summary reporting with structured output
-- Delta mode cleanup operations
+🧰 Better Microsoft Graph error surfacing
+- invoke-graph now captures error.code and error.message reliably, probing with -SkipHttpErrorCheck when needed
+- Clear, concise exceptions: "Graph error (Status): Code - Reason | method=... url=... [reqBody]"
+- Optional full error body logging via $EasyPIM_FullGraphError
 
-🐛 FIXES:
-- Fixed field naming differences (ActiveAssignmentRules vs ActiveAssignmentRequirement)
-- Resolved PowerShell 7+ ternary operator compatibility issues
-- Improved boolean value parsing in CSV operations
-- Enhanced template value resolution in policy configurations
+🧹 Analyzer hygiene & fixes
+- Eliminated empty catch blocks, corrected try/catch structure in invoke-graph
+- Minor robustness improvements in import/copy paths
 
-For detailed documentation and examples, visit: https://github.com/kayasax/EasyPIM/wiki
+For docs and examples, see: https://github.com/kayasax/EasyPIM/wiki
 '@
 
         # Prerelease string of this module

@@ -66,7 +66,7 @@ function Set-Notification_EligibleAssignment_Approver($Notification_EligibleAssi
             "target": {
                 "caller": "Admin",
                 "operations": [
-                    "all"
+                    "All"
                 ],
                 "level": "Eligibility",
                 "inheritableSettings": [],

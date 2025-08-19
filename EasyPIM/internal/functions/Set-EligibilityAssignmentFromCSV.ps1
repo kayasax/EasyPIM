@@ -58,9 +58,9 @@ function Set-EligibilityAssignmentFromCSV($MaximumEligibilityDuration, $AllowPer
         "maximumDuration": "'+ $max + '",
         "target": {
             "caller": "Admin",
-            "operations": [
-                "all"
-            ],
+      "operations": [
+        "All"
+      ],
             "level": "Eligibility",
             "inheritableSettings": [],
             "enforcedSettings": []

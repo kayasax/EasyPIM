@@ -57,7 +57,7 @@ function Set-ActiveAssignmentFromCSV($MaximumActiveAssignmentDuration, $AllowPer
                 "target": {
                     "caller": "Admin",
                     "operations": [
-                        "all"
+                        "All"
                     ],
                     "level": "Assignment",
                     "inheritableSettings": [],

@@ -25,12 +25,23 @@ function Import-Setting ($path) {
     $csv | ForEach-Object {        $rules = @()
         $script:scope=$_.policyID -replace "/providers.*"
 
-        $rules += Set-ActivationDuration $_.ActivationDuration
-        $enablementRules = $_.EnablementRules.Split(',')
-        $rules += Set-ActivationRequirement $enablementRules
+    $rules += Set-ActivationDuration $_.ActivationDuration
+    $enablementRules = $_.EnablementRules.Split(',')
+    $rules += Set-ActivationRequirement $enablementRules
 
-        $activeAssignmentRules = $_.ActiveAssignmentRules.Split(',')
-        $rules += Set-ActiveAssignmentRequirement $activeAssignmentRules
+    $activeAssignmentRules = $_.ActiveAssignmentRules.Split(',')
+    $rules += Set-ActiveAssignmentRequirement $activeAssignmentRules
+
+        # Authentication Context parity (if present in CSV for Azure resources)
+        if ($_.PSObject.Properties['AuthenticationContext_Enabled']) {
+            $authEnabledRaw = $_.AuthenticationContext_Enabled
+            $authEnabled = $false
+            if ($null -ne $authEnabledRaw -and $authEnabledRaw.ToString().Trim() -ne '') {
+                try { $authEnabled = [System.Convert]::ToBoolean($authEnabledRaw) } catch { $authEnabled = $false }
+            }
+            $authValue = if ($_.PSObject.Properties['AuthenticationContext_Value']) { $_.AuthenticationContext_Value } else { $null }
+            $rules += Set-AuthenticationContext $authEnabled $authValue
+        }
 
         #$approvers = @()
         #$approvers += $_.approvers

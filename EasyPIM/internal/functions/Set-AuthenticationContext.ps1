@@ -60,7 +60,7 @@ function Set-AuthenticationContext($authenticationContext_Enabled, $authenticati
             "target": {
                 "caller": "EndUser",
                 "operations": [
-                    "all"
+                    "All"
                 ],
                 "level": "Assignment",
                 "inheritableSettings": [],
