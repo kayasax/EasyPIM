@@ -51,7 +51,15 @@ function Show-PIMReport {
         }
 
         #filter activities from the PIM service and completed activities
-        $allresults = $allresults | Where-Object { $null -ne $_.initiatedby.values.userprincipalname } | Where-Object { $_.activityDisplayName -notmatch "completed" }
+        $allresults = $allresults | Where-Object { $_ -and $_.initiatedby -and $_.initiatedby.values -and $_.initiatedby.values.userprincipalname } | Where-Object { $_.activityDisplayName -notmatch "completed" }
+
+        # If no activities at all, return an empty array gracefully
+        if (-not $PSBoundParameters.ContainsKey('upn')) {
+            if (-not $allresults -or ($allresults | Measure-Object).Count -eq 0) {
+                Write-Verbose "No PIM activities found for tenant $tenantID"
+                return @()
+            }
+        }
 
         #check if upn parameter is set using psboundparameters
         if ($PSBoundParameters.ContainsKey('upn')) {
@@ -73,9 +81,14 @@ function Show-PIMReport {
             $props["operationType"] = $_.operationType
             $props["result"] = $_.result
             $props["resultReason"] = $_.resultReason
-            $props["initiatedBy"] = $_.initiatedBy.values.userprincipalname
-            $props["role"] = $_.targetResources[0]["displayname"]
-            if ( ($_.targetResources | Measure-Object).count -gt 2) {
+            $props["initiatedBy"] = if ($_.initiatedBy -and $_.initiatedBy.values -and $_.initiatedBy.values.userprincipalname) { $_.initiatedBy.values.userprincipalname } else { $null }
+            # role: first target resource display name if present
+            $roleName = $null
+            if ($_.targetResources -and (($_.targetResources | Measure-Object).Count -ge 1)) {
+                $roleName = $_.targetResources[0].displayname
+            }
+            $props["role"] = $roleName
+            if ($_.targetResources -and (($_.targetResources | Measure-Object).count -gt 2)) {
                 if ($_.targetResources[2]["type"] -eq "User") {
                     $props["targetUser"] = $_.targetResources[2]["userprincipalname"]
                 }
@@ -83,12 +96,20 @@ function Show-PIMReport {
                     $props["targetGroup"] = $_.targetResources[2]["displayname"]
                 }
 
-
-                $props["targetResources"] = $_.targetResources[3]["displayname"]
-
-
+                if (($_.targetResources | Measure-Object).count -gt 3) {
+                    $props["targetResources"] = $_.targetResources[3]["displayname"]
+                } else {
+                    $props["targetResources"] = $roleName
+                }
             }
-            else { $props["targetResources"] = $_.targetResources[0].displayname }
+            else {
+                # fallback to first resource name if available
+                if ($_.targetResources -and (($_.targetResources | Measure-Object).Count -ge 1)) {
+                    $props["targetResources"] = $_.targetResources[0].displayname
+                } else {
+                    $props["targetResources"] = $null
+                }
+            }
             $Myoutput += New-Object PSObject -Property $props
         }
         $Myoutput

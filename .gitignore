@@ -18,6 +18,7 @@ coverage/
 # Build / publish artifacts
 publish/
 build/output/
+scripts/
 
 # Large temporary / scratch test folders (legacy)
 TEST/
@@ -46,5 +47,6 @@ Thumbs.db
 
 # PowerShell build artifact leftovers
 *.psd1.tmp
+
 
 # Ensure newline normalization (see .gitattributes)

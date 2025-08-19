@@ -166,6 +166,10 @@ v1.9.1 Release Notes:
 For docs and examples, see: https://github.com/kayasax/EasyPIM/wiki
 '@
 
+    # AdditionalReleaseNotes of this module
+    # (Appended by fix/issue-121-followup)
+    # AdditionalReleaseNotes removed; MFA is always removed when Authentication Context is enabled to avoid conflicts.
+
         # Prerelease string of this module
         # Prerelease = ''
 

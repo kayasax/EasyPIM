@@ -200,7 +200,7 @@ function Set-PIMEntraRolePolicy {
                 }
                 $rules += Set-AuthenticationContext $AuthenticationContext_Enabled $AuthenticationContext_Value -entraRole
                 # If caller didn't pass ActivationRequirement, but current config enforces MFA,
-                # proactively remove MFA to prevent MfaAndAcrsConflict when enabling Authentication Context.
+                # remove MFA to prevent MfaAndAcrsConflict when enabling Authentication Context.
                 if ($AuthenticationContext_Enabled -eq $true -and -not $PSBoundParameters.Keys.Contains('ActivationRequirement')) {
                     $currentEnablement = @()
                     if ($script:config.EnablementRules) { $currentEnablement = ($script:config.EnablementRules -split ',') }

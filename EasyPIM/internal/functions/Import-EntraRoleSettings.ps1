@@ -202,18 +202,18 @@ function Import-EntraRoleSettings  {
         <#
         #>
 
-        # Resolve policy ID if missing in CSV
+    # Resolve policy ID if missing in CSV
         $policyIdToUse = $_.PolicyID
         if ([string]::IsNullOrWhiteSpace([string]$policyIdToUse)) {
             $roleId = $_.roleID
             if ([string]::IsNullOrWhiteSpace([string]$roleId)) {
                 $rn = [string]$_.RoleName
                 if (-not [string]::IsNullOrWhiteSpace($rn)) {
-                    # Escape single quotes in role name for OData
-                    $rnEsc = $rn -replace "'", "''"
-                    $ep = "roleManagement/directory/roleDefinitions?`$filter=displayname eq '$rnEsc'"
-                    $resp = invoke-graph -Endpoint $ep -ErrorAction Stop
-                    $roleId = $resp.value.id
+            # Case-insensitive role resolution: list and match locally
+                    $ep = "roleManagement/directory/roleDefinitions"
+            $resp = invoke-graph -Endpoint $ep -ErrorAction Stop
+            $match = $resp.value | Where-Object { $_.displayName -ieq $rn } | Select-Object -First 1
+            if ($match) { $roleId = $match.id }
                 }
             }
             if (-not [string]::IsNullOrWhiteSpace([string]$roleId)) {

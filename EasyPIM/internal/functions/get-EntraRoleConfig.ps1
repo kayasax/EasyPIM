@@ -17,10 +17,12 @@
 function Get-EntraRoleConfig ($rolename) {
     try {
 
-        # 1 Get roleID for $rolename
-        $endpoint = "roleManagement/directory/roleDefinitions?`$filter=displayname eq '$rolename'"
-        $response = invoke-graph -Endpoint $endpoint
-        $roleID = $response.value.Id
+    # 1 Resolve roleID for $rolename (case-insensitive)
+    # Fetch role definitions (no query options to avoid unsupported query errors) and match locally ignoring case
+    $endpoint = "roleManagement/directory/roleDefinitions"
+    $response = invoke-graph -Endpoint $endpoint
+    $roleMatch = $response.value | Where-Object { $_.displayName -ieq $rolename } | Select-Object -First 1
+    $roleID = $roleMatch.id
         Write-Verbose "roleID = $roleID"
         if($null -eq $roleID){
             Throw "ERROR: Role $rolename not found"
@@ -121,7 +123,7 @@ function Get-EntraRoleConfig ($rolename) {
         $_Notification_Activation_Approver = $response.value | Where-Object { $_.id -eq "Notification_Approver_EndUser_Assignment" }
 
 
-        $config = [PSCustomObject]@{
+    $config = [PSCustomObject]@{
             RoleName                                                     = $_
         roleID = $roleID
             PolicyID                                                     = $policyId
