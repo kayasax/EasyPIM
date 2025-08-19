@@ -60,8 +60,10 @@ function Import-EntraRoleSettings  {
         if ($enablementRules) {
             $allowedEndUser = @('MultiFactorAuthentication','Justification','Ticketing')
             $enablementRules = @($enablementRules | Where-Object { $allowedEndUser -contains $_ })
-            # If Authentication Context is enabled, remove MFA to avoid MfaAndAcrsConflict
-            if ($authEnabled -eq $true) {
+            # If Authentication Context is enabled, optionally remove MFA to avoid MfaAndAcrsConflict
+            # Honor global preference: set $global:EasyPIM_AutoResolveMfaAcrConflict = $false to keep MFA alongside Auth Context (may error in Graph)
+            $autoResolve = if ($null -ne $global:EasyPIM_AutoResolveMfaAcrConflict) { [bool]$global:EasyPIM_AutoResolveMfaAcrConflict } else { $true }
+            if ($authEnabled -eq $true -and $autoResolve) {
                 if ($enablementRules -contains 'MultiFactorAuthentication') {
                     Write-Verbose "Removing 'MultiFactorAuthentication' from Enablement_EndUser_Assignment because Authentication Context is enabled (avoids MfaAndAcrsConflict)"
                     $enablementRules = @($enablementRules | Where-Object { $_ -ne 'MultiFactorAuthentication' })
