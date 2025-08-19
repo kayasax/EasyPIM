@@ -32,25 +32,62 @@ function Import-EntraRoleSettings  {
     }
     $csv = Import-Csv $path
 
-    $csv | ForEach-Object {        $rules = @()
-        $rules += Set-ActivationDuration $_.ActivationDuration -entrarole
+    # Local helper to safely split comma-delimited strings, returning an empty array for null/empty
+    function Split-OrEmpty([object]$value) {
+        $s = [string]$value
+        if ([string]::IsNullOrWhiteSpace($s)) { return @() }
+        return ($s -split ',')
+    }
 
-        $enablementRules = $_.EnablementRules.Split(',')
-        $rules += Set-ActivationRequirement $enablementRules -entraRole
+    $csv | ForEach-Object {
+        $rules = @()
 
-        # Add missing ActiveAssignmentRequirement processing
-        $activeAssignmentRequirements = $_.ActiveAssignmentRequirement.Split(',')
-        $rules += Set-ActiveAssignmentRequirement $activeAssignmentRequirements -entraRole
-
-        # Authentication Context (Issue #121): map CSV -> rule for Entra roles
-        # Safely coerce CSV string to boolean and pass through value (supports formats like "c1" or "c1:Label")
+        # Determine Authentication Context early for downstream rule decisions
+        $authEnabled = $false
+        $authValue = $null
         if ($_.PSObject.Properties['AuthenticationContext_Enabled']) {
             $authEnabledRaw = $_.AuthenticationContext_Enabled
-            $authEnabled = $false
             if ($null -ne $authEnabledRaw -and $authEnabledRaw.ToString().Trim() -ne '') {
                 try { $authEnabled = [System.Convert]::ToBoolean($authEnabledRaw) } catch { $authEnabled = $false }
             }
-            $authValue = if ($_.PSObject.Properties['AuthenticationContext_Value']) { $_.AuthenticationContext_Value } else { $null }
+            if ($_.PSObject.Properties['AuthenticationContext_Value']) { $authValue = $_.AuthenticationContext_Value }
+        }
+
+        $rules += Set-ActivationDuration $_.ActivationDuration -entrarole
+
+        # Filter enablement rules for EndUser Assignment (allowed: MultiFactorAuthentication, Justification, Ticketing)
+        $enablementRules = Split-OrEmpty $_.EnablementRules
+        if ($enablementRules) {
+            $allowedEndUser = @('MultiFactorAuthentication','Justification','Ticketing')
+            $enablementRules = @($enablementRules | Where-Object { $allowedEndUser -contains $_ })
+            # If Authentication Context is enabled, remove MFA to avoid MfaAndAcrsConflict
+            if ($authEnabled -eq $true) {
+                if ($enablementRules -contains 'MultiFactorAuthentication') {
+                    Write-Verbose "Removing 'MultiFactorAuthentication' from Enablement_EndUser_Assignment because Authentication Context is enabled (avoids MfaAndAcrsConflict)"
+                    $enablementRules = @($enablementRules | Where-Object { $_ -ne 'MultiFactorAuthentication' })
+                }
+            }
+        }
+        if ($enablementRules.Count -gt 0) {
+            $rules += Set-ActivationRequirement $enablementRules -entraRole
+        } else {
+            Write-Verbose 'Skipping Enablement_EndUser_Assignment (no allowed end-user rules)'
+        }
+
+        # Filter enablement rules for Admin Assignment (allowed: Justification, Ticketing)
+        $activeAssignmentRequirements = Split-OrEmpty $_.ActiveAssignmentRequirement
+        if ($activeAssignmentRequirements) {
+            $allowedAdmin = @('Justification','Ticketing')
+            $activeAssignmentRequirements = @($activeAssignmentRequirements | Where-Object { $allowedAdmin -contains $_ })
+        }
+        if ($activeAssignmentRequirements.Count -gt 0) {
+            $rules += Set-ActiveAssignmentRequirement $activeAssignmentRequirements -entraRole
+        } else {
+            Write-Verbose 'Skipping Enablement_Admin_Assignment (no allowed admin rules)'
+        }
+
+        # Authentication Context (Issue #121): map CSV -> rule for Entra roles
+        if ($_.PSObject.Properties['AuthenticationContext_Enabled']) {
             $rules += Set-AuthenticationContext $authEnabled $authValue -entraRole
         }
 
@@ -64,72 +101,131 @@ function Import-EntraRoleSettings  {
 
         $rules += Set-ActiveAssignmentFromCSV $_.MaximumActiveAssignmentDuration $_.AllowPermanentActiveAssignment -entraRole
 
-        $Notification_EligibleAssignment_Alert = @{
-            "isDefaultRecipientEnabled" = $_.Notification_Eligibility_Alert_isDefaultRecipientEnabled;
-            "notificationLevel"         = $_.Notification_Eligibility_Alert_notificationLevel;
-            "Recipients"                = $_.Notification_Eligibility_Alert_Recipients.split(',')
+        if ($_.PSObject.Properties['Notification_Eligibility_Alert_isDefaultRecipientEnabled'] -or
+            $_.PSObject.Properties['Notification_Eligibility_Alert_notificationLevel'] -or
+            $_.PSObject.Properties['Notification_Eligibility_Alert_Recipients']) {
+            $Notification_EligibleAssignment_Alert = @{
+                "isDefaultRecipientEnabled" = $_.Notification_Eligibility_Alert_isDefaultRecipientEnabled;
+                "notificationLevel"         = $_.Notification_Eligibility_Alert_notificationLevel;
+                "Recipients"                = (Split-OrEmpty $_.Notification_Eligibility_Alert_Recipients)
+            }
+            $rules += Set-Notification_EligibleAssignment_Alert $Notification_EligibleAssignment_Alert -EntraRole
         }
-        $rules += Set-Notification_EligibleAssignment_Alert $Notification_EligibleAssignment_Alert -EntraRole
 
-        $Notification_EligibleAssignment_Assignee = @{
-            "isDefaultRecipientEnabled" = $_.Notification_Eligibility_Assignee_isDefaultRecipientEnabled;
-            "notificationLevel"         = $_.Notification_Eligibility_Assignee_notificationLevel;
-            "Recipients"                = $_.Notification_Eligibility_Assignee_Recipients.split(',')
+        if ($_.PSObject.Properties['Notification_Eligibility_Assignee_isDefaultRecipientEnabled'] -or
+            $_.PSObject.Properties['Notification_Eligibility_Assignee_notificationLevel'] -or
+            $_.PSObject.Properties['Notification_Eligibility_Assignee_Recipients']) {
+            $Notification_EligibleAssignment_Assignee = @{
+                "isDefaultRecipientEnabled" = $_.Notification_Eligibility_Assignee_isDefaultRecipientEnabled;
+                "notificationLevel"         = $_.Notification_Eligibility_Assignee_notificationLevel;
+                "Recipients"                = (Split-OrEmpty $_.Notification_Eligibility_Assignee_Recipients)
+            }
+            $rules += Set-Notification_EligibleAssignment_Assignee $Notification_EligibleAssignment_Assignee -entraRole
         }
-        $rules += Set-Notification_EligibleAssignment_Assignee $Notification_EligibleAssignment_Assignee -entraRole
 
-        $Notification_EligibleAssignment_Approver = @{
-            "isDefaultRecipientEnabled" = $_.Notification_Eligibility_Approvers_isDefaultRecipientEnabled;
-            "notificationLevel"         = $_.Notification_Eligibility_Approvers_notificationLevel;
-            "Recipients"                = $_.Notification_Eligibility_Approvers_Recipients.split(',')
+        if ($_.PSObject.Properties['Notification_Eligibility_Approvers_isDefaultRecipientEnabled'] -or
+            $_.PSObject.Properties['Notification_Eligibility_Approvers_notificationLevel'] -or
+            $_.PSObject.Properties['Notification_Eligibility_Approvers_Recipients']) {
+            $Notification_EligibleAssignment_Approver = @{
+                "isDefaultRecipientEnabled" = $_.Notification_Eligibility_Approvers_isDefaultRecipientEnabled;
+                "notificationLevel"         = $_.Notification_Eligibility_Approvers_notificationLevel;
+                "Recipients"                = (Split-OrEmpty $_.Notification_Eligibility_Approvers_Recipients)
+            }
+            $rules += Set-Notification_EligibleAssignment_Approver $Notification_EligibleAssignment_Approver -entraRole
         }
-        $rules += Set-Notification_EligibleAssignment_Approver $Notification_EligibleAssignment_Approver -entraRole
 
-        $Notification_Active_Alert = @{
-            "isDefaultRecipientEnabled" = $_.Notification_Active_Alert_isDefaultRecipientEnabled;
-            "notificationLevel"         = $_.Notification_Active_Alert_notificationLevel;
-            "Recipients"                = $_.Notification_Active_Alert_Recipients.split(',')
+        if ($_.PSObject.Properties['Notification_Active_Alert_isDefaultRecipientEnabled'] -or
+            $_.PSObject.Properties['Notification_Active_Alert_notificationLevel'] -or
+            $_.PSObject.Properties['Notification_Active_Alert_Recipients']) {
+            $Notification_Active_Alert = @{
+                "isDefaultRecipientEnabled" = $_.Notification_Active_Alert_isDefaultRecipientEnabled;
+                "notificationLevel"         = $_.Notification_Active_Alert_notificationLevel;
+                "Recipients"                = (Split-OrEmpty $_.Notification_Active_Alert_Recipients)
+            }
+            $rules += Set-Notification_ActiveAssignment_Alert $Notification_Active_Alert -EntraRole
         }
-        $rules += Set-Notification_ActiveAssignment_Alert $Notification_Active_Alert -EntraRole
 
-        $Notification_Active_Assignee = @{
-            "isDefaultRecipientEnabled" = $_.Notification_Active_Assignee_isDefaultRecipientEnabled;
-            "notificationLevel"         = $_.Notification_Active_Assignee_notificationLevel;
-            "Recipients"                = $_.Notification_Active_Assignee_Recipients.split(',')
+        if ($_.PSObject.Properties['Notification_Active_Assignee_isDefaultRecipientEnabled'] -or
+            $_.PSObject.Properties['Notification_Active_Assignee_notificationLevel'] -or
+            $_.PSObject.Properties['Notification_Active_Assignee_Recipients']) {
+            $Notification_Active_Assignee = @{
+                "isDefaultRecipientEnabled" = $_.Notification_Active_Assignee_isDefaultRecipientEnabled;
+                "notificationLevel"         = $_.Notification_Active_Assignee_notificationLevel;
+                "Recipients"                = (Split-OrEmpty $_.Notification_Active_Assignee_Recipients)
+            }
+            $rules += Set-Notification_ActiveAssignment_Assignee $Notification_Active_Assignee -entraRole
         }
-        $rules += Set-Notification_ActiveAssignment_Assignee $Notification_Active_Assignee -entraRole
 
-        $Notification_Active_Approvers = @{
-            "isDefaultRecipientEnabled" = $_.Notification_Active_Approvers_isDefaultRecipientEnabled;
-            "notificationLevel"         = $_.Notification_Active_Approvers_notificationLevel;
-            "Recipients"                = $_.Notification_Active_Approvers_Recipients.split(',')
+        if ($_.PSObject.Properties['Notification_Active_Approvers_isDefaultRecipientEnabled'] -or
+            $_.PSObject.Properties['Notification_Active_Approvers_notificationLevel'] -or
+            $_.PSObject.Properties['Notification_Active_Approvers_Recipients']) {
+            $Notification_Active_Approvers = @{
+                "isDefaultRecipientEnabled" = $_.Notification_Active_Approvers_isDefaultRecipientEnabled;
+                "notificationLevel"         = $_.Notification_Active_Approvers_notificationLevel;
+                "Recipients"                = (Split-OrEmpty $_.Notification_Active_Approvers_Recipients)
+            }
+            $rules += Set-Notification_ActiveAssignment_Approver $Notification_Active_Approvers -entraRole
         }
-        $rules += Set-Notification_ActiveAssignment_Approver $Notification_Active_Approvers -entraRole
 
-        $Notification_Activation_Alert = @{
-            "isDefaultRecipientEnabled" = $_.Notification_Activation_Alert_isDefaultRecipientEnabled;
-            "notificationLevel"         = $_.Notification_Activation_Alert_notificationLevel;
-            "Recipients"                = $_.Notification_Activation_Alert_Recipients.split(',')
+        if ($_.PSObject.Properties['Notification_Activation_Alert_isDefaultRecipientEnabled'] -or
+            $_.PSObject.Properties['Notification_Activation_Alert_notificationLevel'] -or
+            $_.PSObject.Properties['Notification_Activation_Alert_Recipients']) {
+            $Notification_Activation_Alert = @{
+                "isDefaultRecipientEnabled" = $_.Notification_Activation_Alert_isDefaultRecipientEnabled;
+                "notificationLevel"         = $_.Notification_Activation_Alert_notificationLevel;
+                "Recipients"                = (Split-OrEmpty $_.Notification_Activation_Alert_Recipients)
+            }
+            $rules += Set-Notification_Activation_Alert $Notification_Activation_Alert -entraRole
         }
-        $rules += Set-Notification_Activation_Alert $Notification_Activation_Alert -entraRole
 
-        $Notification_Activation_Assignee = @{
-            "isDefaultRecipientEnabled" = $_.Notification_Activation_Assignee_isDefaultRecipientEnabled;
-            "notificationLevel"         = $_.Notification_Activation_Assignee_notificationLevel;
-            "Recipients"                = $_.Notification_Activation_Assignee_Recipients.split(',')
+        if ($_.PSObject.Properties['Notification_Activation_Assignee_isDefaultRecipientEnabled'] -or
+            $_.PSObject.Properties['Notification_Activation_Assignee_notificationLevel'] -or
+            $_.PSObject.Properties['Notification_Activation_Assignee_Recipients']) {
+            $Notification_Activation_Assignee = @{
+                "isDefaultRecipientEnabled" = $_.Notification_Activation_Assignee_isDefaultRecipientEnabled;
+                "notificationLevel"         = $_.Notification_Activation_Assignee_notificationLevel;
+                "Recipients"                = (Split-OrEmpty $_.Notification_Activation_Assignee_Recipients)
+            }
+            $rules += Set-Notification_Activation_Assignee $Notification_Activation_Assignee -entraRole
         }
-        $rules += Set-Notification_Activation_Assignee $Notification_Activation_Assignee -entraRole
 
-        $Notification_Activation_Approver = @{
-            "isDefaultRecipientEnabled" = $_.Notification_Activation_Approver_isDefaultRecipientEnabled;
-            "notificationLevel"         = $_.Notification_Activation_Approver_notificationLevel;
-            "Recipients"                = $_.Notification_Activation_Approver_Recipients.split(',')
+        if ($_.PSObject.Properties['Notification_Activation_Approver_isDefaultRecipientEnabled'] -or
+            $_.PSObject.Properties['Notification_Activation_Approver_notificationLevel'] -or
+            $_.PSObject.Properties['Notification_Activation_Approver_Recipients']) {
+            $Notification_Activation_Approver = @{
+                "isDefaultRecipientEnabled" = $_.Notification_Activation_Approver_isDefaultRecipientEnabled;
+                "notificationLevel"         = $_.Notification_Activation_Approver_notificationLevel;
+                "Recipients"                = (Split-OrEmpty $_.Notification_Activation_Approver_Recipients)
+            }
+            $rules += Set-Notification_Activation_Approver $Notification_Activation_Approver -entraRole
         }
-    $rules += Set-Notification_Activation_Approver $Notification_Activation_Approver -entraRole
         <#
         #>
 
+        # Resolve policy ID if missing in CSV
+        $policyIdToUse = $_.PolicyID
+        if ([string]::IsNullOrWhiteSpace([string]$policyIdToUse)) {
+            $roleId = $_.roleID
+            if ([string]::IsNullOrWhiteSpace([string]$roleId)) {
+                $rn = [string]$_.RoleName
+                if (-not [string]::IsNullOrWhiteSpace($rn)) {
+                    # Escape single quotes in role name for OData
+                    $rnEsc = $rn -replace "'", "''"
+                    $ep = "roleManagement/directory/roleDefinitions?`$filter=displayname eq '$rnEsc'"
+                    $resp = invoke-graph -Endpoint $ep -ErrorAction Stop
+                    $roleId = $resp.value.id
+                }
+            }
+            if (-not [string]::IsNullOrWhiteSpace([string]$roleId)) {
+                $assignEp = "policies/roleManagementPolicyAssignments?`$filter=scopeType eq 'DirectoryRole' and roleDefinitionId eq '$roleId' and scopeId eq '/' "
+                $assign = invoke-graph -Endpoint $assignEp -ErrorAction Stop
+                $policyIdToUse = $assign.value.policyId
+                if (-not $policyIdToUse) { $policyIdToUse = $assign.value.policyID }
+            }
+        }
+        if ([string]::IsNullOrWhiteSpace([string]$policyIdToUse)) { throw "Unable to resolve PolicyID for RoleName='$($_.RoleName)'" }
+
         # patch the policy
-        Update-EntraRolePolicy $_.policyID $($rules -join ',')
+        Update-EntraRolePolicy $policyIdToUse $($rules -join ',')
     }
 }

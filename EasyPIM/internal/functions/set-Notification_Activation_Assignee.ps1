@@ -67,7 +67,7 @@ function set-Notification_Activation_Assignee($Notification_Activation_Assignee,
             "target": {
                 "caller": "EndUser",
                 "operations": [
-                    "all"
+                    "All"
                 ],
                 "level": "Assignment",
                 "inheritableSettings": [],

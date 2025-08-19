@@ -55,10 +55,19 @@ Describe "Verifying integrity of module files" {
 	}
 
 	Context "Validating PS1 Script files" {
-		$allFiles = Get-ChildItem -Path $moduleRoot -Recurse | Where-Object Name -like "*.ps1" | Where-Object FullName -NotLike "$moduleRoot\tests\*"
+		$testFolder = Join-Path $moduleRoot 'TEST'
+		$allFiles = Get-ChildItem -Path $moduleRoot -Recurse -File |
+			Where-Object { $_.Name -like '*.ps1' } |
+			Where-Object { $_.FullName -notlike (Join-Path $moduleRoot 'tests\*') } |
+			Where-Object { $_.FullName -notlike (Join-Path $testFolder '*') }
+		$testFiles = @()
+		if (Test-Path $testFolder) { $testFiles = Get-ChildItem -Path $testFolder -Recurse -File }
+		if ($testFiles.Count -gt 0) { $allFiles = $allFiles | Where-Object { $_.FullName -notin ($testFiles | ForEach-Object FullName) } }
 
+		$testRootPrefix = ((Join-Path $moduleRoot 'TEST') + '\\').ToLowerInvariant()
 		foreach ($file in $allFiles)
 		{
+			if ( ($file.FullName.ToLowerInvariant()).StartsWith($testRootPrefix) ) { continue }
 			$name = $file.FullName.Replace("$moduleRoot\", '')
 
 			It "[$name] Should have UTF8 (BOM optional)" -TestCases @{ file = $file } {
@@ -90,10 +99,19 @@ Describe "Verifying integrity of module files" {
 	}
 
 	Context "Validating help.txt help files" {
-		$allFiles = Get-ChildItem -Path $moduleRoot -Recurse | Where-Object Name -like "*.help.txt" | Where-Object FullName -NotLike "$moduleRoot\tests\*"
+		$testFolder = Join-Path $moduleRoot 'TEST'
+		$allFiles = Get-ChildItem -Path $moduleRoot -Recurse -File |
+			Where-Object { $_.Name -like '*.help.txt' } |
+			Where-Object { $_.FullName -notlike (Join-Path $moduleRoot 'tests\*') } |
+			Where-Object { $_.FullName -notlike (Join-Path $testFolder '*') }
+		$testFiles = @()
+		if (Test-Path $testFolder) { $testFiles = Get-ChildItem -Path $testFolder -Recurse -File }
+		if ($testFiles.Count -gt 0) { $allFiles = $allFiles | Where-Object { $_.FullName -notin ($testFiles | ForEach-Object FullName) } }
 
+		$testRootPrefix = ((Join-Path $moduleRoot 'TEST') + '\\').ToLowerInvariant()
 		foreach ($file in $allFiles)
 		{
+			if ( ($file.FullName.ToLowerInvariant()).StartsWith($testRootPrefix) ) { continue }
 			$name = $file.FullName.Replace("$moduleRoot\", '')
 
 			It "[$name] Should have UTF8 encoding" -TestCases @{ file = $file } {

@@ -64,7 +64,7 @@ function Set-Notification_Activation_Alert($Notification_Activation_Alert, [swit
             "target": {
                 "caller": "EndUser",
                 "operations": [
-                    "all"
+                    "All"
                 ],
                 "level": "Assignment",
                 "inheritableSettings": [],

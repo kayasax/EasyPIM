@@ -73,7 +73,7 @@ function Set-Notification_EligibleAssignment_Assignee {
             "target": {
                 "caller": "Admin",
                 "operations": [
-                    "all"
+                    "All"
                 ],
                 "level": "Eligibility",
                 "inheritableSettings": [],

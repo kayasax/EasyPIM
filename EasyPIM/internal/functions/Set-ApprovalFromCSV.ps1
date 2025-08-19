@@ -119,7 +119,7 @@ if ($ApprovalRequired -eq "FALSE") { $req = "false" }else { $req = "true" }
                 "target": {
                     "caller": "EndUser",
                     "operations": [
-                        "all"
+                        "All"
                     ],
                     "level": "Assignment",
                     "inheritableSettings": [],

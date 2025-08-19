@@ -25,12 +25,12 @@ function Import-Setting ($path) {
     $csv | ForEach-Object {        $rules = @()
         $script:scope=$_.policyID -replace "/providers.*"
 
-        $rules += Set-ActivationDuration $_.ActivationDuration
-        $enablementRules = $_.EnablementRules.Split(',')
-        $rules += Set-ActivationRequirement $enablementRules
+    $rules += Set-ActivationDuration $_.ActivationDuration
+    $enablementRules = $_.EnablementRules.Split(',')
+    $rules += Set-ActivationRequirement $enablementRules
 
-        $activeAssignmentRules = $_.ActiveAssignmentRules.Split(',')
-        $rules += Set-ActiveAssignmentRequirement $activeAssignmentRules
+    $activeAssignmentRules = $_.ActiveAssignmentRules.Split(',')
+    $rules += Set-ActiveAssignmentRequirement $activeAssignmentRules
 
         # Authentication Context parity (if present in CSV for Azure resources)
         if ($_.PSObject.Properties['AuthenticationContext_Enabled']) {

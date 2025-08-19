@@ -67,7 +67,7 @@ function  Set-Notification_ActiveAssignment_Approver($Notification_ActiveAssignm
             "target": {
                 "caller": "Admin",
                 "operations": [
-                    "all"
+                    "All"
                 ],
                 "level": "Assignment",
                 "inheritableSettings": [],

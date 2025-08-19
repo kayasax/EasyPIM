@@ -18,7 +18,17 @@
 #>
 function Set-ActiveAssignmentRequirement($ActiveAssignmentRequirement, [switch]$entraRole) {
     write-verbose "Set-ActiveAssignmentRequirementt : $($ActiveAssignmentRequirement.length)"
-    if (($ActiveAssignmentRequirement -eq "None") -or ($ActiveAssignmentRequirement[0].length -eq 0 )) {
+    # Normalize to array
+    if ($null -eq $ActiveAssignmentRequirement) { $ActiveAssignmentRequirement = @() }
+    elseif ($ActiveAssignmentRequirement -is [string]) {
+        if ($ActiveAssignmentRequirement -match ',') { $ActiveAssignmentRequirement = ($ActiveAssignmentRequirement -split ',') } else { $ActiveAssignmentRequirement = @($ActiveAssignmentRequirement) }
+    }
+
+    # Filter to allowed admin enablement rules only (no MFA on Admin assignment)
+    $allowedAdmin = @('Justification','Ticketing')
+    $ActiveAssignmentRequirement = @($ActiveAssignmentRequirement | Where-Object { $_ -and ($allowedAdmin -contains $_.Trim()) })
+
+    if (($ActiveAssignmentRequirement -eq "None") -or ($ActiveAssignmentRequirement.Count -eq 0)) {
         #if none or a null array
         write-verbose "requirement is null"
         $enabledRules = "[],"
@@ -33,7 +43,7 @@ function Set-ActiveAssignmentRequirement($ActiveAssignmentRequirement, [switch]$
             $formatedRules += '",'
         }
         #remove last comma
-        $formatedRules = $formatedRules -replace “.$”
+        $formatedRules = $formatedRules -replace ",$"
 
         $formatedRules += "],"
         $enabledRules = $formatedRules
@@ -62,7 +72,7 @@ function Set-ActiveAssignmentRequirement($ActiveAssignmentRequirement, [switch]$
                 "enabledRules": '+ $enabledRules + '
                 "id": "Enablement_Admin_Assignment",
                 "target": {
-                    "caller": "EndUser",
+                    "caller": "Admin",
                     "operations": [
                         "All"
                     ],

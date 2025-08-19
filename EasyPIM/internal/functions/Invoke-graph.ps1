@@ -117,6 +117,7 @@ function invoke-graph {
                     $response = Invoke-MgGraphRequest -Uri $currentUri -Method $Method -ErrorAction Stop
                 }
                 catch {
+                    Write-Verbose "Suppressed probe error parse: $($_.Exception.Message)"
                     $statusCode = $null; $errorMessage = $_.Exception.Message; $detailReason = $null; $detailCode = $null; $rawBody = $null; $reqId=$null; $clientReqId=$null
                     try { $statusCode = $_.Exception.Response.StatusCode } catch { Write-Verbose "Suppressed status code extraction: $($_.Exception.Message)" }
                     try {
@@ -129,12 +130,19 @@ function invoke-graph {
                     # Try read response body (GraphServiceException sometimes exposes Content stream)
                     try {
                         if ($_.Exception.Response -and $_.Exception.Response.Content) {
-                            $stream = $_.Exception.Response.Content.ReadAsStream()
-                            if ($stream.CanSeek) { $stream.Position = 0 }
-                            $reader = New-Object System.IO.StreamReader($stream)
-                            $rawBody = $reader.ReadToEnd()
+                            try {
+                                $stream = $_.Exception.Response.Content.ReadAsStream()
+                                if ($stream.CanSeek) { $stream.Position = 0 }
+                                $reader = New-Object System.IO.StreamReader($stream)
+                                $rawBody = $reader.ReadToEnd()
+                            } catch {
+                                Write-Verbose "Suppressed body stream read: $($_.Exception.Message)"
+                                try {
+                                    $rawBody = $_.Exception.Response.Content.ReadAsStringAsync().Result
+                                } catch { Write-Verbose "Suppressed ReadAsStringAsync: $($_.Exception.Message)" }
+                            }
                         }
-                    } catch { Write-Verbose "Suppressed body stream read: $($_.Exception.Message)" }
+                    } catch { Write-Verbose "Suppressed body read: $($_.Exception.Message)" }
                     if (-not $rawBody) { try { $rawBody = $_.ErrorDetails.Message } catch { Write-Verbose "Suppressed ErrorDetails read: $($_.Exception.Message)" } }
                     if ($rawBody -and $script:EasyPIM_FullGraphError) {
                         $displayBody = $rawBody
@@ -147,9 +155,23 @@ function invoke-graph {
                             if ($parsed.error) { $detailReason = $parsed.error.message; $detailCode = $parsed.error.code }
                         } catch { Write-Verbose "Suppressed error body JSON parse: $($_.Exception.Message)" }
                     }
-                    $composed = "Graph API request failed: $statusCode - $errorMessage";
-                    if ($detailCode -or $detailReason) { $composed += " | code=$detailCode reason=$detailReason" }
-                    elseif ($rawBody) { $snippet = ($rawBody -replace '\s+',' '); if ($snippet.Length -gt 180) { $snippet = $snippet.Substring(0,180) + '…' }; $composed += " | raw=$snippet" }
+                    # If we still don't have detail code/reason, probe with -SkipHttpErrorCheck to capture JSON
+                    if (-not $detailCode -and -not $detailReason) {
+                        try {
+                            Write-Verbose "Probing error body with -SkipHttpErrorCheck for details"
+                            $probe = Invoke-MgGraphRequest -Uri $currentUri -Method $Method -SkipHttpErrorCheck -ErrorAction SilentlyContinue
+                            if ($probe) {
+                                try { if ($probe.error) { $detailCode = $probe.error.code; $detailReason = $probe.error.message } } catch { Write-Verbose "Suppressed probe parse: $($_.Exception.Message)" }
+                                if (-not $rawBody) { try { $rawBody = ($probe | ConvertTo-Json -Depth 10) } catch { $rawBody = ($probe | Out-String) } }
+                            }
+                        } catch { Write-Verbose "Suppressed SkipHttpErrorCheck probe: $($_.Exception.Message)" }
+                    }
+                    # Build a concise, human-readable summary
+                    $summary = if ($detailCode -or $detailReason) { "$detailCode - $detailReason" } else { $errorMessage }
+                    $composed = "Graph error ($statusCode): $summary"
+                    # Add context fields tersely
+                    $composed += " | method=$Method url=$currentUri"
+                    if (-not ($detailCode -or $detailReason) -and $rawBody) { $snippet = ($rawBody -replace '\\s+',' '); if ($snippet.Length -gt 180) { $snippet = $snippet.Substring(0,180) + '…' }; $composed += " | raw=$snippet" }
                     if ($reqId) { $composed += " | requestId=$reqId" }
                     if ($clientReqId) { $composed += " | clientRequestId=$clientReqId" }
                     if (Get-Command log -ErrorAction SilentlyContinue) { log $composed } else { Write-Verbose $composed }
@@ -234,11 +256,16 @@ function invoke-graph {
                 # Try read response body for detailed Graph error
                 try {
                     if ($_.Exception.Response -and $_.Exception.Response.Content) {
-                        $stream = $_.Exception.Response.Content.ReadAsStream(); if ($stream.CanSeek) { $stream.Position = 0 }
-                        $reader = New-Object System.IO.StreamReader($stream)
-                        $rawBody = $reader.ReadToEnd()
+                        try {
+                            $stream = $_.Exception.Response.Content.ReadAsStream(); if ($stream.CanSeek) { $stream.Position = 0 }
+                            $reader = New-Object System.IO.StreamReader($stream)
+                            $rawBody = $reader.ReadToEnd()
+                        } catch {
+                            Write-Verbose "Suppressed body stream read: $($_.Exception.Message)"
+                            try { $rawBody = $_.Exception.Response.Content.ReadAsStringAsync().Result } catch { Write-Verbose "Suppressed ReadAsStringAsync: $($_.Exception.Message)" }
+                        }
                     }
-                } catch { Write-Verbose "Suppressed body stream read: $($_.Exception.Message)" }
+                } catch { Write-Verbose "Suppressed body read: $($_.Exception.Message)" }
                 if (-not $rawBody) { try { $rawBody = $_.ErrorDetails.Message } catch { Write-Verbose "Suppressed ErrorDetails read: $($_.Exception.Message)" } }
                 if ($rawBody -and $script:EasyPIM_FullGraphError) {
                     $displayBody = $rawBody
@@ -251,18 +278,36 @@ function invoke-graph {
                         if ($parsed.error) { $detailReason = $parsed.error.message; $detailCode = $parsed.error.code }
                     } catch { Write-Verbose "Suppressed error body JSON parse: $($_.Exception.Message)" }
                 }
-                $composed = "Graph API request failed: $statusCode - $errorMessage";
-                if ($detailCode -or $detailReason) { $composed += " | code=$detailCode reason=$detailReason" }
-                elseif ($rawBody) { $snippet = ($rawBody -replace '\s+',' '); if ($snippet.Length -gt 180) { $snippet = $snippet.Substring(0,180) + '…' }; $composed += " | raw=$snippet" }
+                # If details are still missing, probe with -SkipHttpErrorCheck for JSON error
+                if (-not $detailCode -and -not $detailReason) {
+                    try {
+                        Write-Verbose "Probing $Method with -SkipHttpErrorCheck to capture error details"
+                        if ($body -ne "") {
+                            $probe = Invoke-MgGraphRequest -Uri "$uri" -Method $Method -Body $body -SkipHttpErrorCheck -ErrorAction SilentlyContinue
+                        } else {
+                            $probe = Invoke-MgGraphRequest -Uri "$uri" -Method $Method -SkipHttpErrorCheck -ErrorAction SilentlyContinue
+                        }
+                        if ($probe) {
+                            try { if ($probe.error) { $detailCode = $probe.error.code; $detailReason = $probe.error.message } } catch { Write-Verbose "Suppressed probe parse: $($_.Exception.Message)" }
+                            if (-not $rawBody) { try { $rawBody = ($probe | ConvertTo-Json -Depth 10) } catch { $rawBody = ($probe | Out-String) } }
+                        }
+                    } catch { Write-Verbose "Suppressed SkipHttpErrorCheck probe: $($_.Exception.Message)" }
+                }
+                # Build a concise, human-readable summary
+                $summary = if ($detailCode -or $detailReason) { "$detailCode - $detailReason" } else { $errorMessage }
+                $composed = "Graph error ($statusCode): $summary"
+                # Add context fields tersely
+                $composed += " | method=$Method url=$uri"
+                if (-not ($detailCode -or $detailReason) -and $rawBody) { $snippet = ($rawBody -replace '\\s+',' '); if ($snippet.Length -gt 180) { $snippet = $snippet.Substring(0,180) + '…' }; $composed += " | raw=$snippet" }
                 if ($reqId) { $composed += " | requestId=$reqId" }
                 if ($clientReqId) { $composed += " | clientRequestId=$clientReqId" }
-                if ($Method -ne 'GET' -and $body) { $b = ($body -replace '\s+',' '); if ($b.Length -gt 160) { $b = $b.Substring(0,160) + '…' }; $composed += " | reqBody=$b" }
+                if ($Method -ne 'GET' -and $body) { $b = ($body -replace '\\s+',' '); if ($b.Length -gt 160) { $b = $b.Substring(0,160) + '…' }; $composed += " | reqBody=$b" }
                 if (Get-Command log -ErrorAction SilentlyContinue) { log $composed } else { Write-Verbose $composed }
                 throw $composed
             }
         }
     }
     catch {
-        MyCatch $_
+        if (Get-Command MyCatch -ErrorAction SilentlyContinue) { MyCatch $_ } else { throw $_ }
     }
 }
