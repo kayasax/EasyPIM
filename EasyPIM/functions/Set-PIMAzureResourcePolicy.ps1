@@ -200,6 +200,18 @@ function Set-PIMAzureResourcePolicy {
             }
 
             if ($PSBoundParameters.Keys.Contains('ActivationRequirement')) {
+                # If Authentication Context is being enabled for EndUser activation, remove MFA to avoid conflict
+                if ($PSBoundParameters.Keys.Contains('AuthenticationContext_Enabled') -and $AuthenticationContext_Enabled -eq $true) {
+                    if ($null -ne $ActivationRequirement) {
+                        # Normalize to array and filter MFA
+                        $ar = $ActivationRequirement
+                        if ($ar -is [string]) { if ($ar -match ',') { $ar = $ar -split ',' } else { $ar = @($ar) } }
+                        if ($ar -and ($ar -contains 'MultiFactorAuthentication')) {
+                            Write-Verbose "Removing 'MultiFactorAuthentication' from Enablement_EndUser_Assignment (Azure) because Authentication Context is enabled."
+                            $ActivationRequirement = @($ar | Where-Object { $_ -ne 'MultiFactorAuthentication' })
+                        }
+                    }
+                }
                 $rules += Set-ActivationRequirement $ActivationRequirement
             }
             if ($PSBoundParameters.Keys.Contains('ActiveAssignationRequirement')) {
