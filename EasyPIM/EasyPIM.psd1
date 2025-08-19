@@ -4,7 +4,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.9.1'
+ModuleVersion = '1.9.2'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -148,22 +148,22 @@ PrivateData = @{
 
         # ReleaseNotes of this module
     ReleaseNotes = @'
-v1.9.1 Release Notes:
+    v1.9.2 Release Notes:
 
-✨ Authentication Context parity and reliability
-- Added Authentication Context rule support across Set-*, Export/Import, and copy flows for Entra roles
-- Implemented guard to automatically remove MFA from EndUser enablement when Authentication Context is enabled to avoid Graph conflict (MfaAndAcrsConflict)
+    🔧 Case-insensitive Entra role matching
+    - Resolve roles ignoring case by listing roleDefinitions and matching locally
+    - Removed unsupported Graph query params ($select/$top) to avoid BadRequest
 
-🧰 Better Microsoft Graph error surfacing
-- invoke-graph now captures error.code and error.message reliably, probing with -SkipHttpErrorCheck when needed
-- Clear, concise exceptions: "Graph error (Status): Code - Reason | method=... url=... [reqBody]"
-- Optional full error body logging via $EasyPIM_FullGraphError
+    📦 Copy/csv robustness
+    - Copy-PIMEntraRolePolicy: unique temp files and guarded cleanup (no more missing file errors)
 
-🧹 Analyzer hygiene & fixes
-- Eliminated empty catch blocks, corrected try/catch structure in invoke-graph
-- Minor robustness improvements in import/copy paths
+    🔐 Auth Context consistency (follow-up to v1.9.1)
+    - Always remove MFA from EndUser enablement when Authentication Context is enabled (Set-/Import- for Entra and Azure)
 
-For docs and examples, see: https://github.com/kayasax/EasyPIM/wiki
+    🧹 Analyzer clean
+    - PSAvoidGlobalVars and other rules pass across the affected scripts
+
+    Docs: https://github.com/kayasax/EasyPIM/wiki
 '@
 
     # AdditionalReleaseNotes of this module
