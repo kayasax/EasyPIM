@@ -200,20 +200,15 @@ function Set-PIMAzureResourcePolicy {
             }
 
             if ($PSBoundParameters.Keys.Contains('ActivationRequirement')) {
-                # If Authentication Context is being enabled for EndUser activation, optionally remove MFA to avoid conflict
+                # If Authentication Context is being enabled for EndUser activation, remove MFA to avoid conflict
                 if ($PSBoundParameters.Keys.Contains('AuthenticationContext_Enabled') -and $AuthenticationContext_Enabled -eq $true) {
-                    $autoResolve = if ($null -ne $global:EasyPIM_AutoResolveMfaAcrConflict) { [bool]$global:EasyPIM_AutoResolveMfaAcrConflict } else { $true }
                     if ($null -ne $ActivationRequirement) {
                         # Normalize to array and filter MFA
                         $ar = $ActivationRequirement
                         if ($ar -is [string]) { if ($ar -match ',') { $ar = $ar -split ',' } else { $ar = @($ar) } }
-                        if ($autoResolve) {
-                            if ($ar -and ($ar -contains 'MultiFactorAuthentication')) {
-                                Write-Verbose "Removing 'MultiFactorAuthentication' from Enablement_EndUser_Assignment (Azure) because Authentication Context is enabled."
-                                $ActivationRequirement = @($ar | Where-Object { $_ -ne 'MultiFactorAuthentication' })
-                            }
-                        } else {
-                            Write-Verbose "Leaving 'MultiFactorAuthentication' as-is per EasyPIM_AutoResolveMfaAcrConflict = false (Graph may reject)"
+                        if ($ar -and ($ar -contains 'MultiFactorAuthentication')) {
+                            Write-Verbose "Removing 'MultiFactorAuthentication' from Enablement_EndUser_Assignment (Azure) because Authentication Context is enabled."
+                            $ActivationRequirement = @($ar | Where-Object { $_ -ne 'MultiFactorAuthentication' })
                         }
                     }
                 }

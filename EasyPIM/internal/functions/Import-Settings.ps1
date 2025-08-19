@@ -34,8 +34,7 @@ function Import-Setting ($path) {
         if ($null -ne $authEnabledRaw -and $authEnabledRaw.ToString().Trim() -ne '') {
             try { $authEnabled = [System.Convert]::ToBoolean($authEnabledRaw) } catch { $authEnabled = $false }
         }
-        $autoResolve = if ($null -ne $global:EasyPIM_AutoResolveMfaAcrConflict) { [bool]$global:EasyPIM_AutoResolveMfaAcrConflict } else { $true }
-        if ($autoResolve -and $authEnabled -and $enablementRules -and ($enablementRules -contains 'MultiFactorAuthentication')) {
+    if ($authEnabled -and $enablementRules -and ($enablementRules -contains 'MultiFactorAuthentication')) {
             Write-Verbose "Removing 'MultiFactorAuthentication' from Enablement_EndUser_Assignment (Azure import) because Authentication Context is enabled."
             $enablementRules = @($enablementRules | Where-Object { $_ -ne 'MultiFactorAuthentication' })
         }

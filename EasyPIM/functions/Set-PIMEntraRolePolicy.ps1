@@ -181,16 +181,11 @@ function Set-PIMEntraRolePolicy {
 
             if ($PSBoundParameters.Keys.Contains('ActivationRequirement')) {
                 $ar = $ActivationRequirement
-                # If Authentication Context is being enabled in the same patch, optionally remove MFA to avoid conflict
+                # If Authentication Context is being enabled in the same patch, remove MFA to avoid conflict
                 if ($PSBoundParameters.Keys.Contains('AuthenticationContext_Enabled') -and ($AuthenticationContext_Enabled -eq $true)) {
-                    $autoResolve = if ($null -ne $global:EasyPIM_AutoResolveMfaAcrConflict) { [bool]$global:EasyPIM_AutoResolveMfaAcrConflict } else { $true }
-                    if ($autoResolve) {
-                        if ($ar -and ($ar -contains 'MultiFactorAuthentication')) {
-                            Write-Verbose "Removing 'MultiFactorAuthentication' from Enablement_EndUser_Assignment because Authentication Context is enabled (avoids MfaAndAcrsConflict)"
-                            $ar = @($ar | Where-Object { $_ -ne 'MultiFactorAuthentication' })
-                        }
-                    } else {
-                        Write-Verbose "Leaving 'MultiFactorAuthentication' as-is per EasyPIM_AutoResolveMfaAcrConflict = false (Graph may reject)"
+                    if ($ar -and ($ar -contains 'MultiFactorAuthentication')) {
+                        Write-Verbose "Removing 'MultiFactorAuthentication' from Enablement_EndUser_Assignment because Authentication Context is enabled (avoids MfaAndAcrsConflict)"
+                        $ar = @($ar | Where-Object { $_ -ne 'MultiFactorAuthentication' })
                     }
                 }
                 $rules += Set-ActivationRequirement $ar -EntraRole
@@ -205,19 +200,14 @@ function Set-PIMEntraRolePolicy {
                 }
                 $rules += Set-AuthenticationContext $AuthenticationContext_Enabled $AuthenticationContext_Value -entraRole
                 # If caller didn't pass ActivationRequirement, but current config enforces MFA,
-                # optionally remove MFA to prevent MfaAndAcrsConflict when enabling Authentication Context.
+                # remove MFA to prevent MfaAndAcrsConflict when enabling Authentication Context.
                 if ($AuthenticationContext_Enabled -eq $true -and -not $PSBoundParameters.Keys.Contains('ActivationRequirement')) {
                     $currentEnablement = @()
                     if ($script:config.EnablementRules) { $currentEnablement = ($script:config.EnablementRules -split ',') }
-                    $autoResolve = if ($null -ne $global:EasyPIM_AutoResolveMfaAcrConflict) { [bool]$global:EasyPIM_AutoResolveMfaAcrConflict } else { $true }
-                    if ($autoResolve) {
-                        if ($currentEnablement -contains 'MultiFactorAuthentication') {
-                            Write-Verbose "Current policy has 'MultiFactorAuthentication' enabled; adding Enablement_EndUser_Assignment without MFA to avoid conflict with Authentication Context."
-                            $filtered = @($currentEnablement | Where-Object { $_ -ne 'MultiFactorAuthentication' })
-                            $rules += Set-ActivationRequirement $filtered -EntraRole
-                        }
-                    } else {
-                        Write-Verbose "EasyPIM_AutoResolveMfaAcrConflict = false; not adding a filtered Enablement rule."
+                    if ($currentEnablement -contains 'MultiFactorAuthentication') {
+                        Write-Verbose "Current policy has 'MultiFactorAuthentication' enabled; adding Enablement_EndUser_Assignment without MFA to avoid conflict with Authentication Context."
+                        $filtered = @($currentEnablement | Where-Object { $_ -ne 'MultiFactorAuthentication' })
+                        $rules += Set-ActivationRequirement $filtered -EntraRole
                     }
                 }
             }

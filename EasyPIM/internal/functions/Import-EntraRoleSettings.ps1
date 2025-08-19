@@ -60,10 +60,8 @@ function Import-EntraRoleSettings  {
         if ($enablementRules) {
             $allowedEndUser = @('MultiFactorAuthentication','Justification','Ticketing')
             $enablementRules = @($enablementRules | Where-Object { $allowedEndUser -contains $_ })
-            # If Authentication Context is enabled, optionally remove MFA to avoid MfaAndAcrsConflict
-            # Honor global preference: set $global:EasyPIM_AutoResolveMfaAcrConflict = $false to keep MFA alongside Auth Context (may error in Graph)
-            $autoResolve = if ($null -ne $global:EasyPIM_AutoResolveMfaAcrConflict) { [bool]$global:EasyPIM_AutoResolveMfaAcrConflict } else { $true }
-            if ($authEnabled -eq $true -and $autoResolve) {
+            # If Authentication Context is enabled, remove MFA to avoid MfaAndAcrsConflict
+            if ($authEnabled -eq $true) {
                 if ($enablementRules -contains 'MultiFactorAuthentication') {
                     Write-Verbose "Removing 'MultiFactorAuthentication' from Enablement_EndUser_Assignment because Authentication Context is enabled (avoids MfaAndAcrsConflict)"
                     $enablementRules = @($enablementRules | Where-Object { $_ -ne 'MultiFactorAuthentication' })
@@ -204,18 +202,18 @@ function Import-EntraRoleSettings  {
         <#
         #>
 
-        # Resolve policy ID if missing in CSV
+    # Resolve policy ID if missing in CSV
         $policyIdToUse = $_.PolicyID
         if ([string]::IsNullOrWhiteSpace([string]$policyIdToUse)) {
             $roleId = $_.roleID
             if ([string]::IsNullOrWhiteSpace([string]$roleId)) {
                 $rn = [string]$_.RoleName
                 if (-not [string]::IsNullOrWhiteSpace($rn)) {
-                    # Escape single quotes in role name for OData
-                    $rnEsc = $rn -replace "'", "''"
-                    $ep = "roleManagement/directory/roleDefinitions?`$filter=displayname eq '$rnEsc'"
-                    $resp = invoke-graph -Endpoint $ep -ErrorAction Stop
-                    $roleId = $resp.value.id
+            # Case-insensitive role resolution: list and match locally
+                    $ep = "roleManagement/directory/roleDefinitions"
+            $resp = invoke-graph -Endpoint $ep -ErrorAction Stop
+            $match = $resp.value | Where-Object { $_.displayName -ieq $rn } | Select-Object -First 1
+            if ($match) { $roleId = $match.id }
                 }
             }
             if (-not [string]::IsNullOrWhiteSpace([string]$roleId)) {

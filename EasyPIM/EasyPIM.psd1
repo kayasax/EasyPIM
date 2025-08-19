@@ -168,12 +168,7 @@ For docs and examples, see: https://github.com/kayasax/EasyPIM/wiki
 
     # AdditionalReleaseNotes of this module
     # (Appended by fix/issue-121-followup)
-    AdditionalReleaseNotes = @'
-Configurable MFA/Auth Context conflict handling
-- New global toggle: $global:EasyPIM_AutoResolveMfaAcrConflict (default: $true).
-- When enabled, EasyPIM auto-removes MultiFactorAuthentication from EndUser enablement when AuthenticationContext_Enabled is true to avoid Graph error MfaAndAcrsConflict.
-- Set to $false to keep MFA (Graph may reject the patch).
-'@
+    # AdditionalReleaseNotes removed; MFA is always removed when Authentication Context is enabled to avoid conflicts.
 
         # Prerelease string of this module
         # Prerelease = ''
