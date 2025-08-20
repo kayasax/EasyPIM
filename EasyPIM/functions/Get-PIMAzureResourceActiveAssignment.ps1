@@ -88,7 +88,8 @@ function Get-PIMAzureResourceActiveAssignment {
         # Issue #23due to a bug with the API regarding the membertype, we will use RoleAssignmentSchedulesInstance instead of RoleAssignmentsSchedule
         # the downside is we will not get assignment with a future start date
         #$restURI = "https://management.azure.com/$scope/providers/Microsoft.Authorization/roleAssignmentSchedules?api-version=2020-10-01"
-        $restURI = "https://management.azure.com/$scope/providers/Microsoft.Authorization/roleAssignmentScheduleInstances?api-version=2020-10-01"
+        $armEndpoint = Get-AzureEnvironmentEndpoint -EndpointType 'ARM'
+        $restURI = "$($armEndpoint.TrimEnd('/'))/$scope/providers/Microsoft.Authorization/roleAssignmentScheduleInstances?api-version=2020-10-01"
 
         # Determine which principal ID to use for filtering
         $effectivePrincipalId = $null

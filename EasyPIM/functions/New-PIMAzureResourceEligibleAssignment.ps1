@@ -95,8 +95,8 @@ function New-PIMAzureResourceEligibleAssignment {
         }
         $script:tenantID = $tenantID
 
-        $ARMhost = "https://management.azure.com"
-        $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
+        $ARMhost = Get-AzureEnvironmentEndpoint -EndpointType 'ARM'
+        $ARMendpoint = "$($ARMhost.TrimEnd('/'))/$scope/providers/Microsoft.Authorization"
         #1 get role id
         $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$rolename'"
         $response = Invoke-ARM -restURI $restUri -method "get" -body $null

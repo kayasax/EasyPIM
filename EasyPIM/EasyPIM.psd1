@@ -4,7 +4,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.9.2'
+ModuleVersion = '1.10.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -43,13 +43,18 @@ Description = 'Manage PIM Azure Resource, PIM Entra role and PIM for Group setti
 # ProcessorArchitecture = ''
 
 # Modules that must be imported into the global environment prior to importing this module
- RequiredModules = @("Az.Accounts","Az.KeyVault", "Az.Resources")
+# RequiredModules = @(
+#     @{ModuleName = 'Microsoft.Graph.Authentication'; ModuleVersion = '2.10.0' },
+#     @{ModuleName = 'Microsoft.Graph.Identity.Governance'; ModuleVersion = '2.10.0' },
+#     @{ModuleName = 'Az.Accounts'; ModuleVersion = '2.13.0' }
+# )
+# Note: Dependencies are now checked via ScriptsToProcess with user-friendly warnings
 
 # Assemblies that must be loaded prior to importing this module
 # RequiredAssemblies = @()
 
 # Script files (.ps1) that are run in the caller's environment prior to importing this module.
-# ScriptsToProcess = @()
+ScriptsToProcess = @('internal\scripts\Import-ModuleChecks.ps1')
 
 # Type files (.ps1xml) to be loaded when importing this module
 # TypesToProcess = @()
@@ -108,7 +113,8 @@ FunctionsToExport = @(
     'Copy-PIMEntraRoleEligibleAssignment',
     'Invoke-EasyPIMOrchestrator',
     'Get-EasyPIMConfiguration',
-    'Test-PIMPolicyDrift'
+    'Test-PIMPolicyDrift',
+    'Test-PIMEndpointDiscovery'
 )
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.

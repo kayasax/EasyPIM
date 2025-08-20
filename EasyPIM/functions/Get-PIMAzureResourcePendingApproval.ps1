@@ -44,7 +44,8 @@ function Get-PIMAzureResourcePendingApproval {
         Write-Verbose "Get-PIMAzureResourcePendingApproval start with parameters: tenantID => $tenantID"
 
         $out = @()
-        $response = invoke-AzRestMethod -Uri "https://management.azure.com/providers/Microsoft.Authorization/roleAssignmentScheduleRequests?api-version=2020-10-01&`$filter=asApprover()"
+        $armEndpoint = Get-AzureEnvironmentEndpoint -EndpointType 'ARM'
+        $response = invoke-AzRestMethod -Uri "$($armEndpoint.TrimEnd('/'))/providers/Microsoft.Authorization/roleAssignmentScheduleRequests?api-version=2020-10-01&`$filter=asApprover()"
         $pendingApproval = $response.Content | convertfrom-json
         if ($null -ne $pendingApproval.value.properties) {
             $pendingApproval.value.properties | ForEach-Object {
