@@ -6,7 +6,7 @@
     Visualire PIM activities
 
     .Example
-    PS> Get-PIMReport -tennantID $tenantID
+    PS> Show-PIMReport -tennantID $tenantID
 
 
 
