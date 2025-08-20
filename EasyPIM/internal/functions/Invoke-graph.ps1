@@ -60,7 +60,8 @@ function invoke-graph {
     )
 
     try {
-        $graph = "https://graph.microsoft.com/$version/"
+        $graphBase = Get-AzureEnvironmentEndpoint -EndpointType 'MicrosoftGraph'
+        $graph = "$graphBase/$version/"
 
         [string]$uri = $graph + $endpoint        # Handle filter parameter
         if (-not [string]::IsNullOrEmpty($Filter)) {
