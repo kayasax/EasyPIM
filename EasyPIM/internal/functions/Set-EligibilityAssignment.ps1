@@ -63,7 +63,8 @@ if($entraRole){
   if ($expire -eq 'true') {
   $maxField = '"maximumDuration": "'+ $normMax + '",'
   }
-  Write-Verbose ("[Policy][Entra][Eligibility] isExpirationRequired={0} maximumDuration={1}" -f $expire, ($normMax ? $normMax : '<none>'))
+  $normMaxDisplay = if ($null -ne $normMax -and $normMax -ne '') { $normMax } else { '<none>' }
+  Write-Verbose ("[Policy][Entra][Eligibility] isExpirationRequired={0} maximumDuration={1}" -f $expire, $normMaxDisplay)
   $rule='{
     "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyExpirationRule",
     "id": "Expiration_Admin_Eligibility",
