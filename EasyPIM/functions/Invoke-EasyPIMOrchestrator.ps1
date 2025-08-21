@@ -144,6 +144,11 @@ function Invoke-EasyPIMOrchestrator {
 
         # 2.1. Process policy configurations if present
         $policyConfig = $null
+        # If user constrained Operations but did not explicitly set PolicyOperations, mirror the Operations filter for policies
+        if (-not $PSBoundParameters.ContainsKey('PolicyOperations') -and $PSBoundParameters.ContainsKey('Operations') -and ($Operations -notcontains 'All')) {
+            $PolicyOperations = $Operations
+        }
+
         if (-not $SkipPolicies -and (
             ($config.PSObject.Properties['AzureRolePolicies'] -and $config.AzureRolePolicies) -or
             ($config.PSObject.Properties['EntraRolePolicies'] -and $config.EntraRolePolicies) -or
@@ -155,7 +160,7 @@ function Invoke-EasyPIMOrchestrator {
             ($config.PSObject.Properties['GroupRoles'] -and $config.GroupRoles.PSObject.Properties['Policies'] -and $config.GroupRoles.Policies)
         )) {
             Write-Host "🔧 Processing policy configurations..." -ForegroundColor Cyan
-            $policyConfig = Initialize-EasyPIMPolicies -Config $config
+            $policyConfig = Initialize-EasyPIMPolicies -Config $config -PolicyOperations $PolicyOperations
 
             # Filter policy config based on selected policy operations
             if ($PolicyOperations -notcontains "All") {
@@ -179,7 +184,9 @@ function Invoke-EasyPIMOrchestrator {
                         }
                     }
                 }
-                # Merge filtered policy config with processed config
+                # Make filtered policy config the active policy config for policy processing
+                $policyConfig = $filteredPolicyConfig
+                # Merge filtered policy config with processed assignment config (for visibility)
                 foreach ($key in $filteredPolicyConfig.Keys) {
                     if ($processedConfig.PSObject.Properties[$key]) {
                         $processedConfig.PSObject.Properties[$key].Value = $filteredPolicyConfig[$key]
@@ -225,9 +232,10 @@ function Invoke-EasyPIMOrchestrator {
             $processedConfig = $filteredConfig
         }
 
-        # Always perform principal & group validation before any policy or assignment operations
+    # Always perform principal & group validation before any policy or assignment operations
         Write-Host "🧪 Validating principal and group IDs..." -ForegroundColor Cyan
-        $principalIds = New-Object System.Collections.Generic.HashSet[string]
+    $principalIds = New-Object System.Collections.Generic.HashSet[string]
+    $policyApproverRefs = @()
         if ($processedConfig.PSObject.Properties.Name -contains 'Assignments' -and $processedConfig.Assignments) {
             $assign = $processedConfig.Assignments
             foreach ($section in 'EntraRoles','AzureRoles','Groups') {
@@ -247,6 +255,68 @@ function Invoke-EasyPIMOrchestrator {
                     if ($item.PrincipalId) { [void]$principalIds.Add($item.PrincipalId) }
                     if ($item.GroupId) { [void]$principalIds.Add($item.GroupId) }
                 }
+            }
+        }
+        # Include approver IDs from policy configurations for validation
+        $approverRefsFound = 0
+        $hasEntraPolicies = $false
+        if ($policyConfig -and (
+            ($policyConfig -is [hashtable] -and $policyConfig.ContainsKey('EntraRolePolicies') -and $policyConfig.EntraRolePolicies) -or
+            ($policyConfig -isnot [hashtable] -and $policyConfig.PSObject.Properties['EntraRolePolicies'] -and $policyConfig.EntraRolePolicies)
+        )) {
+            $hasEntraPolicies = $true
+            foreach ($pol in $policyConfig.EntraRolePolicies) {
+                $roleNameRef = $pol.RoleName
+                # Prefer ResolvedPolicy (new path), else Policy (legacy), else the object itself
+                $policyRef = $null
+                if ($pol.PSObject.Properties['ResolvedPolicy'] -and $pol.ResolvedPolicy) { $policyRef = $pol.ResolvedPolicy }
+                elseif ($pol.PSObject.Properties['Policy'] -and $pol.Policy) { $policyRef = $pol.Policy }
+                else { $policyRef = $pol }
+                # Extract approvers regardless of type (hashtable vs. PSCustomObject)
+                $approvers = $null
+                if ($policyRef -is [hashtable]) { if ($policyRef.ContainsKey('Approvers')) { $approvers = $policyRef['Approvers'] } }
+                elseif ($policyRef -and $policyRef.PSObject.Properties['Approvers']) { $approvers = $policyRef.Approvers }
+                if ($approvers) {
+                    foreach ($ap in $approvers) {
+            $apId = $null
+            if ($ap -is [string]) { $apId = $ap }
+            else { $apId = $ap.Id; if (-not $apId) { $apId = $ap.id } }
+                        if ($apId) {
+                            [void]$principalIds.Add([string]$apId)
+                            $policyApproverRefs += [pscustomobject]@{ PrincipalId = [string]$apId; RoleName = $roleNameRef }
+                            $approverRefsFound++
+                        }
+                    }
+                }
+            }
+            Write-Verbose ("[Orchestrator] Collected {0} approver references ({1} unique) from policyConfig.EntraRolePolicies" -f $approverRefsFound, $policyApproverRefs.Count)
+        }
+        # Fallback: if not found via policyConfig, inspect processedConfig attachment for visibility
+        if (-not $hasEntraPolicies -or $approverRefsFound -eq 0) {
+            if ($processedConfig.PSObject.Properties['EntraRolePolicies'] -and $processedConfig.EntraRolePolicies) {
+                foreach ($pol in $processedConfig.EntraRolePolicies) {
+                    $roleNameRef = $pol.RoleName
+                    $policyRef = $null
+                    if ($pol.PSObject.Properties['ResolvedPolicy'] -and $pol.ResolvedPolicy) { $policyRef = $pol.ResolvedPolicy }
+                    elseif ($pol.PSObject.Properties['Policy'] -and $pol.Policy) { $policyRef = $pol.Policy }
+                    else { $policyRef = $pol }
+                    $approvers = $null
+                    if ($policyRef -is [hashtable]) { if ($policyRef.ContainsKey('Approvers')) { $approvers = $policyRef['Approvers'] } }
+                    elseif ($policyRef -and $policyRef.PSObject.Properties['Approvers']) { $approvers = $policyRef.Approvers }
+                    if ($approvers) {
+                        foreach ($ap in $approvers) {
+                            $apId = $null
+                            if ($ap -is [string]) { $apId = $ap }
+                            else { $apId = $ap.Id; if (-not $apId) { $apId = $ap.id } }
+                            if ($apId) {
+                                [void]$principalIds.Add([string]$apId)
+                                $policyApproverRefs += [pscustomobject]@{ PrincipalId = [string]$apId; RoleName = $roleNameRef }
+                                $approverRefsFound++
+                            }
+                        }
+                    }
+                }
+                Write-Verbose ("[Orchestrator] Collected {0} approver references ({1} unique) from processedConfig.EntraRolePolicies" -f $approverRefsFound, $policyApproverRefs.Count)
             }
         }
         $validationResults = @()
@@ -277,7 +347,14 @@ function Invoke-EasyPIMOrchestrator {
         $missing = $validationResults | Where-Object { -not $_.Exists }
         if ($missing.Count -gt 0) {
             Write-Host "⚠️ Principal validation failed:" -ForegroundColor Yellow
-            foreach ($m in $missing) { Write-Host "   • $($m.PrincipalId): DOES NOT EXIST" -ForegroundColor Red }
+            foreach ($m in $missing) {
+                $refRoles = ($policyApproverRefs | Where-Object { $_.PrincipalId -eq $m.PrincipalId } | Select-Object -ExpandProperty RoleName -Unique)
+                if ($refRoles) {
+                    Write-Host "   • $($m.PrincipalId): DOES NOT EXIST (referenced as Approver for Entra role(s): $([string]::Join(', ', $refRoles)))" -ForegroundColor Red
+                } else {
+                    Write-Host "   • $($m.PrincipalId): DOES NOT EXIST" -ForegroundColor Red
+                }
+            }
             if ($WhatIfPreference) {
                 Write-Host "Proceeding due to -WhatIf (preview) to allow cleanup delta visibility. These principals will be ignored." -ForegroundColor Yellow
             } else {
@@ -315,7 +392,7 @@ function Invoke-EasyPIMOrchestrator {
             $effectivePolicyMode = if ($WhatIfPreference) { "validate" } else { "delta" }
             # Convert hashtable to PSCustomObject for the policy function
             $policyConfigObject = [PSCustomObject]$policyConfig
-            $policyResults = New-EasyPIMPolicies -Config $policyConfigObject -TenantId $TenantId -SubscriptionId $SubscriptionId -PolicyMode $effectivePolicyMode -WhatIf:$WhatIfPreference
+            $policyResults = New-EPOEasyPIMPolicy -Config $policyConfigObject -TenantId $TenantId -SubscriptionId $SubscriptionId -PolicyMode $effectivePolicyMode -WhatIf:$WhatIfPreference
 
             if ($WhatIfPreference) {
                 Write-Host "✅ Policy validation completed - role policies are configured correctly for assignment compliance" -ForegroundColor Green
@@ -354,23 +431,23 @@ function Invoke-EasyPIMOrchestrator {
             $assignmentResults = New-EasyPIMAssignments -Config $processedConfig -TenantId $TenantId -SubscriptionId $SubscriptionId
 
             # After assignments, attempt deferred group policies if any
-            if (Get-Command -Name Invoke-DeferredGroupPolicies -ErrorAction SilentlyContinue) {
+            if (Get-Command -Name Invoke-EPODeferredGroupPolicies -ErrorAction SilentlyContinue) {
                 # Compute retry mode explicitly (avoid inline $(if ...) which could surface as a string literal in dynamic invocation scenarios)
                 $retryMode = if ($WhatIfPreference) { 'validate' } else { 'delta' }
-                $deferredSummary = Invoke-DeferredGroupPolicies -TenantId $TenantId -Mode $retryMode -WhatIf:$WhatIfPreference
+                $deferredSummary = Invoke-EPODeferredGroupPolicies -TenantId $TenantId -Mode $retryMode -WhatIf:$WhatIfPreference
                 if ($deferredSummary) {
                     $script:EasyPIM_DeferredGroupPoliciesSummary = $deferredSummary
                     Write-Host "┌──────────────── Deferred Group Policies Retry ────────────────" -ForegroundColor Cyan
                     Write-Host "│ Applied           : $($deferredSummary.Applied)" -ForegroundColor Cyan
-                    Write-Host "│ Still Not Eligible: $($deferredSummary.StillNotEligible)" -ForegroundColor Cyan
+                    Write-Host "│ Skipped           : $($deferredSummary.Skipped)" -ForegroundColor Cyan
                     Write-Host "│ Failed            : $($deferredSummary.Failed)" -ForegroundColor Cyan
                     Write-Host "└──────────────────────────────────────────────────────────────" -ForegroundColor Cyan
                     # Optionally attach to policyResults summary counts
                     if ($policyResults -and $policyResults.Summary) {
-                        $policyResults.Summary.TotalProcessed += ($deferredSummary.Applied + $deferredSummary.StillNotEligible + $deferredSummary.Failed)
+                        $policyResults.Summary.TotalProcessed += ($deferredSummary.Applied + $deferredSummary.Skipped + $deferredSummary.Failed)
                         $policyResults.Summary.Successful += $deferredSummary.Applied
                         $policyResults.Summary.Failed += $deferredSummary.Failed
-                        $policyResults.Summary.Skipped += $deferredSummary.StillNotEligible
+                        $policyResults.Summary.Skipped += $deferredSummary.Skipped
                     }
                 }
             }

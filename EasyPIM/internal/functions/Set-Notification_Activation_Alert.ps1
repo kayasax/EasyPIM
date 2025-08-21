@@ -17,7 +17,7 @@ function Set-Notification_Activation_Alert($Notification_Activation_Alert, [swit
         {
         "notificationType": "Email",
         "recipientType": "Admin",
-        "isDefaultRecipientsEnabled": '+ $Notification_Activation_Alert.isDefaultRecipientEnabled.ToLower() + ',
+    "isDefaultRecipientsEnabled": '+ ($Notification_Activation_Alert.isDefaultRecipientEnabled).ToString().ToLower() + ',
         "notificationLevel": "'+ $Notification_Activation_Alert.notificationLevel + '",
         "notificationRecipients": [
         '
@@ -48,7 +48,7 @@ function Set-Notification_Activation_Alert($Notification_Activation_Alert, [swit
             "id": "Notification_Admin_EndUser_Assignment",
             "notificationType": "Email",
             "recipientType": "Admin",
-            "isDefaultRecipientsEnabled": '+ $Notification_Activation_Alert.isDefaultRecipientEnabled.ToLower() + ',
+            "isDefaultRecipientsEnabled": '+ ($Notification_Activation_Alert.isDefaultRecipientEnabled).ToString().ToLower() + ',
             "notificationLevel": "'+ $Notification_Activation_Alert.notificationLevel + '",
             "notificationRecipients": ['
             #write-verbose "recipient : $($Notification_ActiveAssignment_Assignee.Recipients)"

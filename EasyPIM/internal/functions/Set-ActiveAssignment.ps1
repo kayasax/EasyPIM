@@ -47,16 +47,21 @@ function Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentA
         }
     '
 if($EntraRole){
+    $maxField = ''
+    if ($expire2 -eq 'true') {
+        # expiration required -> include maximumDuration
+    $maxField = '"maximumDuration": "'+ $MaximumActiveAssignmentDuration + '",'
+    }
     $rule = '
         {
             "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyExpirationRule",
             "id": "Expiration_Admin_Assignment",
             "isExpirationRequired": '+ $expire2 + ',
-            "maximumDuration": "'+ $MaximumActiveAssignmentDuration + '",
+            '+ $maxField + '
             "target": {
                 "caller": "Admin",
                 "operations": [
-                    "all"
+                    "All"
                 ],
                 "level": "Assignment",
                 "inheritableSettings": [],

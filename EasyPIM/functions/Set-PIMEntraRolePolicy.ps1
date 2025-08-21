@@ -62,8 +62,8 @@ function Set-PIMEntraRolePolicy {
         # Active assignment requirement
         $ActiveAssignmentRequirement,
 
-        [Parameter()]
-        [Bool]
+    [Parameter()]
+    [Object]
         # Is authentication context required? ($true|$false)
         $AuthenticationContext_Enabled,
 
@@ -72,8 +72,8 @@ function Set-PIMEntraRolePolicy {
         # Authentication context value? (ex c1)
         $AuthenticationContext_Value,
 
-        [Parameter()]
-        [Bool]
+    [Parameter()]
+    [Object]
         # Is approval required to activate a role? ($true|$false)
         $ApprovalRequired,
 
@@ -86,8 +86,8 @@ function Set-PIMEntraRolePolicy {
         # Maximum Eligility Duration
         $MaximumEligibilityDuration = $null,
 
-        [Parameter()]
-        [Bool]
+    [Parameter()]
+    [Object]
         # Allow permanent eligibility? ($true|$false)
         $AllowPermanentEligibility,
 
@@ -96,8 +96,8 @@ function Set-PIMEntraRolePolicy {
         # Maximum active assignment duration # Duration ref https://en.wikipedia.org/wiki/ISO_8601#Durations
         $MaximumActiveAssignmentDuration = $null,
 
-        [Parameter()]
-        [Bool]
+    [Parameter()]
+    [Object]
         # Allow permanent active assignement? ($true|$false)
         $AllowPermanentActiveAssignment,
 
@@ -164,6 +164,28 @@ function Set-PIMEntraRolePolicy {
         $p = $p -join ', '
 
         write-verbose "Function Set-PIMEntraRolePolicy is starting with parameters: $p"
+
+        # Coerce legacy boolean-like inputs (accept strings like 'true','false','1','0','yes','no')
+        $toBool = {
+            param($v)
+            if ($null -eq $v) { return $null }
+            if ($v -is [bool]) { return $v }
+            if ($v -is [int] -or $v -is [long]) { return [bool]([int]$v) }
+            if ($v -is [string]) {
+                $s = $v.Trim()
+                if (-not $s) { return $null }
+                switch -regex ($s.ToLowerInvariant()) {
+                    '^(true|t|1|yes|y)$'   { return $true }
+                    '^(false|f|0|no|n)$'   { return $false }
+                }
+            }
+            return $v
+        }
+
+        if ($PSBoundParameters.ContainsKey('AuthenticationContext_Enabled')) { $AuthenticationContext_Enabled = & $toBool $AuthenticationContext_Enabled }
+        if ($PSBoundParameters.ContainsKey('ApprovalRequired')) { $ApprovalRequired = & $toBool $ApprovalRequired }
+        if ($PSBoundParameters.ContainsKey('AllowPermanentEligibility')) { $AllowPermanentEligibility = & $toBool $AllowPermanentEligibility }
+        if ($PSBoundParameters.ContainsKey('AllowPermanentActiveAssignment')) { $AllowPermanentActiveAssignment = & $toBool $AllowPermanentActiveAssignment }
 
         $script:tenantID=$tenantID
 

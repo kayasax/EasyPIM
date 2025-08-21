@@ -20,7 +20,7 @@ function Set-Notification_Activation_Approver ($Notification_Activation_Approver
         {
         "notificationType": "Email",
         "recipientType": "Approver",
-        "isDefaultRecipientsEnabled": '+ $Notification_Activation_Approver.isDefaultRecipientEnabled.ToLower() + ',
+    "isDefaultRecipientsEnabled": '+ ($Notification_Activation_Approver.isDefaultRecipientEnabled).ToString().ToLower() + ',
         "notificationLevel": "'+ $Notification_Activation_Approver.notificationLevel + '",
         "notificationRecipients": [
         '
@@ -53,7 +53,7 @@ function Set-Notification_Activation_Approver ($Notification_Activation_Approver
             "id": "Notification_Approver_EndUser_Assignment",
             "notificationType": "Email",
             "recipientType": "Approver",
-            "isDefaultRecipientsEnabled": '+ $Notification_Activation_Approver.isDefaultRecipientEnabled.ToLower() + ',
+            "isDefaultRecipientsEnabled": '+ ($Notification_Activation_Approver.isDefaultRecipientEnabled).ToString().ToLower() + ',
             "notificationLevel": "'+ $Notification_Activation_Approver.notificationLevel + '",
             "notificationRecipients": [],
             "target": {

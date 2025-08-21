@@ -20,7 +20,7 @@ function Set-Notification_ActiveAssignment_Alert($Notification_ActiveAssignment_
     {
     "notificationType": "Email",
     "recipientType": "Admin",
-    "isDefaultRecipientsEnabled": '+ $Notification_ActiveAssignment_Alert.isDefaultRecipientEnabled.ToLower() + ',
+    "isDefaultRecipientsEnabled": '+ ($Notification_ActiveAssignment_Alert.isDefaultRecipientEnabled).ToString().ToLower() + ',
     "notificationLevel": "'+ $Notification_ActiveAssignment_Alert.notificationLevel + '",
     "notificationRecipients": [
     '
@@ -52,7 +52,7 @@ function Set-Notification_ActiveAssignment_Alert($Notification_ActiveAssignment_
             "id": "Notification_Admin_Admin_Assignment",
             "notificationType": "Email",
             "recipientType": "Admin",
-            "isDefaultRecipientsEnabled": '+ $Notification_ActiveAssignment_Alert.isDefaultRecipientEnabled.ToLower() + ',
+            "isDefaultRecipientsEnabled": '+ ($Notification_ActiveAssignment_Alert.isDefaultRecipientEnabled).ToString().ToLower() + ',
             "notificationLevel": "'+ $Notification_ActiveAssignment_Alert.notificationLevel + '",
             "notificationRecipients": [
                 '

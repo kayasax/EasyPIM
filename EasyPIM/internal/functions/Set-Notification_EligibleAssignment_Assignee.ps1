@@ -28,7 +28,7 @@ function Set-Notification_EligibleAssignment_Assignee {
         {
         "notificationType": "Email",
         "recipientType": "Requestor",
-        "isDefaultRecipientsEnabled": '+ $Notification_EligibleAssignment_Assignee.isDefaultRecipientEnabled.ToLower() + ',
+    "isDefaultRecipientsEnabled": '+ ($Notification_EligibleAssignment_Assignee.isDefaultRecipientEnabled).ToString().ToLower() + ',
         "notificationLevel": "'+ $Notification_EligibleAssignment_Assignee.notificationLevel + '",
         "notificationRecipients": [
         '
@@ -59,7 +59,7 @@ function Set-Notification_EligibleAssignment_Assignee {
             "id": "Notification_Requestor_Admin_Eligibility",
             "notificationType": "Email",
             "recipientType": "Requestor",
-            "isDefaultRecipientsEnabled": '+ $Notification_EligibleAssignment_Assignee.isDefaultRecipientEnabled.ToLower() + ',
+            "isDefaultRecipientsEnabled": '+ ($Notification_EligibleAssignment_Assignee.isDefaultRecipientEnabled).ToString().ToLower() + ',
             "notificationLevel": "'+ $Notification_EligibleAssignment_Assignee.notificationLevel + '",
             "notificationRecipients": ['
             If ( ($Notification_EligibleAssignment_Assignee.Recipients |Measure-Object |Select-Object -expand count) -gt 0 ){

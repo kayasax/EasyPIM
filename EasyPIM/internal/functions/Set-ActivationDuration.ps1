@@ -47,7 +47,9 @@ function Set-ActivationDuration ($ActivationDuration, [switch]$entraRole) {
                 "operations": [
                     "All"
                 ],
-                "level": "Assignment"
+                "level": "Assignment",
+                "inheritableSettings": [],
+                "enforcedSettings": []
             }
         }'
         }

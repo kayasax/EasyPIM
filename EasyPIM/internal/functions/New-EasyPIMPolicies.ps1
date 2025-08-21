@@ -704,7 +704,8 @@ function Set-EntraRolePolicy {
             if ($existing -and $existing.PolicyID) { $PolicyDefinition | Add-Member -NotePropertyName PolicyID -NotePropertyValue $existing.PolicyID -Force }
         } catch { Write-Verbose "[Policy][Entra] Failed to resolve PolicyID: $($_.Exception.Message)" }
         if ($PolicyDefinition.PSObject.Properties['PolicyID'] -and $PolicyDefinition.PolicyID) {
-            Update-Policy $PolicyDefinition.PolicyID $bodyRules
+            Write-Verbose "[Policy][Entra] Using Graph updater for PolicyID $($PolicyDefinition.PolicyID)"
+            Update-EntraRolePolicy $PolicyDefinition.PolicyID $bodyRules
         } else {
             throw "Entra apply failed: No PolicyID for role $($PolicyDefinition.RoleName)"
         }

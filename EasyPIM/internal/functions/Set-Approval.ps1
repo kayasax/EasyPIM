@@ -167,6 +167,36 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
 #>
 
         if ($entraRole) {
+            # Build approvers array JSON safely (no trailing commas)
+            $approverItems = ''
+            $approverGroups = 0; $approverUsers = 0
+            if ($null -ne $Approvers -and ($Approvers | Measure-Object).Count -gt 0) {
+                $parts = @()
+                foreach ($a in $Approvers) {
+                    $id = $a.Id
+                    if (-not $id) { $id = $a.id }
+                    $name = $a.Name
+                    if (-not $name) { $name = $a.name }
+                    if (-not $name) { $name = $a.description }
+                    # Determine approver subject set type for Graph (@odata.type)
+                    $type = $a.Type; if (-not $type) { $type = $a.type }
+                    $odataType = '#microsoft.graph.singleUser'
+                    $idPropName = 'userId'
+                    if (-not [string]::IsNullOrWhiteSpace($type)) {
+                        $t = ($type.ToString()).Trim().ToLowerInvariant()
+                        if ($t -eq 'group' -or $t -eq 'groupmembers') { $odataType = '#microsoft.graph.groupMembers'; $idPropName = 'groupId' }
+                    }
+                    if ($odataType -eq '#microsoft.graph.groupMembers') { $approverGroups++ } else { $approverUsers++ }
+                    $parts += @"
+                                {
+                                    "@odata.type": "$odataType",
+                                    "$idPropName": "$id"
+                                }
+"@
+                }
+                $approverItems = ($parts -join ',')
+            }
+
             $rule = '
     {
         "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyApprovalRule",
@@ -174,16 +204,14 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
         "target": {
             "caller": "EndUser",
             "operations": [
-                "all"
+                "All"
             ],
             "level": "Assignment",
             "inheritableSettings": [],
             "enforcedSettings": []
         },
         "setting": {
-            "isApprovalRequired": '
-            $rule += $req
-            $rule += ',
+            "isApprovalRequired": ' + $req + ',
             "isApprovalRequiredForExtension": false,
             "isRequestorJustificationRequired": true,
             "approvalMode": "SingleStage",
@@ -193,41 +221,15 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
                     "isApproverJustificationRequired": true,
                     "escalationTimeInMinutes": 0,
                     "isEscalationEnabled": false,
-                    "primaryApprovers": ['
-            if ($null -ne $Approvers) {
-                #at least one approver required if approval is enable
-
-                $cpt = 0
-                $Approvers | ForEach-Object {
-                    #write-host $_
-                    $id = $_.Id
-                    $name = $_.Name
-                    ##$type = $_.Type
-
-                    if ($cpt -gt 0) {
-                        $rule += ","
-                    }
-                    $rule += '
-                                {
-                                    "@odata.type": "#microsoft.graph.singleUser",
-                                    "isBackup": false,
-                                    "id": "'+ $id + '",
-                                    "description": "'+ $name + '",
-                                }
-                                '
-                    $cpt++
-                }
-
-                $rule += '
-
-
+                    "primaryApprovers": [
+                        ' + $approverItems + '
                     ],
                     "escalationApprovers": []
                 }
             ]
         }
     }'
-            }
+            Write-Verbose ("[Policy][Entra][Approval] Built subject sets: Users={0}, Groups={1}" -f $approverUsers, $approverGroups)
         }
         return $rule
     }

@@ -223,7 +223,7 @@ function invoke-graph {
             # For non-GET methods or when pagination is disabled
             try {
                 if ( $body -ne "") {
-                    $response = Invoke-MgGraphRequest -Uri "$uri" -Method $Method -Body $body -ErrorAction Stop
+                    $response = Invoke-MgGraphRequest -Uri "$uri" -Method $Method -Body $body -ContentType 'application/json' -ErrorAction Stop
                 }
                 else {
                     $response = Invoke-MgGraphRequest -Uri "$uri" -Method $Method -ErrorAction Stop
@@ -283,7 +283,7 @@ function invoke-graph {
                     try {
                         Write-Verbose "Probing $Method with -SkipHttpErrorCheck to capture error details"
                         if ($body -ne "") {
-                            $probe = Invoke-MgGraphRequest -Uri "$uri" -Method $Method -Body $body -SkipHttpErrorCheck -ErrorAction SilentlyContinue
+                            $probe = Invoke-MgGraphRequest -Uri "$uri" -Method $Method -Body $body -ContentType 'application/json' -SkipHttpErrorCheck -ErrorAction SilentlyContinue
                         } else {
                             $probe = Invoke-MgGraphRequest -Uri "$uri" -Method $Method -SkipHttpErrorCheck -ErrorAction SilentlyContinue
                         }
