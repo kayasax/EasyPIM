@@ -22,7 +22,7 @@ function Set-Notification_EligibleAssignment_Approver($Notification_EligibleAssi
         {
         "notificationType": "Email",
         "recipientType": "Approver",
-        "isDefaultRecipientsEnabled": '+ $Notification_EligibleAssignment_Approver.isDefaultRecipientEnabled.ToLower() + ',
+    "isDefaultRecipientsEnabled": '+ ($Notification_EligibleAssignment_Approver.isDefaultRecipientEnabled).ToString().ToLower() + ',
         "notificationLevel": "'+ $Notification_EligibleAssignment_Approver.notificationLevel + '",
         "notificationRecipients": [
         '
@@ -53,7 +53,7 @@ function Set-Notification_EligibleAssignment_Approver($Notification_EligibleAssi
             "id": "Notification_Approver_Admin_Eligibility",
             "notificationType": "Email",
             "recipientType": "Approver",
-            "isDefaultRecipientsEnabled": '+ $Notification_EligibleAssignment_Approver.isDefaultRecipientEnabled.ToLower() + ',
+            "isDefaultRecipientsEnabled": '+ ($Notification_EligibleAssignment_Approver.isDefaultRecipientEnabled).ToString().ToLower() + ',
             "notificationLevel": "'+ $Notification_EligibleAssignment_Approver.notificationLevel + '",
             "notificationRecipients": ['
             if( ( $Notification_EligibleAssignment_Approver.recipients |Measure-Object |Select-Object -ExpandProperty count) -gt 0){

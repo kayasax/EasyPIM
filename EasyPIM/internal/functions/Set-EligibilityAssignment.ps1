@@ -50,15 +50,29 @@ function Set-EligibilityAssignment($MaximumEligibilityDuration, $AllowPermanentE
     }
     '
 if($entraRole){
+  $maxField = ''
+  # Normalize duration for Entra: Graph may not accept P1Y; convert to P365D when needed
+  $normMax = $max
+  if ($null -ne $normMax -and $normMax -match '^P\d+Y$') {
+    # Extract years and convert to days (approximate 365 days per year)
+    $years = [int]($normMax.TrimStart('P').TrimEnd('Y'))
+    if ($years -lt 0) { $years = 0 }
+    $days = $years * 365
+    $normMax = "P${days}D"
+  }
+  if ($expire -eq 'true') {
+  $maxField = '"maximumDuration": "'+ $normMax + '",'
+  }
+  Write-Verbose ("[Policy][Entra][Eligibility] isExpirationRequired={0} maximumDuration={1}" -f $expire, ($normMax ? $normMax : '<none>'))
   $rule='{
     "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyExpirationRule",
     "id": "Expiration_Admin_Eligibility",
     "isExpirationRequired": '+ $expire + ',
-    "maximumDuration": "'+ $max + '",
+    '+ $maxField + '
     "target": {
         "caller": "Admin",
         "operations": [
-            "all"
+            "All"
         ],
         "level": "Eligibility",
         "inheritableSettings": [],

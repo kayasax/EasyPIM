@@ -149,19 +149,18 @@ if ($ApprovalRequired -eq "FALSE") { $req = "false" }else { $req = "true" }
             $list = Invoke-Expression $Approvers
             $list | ForEach-Object {
                 $id = $_.id
-                $name = $_.description
-                #$type = $_.userType
+                $type = $_.userType
 
-                if ($cpt -gt 0) {
-                    $rule += ","
-                }
+                if ($cpt -gt 0) { $rule += "," }
+
+                $odataType = '#microsoft.graph.singleUser'
+                $idPropName = 'userId'
+                if ($type -and ($type.ToString().Trim().ToLowerInvariant() -eq 'group')) { $odataType = '#microsoft.graph.groupMembers'; $idPropName = 'groupId' }
 
                 $rule += '
             {
-                "@odata.type": "#microsoft.graph.singleUser",
-                "isBackup": false,
-                "id": "'+ $id + '",
-                "description": "'+ $name + '"
+                "@odata.type": "'+ $odataType + '",
+                "'+ $idPropName + '": "'+ $id + '"
             }
             '
                 $cpt++

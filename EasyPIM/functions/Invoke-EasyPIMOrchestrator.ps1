@@ -232,9 +232,10 @@ function Invoke-EasyPIMOrchestrator {
             $processedConfig = $filteredConfig
         }
 
-        # Always perform principal & group validation before any policy or assignment operations
+    # Always perform principal & group validation before any policy or assignment operations
         Write-Host "🧪 Validating principal and group IDs..." -ForegroundColor Cyan
-        $principalIds = New-Object System.Collections.Generic.HashSet[string]
+    $principalIds = New-Object System.Collections.Generic.HashSet[string]
+    $policyApproverRefs = @()
         if ($processedConfig.PSObject.Properties.Name -contains 'Assignments' -and $processedConfig.Assignments) {
             $assign = $processedConfig.Assignments
             foreach ($section in 'EntraRoles','AzureRoles','Groups') {
@@ -254,6 +255,68 @@ function Invoke-EasyPIMOrchestrator {
                     if ($item.PrincipalId) { [void]$principalIds.Add($item.PrincipalId) }
                     if ($item.GroupId) { [void]$principalIds.Add($item.GroupId) }
                 }
+            }
+        }
+        # Include approver IDs from policy configurations for validation
+        $approverRefsFound = 0
+        $hasEntraPolicies = $false
+        if ($policyConfig -and (
+            ($policyConfig -is [hashtable] -and $policyConfig.ContainsKey('EntraRolePolicies') -and $policyConfig.EntraRolePolicies) -or
+            ($policyConfig -isnot [hashtable] -and $policyConfig.PSObject.Properties['EntraRolePolicies'] -and $policyConfig.EntraRolePolicies)
+        )) {
+            $hasEntraPolicies = $true
+            foreach ($pol in $policyConfig.EntraRolePolicies) {
+                $roleNameRef = $pol.RoleName
+                # Prefer ResolvedPolicy (new path), else Policy (legacy), else the object itself
+                $policyRef = $null
+                if ($pol.PSObject.Properties['ResolvedPolicy'] -and $pol.ResolvedPolicy) { $policyRef = $pol.ResolvedPolicy }
+                elseif ($pol.PSObject.Properties['Policy'] -and $pol.Policy) { $policyRef = $pol.Policy }
+                else { $policyRef = $pol }
+                # Extract approvers regardless of type (hashtable vs. PSCustomObject)
+                $approvers = $null
+                if ($policyRef -is [hashtable]) { if ($policyRef.ContainsKey('Approvers')) { $approvers = $policyRef['Approvers'] } }
+                elseif ($policyRef -and $policyRef.PSObject.Properties['Approvers']) { $approvers = $policyRef.Approvers }
+                if ($approvers) {
+                    foreach ($ap in $approvers) {
+            $apId = $null
+            if ($ap -is [string]) { $apId = $ap }
+            else { $apId = $ap.Id; if (-not $apId) { $apId = $ap.id } }
+                        if ($apId) {
+                            [void]$principalIds.Add([string]$apId)
+                            $policyApproverRefs += [pscustomobject]@{ PrincipalId = [string]$apId; RoleName = $roleNameRef }
+                            $approverRefsFound++
+                        }
+                    }
+                }
+            }
+            Write-Verbose ("[Orchestrator] Collected {0} approver references ({1} unique) from policyConfig.EntraRolePolicies" -f $approverRefsFound, $policyApproverRefs.Count)
+        }
+        # Fallback: if not found via policyConfig, inspect processedConfig attachment for visibility
+        if (-not $hasEntraPolicies -or $approverRefsFound -eq 0) {
+            if ($processedConfig.PSObject.Properties['EntraRolePolicies'] -and $processedConfig.EntraRolePolicies) {
+                foreach ($pol in $processedConfig.EntraRolePolicies) {
+                    $roleNameRef = $pol.RoleName
+                    $policyRef = $null
+                    if ($pol.PSObject.Properties['ResolvedPolicy'] -and $pol.ResolvedPolicy) { $policyRef = $pol.ResolvedPolicy }
+                    elseif ($pol.PSObject.Properties['Policy'] -and $pol.Policy) { $policyRef = $pol.Policy }
+                    else { $policyRef = $pol }
+                    $approvers = $null
+                    if ($policyRef -is [hashtable]) { if ($policyRef.ContainsKey('Approvers')) { $approvers = $policyRef['Approvers'] } }
+                    elseif ($policyRef -and $policyRef.PSObject.Properties['Approvers']) { $approvers = $policyRef.Approvers }
+                    if ($approvers) {
+                        foreach ($ap in $approvers) {
+                            $apId = $null
+                            if ($ap -is [string]) { $apId = $ap }
+                            else { $apId = $ap.Id; if (-not $apId) { $apId = $ap.id } }
+                            if ($apId) {
+                                [void]$principalIds.Add([string]$apId)
+                                $policyApproverRefs += [pscustomobject]@{ PrincipalId = [string]$apId; RoleName = $roleNameRef }
+                                $approverRefsFound++
+                            }
+                        }
+                    }
+                }
+                Write-Verbose ("[Orchestrator] Collected {0} approver references ({1} unique) from processedConfig.EntraRolePolicies" -f $approverRefsFound, $policyApproverRefs.Count)
             }
         }
         $validationResults = @()
@@ -284,7 +347,14 @@ function Invoke-EasyPIMOrchestrator {
         $missing = $validationResults | Where-Object { -not $_.Exists }
         if ($missing.Count -gt 0) {
             Write-Host "⚠️ Principal validation failed:" -ForegroundColor Yellow
-            foreach ($m in $missing) { Write-Host "   • $($m.PrincipalId): DOES NOT EXIST" -ForegroundColor Red }
+            foreach ($m in $missing) {
+                $refRoles = ($policyApproverRefs | Where-Object { $_.PrincipalId -eq $m.PrincipalId } | Select-Object -ExpandProperty RoleName -Unique)
+                if ($refRoles) {
+                    Write-Host "   • $($m.PrincipalId): DOES NOT EXIST (referenced as Approver for Entra role(s): $([string]::Join(', ', $refRoles)))" -ForegroundColor Red
+                } else {
+                    Write-Host "   • $($m.PrincipalId): DOES NOT EXIST" -ForegroundColor Red
+                }
+            }
             if ($WhatIfPreference) {
                 Write-Host "Proceeding due to -WhatIf (preview) to allow cleanup delta visibility. These principals will be ignored." -ForegroundColor Yellow
             } else {

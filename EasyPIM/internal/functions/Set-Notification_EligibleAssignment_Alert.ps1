@@ -22,7 +22,7 @@ function Set-Notification_EligibleAssignment_Alert($Notification_EligibleAssignm
         {
         "notificationType": "Email",
         "recipientType": "Admin",
-        "isDefaultRecipientsEnabled": '+ $Notification_EligibleAssignment_Alert.isDefaultRecipientEnabled.ToLower() + ',
+    "isDefaultRecipientsEnabled": '+ ($Notification_EligibleAssignment_Alert.isDefaultRecipientEnabled).ToString().ToLower() + ',
         "notificationLevel": "'+ $Notification_EligibleAssignment_Alert.notificationLevel + '",
         "notificationRecipients": [
         '
@@ -54,7 +54,7 @@ if($EntraRole){
         "id": "Notification_Admin_Admin_Eligibility",
         "notificationType": "Email",
         "recipientType": "Admin",
-        "isDefaultRecipientsEnabled": '+ $Notification_EligibleAssignment_Alert.isDefaultRecipientEnabled.ToLower() + ',
+    "isDefaultRecipientsEnabled": '+ ($Notification_EligibleAssignment_Alert.isDefaultRecipientEnabled).ToString().ToLower() + ',
         "notificationLevel": "'+ $Notification_EligibleAssignment_Alert.notificationLevel + '",
         "notificationRecipients": [
             '

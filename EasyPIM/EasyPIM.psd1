@@ -4,7 +4,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.9.2'
+ModuleVersion = '1.9.3'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -148,20 +148,23 @@ PrivateData = @{
 
         # ReleaseNotes of this module
     ReleaseNotes = @'
-    v1.9.2 Release Notes:
+    v1.9.3 Release Notes (2025-08-21):
 
-    🔧 Case-insensitive Entra role matching
-    - Resolve roles ignoring case by listing roleDefinitions and matching locally
-    - Removed unsupported Graph query params ($select/$top) to avoid BadRequest
+    ✅ Entra policy stability and correctness
+    - Fixed unifiedRoleManagementPolicyApprovalRule payloads to use Graph subject sets (@odata.type + userId/groupId).
+    - Normalized eligibility durations: convert PnY to day-based (PnD) and only include maximumDuration when expirationRequired=true.
+    - Improved InvalidPolicy diagnostics with per-rule isolation and PATCH body previews.
 
-    📦 Copy/csv robustness
-    - Copy-PIMEntraRolePolicy: unique temp files and guarded cleanup (no more missing file errors)
+    🔐 Authentication Context harmonization
+    - When Authentication Context is enabled for a role, MFA is always stripped from EndUser enablement to avoid MfaAndAcrsConflict.
+    - Still emit enablement rule to clear any prior MFA settings.
 
-    🔐 Auth Context consistency (follow-up to v1.9.1)
-    - Always remove MFA from EndUser enablement when Authentication Context is enabled (Set-/Import- for Entra and Azure)
+    🔔 Notifications
+    - Flattened template properties and fixed boolean handling (.ToString().ToLower()) to prevent crashes.
 
-    🧹 Analyzer clean
-    - PSAvoidGlobalVars and other rules pass across the affected scripts
+    � Quality and tests
+    - Resolved PSAvoidUsingEmptyCatchBlock and PSUseDeclaredVarsMoreThanAssignments findings.
+    - Removed trailing whitespace flagged by tests. Pester now passes cleanly (9052/9052).
 
     Docs: https://github.com/kayasax/EasyPIM/wiki
 '@

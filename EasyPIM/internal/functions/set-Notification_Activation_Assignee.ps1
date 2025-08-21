@@ -20,7 +20,7 @@ function set-Notification_Activation_Assignee($Notification_Activation_Assignee,
          {
          "notificationType": "Email",
          "recipientType": "Requestor",
-         "isDefaultRecipientsEnabled": '+ $Notification_Activation_Assignee.isDefaultRecipientEnabled.ToLower() + ',
+         "isDefaultRecipientsEnabled": '+ ($Notification_Activation_Assignee.isDefaultRecipientEnabled).ToString().ToLower() + ',
          "notificationLevel": "'+ $Notification_Activation_Assignee.notificationLevel + '",
          "notificationRecipients": [
          '
@@ -52,7 +52,7 @@ function set-Notification_Activation_Assignee($Notification_Activation_Assignee,
             "id": "Notification_Requestor_EndUser_Assignment",
             "notificationType": "Email",
             "recipientType": "Requestor",
-            "isDefaultRecipientsEnabled": '+ $Notification_Activation_Assignee.isDefaultRecipientEnabled.ToLower() + ',
+            "isDefaultRecipientsEnabled": '+ ($Notification_Activation_Assignee.isDefaultRecipientEnabled).ToString().ToLower() + ',
          "notificationLevel": "'+ $Notification_Activation_Assignee.notificationLevel + '",
             "notificationRecipients": ['
             #write-verbose "recipient : $($Notification_ActiveAssignment_Assignee.Recipients)"

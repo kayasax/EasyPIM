@@ -169,17 +169,28 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
         if ($entraRole) {
             # Build approvers array JSON safely (no trailing commas)
             $approverItems = ''
+            $approverGroups = 0; $approverUsers = 0
             if ($null -ne $Approvers -and ($Approvers | Measure-Object).Count -gt 0) {
                 $parts = @()
                 foreach ($a in $Approvers) {
                     $id = $a.Id
+                    if (-not $id) { $id = $a.id }
                     $name = $a.Name
+                    if (-not $name) { $name = $a.name }
+                    if (-not $name) { $name = $a.description }
+                    # Determine approver subject set type for Graph (@odata.type)
+                    $type = $a.Type; if (-not $type) { $type = $a.type }
+                    $odataType = '#microsoft.graph.singleUser'
+                    $idPropName = 'userId'
+                    if (-not [string]::IsNullOrWhiteSpace($type)) {
+                        $t = ($type.ToString()).Trim().ToLowerInvariant()
+                        if ($t -eq 'group' -or $t -eq 'groupmembers') { $odataType = '#microsoft.graph.groupMembers'; $idPropName = 'groupId' }
+                    }
+                    if ($odataType -eq '#microsoft.graph.groupMembers') { $approverGroups++ } else { $approverUsers++ }
                     $parts += @"
                                 {
-                                    "@odata.type": "#microsoft.graph.singleUser",
-                                    "isBackup": false,
-                                    "id": "$id",
-                                    "description": "$name"
+                                    "@odata.type": "$odataType",
+                                    "$idPropName": "$id"
                                 }
 "@
                 }
@@ -193,7 +204,7 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
         "target": {
             "caller": "EndUser",
             "operations": [
-                "all"
+                "All"
             ],
             "level": "Assignment",
             "inheritableSettings": [],
@@ -218,6 +229,7 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
             ]
         }
     }'
+            Write-Verbose ("[Policy][Entra][Approval] Built subject sets: Users={0}, Groups={1}" -f $approverUsers, $approverGroups)
         }
         return $rule
     }

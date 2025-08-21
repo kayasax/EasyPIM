@@ -20,7 +20,7 @@ set the notification sent to assignee when active assignment is created
                 {
                 "notificationType": "Email",
                 "recipientType": "Requestor",
-                "isDefaultRecipientsEnabled": '+ $Notification_ActiveAssignment_Assignee.isDefaultRecipientEnabled.ToLower() + ',
+                "isDefaultRecipientsEnabled": '+ ($Notification_ActiveAssignment_Assignee.isDefaultRecipientEnabled).ToString().ToLower() + ',
                 "notificationLevel": "'+ $Notification_ActiveAssignment_Assignee.notificationLevel + '",
                 "notificationRecipients": [
                 '
@@ -51,7 +51,7 @@ set the notification sent to assignee when active assignment is created
         "id": "Notification_Requestor_Admin_Assignment",
         "notificationType": "Email",
         "recipientType": "Requestor",
-        "isDefaultRecipientsEnabled": '+ $Notification_ActiveAssignment_Assignee.isDefaultRecipientEnabled.ToLower() + ',
+    "isDefaultRecipientsEnabled": '+ ($Notification_ActiveAssignment_Assignee.isDefaultRecipientEnabled).ToString().ToLower() + ',
         "notificationLevel": "'+ $Notification_ActiveAssignment_Assignee.notificationLevel + '",
         "notificationRecipients": ['
         write-verbose "recipient : $($Notification_ActiveAssignment_Assignee.Recipients)"

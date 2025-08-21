@@ -20,7 +20,7 @@ function  Set-Notification_ActiveAssignment_Approver($Notification_ActiveAssignm
         {
         "notificationType": "Email",
         "recipientType": "Approver",
-        "isDefaultRecipientsEnabled": '+ $Notification_ActiveAssignment_Approver.isDefaultRecipientEnabled.ToLower() + ',
+    "isDefaultRecipientsEnabled": '+ ($Notification_ActiveAssignment_Approver.isDefaultRecipientEnabled).ToString().ToLower() + ',
         "notificationLevel": "'+ $Notification_ActiveAssignment_Approver.notificationLevel + '",
         "notificationRecipients": [
         '
@@ -51,7 +51,7 @@ function  Set-Notification_ActiveAssignment_Approver($Notification_ActiveAssignm
             "id": "Notification_Approver_Admin_Assignment",
             "notificationType": "Email",
             "recipientType": "Approver",
-            "isDefaultRecipientsEnabled": '+ $Notification_ActiveAssignment_Approver.isDefaultRecipientEnabled.ToLower() + ',
+            "isDefaultRecipientsEnabled": '+ ($Notification_ActiveAssignment_Approver.isDefaultRecipientEnabled).ToString().ToLower() + ',
         "notificationLevel": "'+ $Notification_ActiveAssignment_Approver.notificationLevel + '",
         "notificationRecipients": ['
         #write-verbose "recipient : $($Notification_ActiveAssignment_Assignee.Recipients)"

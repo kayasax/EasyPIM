@@ -107,11 +107,11 @@ function Update-EntraRolePolicy  {
         $sanitized = $sanitized -replace ',\s*([}\]])', '$1'   # remove trailing comma before } or ]
         try {
           $ruleObjects += ($sanitized | ConvertFrom-Json -ErrorAction Stop)
-        } catch {
+    } catch {
           # Approval rule recovery: empty malformed primaryApprovers and retry
           if ($sanitized -match '"primaryApprovers"') {
             $coerced = [regex]::Replace($sanitized, '(?s)"primaryApprovers"\s*:\s*\[.*?\]', '"primaryApprovers": []')
-            try { $ruleObjects += ($coerced | ConvertFrom-Json -ErrorAction Stop); Write-Verbose "Recovered malformed approval rule by emptying primaryApprovers (fragment split)."; continue } catch { }
+      try { $ruleObjects += ($coerced | ConvertFrom-Json -ErrorAction Stop); Write-Verbose "Recovered malformed approval rule by emptying primaryApprovers (fragment split)."; continue } catch { Write-Verbose "Approval rule recovery (fragment split) failed: $($_.Exception.Message)" }
           }
           $preview = ($sanitized -replace '\s+', ' ')
           throw "Entra policy rules serialization failed: $($_.Exception.Message). Fragment preview: $preview"
@@ -132,6 +132,31 @@ function Update-EntraRolePolicy  {
     $approvalBlock = [regex]::Match($body, '(?s)\{\s*"@odata.type"\s*:\s*"#microsoft\.graph\.unifiedRoleManagementPolicyApprovalRule".*?\}').Value
     if ($approvalBlock) { Write-Verbose ("[Policy][Entra] Approval rule JSON length: {0}" -f $approvalBlock.Length) }
   } catch { Write-Verbose "[Policy][Entra] Approval rule diagnostics skipped: $($_.Exception.Message)" }
-  $response = invoke-graph -Endpoint $endpoint -Method "PATCH" -Body $body
+  try {
+    $response = invoke-graph -Endpoint $endpoint -Method "PATCH" -Body $body
+  } catch {
+    $msg = $_.Exception.Message
+    if ($msg -match 'InvalidPolicy') {
+      Write-Host "[Diagnostics] Full PATCH body for InvalidPolicy:" -ForegroundColor Yellow
+      Write-Host $body -ForegroundColor DarkYellow
+      # Attempt to isolate offending rule(s) by patching individually
+      try {
+        Write-Host "[Diagnostics] Attempting per-rule isolation..." -ForegroundColor Yellow
+        $i = 0
+    foreach ($r in $rulesArray) {
+          $i++
+          $single = @{ rules = @($r) } | ConvertTo-Json -Depth 10
+          try {
+            Write-Verbose "[Diagnostics] Testing rule #$i id=$($r.id) type=$($r.'@odata.type')"
+      $null = invoke-graph -Endpoint $endpoint -Method "PATCH" -Body $single -ErrorAction Stop
+            Write-Host ("[Diagnostics] Rule #{0} (id={1}) -> OK" -f $i, $r.id) -ForegroundColor Green
+          } catch {
+            Write-Host ("[Diagnostics] Rule #{0} (id={1}) -> FAILED: {2}" -f $i, $r.id, $_.Exception.Message) -ForegroundColor Red
+          }
+        }
+      } catch { Write-Verbose "[Diagnostics] Per-rule isolation failed: $($_.Exception.Message)" }
+    }
+    throw
+  }
   return $response
 }

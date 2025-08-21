@@ -31,10 +31,22 @@ function Set-EligibilityAssignmentFromCSV($MaximumEligibilityDuration, $AllowPer
         write-verbose "2 setting expire to : $expire"
     }
 
+  # Normalize year-based durations (e.g., P1Y) to day-based for Graph, if provided
+  $normMax = $max
+  if ($null -ne $normMax -and $normMax -match '^P\d+Y$') {
+    try {
+      $years = [int]($normMax.TrimStart('P').TrimEnd('Y'))
+    } catch { $years = 0 }
+    if ($years -lt 0) { $years = 0 }
+    $days = $years * 365
+    $normMax = "P${days}D"
+  }
+  $maxField = '"maximumDuration": "'+ $normMax + '",'
+  if ($expire -eq 'false') { $maxField = '' }
     $rule = '
         {
         "isExpirationRequired": '+ $expire + ',
-        "maximumDuration": "'+ $max + '",
+        '+ $maxField + '
         "id": "Expiration_Admin_Eligibility",
         "ruleType": "RoleManagementPolicyExpirationRule",
         "target": {
@@ -51,11 +63,13 @@ function Set-EligibilityAssignmentFromCSV($MaximumEligibilityDuration, $AllowPer
     '
 
     if($entraRole){
+      $entraMaxField = ''
+  if ($expire -eq 'true') { $entraMaxField = '"maximumDuration": "'+ $normMax + '",' }
       $rule='{
         "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyExpirationRule",
         "id": "Expiration_Admin_Eligibility",
         "isExpirationRequired": '+ $expire + ',
-        "maximumDuration": "'+ $max + '",
+        '+ $entraMaxField + '
         "target": {
             "caller": "Admin",
       "operations": [
