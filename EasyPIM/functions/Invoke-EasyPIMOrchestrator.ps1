@@ -144,6 +144,11 @@ function Invoke-EasyPIMOrchestrator {
 
         # 2.1. Process policy configurations if present
         $policyConfig = $null
+        # If user constrained Operations but did not explicitly set PolicyOperations, mirror the Operations filter for policies
+        if (-not $PSBoundParameters.ContainsKey('PolicyOperations') -and $PSBoundParameters.ContainsKey('Operations') -and ($Operations -notcontains 'All')) {
+            $PolicyOperations = $Operations
+        }
+
         if (-not $SkipPolicies -and (
             ($config.PSObject.Properties['AzureRolePolicies'] -and $config.AzureRolePolicies) -or
             ($config.PSObject.Properties['EntraRolePolicies'] -and $config.EntraRolePolicies) -or
@@ -155,7 +160,7 @@ function Invoke-EasyPIMOrchestrator {
             ($config.PSObject.Properties['GroupRoles'] -and $config.GroupRoles.PSObject.Properties['Policies'] -and $config.GroupRoles.Policies)
         )) {
             Write-Host "🔧 Processing policy configurations..." -ForegroundColor Cyan
-            $policyConfig = Initialize-EasyPIMPolicies -Config $config
+            $policyConfig = Initialize-EasyPIMPolicies -Config $config -PolicyOperations $PolicyOperations
 
             # Filter policy config based on selected policy operations
             if ($PolicyOperations -notcontains "All") {
@@ -179,7 +184,9 @@ function Invoke-EasyPIMOrchestrator {
                         }
                     }
                 }
-                # Merge filtered policy config with processed config
+                # Make filtered policy config the active policy config for policy processing
+                $policyConfig = $filteredPolicyConfig
+                # Merge filtered policy config with processed assignment config (for visibility)
                 foreach ($key in $filteredPolicyConfig.Keys) {
                     if ($processedConfig.PSObject.Properties[$key]) {
                         $processedConfig.PSObject.Properties[$key].Value = $filteredPolicyConfig[$key]
@@ -315,7 +322,7 @@ function Invoke-EasyPIMOrchestrator {
             $effectivePolicyMode = if ($WhatIfPreference) { "validate" } else { "delta" }
             # Convert hashtable to PSCustomObject for the policy function
             $policyConfigObject = [PSCustomObject]$policyConfig
-            $policyResults = New-EasyPIMPolicies -Config $policyConfigObject -TenantId $TenantId -SubscriptionId $SubscriptionId -PolicyMode $effectivePolicyMode -WhatIf:$WhatIfPreference
+            $policyResults = New-EPOEasyPIMPolicy -Config $policyConfigObject -TenantId $TenantId -SubscriptionId $SubscriptionId -PolicyMode $effectivePolicyMode -WhatIf:$WhatIfPreference
 
             if ($WhatIfPreference) {
                 Write-Host "✅ Policy validation completed - role policies are configured correctly for assignment compliance" -ForegroundColor Green
@@ -354,23 +361,23 @@ function Invoke-EasyPIMOrchestrator {
             $assignmentResults = New-EasyPIMAssignments -Config $processedConfig -TenantId $TenantId -SubscriptionId $SubscriptionId
 
             # After assignments, attempt deferred group policies if any
-            if (Get-Command -Name Invoke-DeferredGroupPolicies -ErrorAction SilentlyContinue) {
+            if (Get-Command -Name Invoke-EPODeferredGroupPolicies -ErrorAction SilentlyContinue) {
                 # Compute retry mode explicitly (avoid inline $(if ...) which could surface as a string literal in dynamic invocation scenarios)
                 $retryMode = if ($WhatIfPreference) { 'validate' } else { 'delta' }
-                $deferredSummary = Invoke-DeferredGroupPolicies -TenantId $TenantId -Mode $retryMode -WhatIf:$WhatIfPreference
+                $deferredSummary = Invoke-EPODeferredGroupPolicies -TenantId $TenantId -Mode $retryMode -WhatIf:$WhatIfPreference
                 if ($deferredSummary) {
                     $script:EasyPIM_DeferredGroupPoliciesSummary = $deferredSummary
                     Write-Host "┌──────────────── Deferred Group Policies Retry ────────────────" -ForegroundColor Cyan
                     Write-Host "│ Applied           : $($deferredSummary.Applied)" -ForegroundColor Cyan
-                    Write-Host "│ Still Not Eligible: $($deferredSummary.StillNotEligible)" -ForegroundColor Cyan
+                    Write-Host "│ Skipped           : $($deferredSummary.Skipped)" -ForegroundColor Cyan
                     Write-Host "│ Failed            : $($deferredSummary.Failed)" -ForegroundColor Cyan
                     Write-Host "└──────────────────────────────────────────────────────────────" -ForegroundColor Cyan
                     # Optionally attach to policyResults summary counts
                     if ($policyResults -and $policyResults.Summary) {
-                        $policyResults.Summary.TotalProcessed += ($deferredSummary.Applied + $deferredSummary.StillNotEligible + $deferredSummary.Failed)
+                        $policyResults.Summary.TotalProcessed += ($deferredSummary.Applied + $deferredSummary.Skipped + $deferredSummary.Failed)
                         $policyResults.Summary.Successful += $deferredSummary.Applied
                         $policyResults.Summary.Failed += $deferredSummary.Failed
-                        $policyResults.Summary.Skipped += $deferredSummary.StillNotEligible
+                        $policyResults.Summary.Skipped += $deferredSummary.Skipped
                     }
                 }
             }

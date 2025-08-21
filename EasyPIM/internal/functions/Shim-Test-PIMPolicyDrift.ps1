@@ -5,5 +5,5 @@
  isn't already available from the module import.
 #>
 if (-not (Get-Command -Name Test-PIMPolicyDrift -ErrorAction SilentlyContinue)) {
-    Write-Warning 'Test-PIMPolicyDrift not found. Import the EasyPIM module to load the public implementation.'
+#    Write-Warning 'Test-PIMPolicyDrift not found. Import the EasyPIM module to load the public implementation.'
 }

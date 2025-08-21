@@ -115,9 +115,9 @@ function Initialize-EasyPIMPolicies {
 }
 ```
 
-#### New-EasyPIMPolicies
+#### New-EPOEasyPIMPolicy (preferred; New-EPOEasyPIMPolicies remains for back-compat)
 ```powershell
-function New-EasyPIMPolicies {
+function New-EPOEasyPIMPolicy {
     param($Config, $TenantId, $SubscriptionId)
     # Apply Azure role policies
     # Apply Entra role policies
@@ -143,7 +143,7 @@ function ConvertTo-PolicyCSV {
    - Process templates
    - Resolve policy sources
    - Validate policy definitions
-3. New-EasyPIMPolicies (if not skipped)
+3. New-EPOEasyPIMPolicy (if not skipped)
    - Apply Azure role policies
    - Apply Entra role policies
    - Apply Group policies
@@ -178,7 +178,7 @@ function ConvertTo-PolicyCSV {
 
 ### Phase 2: Policy Processing
 1. ⏳ Implement ConvertTo-PolicyCSV function
-2. ⏳ Create New-EasyPIMPolicies function
+2. ⏳ Create New-EPOEasyPIMPolicy function
 3. ⏳ Integrate with existing Import-PIM*Policy functions
 4. ⏳ Add policy validation logic
 

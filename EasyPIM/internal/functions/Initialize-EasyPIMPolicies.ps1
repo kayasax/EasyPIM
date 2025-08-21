@@ -25,7 +25,11 @@ function Initialize-EasyPIMPolicies {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
-        [PSCustomObject]$Config
+        [PSCustomObject]$Config,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("All", "AzureRoles", "EntraRoles", "GroupRoles")]
+        [string[]]$PolicyOperations = @("All")
     )
 
     Write-Verbose "Starting Initialize-EasyPIMPolicies"
@@ -43,9 +47,14 @@ function Initialize-EasyPIMPolicies {
             Write-Verbose "Found $($policyTemplates.Keys.Count) policy templates"
         }
 
-        # Process Azure Role Policies - DEPRECATED: Use AzureRoles.Policies format instead
+    # Helper: check whether a given domain should be processed based on PolicyOperations filter
+    $processAzure  = ($PolicyOperations -contains 'All' -or $PolicyOperations -contains 'AzureRoles')
+    $processEntra  = ($PolicyOperations -contains 'All' -or $PolicyOperations -contains 'EntraRoles')
+    $processGroups = ($PolicyOperations -contains 'All' -or $PolicyOperations -contains 'GroupRoles')
+
+    # Process Azure Role Policies - DEPRECATED: Use AzureRoles.Policies format instead
         # Keeping minimal support for backward compatibility but recommend migration
-        if ($Config.PSObject.Properties['AzureRolePolicies'] -and $Config.AzureRolePolicies) {
+    if ($processAzure -and $Config.PSObject.Properties['AzureRolePolicies'] -and $Config.AzureRolePolicies) {
             Write-Warning "AzureRolePolicies format is deprecated. Please use AzureRoles.Policies.{RoleName} format instead."
             Write-Verbose "Processing deprecated AzureRolePolicies format"
             $processedConfig.AzureRolePolicies = @()
@@ -60,7 +69,7 @@ function Initialize-EasyPIMPolicies {
 
         # Process Entra Role Policies - DEPRECATED: Use EntraRoles.Policies format instead
         # Keeping minimal support for backward compatibility but recommend migration
-        if ($Config.PSObject.Properties['EntraRolePolicies'] -and $Config.EntraRolePolicies) {
+    if ($processEntra -and $Config.PSObject.Properties['EntraRolePolicies'] -and $Config.EntraRolePolicies) {
             Write-Warning "EntraRolePolicies format is deprecated. Please use EntraRoles.Policies.{RoleName} format instead."
             Write-Verbose "Processing deprecated EntraRolePolicies format"
             $processedConfig.EntraRolePolicies = @()
@@ -75,7 +84,7 @@ function Initialize-EasyPIMPolicies {
 
         # Process Group Policies - DEPRECATED: Use GroupRoles.Policies format instead
         # Keeping minimal support for backward compatibility but recommend migration
-        if ($Config.PSObject.Properties['GroupPolicies'] -and $Config.GroupPolicies) {
+    if ($processGroups -and $Config.PSObject.Properties['GroupPolicies'] -and $Config.GroupPolicies) {
             Write-Warning "GroupPolicies format is deprecated. Please use GroupRoles.Policies.{GroupName} format instead."
             Write-Verbose "Processing deprecated GroupPolicies format"
             $processedConfig.GroupPolicies = @()
@@ -95,7 +104,7 @@ function Initialize-EasyPIMPolicies {
             Write-Verbose "Processing deprecated consolidated Policies section"
 
             # Process Azure Role Policies from Policies section
-            if ($Config.Policies.PSObject.Properties['AzureRoles'] -and $Config.Policies.AzureRoles) {
+            if ($processAzure -and $Config.Policies.PSObject.Properties['AzureRoles'] -and $Config.Policies.AzureRoles) {
                 if (-not $processedConfig.ContainsKey('AzureRolePolicies')) {
                     $processedConfig.AzureRolePolicies = @()
                 }
@@ -106,7 +115,7 @@ function Initialize-EasyPIMPolicies {
             }
 
             # Process Entra Role Policies from Policies section
-            if ($Config.Policies.PSObject.Properties['EntraRoles'] -and $Config.Policies.EntraRoles) {
+            if ($processEntra -and $Config.Policies.PSObject.Properties['EntraRoles'] -and $Config.Policies.EntraRoles) {
                 if (-not $processedConfig.ContainsKey('EntraRolePolicies')) {
                     $processedConfig.EntraRolePolicies = @()
                 }
@@ -117,7 +126,7 @@ function Initialize-EasyPIMPolicies {
             }
 
             # Process Group Policies from Policies section
-            if ($Config.Policies.PSObject.Properties['Groups'] -and $Config.Policies.Groups) {
+            if ($processGroups -and $Config.Policies.PSObject.Properties['Groups'] -and $Config.Policies.Groups) {
                 if (-not $processedConfig.ContainsKey('GroupPolicies')) {
                     $processedConfig.GroupPolicies = @()
                 }
@@ -129,7 +138,7 @@ function Initialize-EasyPIMPolicies {
         }
 
         # Process policies in the newer EntraRoles.Policies, AzureRoles.Policies, GroupRoles.Policies format
-        if ($Config.PSObject.Properties['EntraRoles'] -and $Config.EntraRoles.PSObject.Properties['Policies'] -and $Config.EntraRoles.Policies) {
+    if ($processEntra -and $Config.PSObject.Properties['EntraRoles'] -and $Config.EntraRoles.PSObject.Properties['Policies'] -and $Config.EntraRoles.Policies) {
             Write-Verbose "Processing EntraRoles.Policies section"
             $processedConfig.EntraRolePolicies = @()
 
@@ -160,7 +169,7 @@ function Initialize-EasyPIMPolicies {
             Write-Verbose "Processed $($processedConfig.EntraRolePolicies.Count) Entra Role policies from EntraRoles.Policies"
         }
 
-        if ($Config.PSObject.Properties['AzureRoles'] -and $Config.AzureRoles.PSObject.Properties['Policies'] -and $Config.AzureRoles.Policies) {
+    if ($processAzure -and $Config.PSObject.Properties['AzureRoles'] -and $Config.AzureRoles.PSObject.Properties['Policies'] -and $Config.AzureRoles.Policies) {
             Write-Verbose "Processing AzureRoles.Policies section"
             $processedConfig.AzureRolePolicies = @()
 
@@ -201,7 +210,7 @@ function Initialize-EasyPIMPolicies {
             Write-Verbose "Processed $($processedConfig.AzureRolePolicies.Count) Azure Role policies from AzureRoles.Policies"
         }
 
-        if ($Config.PSObject.Properties['GroupRoles'] -and $Config.GroupRoles.PSObject.Properties['Policies'] -and $Config.GroupRoles.Policies) {
+    if ($processGroups -and $Config.PSObject.Properties['GroupRoles'] -and $Config.GroupRoles.PSObject.Properties['Policies'] -and $Config.GroupRoles.Policies) {
             Write-Verbose "Processing GroupRoles.Policies section"
             $processedConfig.GroupPolicies = @()
 

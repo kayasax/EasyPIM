@@ -167,6 +167,25 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
 #>
 
         if ($entraRole) {
+            # Build approvers array JSON safely (no trailing commas)
+            $approverItems = ''
+            if ($null -ne $Approvers -and ($Approvers | Measure-Object).Count -gt 0) {
+                $parts = @()
+                foreach ($a in $Approvers) {
+                    $id = $a.Id
+                    $name = $a.Name
+                    $parts += @"
+                                {
+                                    "@odata.type": "#microsoft.graph.singleUser",
+                                    "isBackup": false,
+                                    "id": "$id",
+                                    "description": "$name"
+                                }
+"@
+                }
+                $approverItems = ($parts -join ',')
+            }
+
             $rule = '
     {
         "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyApprovalRule",
@@ -181,9 +200,7 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
             "enforcedSettings": []
         },
         "setting": {
-            "isApprovalRequired": '
-            $rule += $req
-            $rule += ',
+            "isApprovalRequired": ' + $req + ',
             "isApprovalRequiredForExtension": false,
             "isRequestorJustificationRequired": true,
             "approvalMode": "SingleStage",
@@ -193,41 +210,14 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
                     "isApproverJustificationRequired": true,
                     "escalationTimeInMinutes": 0,
                     "isEscalationEnabled": false,
-                    "primaryApprovers": ['
-            if ($null -ne $Approvers) {
-                #at least one approver required if approval is enable
-
-                $cpt = 0
-                $Approvers | ForEach-Object {
-                    #write-host $_
-                    $id = $_.Id
-                    $name = $_.Name
-                    ##$type = $_.Type
-
-                    if ($cpt -gt 0) {
-                        $rule += ","
-                    }
-                    $rule += '
-                                {
-                                    "@odata.type": "#microsoft.graph.singleUser",
-                                    "isBackup": false,
-                                    "id": "'+ $id + '",
-                                    "description": "'+ $name + '",
-                                }
-                                '
-                    $cpt++
-                }
-
-                $rule += '
-
-
+                    "primaryApprovers": [
+                        ' + $approverItems + '
                     ],
                     "escalationApprovers": []
                 }
             ]
         }
     }'
-            }
         }
         return $rule
     }
