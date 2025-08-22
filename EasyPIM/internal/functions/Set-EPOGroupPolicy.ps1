@@ -12,7 +12,7 @@ function Set-EPOGroupPolicy {
           - Flattens nested Notifications from templates into Notification_* parameters
           - Normalizes Notification_* objects to true Hashtables the cmdlet accepts
           - Normalizes requirements to string[] (supports comma-separated strings)
-          - Maps legacy/alias fields (EnablementRules → ActivationRequirement, Duration → ActivationDuration)
+          - Maps legacy/alias fields (EnablementRules -> ActivationRequirement, Duration -> ActivationDuration)
           - Suppresses AuthenticationContext_* for Groups (to avoid Graph InvalidPolicy)
         No behavior change is intended beyond shaping data for a reliable call to Set-PIMGroupPolicy.
     #>
@@ -93,7 +93,7 @@ function Set-EPOGroupPolicy {
     } catch { Write-Verbose ("[Policy][Group] Notification flattening skipped: {0}" -f $_.Exception.Message) }
 
     # 4b) Normalize each flattened Notification_* object into a true Hashtable
-    #     This avoids parameter binder errors (PSCustomObject → Hashtable) and standardizes keys/types:
+    #     This avoids parameter binder errors (PSCustomObject -> Hashtable) and standardizes keys/types:
     #       - isDefaultRecipientEnabled: [bool]
     #       - notificationLevel: string ('All'|'Critical')
     #       - Recipients: string[] (emails)

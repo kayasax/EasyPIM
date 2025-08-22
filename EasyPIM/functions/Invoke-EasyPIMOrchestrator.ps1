@@ -398,7 +398,14 @@ function Invoke-EasyPIMOrchestrator {
                 Write-Host "✅ Policy validation completed - role policies are configured correctly for assignment compliance" -ForegroundColor Green
             } else {
                 $failed = 0; $succeeded = 0
-                try { if ($policyResults -and $policyResults.Summary) { $failed = [int]$policyResults.Summary.Failed; $succeeded = [int]$policyResults.Summary.Successful } } catch {}
+                try {
+                    if ($policyResults -and $policyResults.Summary) {
+                        $failed = [int]$policyResults.Summary.Failed
+                        $succeeded = [int]$policyResults.Summary.Successful
+                    }
+                } catch {
+                    Write-Verbose ("[Orchestrator] Unable to read policy summary counts: {0}" -f $_.Exception.Message)
+                }
                 if ($failed -gt 0) {
                     Write-Host "⚠️ Policy configuration completed with errors (Successful: $succeeded, Failed: $failed). Proceeding with assignments." -ForegroundColor Yellow
                 } else {
