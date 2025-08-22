@@ -154,7 +154,12 @@ PrivateData = @{
 
         # ReleaseNotes of this module
     ReleaseNotes = @'
-    v1.9.2 Release Notes:
+    v1.10.0 Release Notes:
+
+    🌐 Multi-cloud Azure environment support (Chase Dafnis)
+    - Enhanced Get-PIMAzureEnvironmentEndpoint for multi-cloud environments (Commercial, US Government, China, Germany)
+    - Added comprehensive endpoint discovery and validation for all Azure cloud environments
+    - Improved custom dependency management with Test-EasyPIMDependencies function
 
     🔧 Case-insensitive Entra role matching
     - Resolve roles ignoring case by listing roleDefinitions and matching locally
@@ -169,6 +174,7 @@ PrivateData = @{
     🧹 Analyzer clean
     - PSAvoidGlobalVars and other rules pass across the affected scripts
 
+    Contributors: Loïc MICHEL (original author), Chase Dafnis (multi-cloud / Azure environment support)
     Docs: https://github.com/kayasax/EasyPIM/wiki
 '@
 
