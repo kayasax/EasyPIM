@@ -189,9 +189,11 @@ function Set-PIMGroupPolicy {
             if ($PSBoundParameters.Keys.Contains('ActiveAssignmentRequirement')) {
                 $rules += Set-ActiveAssignmentRequirement $ActiveAssignmentRequirement -EntraRole
             }
-            # Authentication Context is not supported for Group PIM policies; ignore if provided
-            if ($PSBoundParameters.Keys.Contains('AuthenticationContext_Enabled') -or $PSBoundParameters.Keys.Contains('AuthenticationContext_Value')) {
-                Write-Verbose "[GroupPolicy] Ignoring AuthenticationContext_* parameters for group '$_' (not supported)"
+            if ($PSBoundParameters.Keys.Contains('AuthenticationContext_Enabled')) {
+                if (!($PSBoundParameters.Keys.Contains('AuthenticationContext_Value'))) {
+                    $AuthenticationContext_Value = $null
+                }
+                $rules += Set-AuthenticationContext $AuthenticationContext_Enabled $AuthenticationContext_Value -entraRole
             }
 
             # Approval and approvers
