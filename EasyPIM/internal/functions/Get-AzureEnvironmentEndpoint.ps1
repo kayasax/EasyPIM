@@ -165,7 +165,7 @@ function Get-MicrosoftGraphEndpoint {
 function Get-CustomGraphEndpoint {
     <#
     .SYNOPSIS
-        Gets Microsoft Graph endpoint from custom configuration sources
+        Gets Microsoft Graph endpoint from environment variable configuration
     #>
     [CmdletBinding()]
     param(
@@ -173,27 +173,12 @@ function Get-CustomGraphEndpoint {
         [string]$EnvironmentName
     )
     
-    # Check environment variable first
+    # Check environment variable
     $envVarName = "EASYPIM_GRAPH_ENDPOINT_$($EnvironmentName.ToUpper() -replace '[^A-Z0-9]', '_')"
     $envValue = [System.Environment]::GetEnvironmentVariable($envVarName)
     if ($envValue) {
         Write-Verbose "Found Graph endpoint in environment variable: $envVarName"
         return $envValue.TrimEnd('/')
-    }
-    
-    # Check configuration file
-    $configPath = Join-Path $PSScriptRoot "..\configurations\custom-environments.json"
-    if (Test-Path $configPath) {
-        try {
-            $config = Get-Content $configPath -Raw | ConvertFrom-Json
-            if ($config.environments.$EnvironmentName.graphEndpoint) {
-                Write-Verbose "Found Graph endpoint in configuration file"
-                return $config.environments.$EnvironmentName.graphEndpoint.TrimEnd('/')
-            }
-        }
-        catch {
-            Write-Verbose "Failed to read custom environment config: $_"
-        }
     }
     
     return $null
