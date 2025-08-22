@@ -132,11 +132,9 @@ try {
         # Test endpoint discovery if connected
         if ($connectionInfo.AzConnected) {
             try {
-                # Import the endpoint function
-                . "$PSScriptRoot\..\..\functions\Get-AzureEnvironmentEndpoint.ps1"
-                
-                $armEndpoint = Get-AzureEnvironmentEndpoint -EndpointType 'ARM' -ErrorAction SilentlyContinue
-                $graphEndpoint = Get-AzureEnvironmentEndpoint -EndpointType 'MicrosoftGraph' -ErrorAction SilentlyContinue
+                # The endpoint function is already loaded by the module
+                $armEndpoint = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM' -ErrorAction SilentlyContinue
+                $graphEndpoint = Get-PIMAzureEnvironmentEndpoint -EndpointType 'MicrosoftGraph' -ErrorAction SilentlyContinue
                 
                 Write-Verbose "Endpoint configuration:"
                 Write-Verbose "  ARM: $armEndpoint"
