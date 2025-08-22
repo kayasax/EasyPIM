@@ -67,7 +67,7 @@ set the notification sent to assignee when active assignment is created
         "target": {
             "caller": "Admin",
             "operations": [
-                "all"
+                "All"
             ],
             "level": "Assignment",
             "inheritableSettings": [],

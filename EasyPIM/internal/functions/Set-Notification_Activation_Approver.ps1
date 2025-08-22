@@ -59,7 +59,7 @@ function Set-Notification_Activation_Approver ($Notification_Activation_Approver
             "target": {
                 "caller": "EndUser",
                 "operations": [
-                    "all"
+                    "All"
                 ],
                 "level": "Assignment",
                 "inheritableSettings": [],

@@ -69,7 +69,7 @@ function Set-Notification_ActiveAssignment_Alert($Notification_ActiveAssignment_
             "target": {
                 "caller": "Admin",
                 "operations": [
-                    "all"
+                    "All"
                 ],
                 "level": "Assignment",
                 "inheritableSettings": [],

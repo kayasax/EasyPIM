@@ -397,7 +397,13 @@ function Invoke-EasyPIMOrchestrator {
             if ($WhatIfPreference) {
                 Write-Host "✅ Policy validation completed - role policies are configured correctly for assignment compliance" -ForegroundColor Green
             } else {
-                Write-Host "✅ Policy configuration completed - proceeding with assignments using updated role policies" -ForegroundColor Green
+                $failed = 0; $succeeded = 0
+                try { if ($policyResults -and $policyResults.Summary) { $failed = [int]$policyResults.Summary.Failed; $succeeded = [int]$policyResults.Summary.Successful } } catch {}
+                if ($failed -gt 0) {
+                    Write-Host "⚠️ Policy configuration completed with errors (Successful: $succeeded, Failed: $failed). Proceeding with assignments." -ForegroundColor Yellow
+                } else {
+                    Write-Host "✅ Policy configuration completed - proceeding with assignments using updated role policies" -ForegroundColor Green
+                }
             }
         } elseif ($SkipPolicies) {
             Write-Warning "⚠️ Policy processing skipped - assignments may not comply with intended role policies"
