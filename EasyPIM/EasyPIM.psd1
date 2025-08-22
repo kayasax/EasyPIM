@@ -154,6 +154,13 @@ PrivateData = @{
 
         # ReleaseNotes of this module
     ReleaseNotes = @'
+    v1.10.0 Release Notes:
+
+    🌐 Multi-cloud Azure environment support (Chase Dafnis)
+    - Enhanced Get-PIMAzureEnvironmentEndpoint for multi-cloud environments (Commercial, US Government, China, Germany)
+    - Added comprehensive endpoint discovery and validation for all Azure cloud environments
+    - Improved custom dependency management with Test-EasyPIMDependencies function
+
     v1.9.4 Release Notes (2025-08-22):
 
     ✅ Group policy PATCH stability
@@ -180,10 +187,11 @@ PrivateData = @{
     🔔 Notifications
     - Flattened template properties and fixed boolean handling (.ToString().ToLower()) to prevent crashes.
 
-    � Quality and tests
+    Quality and tests
     - Resolved PSAvoidUsingEmptyCatchBlock and PSUseDeclaredVarsMoreThanAssignments findings.
     - Removed trailing whitespace flagged by tests. Pester now passes cleanly (9052/9052).
 
+    Contributors: Loïc MICHEL (original author), Chase Dafnis (multi-cloud / Azure environment support)
     Docs: https://github.com/kayasax/EasyPIM/wiki
 '@
 
