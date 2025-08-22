@@ -157,7 +157,7 @@ function Get-MicrosoftGraphEndpoint {
     # Method 2: Map known Azure environments to Graph environments
     $graphEnvironmentMapping = @{
         'AzureCloud'        = 'Global'
-        'AzureUSGovernment' = 'USGov'  
+        'AzureUSGovernment' = 'USGov'
         'AzureChinaCloud'   = 'China'
         'AzureGermanCloud'  = 'Germany'
     }
@@ -236,8 +236,8 @@ function Get-InferredMicrosoftGraphEndpoint {
     # Check if there are any custom Graph environments registered
     try {
         $allGraphEnvironments = Get-MgEnvironment -ErrorAction SilentlyContinue
-        $customEnv = $allGraphEnvironments | Where-Object { 
-            $_.Name -eq $EnvironmentName -or 
+        $customEnv = $allGraphEnvironments | Where-Object {
+            $_.Name -eq $EnvironmentName -or
             ($_.AzureADEndpoint -and $_.AzureADEndpoint.TrimEnd('/') -eq $Authority.TrimEnd('/'))
         }
         

@@ -12,6 +12,23 @@
     $Exclude = ""  # No comma on last parameter
 )
 
+<#
+POWERSHELL CROSS-VERSION COMPATIBILITY NOTES:
+==============================================
+This test suite is designed to work with both PowerShell 5.1 and 7.x environments.
+
+PowerShell 5.1 (Pester v3/v4):
+- Core module functionality tests: ✅ Fully supported
+- Help documentation tests: ⚠️  Skipped (requires Pester v5+ syntax)
+- PSScriptAnalyzer tests: ⚠️  Conditional (skipped if module not available)
+
+PowerShell 7.x (Pester v5+):
+- All tests: ✅ Fully supported
+
+The EasyPIM module itself works identically in both PowerShell versions.
+Test skipping ensures compatibility without breaking functionality validation.
+#>
+
 Write-Host "Starting Tests"
 Write-Host "Importing Module"
 
@@ -27,6 +44,16 @@ $pesterModule = Get-Module -Name Pester -ListAvailable | Sort-Object -Property V
 $pesterVersion = $pesterModule.Version
 
 Write-Host "Detected Pester version: $pesterVersion"
+
+# Compatibility notification
+if ($pesterVersion.Major -lt 5) {
+    Write-Host "Using Pester v3/v4 execution mode" -ForegroundColor Yellow
+    Write-Host "NOTE: Some advanced tests (Help documentation) will be skipped for compatibility" -ForegroundColor Yellow
+    Write-Host "Core module functionality testing is fully supported" -ForegroundColor Green
+} else {
+    Write-Host "Using Pester v5+ execution mode" -ForegroundColor Green
+    Write-Host "All tests supported" -ForegroundColor Green
+}
 
 # Create test results directory
 Write-Host "Creating test result folder"
@@ -88,7 +115,18 @@ if ($pesterVersion.Major -ge 5) {
             $testResultPath = Join-Path "$PSScriptRoot\..\TestResults" "TEST-$($file.BaseName).xml"
 
             # Use appropriate parameters for v3/v4
-            $results = Invoke-Pester -Script $file.FullName -OutputFile $testResultPath -PassThru
+            if ($PesterVersion -ge [version]'5.0') {
+                # Pester v5+ syntax
+                $config = New-PesterConfiguration
+                $config.Run.Path = $file.FullName
+                $config.TestResult.Enabled = $true
+                $config.TestResult.OutputPath = $testResultPath
+                $config.TestResult.OutputFormat = 'NUnitXml'
+                $results = Invoke-Pester -Configuration $config
+            } else {
+                # Pester v3/v4 syntax
+                $results = Invoke-Pester -Script $file.FullName -OutputFile $testResultPath -OutputFormat 'NUnitXml' -PassThru
+            }
 
             # Process results
             $totalRun += $results.TotalCount
@@ -112,19 +150,36 @@ if ($TestFunctions) {
         if ($file.Name -like $Exclude) { continue }
 
         Write-Host "  Executing $($file.Name)"
-        $config.TestResult.OutputPath = Join-Path "$PSScriptRoot\..\TestResults" "TEST-$($file.BaseName).xml"
-        $config.Run.Path = $file.FullName
-        $config.Run.PassThru = $true
-        $results = Invoke-Pester -Configuration $config
-        foreach ($result in $results) {
-            $totalRun += $result.TotalCount
-            $totalFailed += $result.FailedCount
-            $result.Tests | Where-Object Result -ne 'Passed' | ForEach-Object {
+        $testResultPath = Join-Path "$PSScriptRoot\..\TestResults" "TEST-$($file.BaseName).xml"
+        
+        if ($PesterVersion -ge [version]'5.0') {
+            # Pester v5+ syntax
+            $config.TestResult.OutputPath = $testResultPath
+            $config.Run.Path = $file.FullName
+            $config.Run.PassThru = $true
+            $results = Invoke-Pester -Configuration $config
+            foreach ($result in $results) {
+                $totalRun += $result.TotalCount
+                $totalFailed += $result.FailedCount
+                $result.Tests | Where-Object Result -ne 'Passed' | ForEach-Object {
+                    $testresults += [pscustomobject]@{
+                        Block    = $_.Block
+                        Name     = "It $($_.Name)"
+                        Result   = $_.Result
+                        Message  = $_.ErrorRecord.DisplayErrorMessage
+                    }
+                }
+            }
+        } else {
+            # Pester v3/v4 syntax
+            $results = Invoke-Pester -Script $file.FullName -OutputFile $testResultPath -OutputFormat 'NUnitXml' -PassThru
+            $totalRun += $results.TotalCount
+            $totalFailed += $results.FailedCount
+            $results.TestResult | Where-Object Result -ne 'Passed' | ForEach-Object {
                 $testresults += [pscustomobject]@{
-                    Block    = $_.Block
-                    Name     = "It $($_.Name)"
-                    Result   = $_.Result
-                    Message  = $_.ErrorRecord.DisplayErrorMessage
+                    Name    = "It $($_.Name)"
+                    Result  = $_.Result
+                    Message = $_.FailureMessage
                 }
             }
         }

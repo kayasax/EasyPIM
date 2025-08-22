@@ -77,180 +77,174 @@ function Test-PIMEndpointDiscovery {
         Recommendations = @()
     }
     
-    try {
-        # Check Azure context
-        Write-Verbose "Checking Azure PowerShell context"
-        $azContext = Get-AzContext -ErrorAction SilentlyContinue
+    # Main execution block with simple error handling
+    Write-Verbose "Checking Azure PowerShell context"
+    $azContext = Get-AzContext -ErrorAction SilentlyContinue
+    
+    if ($azContext) {
+        $result.AzureConnected = $true
+        $result.AzureEnvironment = $azContext.Environment.Name
         
-        if ($azContext) {
-            $result.AzureConnected = $true
-            $result.AzureEnvironment = $azContext.Environment.Name
-            
-            if ($ShowConfiguration) {
-                Write-Host "Azure Configuration:" -ForegroundColor Green
-                Write-Host "  Environment: $($azContext.Environment.Name)" -ForegroundColor Gray
-                Write-Host "  Account: $($azContext.Account.Id)" -ForegroundColor Gray
-                Write-Host "  Tenant: $($azContext.Tenant.Id)" -ForegroundColor Gray
-                Write-Host "  Subscription: $($azContext.Subscription.Name) ($($azContext.Subscription.Id))" -ForegroundColor Gray
-                Write-Host ""
-            }
-            
-            # Test ARM endpoint discovery
-            if ($EndpointType -in @('ARM', 'All')) {
-                Write-Verbose "Testing ARM endpoint discovery"
-                try {
-                    $result.ARMEndpoint = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM'
-                    Write-Host "✓ ARM Endpoint: $($result.ARMEndpoint)" -ForegroundColor Green
-                    
-                    # Validate ARM endpoint format
-                    if ($result.ARMEndpoint -match '^https://management\.' -and $result.ARMEndpoint.EndsWith('/')) {
-                        Write-Verbose "ARM endpoint format validation passed"
-                    } else {
-                        $result.Warnings += "ARM endpoint format may be invalid: $($result.ARMEndpoint)"
-                        Write-Warning "ARM endpoint format unexpected: $($result.ARMEndpoint)"
-                    }
-                    
-                } catch {
-                    $result.Warnings += "ARM endpoint discovery failed: $_"
-                    Write-Error "Failed to discover ARM endpoint: $_"
-                }
-            }
-            
-        } else {
-            $result.Warnings += "No Azure PowerShell context found"
-            $result.Recommendations += "Connect to Azure: Connect-AzAccount"
-            Write-Warning "No Azure context found. Connect with: Connect-AzAccount"
+        if ($ShowConfiguration) {
+            Write-Host "Azure Configuration:" -ForegroundColor Green
+            Write-Host "  Environment: $($azContext.Environment.Name)" -ForegroundColor Gray
+            Write-Host "  Account: $($azContext.Account.Id)" -ForegroundColor Gray
+            Write-Host "  Tenant: $($azContext.Tenant.Id)" -ForegroundColor Gray
+            Write-Host "  Subscription: $($azContext.Subscription.Name) ($($azContext.Subscription.Id))" -ForegroundColor Gray
+            Write-Host ""
         }
         
-        # Check Microsoft Graph context
-        Write-Verbose "Checking Microsoft Graph context"
-        try {
-            $mgContext = Get-MgContext -ErrorAction SilentlyContinue
-            
-            if ($mgContext) {
-                $result.GraphConnected = $true
-                $result.GraphEnvironment = $mgContext.Environment
-                
-                if ($ShowConfiguration) {
-                    Write-Host "Microsoft Graph Configuration:" -ForegroundColor Green
-                    Write-Host "  Environment: $($mgContext.Environment)" -ForegroundColor Gray
-                    Write-Host "  App: $($mgContext.AppName)" -ForegroundColor Gray
-                    Write-Host "  Scopes: $($mgContext.Scopes -join ', ')" -ForegroundColor Gray
-                    Write-Host ""
-                }
-            } else {
-                $result.Recommendations += "Connect to Microsoft Graph: Connect-MgGraph"
-                Write-Verbose "No Microsoft Graph context found"
-            }
-            
-        } catch {
-            $result.Warnings += "Microsoft Graph context check failed: $_"
-            Write-Verbose "Microsoft Graph context check failed: $_"
-        }
-        
-        # Test Microsoft Graph endpoint discovery
-        if ($EndpointType -in @('MicrosoftGraph', 'All')) {
-            Write-Verbose "Testing Microsoft Graph endpoint discovery"
-            try {
-                if ($result.AzureConnected) {
-                    $result.GraphEndpoint = Get-PIMAzureEnvironmentEndpoint -EndpointType 'MicrosoftGraph'
-                    Write-Host "✓ Microsoft Graph Endpoint: $($result.GraphEndpoint)" -ForegroundColor Green
-                    
-                    # Validate Graph endpoint format
-                    if ($result.GraphEndpoint -match '^https://.*graph') {
-                        Write-Verbose "Microsoft Graph endpoint format validation passed"
-                    } else {
-                        $result.Warnings += "Microsoft Graph endpoint format may be invalid: $($result.GraphEndpoint)"
-                        Write-Warning "Microsoft Graph endpoint format unexpected: $($result.GraphEndpoint)"
-                    }
-                    
-                } else {
-                    $result.Warnings += "Cannot test Microsoft Graph endpoint discovery without Azure context"
-                    Write-Warning "Microsoft Graph endpoint discovery requires Azure context"
-                }
-                
-            } catch {
-                $result.Warnings += "Microsoft Graph endpoint discovery failed: $_"
-                Write-Error "Failed to discover Microsoft Graph endpoint: $_"
-            }
-        }
-        
-        # Test connectivity if requested
-        if ($TestConnection -and ($result.ARMEndpoint -or $result.GraphEndpoint)) {
-            Write-Verbose "Testing endpoint connectivity"
-            Write-Host "Testing endpoint connectivity..." -ForegroundColor Yellow
+        # Test ARM endpoint discovery when Azure is connected
+        if ($EndpointType -in @('ARM', 'All')) {
+            Write-Verbose "Testing ARM endpoint discovery"
+            $result.ARMEndpoint = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM' -ErrorAction SilentlyContinue
             
             if ($result.ARMEndpoint) {
-                try {
-                    $armTest = Test-NetConnection -ComputerName ([System.Uri]$result.ARMEndpoint).Host -Port 443 -WarningAction SilentlyContinue
-                    $result.ConnectionTestResults['ARM'] = $armTest.TcpTestSucceeded
-                    
-                    if ($armTest.TcpTestSucceeded) {
-                        Write-Host "✓ ARM endpoint connectivity: Success" -ForegroundColor Green
-                    } else {
-                        Write-Host "❌ ARM endpoint connectivity: Failed" -ForegroundColor Red
-                    }
-                    
-                } catch {
-                    $result.ConnectionTestResults['ARM'] = $false
-                    $result.Warnings += "ARM connectivity test failed: $_"
-                    Write-Warning "ARM connectivity test failed: $_"
+                Write-Host "✓ ARM Endpoint: $($result.ARMEndpoint)" -ForegroundColor Green
+                
+                # Validate ARM endpoint format
+                $armFormatValid = ($result.ARMEndpoint -match '^https://management\.' -and $result.ARMEndpoint.EndsWith('/'))
+                if ($armFormatValid) {
+                    Write-Verbose "ARM endpoint format validation passed"
+                }
+                else {
+                    $result.Warnings += "ARM endpoint format may be invalid: $($result.ARMEndpoint)"
+                    Write-Warning "ARM endpoint format unexpected: $($result.ARMEndpoint)"
                 }
             }
+            else {
+                $result.Warnings += "ARM endpoint discovery failed"
+                Write-Error "Failed to discover ARM endpoint"
+            }
+        }
+    }
+    else {
+        $result.Warnings += "No Azure PowerShell context found"
+        $result.Recommendations += "Connect to Azure: Connect-AzAccount"
+        Write-Warning "No Azure context found. Connect with: Connect-AzAccount"
+    }
+    
+    # Check Microsoft Graph context
+    Write-Verbose "Checking Microsoft Graph context"
+    $mgContext = Get-MgContext -ErrorAction SilentlyContinue
+    
+    if ($mgContext) {
+        $result.GraphConnected = $true
+        $result.GraphEnvironment = $mgContext.Environment
+        
+        if ($ShowConfiguration) {
+            Write-Host "Microsoft Graph Configuration:" -ForegroundColor Green
+            Write-Host "  Environment: $($mgContext.Environment)" -ForegroundColor Gray
+            Write-Host "  App: $($mgContext.AppName)" -ForegroundColor Gray
+            Write-Host "  Scopes: $($mgContext.Scopes -join ', ')" -ForegroundColor Gray
+            Write-Host ""
+        }
+    }
+    else {
+        $result.Recommendations += "Connect to Microsoft Graph: Connect-MgGraph"
+        Write-Verbose "No Microsoft Graph context found"
+    }
+    
+    # Test Microsoft Graph endpoint discovery
+    if ($EndpointType -in @('MicrosoftGraph', 'All')) {
+        Write-Verbose "Testing Microsoft Graph endpoint discovery"
+        
+        if ($result.AzureConnected) {
+            $result.GraphEndpoint = Get-PIMAzureEnvironmentEndpoint -EndpointType 'MicrosoftGraph' -ErrorAction SilentlyContinue
             
             if ($result.GraphEndpoint) {
-                try {
-                    $graphTest = Test-NetConnection -ComputerName ([System.Uri]$result.GraphEndpoint).Host -Port 443 -WarningAction SilentlyContinue
-                    $result.ConnectionTestResults['Graph'] = $graphTest.TcpTestSucceeded
-                    
-                    if ($graphTest.TcpTestSucceeded) {
-                        Write-Host "✓ Microsoft Graph endpoint connectivity: Success" -ForegroundColor Green
-                    } else {
-                        Write-Host "❌ Microsoft Graph endpoint connectivity: Failed" -ForegroundColor Red
-                    }
-                    
-                } catch {
-                    $result.ConnectionTestResults['Graph'] = $false
-                    $result.Warnings += "Microsoft Graph connectivity test failed: $_"
-                    Write-Warning "Microsoft Graph connectivity test failed: $_"
+                Write-Host "✓ Microsoft Graph Endpoint: $($result.GraphEndpoint)" -ForegroundColor Green
+                
+                # Validate Graph endpoint format
+                if ($result.GraphEndpoint -match '^https://.*graph') {
+                    Write-Verbose "Microsoft Graph endpoint format validation passed"
+                }
+                else {
+                    $result.Warnings += "Microsoft Graph endpoint format may be invalid: $($result.GraphEndpoint)"
+                    Write-Warning "Microsoft Graph endpoint format unexpected: $($result.GraphEndpoint)"
                 }
             }
+            else {
+                $result.Warnings += "Microsoft Graph endpoint discovery failed"
+                Write-Error "Failed to discover Microsoft Graph endpoint"
+            }
         }
-        
-        # Determine overall success
-        $discoverySuccess = $true
-        if ($EndpointType -in @('ARM', 'All') -and -not $result.ARMEndpoint) {
-            $discoverySuccess = $false
+        else {
+            $result.Warnings += "Cannot test Microsoft Graph endpoint discovery without Azure context"
+            Write-Warning "Microsoft Graph endpoint discovery requires Azure context"
         }
-        if ($EndpointType -in @('MicrosoftGraph', 'All') -and -not $result.GraphEndpoint) {
-            $discoverySuccess = $false
-        }
+    }
+    
+    # Test connectivity if requested
+    if ($TestConnection -and ($result.ARMEndpoint -or $result.GraphEndpoint)) {
+        Write-Verbose "Testing endpoint connectivity"
+        Write-Host "Testing endpoint connectivity..." -ForegroundColor Yellow
         
-        $result.EndpointDiscoverySuccess = $discoverySuccess
-        
-        # Show summary
-        Write-Host ""
-        Write-Host "Endpoint Discovery Summary:" -ForegroundColor Cyan
-        Write-Host "  Azure Environment: $($result.AzureEnvironment)" -ForegroundColor $(if ($result.AzureEnvironment) { 'Green' } else { 'Yellow' })
-        Write-Host "  Graph Environment: $($result.GraphEnvironment)" -ForegroundColor $(if ($result.GraphEnvironment) { 'Green' } else { 'Yellow' })
-        Write-Host "  Discovery Success: $($result.EndpointDiscoverySuccess)" -ForegroundColor $(if ($result.EndpointDiscoverySuccess) { 'Green' } else { 'Red' })
-        
-        if ($result.Recommendations.Count -gt 0) {
-            Write-Host ""
-            Write-Host "Recommendations:" -ForegroundColor Yellow
-            foreach ($rec in $result.Recommendations) {
-                Write-Host "  • $rec" -ForegroundColor Gray
+        # Test ARM connectivity
+        if ($result.ARMEndpoint) {
+            $armTest = Test-NetConnection -ComputerName ([System.Uri]$result.ARMEndpoint).Host -Port 443 -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+            
+            if ($armTest -and $armTest.TcpTestSucceeded) {
+                $result.ConnectionTestResults['ARM'] = $true
+                Write-Host "✓ ARM endpoint connectivity: Success" -ForegroundColor Green
+            }
+            else {
+                $result.ConnectionTestResults['ARM'] = $false
+                $result.Warnings += "ARM connectivity test failed"
+                Write-Host "❌ ARM endpoint connectivity: Failed" -ForegroundColor Red
             }
         }
         
-        Write-Verbose "EasyPIM endpoint discovery test completed"
-        
-        # Return result object
-        return $result
-        
-    } catch {
-        Write-Error "Endpoint discovery test failed: $_"
-        $result.Warnings += "Test execution failed: $_"
-        return $result
+        # Test Graph connectivity
+        if ($result.GraphEndpoint) {
+            $graphTest = Test-NetConnection -ComputerName ([System.Uri]$result.GraphEndpoint).Host -Port 443 -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+            
+            if ($graphTest -and $graphTest.TcpTestSucceeded) {
+                $result.ConnectionTestResults['Graph'] = $true
+                Write-Host "✓ Microsoft Graph endpoint connectivity: Success" -ForegroundColor Green
+            }
+            else {
+                $result.ConnectionTestResults['Graph'] = $false
+                $result.Warnings += "Microsoft Graph connectivity test failed"
+                Write-Host "❌ Microsoft Graph endpoint connectivity: Failed" -ForegroundColor Red
+            }
+        }
     }
+    
+    # Determine overall success
+    $discoverySuccess = $true
+    if ($EndpointType -in @('ARM', 'All') -and -not $result.ARMEndpoint) {
+        $discoverySuccess = $false
+    }
+    if ($EndpointType -in @('MicrosoftGraph', 'All') -and -not $result.GraphEndpoint) {
+        $discoverySuccess = $false
+    }
+    
+    $result.EndpointDiscoverySuccess = $discoverySuccess
+    
+    # Show summary
+    Write-Host ""
+    Write-Host "Endpoint Discovery Summary:" -ForegroundColor Cyan
+    
+    $azureEnvColor = if ($result.AzureEnvironment) { 'Green' } else { 'Yellow' }
+    Write-Host "  Azure Environment: $($result.AzureEnvironment)" -ForegroundColor $azureEnvColor
+    
+    $graphEnvColor = if ($result.GraphEnvironment) { 'Green' } else { 'Yellow' }
+    Write-Host "  Graph Environment: $($result.GraphEnvironment)" -ForegroundColor $graphEnvColor
+    
+    $successColor = if ($result.EndpointDiscoverySuccess) { 'Green' } else { 'Red' }
+    Write-Host "  Discovery Success: $($result.EndpointDiscoverySuccess)" -ForegroundColor $successColor
+    
+    if ($result.Recommendations.Count -gt 0) {
+        Write-Host ""
+        Write-Host "Recommendations:" -ForegroundColor Yellow
+        foreach ($rec in $result.Recommendations) {
+            Write-Host "  • $rec" -ForegroundColor Gray
+        }
+    }
+    
+    Write-Verbose "EasyPIM endpoint discovery test completed"
+    
+    # Return result object
+    return $result
 }
