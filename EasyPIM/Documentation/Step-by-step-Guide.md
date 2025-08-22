@@ -8,7 +8,7 @@ A safe, step-by-step plan to exercise the orchestrator and policies in a real te
 2. [Step 1 — Minimal config: ProtectedUsers only](#step-1)
 3. [Step 2 — Entra role policy (inline)](#step-2)
 4. [Step 3 — Entra role policy (template)](#step-3)
-5. [Step 4 — Entra role policy (file/CSV, legacy import) \[DEPRECATED\]](#step-4)
+5. [Step 4 — Entra role policy (file/CSV, legacy import) (DEPRECATED)](#step-4)
 6. [Step 5 — Entra role assignments (multiple assignments per role supported)](#step-5)
 7. [Step 6 — Azure role policy (inline; Scope is required)](#step-6)
 8. [Step 7 — Azure role policy (template)](#step-7)
@@ -19,7 +19,8 @@ A safe, step-by-step plan to exercise the orchestrator and policies in a real te
 13. [Step 12 — Use the Same Config from Azure Key Vault (Optional)](#step-12)
 14. [Step 13 — (Optional, Destructive) Reconcile with initial mode](#step-13)
 15. [Step 14 — Comprehensive policy validation (all options)](#step-14)
-16. [Step 15 — (Optional) CI/CD automation (GitHub Actions + Key Vault)](#step-15)
+16. [Step 15 — Detect policy drift with Test-PIMPolicyDrift](#step-15)
+17. [Step 16 — (Optional) CI/CD automation (GitHub Actions + Key Vault)](#step-16)
 17. [Appendix — Tips & Safety Gates](#appendix)
 
 
@@ -1380,12 +1381,42 @@ Instead of repeating full blocks, reference the template and (if needed) overrid
 * ActivationRequirement & ActiveAssignmentRequirement values are case‑sensitive and comma separated (avoid spaces unless inside list items array form).
 * Approvers only used when ApprovalRequired = true.
 * AuthenticationContext_* (if enabled) requires the referenced auth context to exist.
-* Group policies currently do not support AuthenticationContext_*.
+* Group policies currently do not support AuthenticationContext_*; if present in a template they'll be ignored by the orchestrator and cmdlet.
 * Use Verify-PIMPolicies.ps1 or Test-PIMPolicyDrift to audit drift after applying.
 * Keep templates minimal; AllOptions is illustrative — real production templates often exclude rarely used features.
 
 <a id="step-15"></a>
-## Step 15 — (Optional) CI/CD automation (GitHub Actions + Key Vault) [WORK IN PROGRESS]
+## Step 15 — Detect policy drift with Test-PIMPolicyDrift
+
+Goal: Verify that live policies match your declared configuration and catch out-of-band changes. Run this after Step 14 and after any apply to ensure compliance.
+
+What this does:
+- Compares effective Entra/Azure role policies to your JSON-defined expectations
+- Highlights differences per rule (enablement, durations, notifications, approvals, authentication context)
+- Works in non-destructive mode; ideal for scheduled audits
+
+Minimal usage (file config):
+```powershell
+Test-PIMPolicyDrift -ConfigFilePath "C:\Config\pim-config.json" -TenantId $env:TENANTID -SubscriptionId $env:SUBSCRIPTIONID
+```
+
+Key Vault usage:
+```powershell
+Test-PIMPolicyDrift -KeyVaultName MyPIMVault -SecretName PIMConfig -TenantId $env:TENANTID -SubscriptionId $env:SUBSCRIPTIONID
+```
+
+Options and tips:
+- Use -PolicyOperations to limit domains (e.g., EntraRoles only)
+- Use -OutputPath C:\Logs to export a timestamped JSON/CSV report for review
+- Pair with your pipeline to fail builds on detected drift
+- If Authentication Context is enabled, expect MFA to be absent from EndUser enablement by design
+
+Next: If drift is found, re-run Step 2/3/6/7 policy previews with -WhatIf to confirm the intended state, then apply.
+
+---
+
+<a id="step-16"></a>
+## Step 16 — (Optional) CI/CD automation (GitHub Actions + Key Vault) [WORK IN PROGRESS]
 
 Goal: Run the orchestrator automatically (or on demand) using the JSON config stored in Azure Key Vault.
 

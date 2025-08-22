@@ -87,8 +87,9 @@ function New-EasyPIMPolicies {
                     $policyDetails += "Approvers: $($approverList -join ', ')"
                 }
 
+                # Note: Groups do not support Authentication Context; if provided in template, surface as ignored
                 if ($resolvedPolicy.PSObject.Properties['AuthenticationContext_Enabled'] -and $resolvedPolicy.AuthenticationContext_Enabled) {
-                    $policyDetails += "Authentication Context: $($resolvedPolicy.AuthenticationContext_Value)"
+                    $policyDetails += "Authentication Context: NOT SUPPORTED for Groups (ignoring)"
                 }
 
                 $policyDetails += "Max Eligibility: $($resolvedPolicy.MaximumEligibilityDuration)"
@@ -364,31 +365,45 @@ function New-EasyPIMPolicies {
                         $policyResult = Set-GroupPolicy -PolicyDefinition $policyDef -TenantId $TenantId -Mode $PolicyMode
                         $results.GroupPolicies += $policyResult
 
-                        # Check if role was protected
-                        if ($policyResult.Status -like "*Protected*") {
-                            $results.Summary.Skipped++
-                            Write-Host "  [PROTECTED] Protected Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' - policy change blocked for security" -ForegroundColor Yellow
-                        } else {
-                            $results.Summary.Successful++
-                            $resolved = $policyDef.ResolvedPolicy
-                            if ($resolved) {
-                                $act = $resolved.ActivationDuration
-                                $reqs = @()
-                                if ($resolved.ActivationRequirement -match 'MFA') { $reqs += 'MFA' }
-                                if ($resolved.ActivationRequirement -match 'Justification') { $reqs += 'Justification' }
-                                $reqsTxt = if ($reqs) { $reqs -join '+' } else { 'None' }
-                                $appr = if ($resolved.ApprovalRequired) { "Yes($($resolved.Approvers.Count) approvers)" } else { 'No' }
-                                $elig = $resolved.MaximumEligibilityDuration
-                                $permElig = if ($resolved.AllowPermanentEligibility) { 'Allowed' } else { 'No' }
-                                $actMax = $resolved.MaximumActiveAssignmentDuration
-                                $permAct = if ($resolved.AllowPermanentActiveAssignment) { 'Allowed' } else { 'No' }
-                                $notifCount = ($resolved.PSObject.Properties | Where-Object { $_.Name -like 'Notification_*' }).Count
-                                $summary = "Activation=$act Requirements=$reqsTxt Approval=$appr Elig=$elig PermElig=$permElig Active=$actMax PermActive=$permAct Notifications=$notifCount"
-                            } else { $summary = '' }
-                            if ($PolicyMode -eq "validate") {
-                                Write-Host "  [OK] Validated policy for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' (no changes applied) $summary" -ForegroundColor Green
-                            } else {
-                                Write-Host "  [OK] Applied policy for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' $summary" -ForegroundColor Green
+                        switch ($policyResult.Status) {
+                            { $_ -like '*Protected*' } {
+                                $results.Summary.Skipped++
+                                Write-Host "  [PROTECTED] Protected Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' - policy change blocked for security" -ForegroundColor Yellow
+                            }
+                            'Applied' {
+                                $results.Summary.Successful++
+                                $resolved = $policyDef.ResolvedPolicy
+                                if ($resolved) {
+                                    $act = $resolved.ActivationDuration
+                                    $reqs = @()
+                                    if ($resolved.ActivationRequirement -match 'MFA') { $reqs += 'MFA' }
+                                    if ($resolved.ActivationRequirement -match 'Justification') { $reqs += 'Justification' }
+                                    $reqsTxt = if ($reqs) { $reqs -join '+' } else { 'None' }
+                                    $appr = if ($resolved.ApprovalRequired) { "Yes($($resolved.Approvers.Count) approvers)" } else { 'No' }
+                                    $elig = $resolved.MaximumEligibilityDuration
+                                    $permElig = if ($resolved.AllowPermanentEligibility) { 'Allowed' } else { 'No' }
+                                    $actMax = $resolved.MaximumActiveAssignmentDuration
+                                    $permAct = if ($resolved.AllowPermanentActiveAssignment) { 'Allowed' } else { 'No' }
+                                    $notifCount = ($resolved.PSObject.Properties | Where-Object { $_.Name -like 'Notification_*' }).Count
+                                    $summary = "Activation=$act Requirements=$reqsTxt Approval=$appr Elig=$elig PermElig=$permElig Active=$actMax PermActive=$permAct Notifications=$notifCount"
+                                } else { $summary = '' }
+                                if ($PolicyMode -eq 'validate') {
+                                    Write-Host "  [OK] Validated policy for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' (no changes applied) $summary" -ForegroundColor Green
+                                } else {
+                                    Write-Host "  [OK] Applied policy for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' $summary" -ForegroundColor Green
+                                }
+                            }
+                            'DeferredNotEligible' {
+                                $results.Summary.Skipped++
+                                Write-Host "  [DEFERRED] Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' not PIM-eligible yet; will retry later" -ForegroundColor Yellow
+                            }
+                            'Skipped' {
+                                $results.Summary.Skipped++
+                                Write-Host "  [SKIPPED] Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)'" -ForegroundColor Yellow
+                            }
+                            default {
+                                $results.Summary.Failed++
+                                Write-Host "  [ERR] Failed to apply policy for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)': Status=$($policyResult.Status)" -ForegroundColor Red
                             }
                         }
                     }
@@ -813,13 +828,15 @@ function Set-GroupPolicy {
         groupID  = @($PolicyDefinition.GroupId)
         type     = $PolicyDefinition.RoleName.ToLower()
     }
+    $suppressedAuthCtx = $false
     foreach ($prop in $resolved.PSObject.Properties) {
         switch ($prop.Name) {
             'ActivationDuration' { if ($prop.Value) { $setParams.ActivationDuration = $prop.Value } }
             'ActivationRequirement' { if ($prop.Value) { $setParams.ActivationRequirement = $prop.Value } }
             'ActiveAssignmentRequirement' { if ($prop.Value) { $setParams.ActiveAssignmentRequirement = $prop.Value } }
-            'AuthenticationContext_Enabled' { $setParams.AuthenticationContext_Enabled = $prop.Value }
-            'AuthenticationContext_Value' { $setParams.AuthenticationContext_Value = $prop.Value }
+        # Authentication Context not supported for Group policies; ignore if provided
+        'AuthenticationContext_Enabled' { $suppressedAuthCtx = $true; continue }
+        'AuthenticationContext_Value' { $suppressedAuthCtx = $true; continue }
             'ApprovalRequired' { $setParams.ApprovalRequired = $prop.Value }
             'Approvers' { $setParams.Approvers = $prop.Value }
             'MaximumEligibilityDuration' { $setParams.MaximumEligibilityDuration = $prop.Value }
@@ -829,6 +846,7 @@ function Set-GroupPolicy {
             default { if ($prop.Name -like 'Notification_*') { $setParams[$prop.Name] = $prop.Value } }
         }
     }
+    if ($suppressedAuthCtx) { Write-Verbose "[GroupPolicy][Normalize] AuthenticationContext_* provided but not supported for Groups; ignoring for Group $($PolicyDefinition.GroupId) role $($PolicyDefinition.RoleName)" }
 
     $status = 'Applied'
     if ($PSCmdlet.ShouldProcess("Group policy for $($PolicyDefinition.GroupId) role $($PolicyDefinition.RoleName)", "Apply policy")) {
