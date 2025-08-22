@@ -53,7 +53,7 @@ function Deny-PIMAzureResourcePendingApproval {
 
         #Get the stages:
         #Role Assignment Approval Steps - List - REST API (Azure Authorization) | Microsoft Learn
-        $armEndpoint = Get-AzureEnvironmentEndpoint -EndpointType 'ARM'
+        $armEndpoint = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM'
         $stages = Invoke-AzRestMethod -Uri "$($armEndpoint.TrimEnd('/'))/$approvalID/stages?api-version=2021-01-01-preview" -Method GET
 
         $stageid = ($stages.Content | convertfrom-json).value.id

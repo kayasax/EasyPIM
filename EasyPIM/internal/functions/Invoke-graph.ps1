@@ -60,7 +60,7 @@ function invoke-graph {
     )
 
     try {
-        $graphBase = Get-AzureEnvironmentEndpoint -EndpointType 'MicrosoftGraph'
+        $graphBase = Get-PIMAzureEnvironmentEndpoint -EndpointType 'MicrosoftGraph'
         $graph = "$graphBase/$version/"
 
         [string]$uri = $graph + $endpoint        # Handle filter parameter

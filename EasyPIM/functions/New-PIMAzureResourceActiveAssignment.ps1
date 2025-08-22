@@ -94,7 +94,7 @@ function New-PIMAzureResourceActiveAssignment {
     }
     $script:tenantID = $tenantID
 
-    $ARMhost = Get-AzureEnvironmentEndpoint -EndpointType 'ARM'
+    $ARMhost = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM'
     $ARMendpoint = "$($ARMhost.TrimEnd('/'))/$scope/providers/Microsoft.Authorization"
     #1 get role id
     $restUri = "$ARMendpoint/roleDefinitions?api-version=2022-04-01&`$filter=roleName eq '$rolename'"

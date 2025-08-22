@@ -50,7 +50,7 @@ function Get-PIMEntraRolePendingApproval{
         $pendingApproval = $response.value
 
         if ($null -ne $pendingApproval) {
-            $graphEndpoint = Get-AzureEnvironmentEndpoint -EndpointType 'MicrosoftGraph'
+            $graphEndpoint = Get-PIMAzureEnvironmentEndpoint -EndpointType 'MicrosoftGraph'
             $pendingApproval | ForEach-Object {
                 $role=invoke-mgGraphRequest $("$graphEndpoint/v1.0/directoryRoles(roletemplateid ='"+$_.roledefinitionid+"')") -Method get
                 $principalDisplayName = invoke-mgGraphRequest $("$graphEndpoint/v1.0/directoryobjects/"+$_.Principalid+"/") -Method get

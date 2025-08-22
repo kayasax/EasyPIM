@@ -7,10 +7,12 @@ function Get-PIMAzureEnvironmentEndpoint {
         Retrieves ARM and Microsoft Graph endpoints appropriate for the current Azure environment.
         Supports built-in environments (Commercial, US Government, China, Germany) and custom environments.
         For Microsoft Graph, attempts dynamic discovery via multiple methods.
-        This is the EasyPIM-specific implementation for Azure environment endpoint discovery.
     
     .PARAMETER EndpointType
         The type of endpoint to retrieve: 'ARM' or 'MicrosoftGraph'
+        
+    .PARAMETER NoCache
+        Skip cache and force fresh endpoint discovery. Useful for testing or when environment context changes.
     
     .EXAMPLE
         Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM'
@@ -19,17 +21,29 @@ function Get-PIMAzureEnvironmentEndpoint {
     .EXAMPLE
         Get-PIMAzureEnvironmentEndpoint -EndpointType 'MicrosoftGraph'
         Returns: https://graph.microsoft.com (for Commercial cloud)
+        
+    .EXAMPLE
+        Get-PIMAzureEnvironmentEndpoint -EndpointType 'MicrosoftGraph' -NoCache
+        Forces fresh discovery, bypassing cache. Useful when switching between environments.
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
         [ValidateSet('ARM', 'MicrosoftGraph')]
-        [string]$EndpointType
+        [string]$EndpointType,
+        
+        [Parameter(Mandatory = $false)]
+        [switch]$NoCache
     )
     
-    # Cache discovered endpoints for performance
+    # Cache discovered endpoints for performance, but invalidate if environment changes
     if (-not $script:EndpointCache) {
         $script:EndpointCache = @{}
+    }
+    
+    # Track the environment for cache validation
+    if (-not $script:CachedEnvironmentName) {
+        $script:CachedEnvironmentName = $null
     }
     
     try {
@@ -43,6 +57,18 @@ function Get-PIMAzureEnvironmentEndpoint {
         $environment = $azContext.Environment
         $environmentName = $environment.Name
         Write-Verbose "Detected Azure environment: $environmentName"
+        
+        # Clear cache if environment changed or NoCache is specified
+        if ($script:CachedEnvironmentName -ne $environmentName -or $NoCache) {
+            if ($script:CachedEnvironmentName -ne $environmentName) {
+                Write-Verbose "Environment changed from '$script:CachedEnvironmentName' to '$environmentName'. Clearing endpoint cache."
+            }
+            elseif ($NoCache) {
+                Write-Verbose "NoCache specified. Clearing endpoint cache."
+            }
+            $script:EndpointCache = @{}
+            $script:CachedEnvironmentName = $environmentName
+        }
         
         switch ($EndpointType) {
             'ARM' {
@@ -70,13 +96,22 @@ function Get-PIMAzureEnvironmentEndpoint {
                 $endpoint = Get-MicrosoftGraphEndpoint -EnvironmentName $environmentName -Environment $environment
                 
                 if ($endpoint) {
-                    $script:EndpointCache[$cacheKey] = $endpoint
-                    return $endpoint
+                    # Validate that discovered endpoint seems appropriate for the environment
+                    if (Test-EndpointEnvironmentMatch -Endpoint $endpoint -EnvironmentName $environmentName) {
+                        $script:EndpointCache[$cacheKey] = $endpoint
+                        return $endpoint
+                    }
+                    else {
+                        Write-Warning "Discovered Microsoft Graph endpoint '$endpoint' doesn't appear to match environment '$environmentName'"
+                    }
                 }
                 
-                # Fallback - this should rarely happen
-                Write-Warning "Could not determine Microsoft Graph endpoint for '$environmentName'. Using Commercial endpoint as fallback."
-                return 'https://graph.microsoft.com'
+                # Instead of defaulting to Commercial, fail with a clear error message
+                $errorMessage = "Could not determine Microsoft Graph endpoint for environment '$environmentName'. " +
+                                "Please ensure you have the correct modules installed (Microsoft.Graph.Authentication) " +
+                                "and try again with -NoCache to force fresh discovery."
+                Write-Error $errorMessage
+                throw $errorMessage
             }
         }
     }
@@ -255,4 +290,45 @@ function Get-InferredMicrosoftGraphEndpoint {
     }
     
     return $null
+}
+
+function Test-EndpointEnvironmentMatch {
+    <#
+    .SYNOPSIS
+        Validates that a discovered endpoint matches the expected Azure environment
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Endpoint,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$EnvironmentName
+    )
+    
+    # Known endpoint patterns for validation
+    $environmentPatterns = @{
+        'AzureCloud'        = @('graph.microsoft.com', 'management.azure.com')
+        'AzureUSGovernment' = @('graph.microsoft.us', 'management.usgovcloudapi.net')
+        'AzureChinaCloud'   = @('microsoftgraph.chinacloudapi.cn', 'management.chinacloudapi.cn')
+        'AzureGermanCloud'  = @('graph.microsoft.de', 'management.microsoftazure.de')
+    }
+    
+    $expectedPatterns = $environmentPatterns[$EnvironmentName]
+    if (-not $expectedPatterns) {
+        # For unknown environments, accept any endpoint (custom clouds)
+        Write-Verbose "Unknown environment '$EnvironmentName'. Accepting endpoint '$Endpoint'"
+        return $true
+    }
+    
+    # Check if endpoint matches expected patterns for this environment
+    foreach ($pattern in $expectedPatterns) {
+        if ($Endpoint -like "*$pattern*") {
+            Write-Verbose "Endpoint '$Endpoint' matches expected pattern '$pattern' for environment '$EnvironmentName'"
+            return $true
+        }
+    }
+    
+    Write-Verbose "Endpoint '$Endpoint' doesn't match expected patterns for environment '$EnvironmentName': $($expectedPatterns -join ', ')"
+    return $false
 }

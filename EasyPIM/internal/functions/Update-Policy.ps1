@@ -25,7 +25,7 @@ function Update-Policy  {
     write-Verbose "script:scope = $script:scope"
     #write-verbose "rules: $rules"
     $scope = $script:scope
-    $ARMhost = Get-AzureEnvironmentEndpoint -EndpointType 'ARM'
+    $ARMhost = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM'
     #$ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
 
     $body = '

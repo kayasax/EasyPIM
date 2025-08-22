@@ -22,7 +22,7 @@ function Get-AllPolicies {
       $scope
   )
 
-    $ARMhost = Get-AzureEnvironmentEndpoint -EndpointType 'ARM'
+    $ARMhost = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM'
     $ARMendpoint = "$($ARMhost.TrimEnd('/'))/$scope/providers/Microsoft.Authorization"
     $restUri = "$ARMendpoint/roleDefinitions?`$select=roleName&api-version=2022-04-01"
 
