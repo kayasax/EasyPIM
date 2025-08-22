@@ -344,7 +344,7 @@ function New-EasyPIMPolicies {
                 }
 
                 if ($resolvedPolicy.PSObject.Properties['AuthenticationContext_Enabled'] -and $resolvedPolicy.AuthenticationContext_Enabled) {
-                    $policyDetails += "Authentication Context: $($resolvedPolicy.AuthenticationContext_Value)"
+                    $policyDetails += "Authentication Context: $($resolvedPolicy.AuthenticationContext_Value) (ignored for Groups)"
                 }
 
                 $policyDetails += "Max Eligibility: $($resolvedPolicy.MaximumEligibilityDuration)"
@@ -362,6 +362,11 @@ function New-EasyPIMPolicies {
                     $results.Summary.TotalProcessed++
 
                     try {
+                        # Heads-up: Group policies ignore AuthenticationContext_* if present
+                        $resolvedPre = if ($policyDef.ResolvedPolicy) { $policyDef.ResolvedPolicy } else { $policyDef }
+                        if ($resolvedPre.PSObject.Properties['AuthenticationContext_Enabled'] -and $resolvedPre.AuthenticationContext_Enabled) {
+                            Write-Warning "[GroupPolicy] AuthenticationContext_* present for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' — ignored"
+                        }
                         $policyResult = Set-GroupPolicy -PolicyDefinition $policyDef -TenantId $TenantId -Mode $PolicyMode
                         $results.GroupPolicies += $policyResult
 

@@ -1381,7 +1381,7 @@ Instead of repeating full blocks, reference the template and (if needed) overrid
 * ActivationRequirement & ActiveAssignmentRequirement values are case‑sensitive and comma separated (avoid spaces unless inside list items array form).
 * Approvers only used when ApprovalRequired = true.
 * AuthenticationContext_* (if enabled) requires the referenced auth context to exist.
-* Group policies currently do not support AuthenticationContext_*; if present in a template they'll be ignored by the orchestrator and cmdlet.
+* AuthenticationContext_* is ignored for Group policies; you can keep it in shared templates, but it won’t be applied to Groups.
 * Use Verify-PIMPolicies.ps1 or Test-PIMPolicyDrift to audit drift after applying.
 * Keep templates minimal; AllOptions is illustrative — real production templates often exclude rarely used features.
 
