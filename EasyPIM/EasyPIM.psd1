@@ -6,41 +6,26 @@ RootModule = 'EasyPIM.psm1'
 # Version number of this module.
 ModuleVersion = '1.10.0'
 
-    ReleaseNotes = @'
-    v1.10.0 Release Notes:
+# Supported PSEditions
+# CompatiblePSEditions = @()
 
-    Multi-cloud Azure environment support (Chase Dafnis)
-    - Enhanced Get-PIMAzureEnvironmentEndpoint for multi-cloud environments (Commercial, US Government, China, Germany)
-    - Added comprehensive endpoint discovery and validation for all Azure cloud environments
-    - Improved custom dependency management with Test-EasyPIMDependencies function
+# ID used to uniquely identify this module
+GUID = '634875e7-f904-423d-a6b1-69132684321c'
 
-    v1.9.4 Release Notes (2025-08-22):
+# Author of this module
+Author = 'Loïc MICHEL'
 
-    Group policy PATCH stability
-    - Filter out null rule entries before PATCH to avoid Graph schema errors (rules: [ null ]).
-    - Re-filter during per-rule isolation; isolation triggers only after a global PATCH failure.
-    - Policy summary now increments Failed on apply errors (no false "Applied" on error paths).
+# Company or vendor of this module
+#CompanyName = 'MyCompany'
 
-    Diagnostics
-    - Clearer isolation output (rule index, id, and type), retains body preview on failures.
+# Copyright statement for this module
+Copyright = '(c) loicmichel. All rights reserved.'
 
-    Notes: This is a patch-only release. No public API changes.
+# Description of the functionality provided by this module
+Description = 'Manage PIM Azure Resource, PIM Entra role and PIM for Group settings and assignments with simplicity in mind'
 
-    v1.9.3 Release Notes (2025-08-21):
-
-    Entra policy stability and correctness
-    - Fixed unifiedRoleManagementPolicyApprovalRule payloads to use Graph subject sets (@odata.type + userId/groupId).
-    - Normalized eligibility durations: convert PnY to day-based (PnD) and only include maximumDuration when expirationRequired=true.
-    - Improved InvalidPolicy diagnostics with per-rule isolation and PATCH body previews.
-
-    Authentication Context harmonization
-    - When Authentication Context is enabled for a role, MFA is always stripped from EndUser enablement to avoid MfaAndAcrsConflict.
-    - Still emit enablement rule to clear any prior MFA settings.
-
-    Notifications
-    - Flattened template properties and fixed boolean handling (.ToString().ToLower()) to prevent crashes.
-
-    Quality and tests
+# Script files (.ps1) that are run in the caller's environment prior to importing this module.
+ScriptsToProcess = @('internal\scripts\Import-ModuleChecks.ps1')
 
 # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
 # NestedModules = @()
