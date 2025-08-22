@@ -76,7 +76,22 @@ function New-EPOEasyPIMPolicies {
                         try {
                             $policyResult = Set-EPOAzureRolePolicy -PolicyDefinition $policyDef -TenantId $TenantId -SubscriptionId $SubscriptionId -Mode $PolicyMode
                             $results.AzureRolePolicies += $policyResult
-                            if ($policyResult.Status -like "*Protected*") { $results.Summary.Skipped++; Write-Host "  [PROTECTED] Protected Azure role '$($policyDef.RoleName)' - policy change blocked for security" -ForegroundColor Yellow }
+                            if ($policyResult.Status -like "*Protected*") {
+                                $results.Summary.Skipped++
+                                Write-Host "  [PROTECTED] Protected Azure role '$($policyDef.RoleName)' - policy change blocked for security" -ForegroundColor Yellow
+                            }
+                            elseif ($policyResult.Status -like "Failed*") {
+                                $results.Summary.Failed++
+                                Write-Host "  [FAIL] Azure role '$($policyDef.RoleName)' at scope '$($policyDef.Scope)' policy apply failed (Status=$($policyResult.Status))" -ForegroundColor Red
+                            }
+                            elseif ($policyResult.Status -like "Skipped*" -or $policyResult.Status -like "Deferred*") {
+                                $results.Summary.Skipped++
+                                Write-Host "  [SKIPPED] Azure role '$($policyDef.RoleName)' at scope '$($policyDef.Scope)' (Status=$($policyResult.Status))" -ForegroundColor Yellow
+                            }
+                            elseif ($policyResult.Status -like "CmdletMissing*") {
+                                $results.Summary.Failed++
+                                Write-Host "  [FAIL] Azure role '$($policyDef.RoleName)' at scope '$($policyDef.Scope)' required cmdlet missing" -ForegroundColor Red
+                            }
                             else {
                                 $results.Summary.Successful++
                                 $resolved = $policyDef.ResolvedPolicy
@@ -150,7 +165,22 @@ function New-EPOEasyPIMPolicies {
                     try {
                         $policyResult = Set-EPOEntraRolePolicy -PolicyDefinition $policyDef -TenantId $TenantId -Mode $PolicyMode
                         $results.EntraRolePolicies += $policyResult
-                        if ($policyResult.Status -like "*Protected*") { $results.Summary.Skipped++; Write-Host "  [PROTECTED] Protected role '$($policyDef.RoleName)' - policy change blocked for security" -ForegroundColor Yellow }
+                        if ($policyResult.Status -like "*Protected*") {
+                            $results.Summary.Skipped++
+                            Write-Host "  [PROTECTED] Protected role '$($policyDef.RoleName)' - policy change blocked for security" -ForegroundColor Yellow
+                        }
+                        elseif ($policyResult.Status -like "Failed*") {
+                            $results.Summary.Failed++
+                            Write-Host "  [FAIL] Entra role '$($policyDef.RoleName)' policy apply failed (Status=$($policyResult.Status))" -ForegroundColor Red
+                        }
+                        elseif ($policyResult.Status -like "Skipped*" -or $policyResult.Status -like "Deferred*") {
+                            $results.Summary.Skipped++
+                            Write-Host "  [SKIPPED] Entra role '$($policyDef.RoleName)' (Status=$($policyResult.Status))" -ForegroundColor Yellow
+                        }
+                        elseif ($policyResult.Status -like "CmdletMissing*") {
+                            $results.Summary.Failed++
+                            Write-Host "  [FAIL] Entra role '$($policyDef.RoleName)' required cmdlet missing" -ForegroundColor Red
+                        }
                         else {
                             $results.Summary.Successful++
                             $resolved = $policyDef.ResolvedPolicy
@@ -212,7 +242,22 @@ function New-EPOEasyPIMPolicies {
                     try {
                         $policyResult = Set-EPOGroupPolicy -PolicyDefinition $policyDef -TenantId $TenantId -Mode $PolicyMode
                         $results.GroupPolicies += $policyResult
-                        if ($policyResult.Status -like "*Protected*") { $results.Summary.Skipped++; Write-Host "  [PROTECTED] Protected Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' - policy change blocked for security" -ForegroundColor Yellow }
+                        if ($policyResult.Status -like "*Protected*") {
+                            $results.Summary.Skipped++
+                            Write-Host "  [PROTECTED] Protected Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' - policy change blocked for security" -ForegroundColor Yellow
+                        }
+                        elseif ($policyResult.Status -like "Failed*") {
+                            $results.Summary.Failed++
+                            Write-Host "  [FAIL] Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' policy apply failed (Status=$($policyResult.Status))" -ForegroundColor Red
+                        }
+                        elseif ($policyResult.Status -like "Skipped*" -or $policyResult.Status -like "Deferred*") {
+                            $results.Summary.Skipped++
+                            Write-Host "  [SKIPPED] Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' (Status=$($policyResult.Status))" -ForegroundColor Yellow
+                        }
+                        elseif ($policyResult.Status -like "CmdletMissing*") {
+                            $results.Summary.Failed++
+                            Write-Host "  [FAIL] Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' required cmdlet missing" -ForegroundColor Red
+                        }
                         else {
                             $results.Summary.Successful++
                             $resolved = $policyDef.ResolvedPolicy

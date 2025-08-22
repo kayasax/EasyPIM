@@ -4,7 +4,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.9.3'
+ModuleVersion = '1.9.4'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -148,6 +148,18 @@ PrivateData = @{
 
         # ReleaseNotes of this module
     ReleaseNotes = @'
+    v1.9.4 Release Notes (2025-08-22):
+
+    ✅ Group policy PATCH stability
+    - Filter out null rule entries before PATCH to avoid Graph schema errors (rules: [ null ]).
+    - Re-filter during per‑rule isolation; isolation triggers only after a global PATCH failure.
+    - Policy summary now increments Failed on apply errors (no false "Applied" on error paths).
+
+    🔧 Diagnostics
+    - Clearer isolation output (rule index, id, and type), retains body preview on failures.
+
+    Notes: This is a patch-only release. No public API changes.
+
     v1.9.3 Release Notes (2025-08-21):
 
     ✅ Entra policy stability and correctness

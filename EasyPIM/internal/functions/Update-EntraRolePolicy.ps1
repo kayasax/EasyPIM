@@ -122,6 +122,13 @@ function Update-EntraRolePolicy  {
     }
   }
 
+  # Filter out any null/empty rule objects to avoid schema errors like rules: [ null ]
+  $preFilterCount = if ($rulesArray) { $rulesArray.Count } else { 0 }
+  $rulesArray = @($rulesArray | Where-Object { $_ -ne $null })
+  $removed = $preFilterCount - $rulesArray.Count
+  if ($removed -gt 0) { Write-Verbose "[Policy][Entra] Removed $removed null rule(s) before PATCH" }
+  if ($rulesArray.Count -eq 0) { throw "No valid rules provided for Entra role policy update after filtering nulls." }
+
   $payloadObject = @{ rules = $rulesArray }
   $body = $payloadObject | ConvertTo-Json -Depth 10
 
@@ -136,19 +143,21 @@ function Update-EntraRolePolicy  {
     $response = invoke-graph -Endpoint $endpoint -Method "PATCH" -Body $body
   } catch {
     $msg = $_.Exception.Message
-    if ($msg -match 'InvalidPolicy') {
+    if ($msg -match 'InvalidPolicy' -or $msg -match 'BadRequest' -or $msg -match 'does not match schema') {
       Write-Host "[Diagnostics] Full PATCH body for InvalidPolicy:" -ForegroundColor Yellow
       Write-Host $body -ForegroundColor DarkYellow
       # Attempt to isolate offending rule(s) by patching individually
       try {
         Write-Host "[Diagnostics] Attempting per-rule isolation..." -ForegroundColor Yellow
+        # Re-filter in case upstream mutated the array
+        $isoArray = @($rulesArray | Where-Object { $_ -ne $null })
         $i = 0
-    foreach ($r in $rulesArray) {
+        foreach ($r in $isoArray) {
           $i++
           $single = @{ rules = @($r) } | ConvertTo-Json -Depth 10
           try {
             Write-Verbose "[Diagnostics] Testing rule #$i id=$($r.id) type=$($r.'@odata.type')"
-      $null = invoke-graph -Endpoint $endpoint -Method "PATCH" -Body $single -ErrorAction Stop
+            $null = invoke-graph -Endpoint $endpoint -Method "PATCH" -Body $single -ErrorAction Stop
             Write-Host ("[Diagnostics] Rule #{0} (id={1}) -> OK" -f $i, $r.id) -ForegroundColor Green
           } catch {
             Write-Host ("[Diagnostics] Rule #{0} (id={1}) -> FAILED: {2}" -f $i, $r.id, $_.Exception.Message) -ForegroundColor Red
