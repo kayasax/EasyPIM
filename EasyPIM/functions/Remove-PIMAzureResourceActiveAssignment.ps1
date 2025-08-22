@@ -74,7 +74,7 @@ function Remove-PIMAzureResourceActiveAssignment {
         }
         $script:tenantID = $tenantID
 
-        $ARMhost = Get-AzureEnvironmentEndpoint -EndpointType 'ARM'
+        $ARMhost = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM'
         $ARMendpoint = "$($ARMhost.TrimEnd('/'))/$scope/providers/Microsoft.Authorization"
 
         #1 get role id

@@ -27,7 +27,7 @@ function Test-PrincipalExists {
             Connect-MgGraph -Tenant $script:tenantID -Scopes $scopes -NoWelcome | Out-Null
         }
 
-        $graphEndpoint = Get-AzureEnvironmentEndpoint -EndpointType 'MicrosoftGraph'
+        $graphEndpoint = Get-PIMAzureEnvironmentEndpoint -EndpointType 'MicrosoftGraph'
         $uri = "$graphEndpoint/v1.0/directoryObjects/$PrincipalId"
         $response = Invoke-MgGraphRequest -Uri $uri -Method GET -ErrorAction Stop
         # Cache

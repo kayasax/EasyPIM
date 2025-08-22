@@ -99,7 +99,7 @@ function Test-PIMEndpointDiscovery {
             if ($EndpointType -in @('ARM', 'All')) {
                 Write-Verbose "Testing ARM endpoint discovery"
                 try {
-                    $result.ARMEndpoint = Get-AzureEnvironmentEndpoint -EndpointType 'ARM'
+                    $result.ARMEndpoint = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM'
                     Write-Host "✓ ARM Endpoint: $($result.ARMEndpoint)" -ForegroundColor Green
                     
                     # Validate ARM endpoint format
@@ -153,7 +153,7 @@ function Test-PIMEndpointDiscovery {
             Write-Verbose "Testing Microsoft Graph endpoint discovery"
             try {
                 if ($result.AzureConnected) {
-                    $result.GraphEndpoint = Get-AzureEnvironmentEndpoint -EndpointType 'MicrosoftGraph'
+                    $result.GraphEndpoint = Get-PIMAzureEnvironmentEndpoint -EndpointType 'MicrosoftGraph'
                     Write-Host "✓ Microsoft Graph Endpoint: $($result.GraphEndpoint)" -ForegroundColor Green
                     
                     # Validate Graph endpoint format

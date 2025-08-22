@@ -20,7 +20,7 @@
      #>
 function get-config ($scope, $rolename, $copyFrom = $null) {
 
-    $ARMhost = Get-AzureEnvironmentEndpoint -EndpointType 'ARM'
+    $ARMhost = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM'
     $ARMendpoint = "$($ARMhost.TrimEnd('/'))/$scope/providers/Microsoft.Authorization"
     try {
 
