@@ -816,6 +816,8 @@ Multiple principals
 
 Group policies ARE supported (Get-PIMGroupPolicy / Set-PIMGroupPolicy). The orchestrator resolves group policies via `GroupRoles.Policies` (preferred) or the deprecated `GroupPolicies` / `Policies.Groups` formats. We'll DEFINE a minimal policy first, then add assignments referencing it. This mirrors the security-first approach: establish guardrails (policy) before granting access (assignments).
 
+> Heads-up: AuthenticationContext_* in a shared template is ignored for Group policies. You can leave it in the template for Entra/Azure roles, but it won’t be applied to Groups.
+
 > NOTE: In `GroupRoles.Policies` you may use either the group GUID (treated as `GroupId`) or a readable display name key (treated as `GroupName`). The orchestrator will resolve `GroupName` to `GroupId` at runtime. For production/stable configs prefer GUIDs to avoid ambiguity when duplicate or renamed groups exist. Assignments still require an explicit `groupId` field.
 
 > QUICK NOTE (Auto‑Deferral): If a Group policy targets a group that is not yet PIM‑eligible (e.g. on‑premises synced or not onboarded), the orchestrator now DEFERS that policy instead of failing. It records status `DeferredNotEligible`, proceeds with the rest of the run, then automatically retries those deferred group policies after the assignment phase. The final summary prints a `DEFERRED GROUP POLICIES` block showing Applied / Still Not Eligible / Failed counts. To resolve a persistent `Still Not Eligible` state: (1) ensure the group is a cloud security group (not synced or M365 type unsupported), (2) enable PIM for the group in the portal (preview blade), then re-run the orchestrator. No action needed if the group becomes eligible mid‑run; the retry will apply it.
