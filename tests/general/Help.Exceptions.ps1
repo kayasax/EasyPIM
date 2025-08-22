@@ -22,7 +22,7 @@ $global:HelpTestEnumeratedArrays = @(
   "Get-DbaCmObject"       = @("DoNotUse")
 #>
 $global:HelpTestSkipParameterType = @{
-  Set-Notification_ActiveAssignment_Assignee=@(Notification_ActiveAssignment_Assignee);
-  Set-Notification_EligibleAssignment_Alert=@(Notification_EligibleAssignment_Alert);
+  'Set-Notification_ActiveAssignment_Assignee' = @('Notification_ActiveAssignment_Assignee');
+  'Set-Notification_EligibleAssignment_Alert' = @('Notification_EligibleAssignment_Alert');
 
 }

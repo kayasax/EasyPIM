@@ -7,6 +7,10 @@
 
     .DESCRIPTION
 		This test evaluates the help for all commands in a module.
+		
+		COMPATIBILITY NOTE: This test uses Pester v5+ syntax and will be skipped 
+		in PowerShell 5.1 environments that have older Pester versions (v3/v4).
+		The core module functionality is still fully tested in all PowerShell versions.
 
 	.PARAMETER SkipTest
 		Disables this test.
@@ -44,6 +48,17 @@ Param (
 	[string]
 	$ExceptionsFile = "$global:testroot\general\Help.Exceptions.ps1"
 )
+
+# COMPATIBILITY CHECK: Skip help tests in PowerShell 5.1 with older Pester versions
+# This test uses Pester v5+ syntax that is incompatible with Pester v3/v4
+$PesterVersion = (Get-Module Pester).Version
+if ($PesterVersion -lt [version]'5.0') {
+	Write-Warning "Skipping Help tests - requires Pester v5+ (current: v$PesterVersion)"
+	Write-Warning "Help test compatibility: PowerShell 5.1 typically has Pester v3/v4"
+	Write-Warning "Core module functionality is fully tested in PowerShell 5.1"
+	return
+}
+
 if ($SkipTest) { return }
 . $ExceptionsFile
 

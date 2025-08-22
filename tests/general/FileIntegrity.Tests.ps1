@@ -7,8 +7,9 @@ try {
 
 $moduleRoot = (Resolve-Path (Join-Path $global:testroot '..')).Path
 
-if (Test-Path (Join-Path $global:testroot 'general' 'FileIntegrity.Exceptions.ps1')) {
-	. (Join-Path $global:testroot 'general' 'FileIntegrity.Exceptions.ps1')
+$exceptionsFile = Join-Path $global:testroot 'general\FileIntegrity.Exceptions.ps1'
+if (Test-Path $exceptionsFile) {
+	. $exceptionsFile
 } else {
 	Write-Warning "FileIntegrity.Exceptions.ps1 not found under $global:testroot/general; proceeding with default (no bans)."
 	if (-not $global:BannedCommands) { $global:BannedCommands = @() }
@@ -17,6 +18,11 @@ if (Test-Path (Join-Path $global:testroot 'general' 'FileIntegrity.Exceptions.ps
 
 Describe "Verifying integrity of module files" {
 	BeforeAll {
+		# Detect Pester version for cross-version compatibility
+		$pesterModule = Get-Module -Name Pester -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
+		$pesterVersion = if ($pesterModule) { $pesterModule.Version } else { [Version]'0.0' }
+		$isLegacyPester = $pesterVersion.Major -lt 5
+		
 		function Get-FileEncoding
 		{
 		<#
@@ -71,11 +77,30 @@ Describe "Verifying integrity of module files" {
 			$name = $file.FullName.Replace("$moduleRoot\", '')
 
 			It "[$name] Should have UTF8 (BOM optional)" -TestCases @{ file = $file } {
-				(Get-FileEncoding -Path $file.FullName) | Should -BeIn @('UTF8 BOM','Unknown')
+				# Detect Pester version for cross-version compatibility within test
+				$pesterModule = Get-Module -Name Pester -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
+				$pesterVersion = if ($pesterModule) { $pesterModule.Version } else { [Version]'0.0' }
+				$isLegacyPester = $pesterVersion.Major -lt 5
+				
+				if ($isLegacyPester) {
+					$encoding = Get-FileEncoding -Path $file.FullName
+					$encoding | Should Match '^(UTF8 BOM|Unknown)$'
+				} else {
+					(Get-FileEncoding -Path $file.FullName) | Should -BeIn @('UTF8 BOM','Unknown')
+				}
 			}
 
 			It "[$name] Should have no trailing space" -TestCases @{ file = $file } {
-				($file | Select-String "\s$" | Where-Object { $_.Line.Trim().Length -gt 0}).LineNumber | Should -BeNullOrEmpty
+				# Detect Pester version for cross-version compatibility within test
+				$pesterModule = Get-Module -Name Pester -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
+				$pesterVersion = if ($pesterModule) { $pesterModule.Version } else { [Version]'0.0' }
+				$isLegacyPester = $pesterVersion.Major -lt 5
+				
+				if ($isLegacyPester) {
+					($file | Select-String "\s$" | Where-Object { $_.Line.Trim().Length -gt 0}).LineNumber | Should BeNullOrEmpty
+				} else {
+					($file | Select-String "\s$" | Where-Object { $_.Line.Trim().Length -gt 0}).LineNumber | Should -BeNullOrEmpty
+				}
 			}
 
 			$tokens = $null
@@ -83,7 +108,16 @@ Describe "Verifying integrity of module files" {
 			$null = [System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$parseErrors)
 
 			It "[$name] Should have no syntax errors" -TestCases @{ parseErrors = $parseErrors } {
-				$parseErrors | Should -BeNullOrEmpty
+				# Detect Pester version for cross-version compatibility within test
+				$pesterModule = Get-Module -Name Pester -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
+				$pesterVersion = if ($pesterModule) { $pesterModule.Version } else { [Version]'0.0' }
+				$isLegacyPester = $pesterVersion.Major -lt 5
+				
+				if ($isLegacyPester) {
+					$parseErrors | Should BeNullOrEmpty
+				} else {
+					$parseErrors | Should -BeNullOrEmpty
+				}
 			}
 
 			foreach ($command in $global:BannedCommands)
@@ -91,7 +125,16 @@ Describe "Verifying integrity of module files" {
 				if ($global:MayContainCommand["$command"] -notcontains $file.Name)
 				{
 					It "[$name] Should not use $command" -TestCases @{ tokens = $tokens; command = $command } {
-						$tokens | Where-Object Text -EQ $command | Should -BeNullOrEmpty
+						# Detect Pester version for cross-version compatibility within test
+						$pesterModule = Get-Module -Name Pester -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
+						$pesterVersion = if ($pesterModule) { $pesterModule.Version } else { [Version]'0.0' }
+						$isLegacyPester = $pesterVersion.Major -lt 5
+						
+						if ($isLegacyPester) {
+							$tokens | Where-Object Text -EQ $command | Should BeNullOrEmpty
+						} else {
+							$tokens | Where-Object Text -EQ $command | Should -BeNullOrEmpty
+						}
 					}
 				}
 			}
@@ -115,11 +158,29 @@ Describe "Verifying integrity of module files" {
 			$name = $file.FullName.Replace("$moduleRoot\", '')
 
 			It "[$name] Should have UTF8 encoding" -TestCases @{ file = $file } {
-				Get-FileEncoding -Path $file.FullName | Should -Be 'UTF8 BOM'
+				# Detect Pester version for cross-version compatibility within test
+				$pesterModule = Get-Module -Name Pester -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
+				$pesterVersion = if ($pesterModule) { $pesterModule.Version } else { [Version]'0.0' }
+				$isLegacyPester = $pesterVersion.Major -lt 5
+				
+				if ($isLegacyPester) {
+					Get-FileEncoding -Path $file.FullName | Should Be 'UTF8 BOM'
+				} else {
+					Get-FileEncoding -Path $file.FullName | Should -Be 'UTF8 BOM'
+				}
 			}
 
 			It "[$name] Should have no trailing space" -TestCases @{ file = $file } {
-				($file | Select-String "\s$" | Where-Object { $_.Line.Trim().Length -gt 0 } | Measure-Object).Count | Should -Be 0
+				# Detect Pester version for cross-version compatibility within test
+				$pesterModule = Get-Module -Name Pester -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
+				$pesterVersion = if ($pesterModule) { $pesterModule.Version } else { [Version]'0.0' }
+				$isLegacyPester = $pesterVersion.Major -lt 5
+				
+				if ($isLegacyPester) {
+					($file | Select-String "\s$" | Where-Object { $_.Line.Trim().Length -gt 0 } | Measure-Object).Count | Should Be 0
+				} else {
+					($file | Select-String "\s$" | Where-Object { $_.Line.Trim().Length -gt 0 } | Measure-Object).Count | Should -Be 0
+				}
 			}
 		}
 	}

@@ -32,7 +32,7 @@ try {
         $armValid = Test-EndpointEnvironmentMatch -Endpoint $armEndpoint -EnvironmentName $envName -Verbose
         Write-Host "ARM endpoint validation: $armValid" -ForegroundColor $(if($armValid) {"Green"} else {"Red"})
         
-        $graphValid = Test-EndpointEnvironmentMatch -Endpoint $graphEndpoint -EnvironmentName $envName -Verbose  
+        $graphValid = Test-EndpointEnvironmentMatch -Endpoint $graphEndpoint -EnvironmentName $envName -Verbose
         Write-Host "Graph endpoint validation: $graphValid" -ForegroundColor $(if($graphValid) {"Green"} else {"Red"})
         
     } else {
