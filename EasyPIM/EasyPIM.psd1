@@ -1,5 +1,7 @@
 @{
 
+# CI trigger: 2025-08-23 to force GH rebuild via PR (no functional change)
+
 # Script module or binary module file associated with this manifest.
 RootModule = 'EasyPIM.psm1'
 
@@ -25,7 +27,8 @@ Copyright = '(c) loicmichel. All rights reserved.'
 Description = 'Manage PIM Azure Resource, PIM Entra role and PIM for Group settings and assignments with simplicity in mind'
 
 # Script files (.ps1) that are run in the caller's environment prior to importing this module.
-ScriptsToProcess = @('internal\scripts\Import-ModuleChecks.ps1')
+# ScriptsToProcess intentionally left empty to simplify CI import path
+# ScriptsToProcess = @('internal\\scripts\\Import-ModuleChecks.ps1')
 
 # Modules that must be imported into the global environment prior to importing this module.
 # Keep versions flexible; rely on gallery to resolve suitable versions.
@@ -132,7 +135,7 @@ PrivateData = @{
     Multi-cloud Azure environment support (Chase Dafnis)
     - Enhanced Get-PIMAzureEnvironmentEndpoint for multi-cloud environments (Commercial, US Government, China, Germany)
     - Added comprehensive endpoint discovery and validation for all Azure cloud environments
-    - Improved custom dependency management with Test-EasyPIMDependencies function
+    - Improved custom dependency management with Test-EasyPIMDependencies function.
 
     v1.9.4 Release Notes (2025-08-22):
 
