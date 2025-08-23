@@ -6,7 +6,8 @@ EasyPIM is a PowerShell module created to help you manage Microsof Privileged Id
 Packed with more than 30 cmdlets, EasyPIM leverages the ARM and Graph APIs complexity to let you configure PIM **Azure Resources**, **Entra Roles** and **groups** settings and assignments in a simple way .  
 
 🆕 V1.9 Improves our Invoke-EasyPIMOrchestrator, your go-to way if you want to manage your PIM model from a config file.  
-**Check out our :  [step-by-step guide](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)**
+**Check out our :  [step-by-step guide](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)**  
+🌍 V1.10 EasyPIM now supports multi-cloud (Public, Governement, China, Germany) thanks to Chase Dafnis! 
 
 ## Key features
 :boom: Support editing multiple roles at once  
