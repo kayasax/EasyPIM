@@ -7,8 +7,8 @@
 
     .DESCRIPTION
 		This test evaluates the help for all commands in a module.
-		
-		COMPATIBILITY NOTE: This test uses Pester v5+ syntax and will be skipped 
+
+		COMPATIBILITY NOTE: This test uses Pester v5+ syntax and will be skipped
 		in PowerShell 5.1 environments that have older Pester versions (v3/v4).
 		The core module functionality is still fully tested in all PowerShell versions.
 

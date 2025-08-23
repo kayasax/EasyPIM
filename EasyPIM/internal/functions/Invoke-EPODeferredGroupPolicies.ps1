@@ -13,15 +13,15 @@ function Invoke-EPODeferredGroupPolicies {
     The Entra tenant ID used to connect and apply the group policies.
 
     .PARAMETER Mode
-    Policy application mode: validate, delta, or initial. Defaults to delta.
+    Policy application mode: delta or initial. Defaults to delta.
 
     .EXAMPLE
     Invoke-EPODeferredGroupPolicies -TenantId $tenant -Mode delta
     Replays deferred group policies with delta semantics (additive changes).
 
     .EXAMPLE
-    Invoke-EPODeferredGroupPolicies -TenantId $tenant -Mode validate
-    Attempts policies in validation mode; no changes are made.
+    Invoke-EPODeferredGroupPolicies -TenantId $tenant -WhatIf
+    Attempts policies in preview using -WhatIf; no changes are made.
 
     .NOTES
     Uses Set-EPOGroupPolicy internally and clears the deferred queue upon completion.
@@ -31,8 +31,8 @@ function Invoke-EPODeferredGroupPolicies {
         [Parameter(Mandatory = $true)]
         [string]$TenantId,
         [Parameter(Mandatory = $false)]
-        [ValidateSet('validate','delta','initial')]
-        [string]$Mode = 'delta'
+    [ValidateSet('delta','initial')]
+    [string]$Mode = 'delta'
     )
 
     if (-not $script:EasyPIM_DeferredGroupPolicies -or $script:EasyPIM_DeferredGroupPolicies.Count -eq 0) {

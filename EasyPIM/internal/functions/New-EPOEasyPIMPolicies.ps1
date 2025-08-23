@@ -3,10 +3,10 @@
 function New-EPOEasyPIMPolicies {
     <#
     .SYNOPSIS
-    Apply or validate EasyPIM policies across Azure, Entra, and Groups.
+    Apply EasyPIM policies across Azure, Entra, and Groups.
 
     .DESCRIPTION
-    Processes the provided configuration object, generating and applying policy rules for Azure Resource roles, Entra roles, and Group roles based on PolicyMode. Supports -WhatIf and returns a summarized result object.
+    Processes the provided configuration object, generating and applying policy rules for Azure Resource roles, Entra roles, and Group roles based on PolicyMode (delta/initial). Supports -WhatIf for preview and returns a summarized result object.
 
     .PARAMETER Config
     The PSCustomObject configuration previously loaded (e.g., via Get-EasyPIMConfiguration).
@@ -18,11 +18,11 @@ function New-EPOEasyPIMPolicies {
     The Azure subscription ID for Azure Resource role policies.
 
     .PARAMETER PolicyMode
-    One of validate, delta, or initial to control application behavior.
+    One of delta or initial to control application behavior.
 
     .EXAMPLE
-    New-EPOEasyPIMPolicies -Config $cfg -TenantId $tid -SubscriptionId $sub -PolicyMode validate
-    Validates all configured policies without making changes.
+    New-EPOEasyPIMPolicies -Config $cfg -TenantId $tid -SubscriptionId $sub -PolicyMode delta -WhatIf
+    Previews configured policy changes without making modifications.
 
     .EXAMPLE
     New-EPOEasyPIMPolicies -Config $cfg -TenantId $tid -SubscriptionId $sub -PolicyMode delta
@@ -43,8 +43,8 @@ function New-EPOEasyPIMPolicies {
         [string]$SubscriptionId,
 
     [Parameter(Mandatory=$false)]
-        [ValidateSet('validate','delta','initial')]
-        [string]$PolicyMode = 'validate'
+    [ValidateSet('delta','initial')]
+    [string]$PolicyMode = 'delta'
     )
 
     Write-Verbose "Starting New-EPOEasyPIMPolicies in $PolicyMode mode"
@@ -137,8 +137,7 @@ function New-EPOEasyPIMPolicies {
                                     $notifCount = ($resolved.PSObject.Properties | Where-Object { $_.Name -like 'Notification_*' }).Count
                                     $summary = "Activation=$act Requirements=$reqsTxt Approval=$appr Elig=$elig PermElig=$permElig Active=$actMax PermActive=$permAct Notifications=$notifCount"
                                 } else { $summary = '' }
-                                if ($PolicyMode -eq "validate") { Write-Host "  [OK] Validated policy for role '$($policyDef.RoleName)' at scope '$($policyDef.Scope)' (no changes applied) $summary" -ForegroundColor Green }
-                                else { Write-Host "  [OK] Applied policy for role '$($policyDef.RoleName)' at scope '$($policyDef.Scope)' $summary" -ForegroundColor Green }
+                                Write-Host "  [OK] Applied policy for role '$($policyDef.RoleName)' at scope '$($policyDef.Scope)' $summary" -ForegroundColor Green
                             }
                         } catch { $errorMsg = "Failed to apply Azure role policy for '$($policyDef.RoleName)': $($_.Exception.Message)"; Write-Error $errorMsg; $results.Errors += $errorMsg; $results.Summary.Failed++ }
                     }
@@ -161,7 +160,7 @@ function New-EPOEasyPIMPolicies {
                     $found = $false; if ($resp.value -and $resp.value.Count -gt 0) { $found = $true }
                     if (-not $found) { Write-Warning "Entra role '$($policyDef.RoleName)' not found - policy will be skipped. Correct the name to apply this policy."; if (-not $policyDef.PSObject.Properties['_RoleNotFound']) { $policyDef | Add-Member -NotePropertyName _RoleNotFound -NotePropertyValue $true -Force } else { $policyDef._RoleNotFound = $true }; $results.Summary.RolesNotFound++ }
                     else { if (-not $policyDef.PSObject.Properties['_RoleNotFound']) { $policyDef | Add-Member -NotePropertyName _RoleNotFound -NotePropertyValue $false -Force } else { $policyDef._RoleNotFound = $false } }
-                } catch { Write-Warning "Failed to validate Entra role '$($policyDef.RoleName)': $($_.Exception.Message)" }
+                } catch { Write-Warning "Failed to resolve Entra role '$($policyDef.RoleName)': $($_.Exception.Message)" }
             }
 
             $whatIfDetails = @()
@@ -226,8 +225,7 @@ function New-EPOEasyPIMPolicies {
                                 $notifCount = ($resolved.PSObject.Properties | Where-Object { $_.Name -like 'Notification_*' }).Count
                                 $summary = "Activation=$act Requirements=$reqsTxt Approval=$appr Elig=$elig PermElig=$permElig Active=$actMax PermActive=$permAct Notifications=$notifCount"
                             } else { $summary = '' }
-                            if ($PolicyMode -eq "validate") { Write-Host "  [OK] Validated policy for Entra role '$($policyDef.RoleName)' (no changes applied) $summary" -ForegroundColor Green }
-                            else { Write-Host "  [OK] Applied policy for Entra role '$($policyDef.RoleName)' $summary" -ForegroundColor Green }
+                            Write-Host "  [OK] Applied policy for Entra role '$($policyDef.RoleName)' $summary" -ForegroundColor Green
                         }
                     } catch { $errorMsg = "Failed to apply Entra role policy for '$($policyDef.RoleName)': $($_.Exception.Message)"; Write-Error $errorMsg; $results.Errors += $errorMsg; $results.Summary.Failed++ }
                 }
@@ -303,8 +301,7 @@ function New-EPOEasyPIMPolicies {
                                 $notifCount = ($resolved.PSObject.Properties | Where-Object { $_.Name -like 'Notification_*' }).Count
                                 $summary = "Activation=$act Requirements=$reqsTxt Approval=$appr Elig=$elig PermElig=$permElig Active=$actMax PermActive=$permAct Notifications=$notifCount"
                             } else { $summary = '' }
-                            if ($PolicyMode -eq "validate") { Write-Host "  [OK] Validated policy for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' (no changes applied) $summary" -ForegroundColor Green }
-                            else { Write-Host "  [OK] Applied policy for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' $summary" -ForegroundColor Green }
+                            Write-Host "  [OK] Applied policy for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' $summary" -ForegroundColor Green
                         }
                     } catch { $errorMsg = "Failed to apply Group policy for '$($policyDef.GroupId)' role '$($policyDef.RoleName)': $($_.Exception.Message)"; Write-Error $errorMsg; $results.Errors += $errorMsg; $results.Summary.Failed++ }
                 }

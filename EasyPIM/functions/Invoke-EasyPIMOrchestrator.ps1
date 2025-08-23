@@ -389,13 +389,14 @@ function Invoke-EasyPIMOrchestrator {
             ($policyConfig.ContainsKey('EntraRolePolicies') -and $policyConfig.EntraRolePolicies) -or
             ($policyConfig.ContainsKey('GroupPolicies') -and $policyConfig.GroupPolicies)
         )) {
-            $effectivePolicyMode = if ($WhatIfPreference) { "validate" } else { "delta" }
+            # Policy functions no longer support a separate 'validate' mode. Always use 'delta'; rely on -WhatIf for preview.
+            $effectivePolicyMode = "delta"
             # Convert hashtable to PSCustomObject for the policy function
             $policyConfigObject = [PSCustomObject]$policyConfig
             $policyResults = New-EPOEasyPIMPolicy -Config $policyConfigObject -TenantId $TenantId -SubscriptionId $SubscriptionId -PolicyMode $effectivePolicyMode -WhatIf:$WhatIfPreference
 
             if ($WhatIfPreference) {
-                Write-Host "✅ Policy validation completed - role policies are configured correctly for assignment compliance" -ForegroundColor Green
+                Write-Host "✅ Policy dry-run completed (-WhatIf) - role policies appear correctly configured for assignment compliance" -ForegroundColor Green
             } else {
                 $failed = 0; $succeeded = 0
                 try {
@@ -445,8 +446,8 @@ function Invoke-EasyPIMOrchestrator {
 
             # After assignments, attempt deferred group policies if any
             if (Get-Command -Name Invoke-EPODeferredGroupPolicies -ErrorAction SilentlyContinue) {
-                # Compute retry mode explicitly (avoid inline $(if ...) which could surface as a string literal in dynamic invocation scenarios)
-                $retryMode = if ($WhatIfPreference) { 'validate' } else { 'delta' }
+                # Deferred group policies follow the same rule: always use 'delta' mode; -WhatIf controls preview only.
+                $retryMode = 'delta'
                 $deferredSummary = Invoke-EPODeferredGroupPolicies -TenantId $TenantId -Mode $retryMode -WhatIf:$WhatIfPreference
                 if ($deferredSummary) {
                     $script:EasyPIM_DeferredGroupPoliciesSummary = $deferredSummary
@@ -470,7 +471,8 @@ function Invoke-EasyPIMOrchestrator {
         }
 
         # 6. Display summary
-    $effectivePolicyMode = if ($WhatIfPreference) { "validate" } else { "delta" }
+    # Summary no longer distinguishes 'validate' policy mode; pass 'delta' and rely on -WhatIf for preview messaging upstream
+    $effectivePolicyMode = 'delta'
     Write-EasyPIMSummary -CleanupResults $cleanupResults -AssignmentResults $assignmentResults -PolicyResults $policyResults -PolicyMode $effectivePolicyMode
     Write-Host "Mode semantics: delta = add/update only (no removals), initial = full reconcile (destructive)." -ForegroundColor Gray
 

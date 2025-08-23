@@ -23,7 +23,7 @@ function New-EasyPIMPolicies {
         The Azure subscription ID (required for Azure role policies)
 
     .PARAMETER PolicyMode
-        The policy application mode: validate, delta, or initial
+        The policy application mode: delta or initial
 
     .EXAMPLE
         $results = New-EasyPIMPolicies -Config $processedConfig -TenantId $tenantId -SubscriptionId $subscriptionId
@@ -44,8 +44,8 @@ function New-EasyPIMPolicies {
         [string]$SubscriptionId,
 
         [Parameter(Mandatory = $false)]
-        [ValidateSet("validate", "delta", "initial")]
-        [string]$PolicyMode = "validate"
+    [ValidateSet("delta", "initial")]
+    [string]$PolicyMode = "delta"
     )
 
     Write-Verbose "Starting New-EasyPIMPolicies in $PolicyMode mode"
@@ -149,11 +149,7 @@ function New-EasyPIMPolicies {
                                     }
                                     $summary = "Activation=$act Requirements=$reqsTxt Approval=$appr Elig=$elig PermElig=$permElig Active=$actMax PermActive=$permAct Notifications=$notifCount"
                                 } else { $summary = '' }
-                                if ($PolicyMode -eq "validate") {
-                                    Write-Host "  [OK] Validated policy for role '$($policyDef.RoleName)' at scope '$($policyDef.Scope)' (no changes applied) $summary" -ForegroundColor Green
-                                } else {
-                                    Write-Host "  [OK] Applied policy for role '$($policyDef.RoleName)' at scope '$($policyDef.Scope)' $summary" -ForegroundColor Green
-                                }
+                                Write-Host "  [OK] Applied policy for role '$($policyDef.RoleName)' at scope '$($policyDef.Scope)' $summary" -ForegroundColor Green
                             }
                         }
                         catch {
@@ -176,7 +172,7 @@ function New-EasyPIMPolicies {
 
         # Process Entra Role Policies
         if ($Config.PSObject.Properties['EntraRolePolicies'] -and $Config.EntraRolePolicies -and $Config.EntraRolePolicies.Count -gt 0) {
-            # Pre-validate each Entra role exists so warnings surface even under -WhatIf / validation
+            # Pre-check each Entra role exists so warnings surface even under -WhatIf
             foreach ($policyDef in $Config.EntraRolePolicies) {
                 try {
                     if (-not $policyDef.PSObject.Properties['RoleName'] -or [string]::IsNullOrWhiteSpace($policyDef.RoleName)) { continue }
@@ -192,7 +188,7 @@ function New-EasyPIMPolicies {
                         if (-not $policyDef.PSObject.Properties['_RoleNotFound']) { $policyDef | Add-Member -NotePropertyName _RoleNotFound -NotePropertyValue $false -Force } else { $policyDef._RoleNotFound = $false }
                     }
                 } catch {
-                    Write-Warning "Failed to validate Entra role '$($policyDef.RoleName)': $($_.Exception.Message)"
+                    Write-Warning "Failed to resolve Entra role '$($policyDef.RoleName)': $($_.Exception.Message)"
                 }
             }
             # Build detailed WhatIf message for Entra Role Policies
@@ -303,11 +299,7 @@ function New-EasyPIMPolicies {
                                 $notifCount = ($resolved.PSObject.Properties | Where-Object { $_.Name -like 'Notification_*' }).Count
                                 $summary = "Activation=$act Requirements=$reqsTxt Approval=$appr Elig=$elig PermElig=$permElig Active=$actMax PermActive=$permAct Notifications=$notifCount"
                             } else { $summary = '' }
-                            if ($PolicyMode -eq "validate") {
-                                Write-Host "  [OK] Validated policy for Entra role '$($policyDef.RoleName)' (no changes applied) $summary" -ForegroundColor Green
-                            } else {
-                                Write-Host "  [OK] Applied policy for Entra role '$($policyDef.RoleName)' $summary" -ForegroundColor Green
-                            }
+                            Write-Host "  [OK] Applied policy for Entra role '$($policyDef.RoleName)' $summary" -ForegroundColor Green
                         }
                     }
                     catch {
@@ -403,11 +395,7 @@ function New-EasyPIMPolicies {
                                     $notifCount = ($resolved.PSObject.Properties | Where-Object { $_.Name -like 'Notification_*' }).Count
                                     $summary = "Activation=$act Requirements=$reqsTxt Approval=$appr Elig=$elig PermElig=$permElig Active=$actMax PermActive=$permAct Notifications=$notifCount"
                                 } else { $summary = '' }
-                                if ($PolicyMode -eq 'validate') {
-                                    Write-Host "  [OK] Validated policy for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' (no changes applied) $summary" -ForegroundColor Green
-                                } else {
-                                    Write-Host "  [OK] Applied policy for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' $summary" -ForegroundColor Green
-                                }
+                                Write-Host "  [OK] Applied policy for Group '$($policyDef.GroupId)' role '$($policyDef.RoleName)' $summary" -ForegroundColor Green
                             }
                             'DeferredNotEligible' {
                                 $results.Summary.Skipped++
@@ -510,41 +498,7 @@ function Set-AzureRolePolicy {
         }
     }
 
-    if ($Mode -eq "validate") {
-        Write-Verbose "Validation mode: Policy would be applied for role '$($PolicyDefinition.RoleName)'"
-
-        # Show policy details that would be applied
-        $policy = $PolicyDefinition.ResolvedPolicy
-        Write-Host "[INFO] Policy Changes for Azure Role '$($PolicyDefinition.RoleName)' at '$($PolicyDefinition.Scope)':" -ForegroundColor Cyan
-        Write-Host "   [TIME] Activation Duration: $($policy.ActivationDuration)" -ForegroundColor Yellow
-        Write-Host "   [LOCK] Activation Requirements: $($policy.ActivationRequirement)" -ForegroundColor Yellow
-        if ($policy.ActiveAssignmentRequirement) {
-            Write-Host "   [SECURE] Active Assignment Requirements: $($policy.ActiveAssignmentRequirement)" -ForegroundColor Yellow
-        }
-        Write-Host "   [OK] Approval Required: $($policy.ApprovalRequired)" -ForegroundColor Yellow
-        if ($policy.Approvers -and $policy.ApprovalRequired -eq $true) {
-            Write-Host "   [USERS] Approvers: $($policy.Approvers.Count) configured" -ForegroundColor Yellow
-        }
-        Write-Host "   [TARGET] Max Eligibility Duration: $($policy.MaximumEligibilityDuration)" -ForegroundColor Yellow
-        Write-Host "   [FAST] Max Active Duration: $($policy.MaximumActiveAssignmentDuration)" -ForegroundColor Yellow
-
-        # Count notification settings
-        $notificationCount = 0
-        $policy.PSObject.Properties | Where-Object { $_.Name -like "Notification_*" } | ForEach-Object { $notificationCount++ }
-        if ($notificationCount -gt 0) {
-            Write-Host "   [EMAIL] Notification Settings: $notificationCount configured" -ForegroundColor Yellow
-        }
-
-        Write-Host "   [WARNING]  NOTE: No changes applied in validation mode" -ForegroundColor Magenta
-
-        return @{
-            RoleName = $PolicyDefinition.RoleName
-            Scope = $PolicyDefinition.Scope
-            Status = "Validated (No Changes Applied)"
-            Mode = $Mode
-            Details = "Policy validation completed - changes would be applied in delta/initial mode"
-        }
-    }
+    # Note: historical 'validate' preview mode removed. Use -WhatIf for preview.
 
     # Retrieve existing policy to capture correct PolicyID (roleManagementPolicies GUID) so PATCH hits the right resource
     try {
@@ -655,43 +609,7 @@ function Set-EntraRolePolicy {
         }
     }
 
-    if ($Mode -eq "validate") {
-        Write-Verbose "Validation mode: Policy would be applied for Entra role '$($PolicyDefinition.RoleName)'"
-
-        # Show policy details that would be applied
-        $policy = $PolicyDefinition.ResolvedPolicy
-        Write-Host "[INFO] Policy Changes for Entra Role '$($PolicyDefinition.RoleName)':" -ForegroundColor Cyan
-        Write-Host "   [TIME] Activation Duration: $($policy.ActivationDuration)" -ForegroundColor Yellow
-        Write-Host "   [LOCK] Activation Requirements: $($policy.ActivationRequirement)" -ForegroundColor Yellow
-        if ($policy.ActiveAssignmentRequirement) {
-            Write-Host "   [SECURE] Active Assignment Requirements: $($policy.ActiveAssignmentRequirement)" -ForegroundColor Yellow
-        }
-        Write-Host "   [OK] Approval Required: $($policy.ApprovalRequired)" -ForegroundColor Yellow
-        if ($policy.Approvers -and $policy.ApprovalRequired -eq $true) {
-            Write-Host "   [USERS] Approvers: $($policy.Approvers.Count) configured" -ForegroundColor Yellow
-        }
-        Write-Host "   [TARGET] Max Eligibility Duration: $($policy.MaximumEligibilityDuration)" -ForegroundColor Yellow
-        Write-Host "   [FAST] Max Active Duration: $($policy.MaximumActiveAssignmentDuration)" -ForegroundColor Yellow
-        if ($policy.AuthenticationContext_Enabled -eq $true) {
-            Write-Host "   [PROTECTED] Auth Context: $($policy.AuthenticationContext_Value)" -ForegroundColor Yellow
-        }
-
-        # Count notification settings
-        $notificationCount = 0
-        $policy.PSObject.Properties | Where-Object { $_.Name -like "Notification_*" } | ForEach-Object { $notificationCount++ }
-        if ($notificationCount -gt 0) {
-            Write-Host "   [EMAIL] Notification Settings: $notificationCount configured" -ForegroundColor Yellow
-        }
-
-        Write-Host "   [WARNING]  NOTE: No changes applied in validation mode" -ForegroundColor Magenta
-
-        return @{
-            RoleName = $PolicyDefinition.RoleName
-            Status = "Validated (No Changes Applied)"
-            Mode = $Mode
-            Details = "Policy validation completed - changes would be applied in delta/initial mode"
-        }
-    }
+    # Note: historical 'validate' preview mode removed. Use -WhatIf for preview.
 
     # Build and PATCH in-memory for Entra roles.
     $resolved = $PolicyDefinition.ResolvedPolicy
@@ -796,8 +714,8 @@ function Set-GroupPolicy {
     $groupRef = if ($PolicyDefinition.GroupId) { $PolicyDefinition.GroupId } else { $PolicyDefinition.GroupName }
     Write-Verbose "Applying Group policy for Group $groupRef role $($PolicyDefinition.RoleName)"
 
-    # Eligibility pre-check (skip for validate mode or if explicitly bypassed)
-    if ($Mode -ne 'validate' -and -not $SkipEligibilityCheck) {
+    # Eligibility pre-check (skip only if explicitly bypassed)
+    if (-not $SkipEligibilityCheck) {
         if (-not $PolicyDefinition.GroupId) {
             Write-Warning "Cannot check eligibility without GroupId for group name '$($PolicyDefinition.GroupName)'"
         } else {
@@ -819,11 +737,7 @@ function Set-GroupPolicy {
         }
     }
 
-    if ($Mode -eq "validate") {
-    $groupRefValidate = if ($PolicyDefinition.GroupId) { $PolicyDefinition.GroupId } else { $PolicyDefinition.GroupName }
-    Write-Verbose "Validation mode: Policy would be applied for Group '$groupRefValidate' role '$($PolicyDefinition.RoleName)'"
-        return @{ GroupId = $PolicyDefinition.GroupId; RoleName = $PolicyDefinition.RoleName; Status = 'Validated'; Mode = $Mode }
-    }
+    # Note: historical 'validate' preview mode removed. Use -WhatIf for preview.
 
     # Build parameters for Set-PIMGroupPolicy from resolved policy
     $resolved = if ($PolicyDefinition.ResolvedPolicy) { $PolicyDefinition.ResolvedPolicy } else { $PolicyDefinition }

@@ -220,7 +220,7 @@ if ($TestFunctions) {
 
         Write-Host "  Executing $($file.Name)"
         $testResultPath = Join-Path "$PSScriptRoot\..\TestResults" "TEST-$($file.BaseName).xml"
-        
+
         if ($PesterVersion -ge [version]'5.0') {
             # Pester v5+ syntax
             $config.TestResult.OutputPath = $testResultPath

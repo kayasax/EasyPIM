@@ -48,14 +48,12 @@
 
     # Handle policy results - might be null if policies were skipped
     if ($null -ne $PolicyResults -and $null -ne $PolicyResults.Summary) {
-        $actionLabel = if ($PolicyMode -eq "validate") { "Validated" } else { "Applied" }
-        Write-Host "│ ✅ $actionLabel : $($PolicyResults.Summary.Successful)" -ForegroundColor White
+        Write-Host "│ ✅ Applied : $($PolicyResults.Summary.Successful)" -ForegroundColor White
         Write-Host "│ ⏭️ Skipped : $($PolicyResults.Summary.Skipped)" -ForegroundColor White
         Write-Host "│ ❌ Failed  : $($PolicyResults.Summary.Failed)" -ForegroundColor White
         Write-Host "│ 📋 Total   : $($PolicyResults.Summary.TotalProcessed)" -ForegroundColor White
     } else {
-        $actionLabel = if ($PolicyMode -eq "validate") { "Validated" } else { "Applied" }
-        Write-Host "│ ✅ $actionLabel : 0" -ForegroundColor White
+        Write-Host "│ ✅ Applied : 0" -ForegroundColor White
         Write-Host "│ ⏭️ Skipped : 0" -ForegroundColor White
         Write-Host "│ ❌ Failed  : 0" -ForegroundColor White
         Write-Host "│ 📋 Total   : 0" -ForegroundColor White

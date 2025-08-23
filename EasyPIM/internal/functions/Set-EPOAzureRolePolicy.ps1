@@ -6,7 +6,7 @@ function Set-EPOAzureRolePolicy {
     Build and apply an Azure Resource role policy from a definition object.
 
     .DESCRIPTION
-    Converts a policy definition into ARM policy rule fragments and performs the PATCH using Update-Policy. Supports a validate mode that prints a preview without modifying the live policy.
+    Converts a policy definition into ARM policy rule fragments and performs the PATCH using Update-Policy. Use -WhatIf for preview without modifying the live policy.
 
     .PARAMETER PolicyDefinition
     The policy definition object (optionally with ResolvedPolicy) to apply.
@@ -18,11 +18,11 @@ function Set-EPOAzureRolePolicy {
     The Azure subscription ID for scope resolution.
 
     .PARAMETER Mode
-    One of validate, delta, initial to control apply semantics.
+    One of delta or initial to control apply semantics. Use -WhatIf for preview; there is no separate 'validate' mode.
 
     .EXAMPLE
-    Set-EPOAzureRolePolicy -PolicyDefinition $p -TenantId $tid -SubscriptionId $sub -Mode validate
-    Shows the intended changes without applying them.
+    Set-EPOAzureRolePolicy -PolicyDefinition $p -TenantId $tid -SubscriptionId $sub -Mode delta -WhatIf
+    Shows the intended changes without applying them (dry-run).
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param (
@@ -45,21 +45,7 @@ function Set-EPOAzureRolePolicy {
         return @{ RoleName = $PolicyDefinition.RoleName; Scope = $PolicyDefinition.Scope; Status = "Protected (No Changes)"; Mode = $Mode; Details = "Azure role is protected from policy changes for security reasons" }
     }
 
-    if ($Mode -eq "validate") {
-        $policy = $PolicyDefinition.ResolvedPolicy
-        Write-Host "[INFO] Policy Changes for Azure Role '$($PolicyDefinition.RoleName)' at '$($PolicyDefinition.Scope)':" -ForegroundColor Cyan
-        Write-Host "   [TIME] Activation Duration: $($policy.ActivationDuration)" -ForegroundColor Yellow
-        Write-Host "   [LOCK] Activation Requirements: $($policy.ActivationRequirement)" -ForegroundColor Yellow
-        if ($policy.ActiveAssignmentRequirement) { Write-Host "   [SECURE] Active Assignment Requirements: $($policy.ActiveAssignmentRequirement)" -ForegroundColor Yellow }
-        Write-Host "   [OK] Approval Required: $($policy.ApprovalRequired)" -ForegroundColor Yellow
-        if ($policy.Approvers -and $policy.ApprovalRequired -eq $true) { Write-Host "   [USERS] Approvers: $($policy.Approvers.Count) configured" -ForegroundColor Yellow }
-        Write-Host "   [TARGET] Max Eligibility Duration: $($policy.MaximumEligibilityDuration)" -ForegroundColor Yellow
-        Write-Host "   [FAST] Max Active Duration: $($policy.MaximumActiveAssignmentDuration)" -ForegroundColor Yellow
-        $notificationCount = 0; $policy.PSObject.Properties | Where-Object { $_.Name -like "Notification_*" } | ForEach-Object { $notificationCount++ }
-        if ($notificationCount -gt 0) { Write-Host "   [EMAIL] Notification Settings: $notificationCount configured" -ForegroundColor Yellow }
-        Write-Host "   [WARNING]  NOTE: No changes applied in validation mode" -ForegroundColor Magenta
-        return @{ RoleName = $PolicyDefinition.RoleName; Scope = $PolicyDefinition.Scope; Status = "Validated (No Changes Applied)"; Mode = $Mode; Details = "Policy validation completed - changes would be applied in delta/initial mode" }
-    }
+    # Note: historical 'validate' preview mode removed. Use -WhatIf for preview.
 
     try {
         $existing = Get-PIMAzureResourcePolicy -tenantID $TenantId -subscriptionID $SubscriptionId -rolename $PolicyDefinition.RoleName -ErrorAction Stop

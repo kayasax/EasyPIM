@@ -98,8 +98,8 @@ Add new parameters:
 [string[]]$PolicyOperations = @("All"),
 
 [Parameter(Mandatory = $false)]
-[ValidateSet("initial", "delta", "validate")]
-[string]$PolicyMode = "validate"
+[ValidateSet("initial", "delta")]
+[string]$PolicyMode = "delta"
 ```
 
 ### 2. New Internal Functions
@@ -152,11 +152,6 @@ function ConvertTo-PolicyCSV {
 
 ## Policy Modes
 
-### Validate Mode (Default)
-- Check policy definitions without applying
-- Validate templates and file references
-- Report configuration issues
-
 ### Delta Mode
 - Apply only policies that differ from current state
 - Compare with existing policies
@@ -166,6 +161,8 @@ function ConvertTo-PolicyCSV {
 - Apply all defined policies
 - Overwrite existing policies
 - Full policy deployment
+
+Note: Use -WhatIf for non-destructive previews during policy processing. A separate 'validate' policy mode has been removed.
 
 ## Implementation Plan
 
