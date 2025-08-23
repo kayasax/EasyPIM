@@ -135,7 +135,7 @@ PrivateData = @{
     Multi-cloud Azure environment support (Chase Dafnis)
     - Enhanced Get-PIMAzureEnvironmentEndpoint for multi-cloud environments (Commercial, US Government, China, Germany)
     - Added comprehensive endpoint discovery and validation for all Azure cloud environments
-    - Improved custom dependency management with Test-EasyPIMDependencies function
+    - Improved custom dependency management with Test-EasyPIMDependencies function.
 
     v1.9.4 Release Notes (2025-08-22):
 
