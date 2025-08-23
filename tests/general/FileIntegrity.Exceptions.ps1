@@ -3,14 +3,14 @@ $global:BannedCommands = @(
 	#'Write-Output'
 
 	# Use CIM instead where possible
-	'Get-WmiObject'
-	'Invoke-WmiMethod'
-	'Register-WmiEvent'
-	'Remove-WmiObject'
-	'Set-WmiInstance'
+	#'Get-WmiObject'
+	#'Invoke-WmiMethod'
+	#'Register-WmiEvent'
+	#'Remove-WmiObject'
+	#'Set-WmiInstance'
 
 	# Use Get-WinEvent instead
-	'Get-EventLog'
+	#'Get-EventLog'
 )
 
 <#

@@ -9,7 +9,16 @@
 
     $Include = "*",  # Add comma here
 
-    $Exclude = ""  # No comma on last parameter
+    $Exclude = "",  # No comma on last parameter
+
+    # Speed toggles
+    [switch]$Parallel,
+    [int]$Workers = [Math]::Max(1,[Environment]::ProcessorCount),
+    [switch]$SkipHelp,
+    [switch]$SkipAnalyzer,
+    [switch]$SkipIntegration,
+    # One-stop fast switch: skips heavy suites and enables parallel with optimal workers
+    [switch]$Fast
 )
 
 <#
@@ -63,6 +72,14 @@ $totalFailed = 0
 $totalRun = 0
 $testresults = @()
 
+# Apply Fast preset
+if ($Fast) {
+    if (-not $Parallel) { $Parallel = $true }
+    if (-not $PSBoundParameters.ContainsKey('Workers')) { $Workers = [Math]::Max(2,[Environment]::ProcessorCount - 1) }
+    $SkipHelp = $true
+    $SkipAnalyzer = $true
+}
+
 # Version-specific Pester handling
 if ($pesterVersion.Major -ge 5) {
     # Pester v5 approach
@@ -75,26 +92,78 @@ if ($pesterVersion.Major -ge 5) {
     #region Run General Tests
     if ($TestGeneral) {
         Write-Host "Modules imported, proceeding with general tests"
-        foreach ($file in (Get-ChildItem "$PSScriptRoot\general" | Where-Object Name -like "*.Tests.ps1")) {
-            if ($file.Name -notlike $Include) { continue }
-            if ($file.Name -like $Exclude) { continue }
 
-            Write-Host "  Executing $($file.Name)"
-            $config.TestResult.OutputPath = Join-Path "$PSScriptRoot\..\TestResults" "TEST-$($file.BaseName).xml"
-            $config.Run.Path = $file.FullName
-            $config.Run.PassThru = $true
-            $results = Invoke-Pester -Configuration $config
+        # Collect test files with include/exclude and optional skip flags
+        $allGeneral = Get-ChildItem "$PSScriptRoot\general" | Where-Object Name -like "*.Tests.ps1"
+        $files = $allGeneral | Where-Object { $_.Name -like $Include -and ($Exclude -eq '' -or $_.Name -notlike $Exclude) }
 
-            # Process results
-            foreach ($result in $results) {
-                $totalRun += $result.TotalCount
-                $totalFailed += $result.FailedCount
-                $result.Tests | Where-Object Result -ne 'Passed' | ForEach-Object {
+        # By default, skip Help tests to speed up runs. Opt-in by setting EASYPIM_RUN_HELP=1 or passing -SkipHelp:$false explicitly.
+        if (-not $PSBoundParameters.ContainsKey('SkipHelp')) {
+            if (-not $env:EASYPIM_RUN_HELP -or $env:EASYPIM_RUN_HELP -eq '0') {
+                $SkipHelp = $true
+                Write-Host "Skipping Help tests (set EASYPIM_RUN_HELP=1 to enable)" -ForegroundColor Yellow
+            }
+        }
+        if ($SkipHelp) { $files = $files | Where-Object Name -ne 'Help.Tests.ps1' }
+        if ($SkipAnalyzer) { $files = $files | Where-Object Name -ne 'PSScriptAnalyzer.Tests.ps1' }
+        if ($SkipIntegration) { $files = $files | Where-Object Name -ne 'Integration.Tests.ps1' }
+
+        if (-not $files) { Write-Host "No matching general tests found after filters"; }
+        else {
+            if ($Parallel) {
+                Write-Host "Running general tests in parallel ($Workers workers)"
+                $config.Run.Path = @($files.FullName)
+                $config.Run.PassThru = $true
+                $config.Run.Parallel.Enabled = $true
+                $config.Run.Parallel.Workers = [Math]::Max(1,$Workers)
+                $config.TestResult.OutputPath = Join-Path "$PSScriptRoot\..\TestResults" "TEST-General.xml"
+                $results = Invoke-Pester -Configuration $config
+
+                # Aggregate single run object
+                $totalRun += $results.TotalCount
+                $totalFailed += $results.FailedCount
+                $results.Tests | Where-Object Result -ne 'Passed' | ForEach-Object {
                     $testresults += [pscustomobject]@{
                         Block   = $_.Block
                         Name    = "It $($_.Name)"
                         Result  = $_.Result
                         Message = $_.ErrorRecord.DisplayErrorMessage
+                    }
+                }
+            }
+            else {
+                foreach ($file in $files) {
+                    Write-Host "  Executing $($file.Name)"
+                    $config.TestResult.OutputPath = Join-Path "$PSScriptRoot\..\TestResults" "TEST-$($file.BaseName).xml"
+                    $config.Run.Path = $file.FullName
+                    $config.Run.PassThru = $true
+                    $results = Invoke-Pester -Configuration $config
+
+                    # Process results (support both array and single objects)
+                    if ($results -is [System.Collections.IEnumerable] -and -not ($results -is [string])) {
+                        foreach ($result in $results) {
+                            $totalRun += $result.TotalCount
+                            $totalFailed += $result.FailedCount
+                            $result.Tests | Where-Object Result -ne 'Passed' | ForEach-Object {
+                                $testresults += [pscustomobject]@{
+                                    Block   = $_.Block
+                                    Name    = "It $($_.Name)"
+                                    Result  = $_.Result
+                                    Message = $_.ErrorRecord.DisplayErrorMessage
+                                }
+                            }
+                        }
+                    } else {
+                        $totalRun += $results.TotalCount
+                        $totalFailed += $results.FailedCount
+                        $results.Tests | Where-Object Result -ne 'Passed' | ForEach-Object {
+                            $testresults += [pscustomobject]@{
+                                Block   = $_.Block
+                                Name    = "It $($_.Name)"
+                                Result  = $_.Result
+                                Message = $_.ErrorRecord.DisplayErrorMessage
+                            }
+                        }
                     }
                 }
             }

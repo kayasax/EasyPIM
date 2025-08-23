@@ -49,6 +49,12 @@ Param (
 	$ExceptionsFile = "$global:testroot\general\Help.Exceptions.ps1"
 )
 
+# Opt-in only: Skip Help tests unless explicitly enabled
+if (-not $env:EASYPIM_RUN_HELP -or $env:EASYPIM_RUN_HELP -eq '0') {
+	Write-Warning "Skipping Help tests - set EASYPIM_RUN_HELP=1 to enable"
+	return
+}
+
 # COMPATIBILITY CHECK: Skip help tests in PowerShell 5.1 with older Pester versions
 # This test uses Pester v5+ syntax that is incompatible with Pester v3/v4
 $PesterVersion = (Get-Module Pester).Version

@@ -1,6 +1,31 @@
 #Requires -Version 5.1
 
 function Invoke-EPODeferredGroupPolicies {
+    <#
+    .SYNOPSIS
+    Applies any group policies that were deferred earlier in the run.
+
+    .DESCRIPTION
+    Some group policies are deferred when the group isn't yet PIM-eligible. This command
+    re-attempts those policies using the provided TenantId and Mode.
+
+    .PARAMETER TenantId
+    The Entra tenant ID used to connect and apply the group policies.
+
+    .PARAMETER Mode
+    Policy application mode: validate, delta, or initial. Defaults to delta.
+
+    .EXAMPLE
+    Invoke-EPODeferredGroupPolicies -TenantId $tenant -Mode delta
+    Replays deferred group policies with delta semantics (additive changes).
+
+    .EXAMPLE
+    Invoke-EPODeferredGroupPolicies -TenantId $tenant -Mode validate
+    Attempts policies in validation mode; no changes are made.
+
+    .NOTES
+    Uses Set-EPOGroupPolicy internally and clears the deferred queue upon completion.
+    #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]

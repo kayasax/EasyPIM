@@ -20,14 +20,17 @@ function Test-PIMEndpointDiscovery {
     .EXAMPLE
         Test-PIMEndpointDiscovery
         Tests discovery of both ARM and Microsoft Graph endpoints for current environment
+        Use -Verbose for detailed discovery logs and endpoint validation output.
     
     .EXAMPLE
         Test-PIMEndpointDiscovery -EndpointType ARM -ShowConfiguration
         Tests ARM endpoint discovery and shows Azure configuration details
+        Helpful when diagnosing Az context issues in sovereign clouds.
     
     .EXAMPLE
         Test-PIMEndpointDiscovery -TestConnection
         Tests endpoint discovery and validates connectivity to discovered endpoints
+        Runs Test-NetConnection to each host on port 443 and records the results.
     
     .OUTPUTS
         PSCustomObject containing discovered endpoints and test results
@@ -100,7 +103,7 @@ function Test-PIMEndpointDiscovery {
             $result.ARMEndpoint = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM' -ErrorAction SilentlyContinue
             
             if ($result.ARMEndpoint) {
-                Write-Host "✓ ARM Endpoint: $($result.ARMEndpoint)" -ForegroundColor Green
+                Write-Host "[OK] ARM Endpoint: $($result.ARMEndpoint)" -ForegroundColor Green
                 
                 # Validate ARM endpoint format
                 $armFormatValid = ($result.ARMEndpoint -match '^https://management\.' -and $result.ARMEndpoint.EndsWith('/'))
@@ -153,7 +156,7 @@ function Test-PIMEndpointDiscovery {
             $result.GraphEndpoint = Get-PIMAzureEnvironmentEndpoint -EndpointType 'MicrosoftGraph' -ErrorAction SilentlyContinue
             
             if ($result.GraphEndpoint) {
-                Write-Host "✓ Microsoft Graph Endpoint: $($result.GraphEndpoint)" -ForegroundColor Green
+                Write-Host "[OK] Microsoft Graph Endpoint: $($result.GraphEndpoint)" -ForegroundColor Green
                 
                 # Validate Graph endpoint format
                 if ($result.GraphEndpoint -match '^https://.*graph') {
@@ -178,7 +181,7 @@ function Test-PIMEndpointDiscovery {
     # Test connectivity if requested
     if ($TestConnection -and ($result.ARMEndpoint -or $result.GraphEndpoint)) {
         Write-Verbose "Testing endpoint connectivity"
-        Write-Host "Testing endpoint connectivity..." -ForegroundColor Yellow
+    Write-Host "Testing endpoint connectivity..." -ForegroundColor Yellow
         
         # Test ARM connectivity
         if ($result.ARMEndpoint) {
@@ -186,12 +189,12 @@ function Test-PIMEndpointDiscovery {
             
             if ($armTest -and $armTest.TcpTestSucceeded) {
                 $result.ConnectionTestResults['ARM'] = $true
-                Write-Host "✓ ARM endpoint connectivity: Success" -ForegroundColor Green
+                Write-Host "[OK] ARM endpoint connectivity: Success" -ForegroundColor Green
             }
             else {
                 $result.ConnectionTestResults['ARM'] = $false
                 $result.Warnings += "ARM connectivity test failed"
-                Write-Host "❌ ARM endpoint connectivity: Failed" -ForegroundColor Red
+                Write-Host "[FAIL] ARM endpoint connectivity: Failed" -ForegroundColor Red
             }
         }
         
@@ -201,12 +204,12 @@ function Test-PIMEndpointDiscovery {
             
             if ($graphTest -and $graphTest.TcpTestSucceeded) {
                 $result.ConnectionTestResults['Graph'] = $true
-                Write-Host "✓ Microsoft Graph endpoint connectivity: Success" -ForegroundColor Green
+                Write-Host "[OK] Microsoft Graph endpoint connectivity: Success" -ForegroundColor Green
             }
             else {
                 $result.ConnectionTestResults['Graph'] = $false
                 $result.Warnings += "Microsoft Graph connectivity test failed"
-                Write-Host "❌ Microsoft Graph endpoint connectivity: Failed" -ForegroundColor Red
+                Write-Host "[FAIL] Microsoft Graph endpoint connectivity: Failed" -ForegroundColor Red
             }
         }
     }
@@ -239,7 +242,7 @@ function Test-PIMEndpointDiscovery {
         Write-Host ""
         Write-Host "Recommendations:" -ForegroundColor Yellow
         foreach ($rec in $result.Recommendations) {
-            Write-Host "  • $rec" -ForegroundColor Gray
+            Write-Host "  - $rec" -ForegroundColor Gray
         }
     }
     

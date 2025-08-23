@@ -152,10 +152,6 @@ PrivateData = @{
     Notifications
     - Flattened template properties and fixed boolean handling (.ToString().ToLower()) to prevent crashes.
 
-    Quality and tests
-    - Resolved PSAvoidUsingEmptyCatchBlock and PSUseDeclaredVarsMoreThanAssignments findings.
-    - Removed trailing whitespace flagged by tests. Pester now passes cleanly (9052/9052).
-
     Contributors: Loïc MICHEL (original author), Chase Dafnis (multi-cloud / Azure environment support)
     Docs: https://github.com/kayasax/EasyPIM/wiki
 '@

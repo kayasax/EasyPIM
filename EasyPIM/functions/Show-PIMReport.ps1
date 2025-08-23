@@ -1,16 +1,21 @@
 ﻿<#
-    .Synopsis
-    Visualize PIM activities
+    .SYNOPSIS
+    Visualize PIM activities.
 
-    .Description
-    Visualire PIM activities
+    .DESCRIPTION
+    Retrieves PIM-related audit events from Microsoft Graph and returns a summarized object array. Can optionally filter by user UPN. Also computes top categories and actors for HTML visualization.
 
-    .Example
-    PS> Show-PIMReport -tennantID $tenantID
+    .EXAMPLE
+    Show-PIMReport -tenantID $tenantID
+    Returns recent PIM activity entries for the tenant with useful derived fields.
 
+    .PARAMETER tenantID
+    The Entra tenant ID to query.
 
+    .PARAMETER upn
+    Optional UPN filter to return only activities initiated by a specific user.
 
-    .Notes
+    .NOTES
     Author: Loïc MICHEL
     Homepage: https://github.com/kayasax/EasyPIM
 
