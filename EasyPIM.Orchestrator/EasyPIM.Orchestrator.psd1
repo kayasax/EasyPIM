@@ -7,7 +7,15 @@
     Description       = 'Orchestrator for EasyPIM (Invoke-EasyPIMOrchestrator and policy/cleanup pipeline) (scaffold).'
     PowerShellVersion = '5.1'
     RequiredModules   = @()
-    FunctionsToExport = @()
+    FunctionsToExport = @(
+        'Invoke-EasyPIMOrchestrator',
+        'New-EPOEasyPIMPolicies',
+        'New-EPOEasyPIMPolicy',
+        'Set-EPOAzureRolePolicy',
+        'Set-EPOEntraRolePolicy',
+        'Set-EPOGroupPolicy',
+        'Invoke-EPODeferredGroupPolicies'
+    )
     AliasesToExport   = @()
     CmdletsToExport   = @()
     PrivateData       = @{ PSData = @{ Tags = @('EasyPIM','Orchestrator','Scaffold'); ProjectUri = 'https://github.com/kayasax/EasyPIM' } }
