@@ -6,18 +6,19 @@
 - Improve test surfaces and release cadence per package
 
 ## Proposed packages
-- EasyPIM.Core
+- EasyPIM (existing module) — acts as Core
   - Contents: configuration helpers, discovery, Get-* commands, export/report, Test-* diagnostics
   - Dependencies: Microsoft.Graph.Authentication, Az.Accounts (read-only usage)
-- EasyPIM.Orchestrator
+- EasyPIM.Orchestrator (new)
   - Contents: Invoke-EasyPIMOrchestrator, New-EPO*/Set-EPO* policy appliers, cleanup/deferred processors
-  - DependsOn: EasyPIM.Core
+  - DependsOn: EasyPIM (Core)
 
 ## Code moves (phase 1 draft)
 - Keep current repo; create submodules later if needed
-- ./EasyPIM/functions/* → Core (except orchestrator entrypoints)
-- ./EasyPIM/internal/functions/Initialize-*, Get-*, Test-*, Show-* → Core
-- ./EasyPIM/internal/functions/Set-EPO*, New-EPO*, Invoke-EPO* → Orchestrator
+- Keep EasyPIM as Core (no new Core module created)
+- ./EasyPIM/functions/* stay in EasyPIM (except orchestrator entrypoints)
+- ./EasyPIM/internal/functions/Initialize-*, Get-*, Test-*, Show-* stay in EasyPIM
+- ./EasyPIM/internal/functions/Set-EPO*, New-EPO*, Invoke-EPO* → EasyPIM.Orchestrator
 
 ## Breaking changes
 - None initially; maintain re-export from umbrella module during transition
