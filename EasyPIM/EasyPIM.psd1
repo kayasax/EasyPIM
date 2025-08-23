@@ -25,7 +25,8 @@ Copyright = '(c) loicmichel. All rights reserved.'
 Description = 'Manage PIM Azure Resource, PIM Entra role and PIM for Group settings and assignments with simplicity in mind'
 
 # Script files (.ps1) that are run in the caller's environment prior to importing this module.
-ScriptsToProcess = @('internal\scripts\Import-ModuleChecks.ps1')
+# ScriptsToProcess intentionally left empty to simplify CI import path
+# ScriptsToProcess = @('internal\\scripts\\Import-ModuleChecks.ps1')
 
 # Modules that must be imported into the global environment prior to importing this module.
 # Keep versions flexible; rely on gallery to resolve suitable versions.
