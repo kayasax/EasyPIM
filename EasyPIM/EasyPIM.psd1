@@ -1,5 +1,7 @@
 @{
 
+# CI trigger: 2025-08-23 to force GH rebuild via PR (no functional change)
+
 # Script module or binary module file associated with this manifest.
 RootModule = 'EasyPIM.psm1'
 
