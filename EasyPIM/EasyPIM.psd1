@@ -4,7 +4,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.9.4'
+ModuleVersion = '1.10.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -24,38 +24,16 @@ Copyright = '(c) loicmichel. All rights reserved.'
 # Description of the functionality provided by this module
 Description = 'Manage PIM Azure Resource, PIM Entra role and PIM for Group settings and assignments with simplicity in mind'
 
-# Minimum version of the PowerShell engine required by this module
-# PowerShellVersion = ''
-
-# Name of the PowerShell host required by this module
-# PowerShellHostName = ''
-
-# Minimum version of the PowerShell host required by this module
-# PowerShellHostVersion = ''
-
-# Minimum version of Microsoft .NET Framework required by this module. This prerequisite is valid for the PowerShell Desktop edition only.
-# DotNetFrameworkVersion = ''
-
-# Minimum version of the common language runtime (CLR) required by this module. This prerequisite is valid for the PowerShell Desktop edition only.
-# ClrVersion = ''
-
-# Processor architecture (None, X86, Amd64) required by this module
-# ProcessorArchitecture = ''
-
-# Modules that must be imported into the global environment prior to importing this module
- RequiredModules = @("Az.Accounts","Az.KeyVault", "Az.Resources")
-
-# Assemblies that must be loaded prior to importing this module
-# RequiredAssemblies = @()
-
 # Script files (.ps1) that are run in the caller's environment prior to importing this module.
-# ScriptsToProcess = @()
+ScriptsToProcess = @('internal\scripts\Import-ModuleChecks.ps1')
 
-# Type files (.ps1xml) to be loaded when importing this module
-# TypesToProcess = @()
-
-# Format files (.ps1xml) to be loaded when importing this module
-# FormatsToProcess = @()
+# Modules that must be imported into the global environment prior to importing this module.
+# Keep versions flexible; rely on gallery to resolve suitable versions.
+RequiredModules = @(
+    'Az.Accounts',
+    'Microsoft.Graph.Authentication',
+    'Microsoft.Graph.Identity.Governance'
+)
 
 # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
 # NestedModules = @()
@@ -108,7 +86,8 @@ FunctionsToExport = @(
     'Copy-PIMEntraRoleEligibleAssignment',
     'Invoke-EasyPIMOrchestrator',
     'Get-EasyPIMConfiguration',
-    'Test-PIMPolicyDrift'
+    'Test-PIMPolicyDrift',
+    'Test-PIMEndpointDiscovery'
 )
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
@@ -148,36 +127,40 @@ PrivateData = @{
 
         # ReleaseNotes of this module
     ReleaseNotes = @'
+    v1.10.0 Release Notes (2025-08-23):
+
+    Multi-cloud Azure environment support (Chase Dafnis)
+    - Enhanced Get-PIMAzureEnvironmentEndpoint for multi-cloud environments (Commercial, US Government, China, Germany)
+    - Added comprehensive endpoint discovery and validation for all Azure cloud environments
+    - Improved custom dependency management with Test-EasyPIMDependencies function
+
     v1.9.4 Release Notes (2025-08-22):
 
-    ✅ Group policy PATCH stability
+    Group policy PATCH stability
     - Filter out null rule entries before PATCH to avoid Graph schema errors (rules: [ null ]).
-    - Re-filter during per‑rule isolation; isolation triggers only after a global PATCH failure.
+    - Re-filter during per-rule isolation; isolation triggers only after a global PATCH failure.
     - Policy summary now increments Failed on apply errors (no false "Applied" on error paths).
 
-    🔧 Diagnostics
+    Diagnostics
     - Clearer isolation output (rule index, id, and type), retains body preview on failures.
 
     Notes: This is a patch-only release. No public API changes.
 
     v1.9.3 Release Notes (2025-08-21):
 
-    ✅ Entra policy stability and correctness
+    Entra policy stability and correctness
     - Fixed unifiedRoleManagementPolicyApprovalRule payloads to use Graph subject sets (@odata.type + userId/groupId).
     - Normalized eligibility durations: convert PnY to day-based (PnD) and only include maximumDuration when expirationRequired=true.
     - Improved InvalidPolicy diagnostics with per-rule isolation and PATCH body previews.
 
-    🔐 Authentication Context harmonization
+    Authentication Context harmonization
     - When Authentication Context is enabled for a role, MFA is always stripped from EndUser enablement to avoid MfaAndAcrsConflict.
     - Still emit enablement rule to clear any prior MFA settings.
 
-    🔔 Notifications
+    Notifications
     - Flattened template properties and fixed boolean handling (.ToString().ToLower()) to prevent crashes.
 
-    � Quality and tests
-    - Resolved PSAvoidUsingEmptyCatchBlock and PSUseDeclaredVarsMoreThanAssignments findings.
-    - Removed trailing whitespace flagged by tests. Pester now passes cleanly (9052/9052).
-
+    Contributors: Loïc MICHEL (original author), Chase Dafnis (multi-cloud / Azure environment support)
     Docs: https://github.com/kayasax/EasyPIM/wiki
 '@
 

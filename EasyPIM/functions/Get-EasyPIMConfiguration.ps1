@@ -24,9 +24,11 @@ function Get-EasyPIMConfiguration {
 
     .EXAMPLE
         $config = Get-EasyPIMConfiguration -ConfigFilePath "config.json"
+    Supports // and /* */ comments when Remove-JsonComments helper is available.
 
     .EXAMPLE
         $config = Get-EasyPIMConfiguration -KeyVaultName "MyVault" -SecretName "PIMConfig"
+    Requires Az.KeyVault module and read access to the specified secret.
     #>
     [CmdletBinding(DefaultParameterSetName = 'FilePath')]
     param (

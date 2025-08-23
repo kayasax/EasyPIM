@@ -1,5 +1,31 @@
 #Requires -Version 5.1
 
+<#
+.SYNOPSIS
+Convenience wrapper to process policies using a singular noun form.
+
+.DESCRIPTION
+Delegates to New-EPOEasyPIMPolicies to apply or validate policies based on the provided configuration, mode, and targets.
+
+.PARAMETER Config
+The PSCustomObject configuration object containing policy definitions.
+
+.PARAMETER TenantId
+The target Entra tenant ID.
+
+.PARAMETER SubscriptionId
+The Azure subscription ID for Azure role policies.
+
+.PARAMETER PolicyMode
+Policy apply mode: validate, delta, initial.
+
+.EXAMPLE
+New-EPOEasyPIMPolicy -Config $cfg -TenantId $tid -SubscriptionId $sub -PolicyMode delta
+Returns the same result object as New-EPOEasyPIMPolicies.
+
+.NOTES
+Provided for naming consistency; returns the result from New-EPOEasyPIMPolicies.
+#>
 # Wrapper to align with PS naming best practices (singular noun)
 # Delegates to existing New-EPOEasyPIMPolicies implementation for backward compatibility
 function New-EPOEasyPIMPolicy {
@@ -14,7 +40,7 @@ function New-EPOEasyPIMPolicy {
         [Parameter(Mandatory=$false)]
         [string]$SubscriptionId,
 
-        [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false)]
         [ValidateSet('validate','delta','initial')]
         [string]$PolicyMode = 'validate'
     )

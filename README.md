@@ -87,6 +87,10 @@ More samples available in the [documentation](https://github.com/kayasax/EasyPIM
 ## Use cases
 Discover how EasyPIM answers to common challenges [Use cases](https://github.com/kayasax/EasyPIM/wiki/Use-Cases)
 
+## Contributors
+- **Loïc MICHEL** - Original author and maintainer
+- **Chase Dafnis** - Multi-cloud / Azure environment support
+
 ## Requirement
 * Az.Accounts module
 * Permission:

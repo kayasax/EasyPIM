@@ -92,11 +92,13 @@ function Get-PIMAzureResourceEligibleAssignment {
 
         # issue #23: due to a bug with the API regarding the membertype, we will use RoleEligibilitySchedulesInstance instead of RoleEligibilitySchedule
         # the downside is we will not get assignment with a future start date
+        $armEndpoint = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM'
         if ($PSBoundParameters.Keys.Contains('includeFutureAssignments')) {
-            $restURI = "https://management.azure.com/$scope/providers/Microsoft.Authorization/roleEligibilitySchedules?api-version=2020-10-01"
+            $restURI = "$($armEndpoint.TrimEnd('/'))/$scope/providers/Microsoft.Authorization/roleEligibilitySchedules?api-version=2020-10-01"
         }
         else {
-            $restURI = "https://management.azure.com/$scope/providers/Microsoft.Authorization/roleEligibilityScheduleInstances?api-version=2020-10-01"        }
+            $restURI = "$($armEndpoint.TrimEnd('/'))/$scope/providers/Microsoft.Authorization/roleEligibilityScheduleInstances?api-version=2020-10-01"
+        }
 
         # Determine which principal ID to use for filtering
         $effectivePrincipalId = $null

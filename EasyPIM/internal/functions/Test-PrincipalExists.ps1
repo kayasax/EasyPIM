@@ -2,6 +2,20 @@
 if (-not $script:principalCache) { $script:principalCache = @{} }
 if (-not $script:principalObjectCache) { $script:principalObjectCache = @{} }
 
+<#
+.SYNOPSIS
+Check whether an Entra ID directory object exists by ID.
+
+.DESCRIPTION
+Performs a lightweight GET on /directoryObjects/{id} using Microsoft Graph and caches results to reduce repeated calls.
+
+.PARAMETER PrincipalId
+The object ID (GUID) of the directory object to check.
+
+.EXAMPLE
+Test-PrincipalExists -PrincipalId $objectId
+Returns $true if the object exists (HTTP 200), or $false for HTTP 404 and other handled errors.
+#>
 function Test-PrincipalExists {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "")]
     param ([string]$PrincipalId)
@@ -27,7 +41,8 @@ function Test-PrincipalExists {
             Connect-MgGraph -Tenant $script:tenantID -Scopes $scopes -NoWelcome | Out-Null
         }
 
-        $uri = "https://graph.microsoft.com/v1.0/directoryObjects/$PrincipalId"
+        $graphEndpoint = Get-PIMAzureEnvironmentEndpoint -EndpointType 'MicrosoftGraph'
+        $uri = "$graphEndpoint/v1.0/directoryObjects/$PrincipalId"
         $response = Invoke-MgGraphRequest -Uri $uri -Method GET -ErrorAction Stop
         # Cache
         $script:principalCache[$PrincipalId] = $true

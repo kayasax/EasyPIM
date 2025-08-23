@@ -1,33 +1,39 @@
 ﻿<#
-    .Synopsis
-    List of PIM Entra Role active assignement
-    .Description
-    Active assignment does not require to activate their role. https://learn.microsoft.com/en-us/graph/api/rbacapplication-list-roleeligibilityscheduleinstances?view=graph-rest-1.0&tabs=http
-    .Parameter tenantID
-    EntraID tenant ID
-    .Parameter summary
-    When enabled will return the most useful information only
+    .SYNOPSIS
+    List eligible PIM assignments for a Microsoft Entra group.
+
+    .DESCRIPTION
+    Returns eligibility schedule instances for a PIM-enabled group using Microsoft Graph.
+    Supports server-side filtering by group, principal name, or user principal name (UPN).
+    When userPrincipalName is provided, it is resolved to the object ID for efficient API filtering.
+
+    .PARAMETER tenantID
+    The Microsoft Entra tenant ID to query.
+
+    .PARAMETER groupID
+    The object ID of the PIM-enabled group to filter on.
+
+    .PARAMETER summary
+    When specified, returns a concise projection of the most useful properties.
+
     .PARAMETER rolename
-    Filter by rolename    .PARAMETER principalid
-    Filter by principalid
+    Optional role name filter. Note: group PIM APIs typically scope access by group rather than role.
+
     .PARAMETER principalName
-    Filter by principalName
+    Optional principal display name prefix to filter on (client-side when UPN isn't provided).
+
     .PARAMETER userPrincipalName
-    Filter by userPrincipalName (UPN). Will resolve to object ID for efficient Graph API filtering.
+    Optional UPN to resolve to an object ID; enables server-side filtering for performance.
 
-    .Example
+    .EXAMPLE
     PS> Get-PIMGroupEligibleAssignment -tenantID $tid -groupID $gID
+        Lists all eligible assignments for the specified group in the given tenant.
 
-    List eligible assignments
-
-    .Example
+    .EXAMPLE
     PS> Get-PIMGroupEligibleAssignment -tenantID $tid -groupID $gID -userPrincipalName "user@domain.com"
+        Lists eligible assignments for the specified user by resolving the UPN to the object ID and filtering at the API.
 
-    List eligible assignments for a specific user by UPN
-
-
-    .Link
-    .Notes
+    .NOTES
     Author: Loïc MICHEL
     Homepage: https://github.com/kayasax/EasyPIM
 #>

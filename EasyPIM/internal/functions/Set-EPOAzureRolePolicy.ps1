@@ -1,6 +1,29 @@
 #Requires -Version 5.1
 
 function Set-EPOAzureRolePolicy {
+    <#
+    .SYNOPSIS
+    Build and apply an Azure Resource role policy from a definition object.
+
+    .DESCRIPTION
+    Converts a policy definition into ARM policy rule fragments and performs the PATCH using Update-Policy. Supports a validate mode that prints a preview without modifying the live policy.
+
+    .PARAMETER PolicyDefinition
+    The policy definition object (optionally with ResolvedPolicy) to apply.
+
+    .PARAMETER TenantId
+    The target Entra tenant ID.
+
+    .PARAMETER SubscriptionId
+    The Azure subscription ID for scope resolution.
+
+    .PARAMETER Mode
+    One of validate, delta, initial to control apply semantics.
+
+    .EXAMPLE
+    Set-EPOAzureRolePolicy -PolicyDefinition $p -TenantId $tid -SubscriptionId $sub -Mode validate
+    Shows the intended changes without applying them.
+    #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param (
         [Parameter(Mandatory = $true)]

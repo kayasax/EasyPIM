@@ -1,6 +1,23 @@
 ﻿# Cache for role mappings
 $script:roleCache = @{}
 
+<#
+.SYNOPSIS
+Build quick-look role name/ID mappings for a subscription.
+
+.DESCRIPTION
+Queries Azure RBAC role definitions for the specified subscription and returns a hashtable with three maps: NameToId, IdToName, and FullPathToName. Results are cached per-subscription for performance in repeated operations.
+
+.PARAMETER SubscriptionId
+The Azure Subscription GUID to query role definitions from.
+
+.EXAMPLE
+Get-RoleMappings -SubscriptionId $subId
+Use the maps for fast lookups when translating between role names and IDs.
+
+.NOTES
+Uses Get-AzRoleDefinition; requires an active Az context.
+#>
 function Get-RoleMappings {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "")]
     param([string]$SubscriptionId)

@@ -143,21 +143,21 @@ function Update-EntraRolePolicy  {
     $response = invoke-graph -Endpoint $endpoint -Method "PATCH" -Body $body
   } catch {
     $msg = $_.Exception.Message
-    if ($msg -match 'InvalidPolicy' -or $msg -match 'BadRequest' -or $msg -match 'does not match schema') {
+  if ($msg -match 'InvalidPolicy' -or $msg -match 'BadRequest' -or $msg -match 'does not match schema') {
       Write-Host "[Diagnostics] Full PATCH body for InvalidPolicy:" -ForegroundColor Yellow
       Write-Host $body -ForegroundColor DarkYellow
       # Attempt to isolate offending rule(s) by patching individually
       try {
         Write-Host "[Diagnostics] Attempting per-rule isolation..." -ForegroundColor Yellow
-        # Re-filter in case upstream mutated the array
-        $isoArray = @($rulesArray | Where-Object { $_ -ne $null })
-        $i = 0
-        foreach ($r in $isoArray) {
+    # Re-filter in case upstream mutated the array
+    $isoArray = @($rulesArray | Where-Object { $_ -ne $null })
+    $i = 0
+    foreach ($r in $isoArray) {
           $i++
           $single = @{ rules = @($r) } | ConvertTo-Json -Depth 10
           try {
             Write-Verbose "[Diagnostics] Testing rule #$i id=$($r.id) type=$($r.'@odata.type')"
-            $null = invoke-graph -Endpoint $endpoint -Method "PATCH" -Body $single -ErrorAction Stop
+      $null = invoke-graph -Endpoint $endpoint -Method "PATCH" -Body $single -ErrorAction Stop
             Write-Host ("[Diagnostics] Rule #{0} (id={1}) -> OK" -f $i, $r.id) -ForegroundColor Green
           } catch {
             Write-Host ("[Diagnostics] Rule #{0} (id={1}) -> FAILED: {2}" -f $i, $r.id, $_.Exception.Message) -ForegroundColor Red

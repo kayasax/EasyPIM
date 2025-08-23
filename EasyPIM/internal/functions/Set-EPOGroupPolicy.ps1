@@ -3,18 +3,29 @@
 function Set-EPOGroupPolicy {
     <#
     .SYNOPSIS
-        Apply a PIM Group role policy using the EasyPIM "EPO" (Enhanced Policy Orchestrator) path.
+    Apply a PIM Group role policy using the Enhanced Policy Orchestrator.
 
     .DESCRIPTION
-        This wrapper prepares a policy definition for the Set-PIMGroupPolicy cmdlet. It:
-          - Resolves GroupId from GroupName when needed
-          - Optionally defers when the group isn't yet PIM-eligible
-          - Flattens nested Notifications from templates into Notification_* parameters
-          - Normalizes Notification_* objects to true Hashtables the cmdlet accepts
-          - Normalizes requirements to string[] (supports comma-separated strings)
-          - Maps legacy/alias fields (EnablementRules -> ActivationRequirement, Duration -> ActivationDuration)
-          - Suppresses AuthenticationContext_* for Groups (to avoid Graph InvalidPolicy)
-        No behavior change is intended beyond shaping data for a reliable call to Set-PIMGroupPolicy.
+    Prepares and applies a group role policy by resolving GroupId, handling deferrals, flattening and normalizing notifications, normalizing requirements, and mapping legacy fields to expected parameters for Set-PIMGroupPolicy. AuthenticationContext_* is ignored for groups to avoid InvalidPolicy errors.
+
+    .PARAMETER PolicyDefinition
+    The group policy definition (optionally with ResolvedPolicy) to apply.
+
+    .PARAMETER TenantId
+    The target Entra tenant ID.
+
+    .PARAMETER Mode
+    One of validate, delta, initial to control apply semantics.
+
+    .PARAMETER SkipEligibilityCheck
+    Skips the PIM eligibility pre-check for the target group.
+
+    .EXAMPLE
+    Set-EPOGroupPolicy -PolicyDefinition $p -TenantId $tid -Mode validate
+    Shows what would change without applying any updates.
+
+    .NOTES
+    Defers group policies if the group isn't yet PIM-enabled; use Invoke-EPODeferredGroupPolicies to retry.
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param (

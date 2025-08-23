@@ -1,6 +1,36 @@
 #Requires -Version 5.1
 
 function New-EPOEasyPIMPolicies {
+    <#
+    .SYNOPSIS
+    Apply or validate EasyPIM policies across Azure, Entra, and Groups.
+
+    .DESCRIPTION
+    Processes the provided configuration object, generating and applying policy rules for Azure Resource roles, Entra roles, and Group roles based on PolicyMode. Supports -WhatIf and returns a summarized result object.
+
+    .PARAMETER Config
+    The PSCustomObject configuration previously loaded (e.g., via Get-EasyPIMConfiguration).
+
+    .PARAMETER TenantId
+    The target Entra tenant ID.
+
+    .PARAMETER SubscriptionId
+    The Azure subscription ID for Azure Resource role policies.
+
+    .PARAMETER PolicyMode
+    One of validate, delta, or initial to control application behavior.
+
+    .EXAMPLE
+    New-EPOEasyPIMPolicies -Config $cfg -TenantId $tid -SubscriptionId $sub -PolicyMode validate
+    Validates all configured policies without making changes.
+
+    .EXAMPLE
+    New-EPOEasyPIMPolicies -Config $cfg -TenantId $tid -SubscriptionId $sub -PolicyMode delta
+    Applies additive changes for roles and groups where needed.
+
+    .NOTES
+    Returns a summary object with per-domain results and counts.
+    #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param (
         [Parameter(Mandatory=$true)]
@@ -12,7 +42,7 @@ function New-EPOEasyPIMPolicies {
         [Parameter(Mandatory=$false)]
         [string]$SubscriptionId,
 
-        [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false)]
         [ValidateSet('validate','delta','initial')]
         [string]$PolicyMode = 'validate'
     )

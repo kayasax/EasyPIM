@@ -48,7 +48,7 @@ if (-not (Get-Command Test-PIMPolicyDrift -ErrorAction SilentlyContinue)) {
   try { Import-Module (Join-Path $PSScriptRoot 'EasyPIM' 'EasyPIM.psd1') -ErrorAction Stop } catch { Write-Warning "Could not auto-import EasyPIM module: $($_.Exception.Message)" }
 }
 
-Write-Host "🔍 Verifying PIM policies from config: $ConfigPath" -ForegroundColor Cyan
+Write-Host "Verifying PIM policies from config: $ConfigPath" -ForegroundColor Cyan
 $results = Test-PIMPolicyDrift -TenantId $TenantId -SubscriptionId $SubscriptionId -ConfigPath $ConfigPath -FailOnDrift:$FailOnDrift -PassThru:$PassThru
 if ($PassThru) { return $results }
 if ($FailOnDrift -and ($results | Where-Object Status -in 'Drift','Error')) { exit 1 }

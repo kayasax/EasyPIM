@@ -9,6 +9,12 @@ Param (
 
 if ($SkipTest) { return }
 
+# Check if PSScriptAnalyzer is available
+if (-not (Get-Module -ListAvailable PSScriptAnalyzer)) {
+	Write-Warning "PSScriptAnalyzer module not available - skipping code analysis tests"
+	return
+}
+
 if (-not $global:testroot) { $global:testroot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path }
 
 # Derive repository root (one level above tests directory)

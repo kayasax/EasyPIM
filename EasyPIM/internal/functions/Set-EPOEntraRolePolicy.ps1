@@ -1,6 +1,26 @@
 #Requires -Version 5.1
 
 function Set-EPOEntraRolePolicy {
+    <#
+    .SYNOPSIS
+    Build and apply an Entra role policy from a definition object.
+
+    .DESCRIPTION
+    Normalizes inputs, validates approvers and authentication context, and PATCHes the policy using Update-EntraRolePolicy. Supports validate mode for previewing changes without applying them.
+
+    .PARAMETER PolicyDefinition
+    The policy definition object (optionally with ResolvedPolicy) to apply.
+
+    .PARAMETER TenantId
+    The target Entra tenant ID.
+
+    .PARAMETER Mode
+    One of validate, delta, initial to control apply semantics.
+
+    .EXAMPLE
+    Set-EPOEntraRolePolicy -PolicyDefinition $p -TenantId $tid -Mode delta
+    Applies changes to the specified Entra role policy.
+    #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param (
         [Parameter(Mandatory = $true)]

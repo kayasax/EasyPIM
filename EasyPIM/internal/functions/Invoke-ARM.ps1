@@ -47,7 +47,7 @@ function Invoke-ARM {
         # Ensure the URI is absolute (starts with https://)
         if (-not $restURI.StartsWith("https://")) {
             # If it's not absolute, prepare to make it absolute
-            $baseUrl = "https://management.azure.com"
+            $baseUrl = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM'
 
             # If the URI starts with a slash, don't add another one
             if ($restURI.StartsWith("/")) {

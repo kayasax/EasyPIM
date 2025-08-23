@@ -72,8 +72,8 @@ function Remove-PIMAzureResourceEligibleAssignment {
         }
         $script:tenantID = $tenantID
 
-        $ARMhost = "https://management.azure.com"
-        $ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
+        $ARMhost = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM'
+        $ARMendpoint = "$($ARMhost.TrimEnd('/'))/$scope/providers/Microsoft.Authorization"
 
         #1 check if there is a request for future assignment, in that case we need to cancel the request
         write-verbose "Checking if there is a future assignment for $principalID and $rolename at $scope"

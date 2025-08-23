@@ -1,6 +1,4 @@
-# Public wrapper: moved from internal/functions to functions to satisfy manifest export tests.
-function Test-PIMPolicyDrift {
-<#+
+<#
 .SYNOPSIS
 Tests (verifies) PIM policy settings against an expected configuration file and reports drift.
 
@@ -9,30 +7,33 @@ Parses a policy configuration JSON (supports // and /* */ comments plus PolicyTe
 Returns structured drift result objects and optionally fails (non-zero exit code when used in a script) if drift or retrieval errors are present. Designed for reuse by Verify-PIMPolicies.ps1 and test harness.
 
 .PARAMETER TenantId
-Entra tenant (Directory) ID to query.
+<String> Entra tenant (Directory) ID to query.
 
 .PARAMETER ConfigPath
-Path to policy configuration JSON file. Comments allowed.
+<String> Path to policy configuration JSON file. Comments allowed.
 
 .PARAMETER SubscriptionId
-Azure subscription Id. If omitted, Azure role policies in config are skipped with warning.
+<String> Azure subscription Id. If omitted, Azure role policies in config are skipped with warning.
 
 .PARAMETER FailOnDrift
-When supplied, function throws terminating error if drift or errors found.
+<SwitchParameter> When supplied, function throws terminating error if drift or errors found.
 
 .PARAMETER PassThru
-Return the list of result objects instead of (or in addition to) formatted table output. (Objects always returned; PassThru suppresses formatting.)
+<SwitchParameter> Return the list of result objects instead of (or in addition to) formatted table output. (Objects always returned; PassThru suppresses formatting.)
 
 .OUTPUTS
 PSCustomObject with properties: Type, Name, Target, Status (Match|Drift|Error|SkippedRoleNotFound), Differences.
 
 .EXAMPLE
 Test-PIMPolicyDrift -TenantId $tid -SubscriptionId $sub -ConfigPath .\policy.json -FailOnDrift -PassThru
+Pass -PassThru to get structured results for further processing in CI.
 
 .NOTES
 Key compared fields: ActivationDuration, ActivationRequirement, ApprovalRequired, MaximumEligibilityDuration, AllowPermanentEligibility, MaximumActiveAssignmentDuration, AllowPermanentActiveAssignment.
 Approver count drift is also flagged when ApprovalRequired=true.
 #>
+# Public wrapper: moved from internal/functions to functions to satisfy manifest export tests.
+function Test-PIMPolicyDrift {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$TenantId,
