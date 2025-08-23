@@ -20,7 +20,7 @@ Packed with more than 30 cmdlets, EasyPIM leverages the ARM and Graph APIs compl
 :boom: New in V1.7 Approve/Deny pending requests  
 :fire: V1.8.1 Invoke-EasyPIMOrchestrator :fire: [more info](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator)  
 👌 V1.9 Invoke-EasyPIM orchestrator now let you to define your PIM model (full spectrum: entra, azure, groups, policies, assignements, protected accounts) from a *single JSON file* !
-👉 Check out the [step-by-step guide]((https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)
+👉 Check out the [step-by-step guide](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)
 With the export function you can now edit your PIM settings in Excel then import back your changes :wink:
 
 🗒️Change log: [https://github.com/kayasax/EasyPIM/wiki/Changelog](https://github.com/kayasax/EasyPIM/wiki/Changelog)
