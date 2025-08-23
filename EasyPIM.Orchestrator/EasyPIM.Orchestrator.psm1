@@ -4,14 +4,18 @@
 $root = Split-Path -Parent $PSScriptRoot
 $easyPIMDir = Join-Path $root 'EasyPIM'
 
-$orchestratorFiles = @(
-	'functions/Invoke-EasyPIMOrchestrator.ps1',
-	'functions/Test-PIMPolicyDrift.ps1',
-	# Internals required by orchestrator but not exported
+# Source public orchestrator functions locally from this module
+$localFunctionFiles = @(
+	(Join-Path $PSScriptRoot 'functions/Invoke-EasyPIMOrchestrator.ps1'),
+	(Join-Path $PSScriptRoot 'functions/Test-PIMPolicyDrift.ps1')
+)
+foreach ($f in $localFunctionFiles) { if (Test-Path $f) { . $f } }
+
+# Source required internal helper from EasyPIM core (kept internal for now)
+$easyPIMInternalFiles = @(
 	'internal/functions/EPO_Write-EasyPIMSummary.ps1'
 )
-
-foreach ($rel in $orchestratorFiles) {
+foreach ($rel in $easyPIMInternalFiles) {
 	$path = Join-Path $easyPIMDir $rel
 	if (Test-Path $path) { . $path }
 }
