@@ -74,6 +74,16 @@
 				"-File",
 				"d:\\WIP\\EASYPIM\\tests\\pester.ps1"
 			]
+		},
+		{
+			"label": "Git add + commit module-split + validate cleanup",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"git add -A; git commit -m \"docs(arch): module split plan; remove validate mode across code/docs; default to delta\""
+			]
 		}
 	]
 }

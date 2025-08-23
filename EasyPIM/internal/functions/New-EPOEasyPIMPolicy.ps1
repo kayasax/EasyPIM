@@ -5,7 +5,7 @@
 Convenience wrapper to process policies using a singular noun form.
 
 .DESCRIPTION
-Delegates to New-EPOEasyPIMPolicies to apply or validate policies based on the provided configuration, mode, and targets.
+Delegates to New-EPOEasyPIMPolicies to apply policies based on the provided configuration, mode, and targets.
 
 .PARAMETER Config
 The PSCustomObject configuration object containing policy definitions.
@@ -17,7 +17,7 @@ The target Entra tenant ID.
 The Azure subscription ID for Azure role policies.
 
 .PARAMETER PolicyMode
-Policy apply mode: validate, delta, initial.
+Policy apply mode: delta or initial.
 
 .EXAMPLE
 New-EPOEasyPIMPolicy -Config $cfg -TenantId $tid -SubscriptionId $sub -PolicyMode delta
@@ -41,13 +41,13 @@ function New-EPOEasyPIMPolicy {
         [string]$SubscriptionId,
 
     [Parameter(Mandatory=$false)]
-        [ValidateSet('validate','delta','initial')]
-        [string]$PolicyMode = 'validate'
+        [ValidateSet('delta','initial')]
+        [string]$PolicyMode = 'delta'
     )
 
     Write-Verbose "New-EPOEasyPIMPolicy delegating to New-EPOEasyPIMPolicies (mode: $PolicyMode)"
     $target = "Tenant $TenantId"
-    # Non-gating ShouldProcess for rich validation output even under -WhatIf
-    $null = $PSCmdlet.ShouldProcess($target, "Apply/Validate policies")
+    # Non-gating ShouldProcess for rich preview output under -WhatIf
+    $null = $PSCmdlet.ShouldProcess($target, "Apply policies")
     return New-EPOEasyPIMPolicies -Config $Config -TenantId $TenantId -SubscriptionId $SubscriptionId -PolicyMode $PolicyMode -WhatIf:$WhatIfPreference
 }

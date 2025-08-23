@@ -15,13 +15,13 @@ function Set-EPOGroupPolicy {
     The target Entra tenant ID.
 
     .PARAMETER Mode
-    One of validate, delta, initial to control apply semantics.
+    One of delta or initial to control apply semantics.
 
     .PARAMETER SkipEligibilityCheck
     Skips the PIM eligibility pre-check for the target group.
 
     .EXAMPLE
-    Set-EPOGroupPolicy -PolicyDefinition $p -TenantId $tid -Mode validate
+    Set-EPOGroupPolicy -PolicyDefinition $p -TenantId $tid -WhatIf
     Shows what would change without applying any updates.
 
     .NOTES
@@ -69,14 +69,13 @@ function Set-EPOGroupPolicy {
         }
     } catch { Write-Verbose ("[Policy][Group] Graph connect skipped: {0}" -f $_.Exception.Message) }
 
-    # 2) Eligibility pre-check (skip in validate mode or if explicitly bypassed)
-    if ($Mode -ne 'validate' -and -not $SkipEligibilityCheck) {
+    # 2) Eligibility pre-check (skip if explicitly bypassed)
+    if (-not $SkipEligibilityCheck) {
         if (-not $PolicyDefinition.GroupId) { Write-Warning "Cannot check eligibility without GroupId for group name '$($PolicyDefinition.GroupName)'" }
         else { $eligible = $true; try { $eligible = Test-GroupEligibleForPIM -GroupId $PolicyDefinition.GroupId } catch { Write-Verbose "Eligibility check failed: $($_.Exception.Message)" }; if (-not $eligible) { if (-not $script:EasyPIM_DeferredGroupPolicies) { $script:EasyPIM_DeferredGroupPolicies = @() }; $script:EasyPIM_DeferredGroupPolicies += [PSCustomObject]@{ GroupId=$PolicyDefinition.GroupId; GroupName=$PolicyDefinition.GroupName; RoleName=$PolicyDefinition.RoleName; ResolvedPolicy=$PolicyDefinition.ResolvedPolicy; OriginalPolicy=$PolicyDefinition }; Write-Warning "Deferring Group policy for $($PolicyDefinition.GroupId) role $($PolicyDefinition.RoleName) - group not PIM-eligible yet"; return @{ GroupId = $PolicyDefinition.GroupId; RoleName = $PolicyDefinition.RoleName; Status = 'DeferredNotEligible'; Mode = $Mode } } }
     }
 
-    # 3) Validation short-circuit
-    if ($Mode -eq "validate") { $groupRefValidate = if ($PolicyDefinition.GroupId) { $PolicyDefinition.GroupId } else { $PolicyDefinition.GroupName }; Write-Verbose "Validation mode: Policy would be applied for Group '$groupRefValidate' role '$($PolicyDefinition.RoleName)'"; return @{ GroupId = $PolicyDefinition.GroupId; RoleName = $PolicyDefinition.RoleName; Status = 'Validated'; Mode = $Mode } }
+    # 3) Validation short-circuit removed; use -WhatIf for preview
 
     # 4) Prepare the working policy object
     $resolved = if ($PolicyDefinition.ResolvedPolicy) { $PolicyDefinition.ResolvedPolicy } else { $PolicyDefinition }

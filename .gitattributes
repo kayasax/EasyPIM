@@ -1,8 +1,0 @@
-# Normalize line endings and enforce UTF-8
-* text=auto eol=lf
-*.ps1 text eol=lf
-*.psm1 text eol=lf
-*.psd1 text eol=lf
-*.md  text eol=lf
-*.json text eol=lf
-*.csv  text eol=lf

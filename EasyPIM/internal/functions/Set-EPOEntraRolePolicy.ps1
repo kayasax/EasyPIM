@@ -6,7 +6,7 @@ function Set-EPOEntraRolePolicy {
     Build and apply an Entra role policy from a definition object.
 
     .DESCRIPTION
-    Normalizes inputs, validates approvers and authentication context, and PATCHes the policy using Update-EntraRolePolicy. Supports validate mode for previewing changes without applying them.
+    Normalizes inputs, validates approvers and authentication context, and PATCHes the policy using Update-EntraRolePolicy.
 
     .PARAMETER PolicyDefinition
     The policy definition object (optionally with ResolvedPolicy) to apply.
@@ -15,7 +15,7 @@ function Set-EPOEntraRolePolicy {
     The target Entra tenant ID.
 
     .PARAMETER Mode
-    One of validate, delta, initial to control apply semantics.
+    One of delta or initial to control apply semantics.
 
     .EXAMPLE
     Set-EPOEntraRolePolicy -PolicyDefinition $p -TenantId $tid -Mode delta
@@ -40,22 +40,7 @@ function Set-EPOEntraRolePolicy {
         return @{ RoleName = $PolicyDefinition.RoleName; Status = "Protected (No Changes)"; Mode = $Mode; Details = "Role is protected from policy changes for security reasons" }
     }
 
-    if ($Mode -eq "validate") {
-        $policy = $PolicyDefinition.ResolvedPolicy
-        Write-Host "[INFO] Policy Changes for Entra Role '$($PolicyDefinition.RoleName)':" -ForegroundColor Cyan
-        Write-Host "   [TIME] Activation Duration: $($policy.ActivationDuration)" -ForegroundColor Yellow
-        Write-Host "   [LOCK] Activation Requirements: $($policy.ActivationRequirement)" -ForegroundColor Yellow
-        if ($policy.ActiveAssignmentRequirement) { Write-Host "   [SECURE] Active Assignment Requirements: $($policy.ActiveAssignmentRequirement)" -ForegroundColor Yellow }
-        Write-Host "   [OK] Approval Required: $($policy.ApprovalRequired)" -ForegroundColor Yellow
-        if ($policy.Approvers -and $policy.ApprovalRequired -eq $true) { Write-Host "   [USERS] Approvers: $($policy.Approvers.Count) configured" -ForegroundColor Yellow }
-        Write-Host "   [TARGET] Max Eligibility Duration: $($policy.MaximumEligibilityDuration)" -ForegroundColor Yellow
-        Write-Host "   [FAST] Max Active Duration: $($policy.MaximumActiveAssignmentDuration)" -ForegroundColor Yellow
-        if ($policy.AuthenticationContext_Enabled -eq $true) { Write-Host "   [PROTECTED] Auth Context: $($policy.AuthenticationContext_Value)" -ForegroundColor Yellow }
-        $notificationCount = 0; $policy.PSObject.Properties | Where-Object { $_.Name -like "Notification_*" } | ForEach-Object { $notificationCount++ }
-        if ($notificationCount -gt 0) { Write-Host "   [EMAIL] Notification Settings: $notificationCount configured" -ForegroundColor Yellow }
-        Write-Host "   [WARNING]  NOTE: No changes applied in validation mode" -ForegroundColor Magenta
-        return @{ RoleName = $PolicyDefinition.RoleName; Status = "Validated (No Changes Applied)"; Mode = $Mode; Details = "Policy validation completed - changes would be applied in delta/initial mode" }
-    }
+    # Note: historical 'validate' preview mode removed. Use -WhatIf for preview.
 
     $resolved = $PolicyDefinition.ResolvedPolicy; if (-not $resolved) { $resolved = $PolicyDefinition }
 
