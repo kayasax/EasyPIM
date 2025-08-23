@@ -27,6 +27,14 @@ Description = 'Manage PIM Azure Resource, PIM Entra role and PIM for Group setti
 # Script files (.ps1) that are run in the caller's environment prior to importing this module.
 ScriptsToProcess = @('internal\scripts\Import-ModuleChecks.ps1')
 
+# Modules that must be imported into the global environment prior to importing this module.
+# Keep versions flexible; rely on gallery to resolve suitable versions.
+RequiredModules = @(
+    'Az.Accounts',
+    'Microsoft.Graph.Authentication',
+    'Microsoft.Graph.Identity.Governance'
+)
+
 # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
 # NestedModules = @()
 
@@ -119,7 +127,7 @@ PrivateData = @{
 
         # ReleaseNotes of this module
     ReleaseNotes = @'
-    v1.10.0 Release Notes:
+    v1.10.0 Release Notes (2025-08-23):
 
     Multi-cloud Azure environment support (Chase Dafnis)
     - Enhanced Get-PIMAzureEnvironmentEndpoint for multi-cloud environments (Commercial, US Government, China, Germany)
