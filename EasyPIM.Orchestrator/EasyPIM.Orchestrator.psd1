@@ -9,12 +9,7 @@
     RequiredModules   = @()
     FunctionsToExport = @(
         'Invoke-EasyPIMOrchestrator',
-        'New-EPOEasyPIMPolicies',
-        'New-EPOEasyPIMPolicy',
-        'Set-EPOAzureRolePolicy',
-        'Set-EPOEntraRolePolicy',
-        'Set-EPOGroupPolicy',
-        'Invoke-EPODeferredGroupPolicies'
+        'Test-PIMPolicyDrift'
     )
     AliasesToExport   = @()
     CmdletsToExport   = @()
