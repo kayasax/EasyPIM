@@ -80,8 +80,6 @@ New-PIMEntraRoleActiveAssignment -tenantID $tenantID -rolename "testrole" -princ
 
 More samples available in the [documentation](https://github.com/kayasax/EasyPIM/wiki/Documentation)
 
-##🗒️Change log: [https://github.com/kayasax/EasyPIM/wiki/Changelog](https://github.com/kayasax/EasyPIM/wiki/Changelog)
-
 ## Documentation
 [documentation](https://github.com/kayasax/EasyPIM/wiki/Documentation)
 
