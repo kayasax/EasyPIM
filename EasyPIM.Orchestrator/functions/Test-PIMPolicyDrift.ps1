@@ -57,6 +57,8 @@ License: MIT (same as EasyPIM)
 https://github.com/kayasax/EasyPIM
 #>
 # Public wrapper: moved from internal/functions to functions to satisfy manifest export tests.
+
+
 function Test-PIMPolicyDrift {
 	[CmdletBinding()]
 	[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingPositionalParameters", "", Justification="Parameters are named at call sites; internal helper calls may trigger false positives.")]
