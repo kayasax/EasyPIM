@@ -1,5 +1,60 @@
-<#!
-.
+<#
+.SYNOPSIS
+Tests PIM role assignment policy configuration for drift against live settings.
+
+.DESCRIPTION
+Reads a policy configuration JSON file (with optional templates), resolves the expected
+settings for Entra roles, Azure resource roles, and group roles, and compares them with
+the live PIM policies in the specified tenant. Reports matches, drift, and errors.
+Optionally throws when drift is detected.
+
+.PARAMETER TenantId
+The Entra tenant ID to query for PIM policy settings.
+
+.PARAMETER ConfigPath
+Path to the JSON configuration file describing expected PIM policies. Supports line
+comments (//) and block comments (/* */) which will be removed before parsing.
+
+.PARAMETER SubscriptionId
+Optional Azure subscription ID. Required if the config includes Azure resource role
+policies to validate.
+
+.PARAMETER FailOnDrift
+If set, throws an error when any policy drift or error is detected.
+
+.PARAMETER PassThru
+If set, suppresses formatted console output and is intended for use in pipelines.
+Note: The function always returns the results array; PassThru only affects host output.
+
+.INPUTS
+None. You cannot pipe objects to this function.
+
+.OUTPUTS
+PSCustomObject. One object per evaluated policy with properties:
+Type, Name, Target, Status (Match|Drift|Error|SkippedRoleNotFound), Differences.
+
+.EXAMPLE
+Test-PIMPolicyDrift -TenantId 00000000-0000-0000-0000-000000000000 -ConfigPath .\examples\scripts\pim-policies.json
+
+Compares Entra and group role policies from the config to live settings in the tenant.
+
+.EXAMPLE
+Test-PIMPolicyDrift -TenantId 00000000-0000-0000-0000-000000000000 -ConfigPath .\config\pim.json -SubscriptionId 11111111-1111-1111-1111-111111111111 -FailOnDrift -Verbose
+
+Validates Entra, group, and Azure resource role policies and throws if drift is found.
+
+.EXAMPLE
+Test-PIMPolicyDrift -TenantId $env:TenantId -ConfigPath .\config\pim.json -PassThru | Where-Object Status -ne 'Match'
+
+Returns only the items where drift or error is present.
+
+.NOTES
+Module: EasyPIM.Orchestrator (requires EasyPIM core module)
+Author: Kayasax and contributors
+License: MIT (same as EasyPIM)
+
+.LINK
+https://github.com/kayasax/EasyPIM
 #>
 # Public wrapper: moved from internal/functions to functions to satisfy manifest export tests.
 function Test-PIMPolicyDrift {
