@@ -1,5 +1,6 @@
 ﻿function Invoke-EasyPIMOrchestrator {
-    [CmdletBinding(DefaultParameterSetName = 'Default', SupportsShouldProcess = $true, ConfirmImpact='Medium')]
+    [CmdletBinding(DefaultParameterSetName = 'Default')]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingPositionalParameters", "")]
     param(
         [Parameter(Mandatory = $true, ParameterSetName = 'KeyVault')][string]$KeyVaultName,
         [Parameter(Mandatory = $true, ParameterSetName = 'KeyVault')][string]$SecretName,
@@ -18,9 +19,16 @@
     # Ensure orchestrator module is available
     $loaded = Get-Module -Name EasyPIM.Orchestrator
     if (-not $loaded) {
-        $orchestratorManifest = Join-Path (Split-Path -Parent $PSScriptRoot) 'EasyPIM.Orchestrator' 'EasyPIM.Orchestrator.psd1'
-        if (Test-Path $orchestratorManifest) { Import-Module $orchestratorManifest -Force } else { Import-Module EasyPIM.Orchestrator -ErrorAction SilentlyContinue }
+        $root = Split-Path -Path $PSScriptRoot -Parent
+        $orchestratorDir = Join-Path -Path $root -ChildPath 'EasyPIM.Orchestrator'
+        $orchestratorManifest = Join-Path -Path $orchestratorDir -ChildPath 'EasyPIM.Orchestrator.psd1'
+        if (Test-Path -Path $orchestratorManifest) {
+            Import-Module -Name $orchestratorManifest -Force
+        }
+        else {
+            Import-Module -Name EasyPIM.Orchestrator -ErrorAction SilentlyContinue
+        }
     }
 
-    & EasyPIM.Orchestrator\Invoke-EasyPIMOrchestrator @PSBoundParameters
+    return EasyPIM.Orchestrator\Invoke-EasyPIMOrchestrator @PSBoundParameters
 }

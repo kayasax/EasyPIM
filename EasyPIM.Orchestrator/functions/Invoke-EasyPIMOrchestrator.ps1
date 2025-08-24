@@ -66,6 +66,7 @@ https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator
 function Invoke-EasyPIMOrchestrator {
 	[CmdletBinding(DefaultParameterSetName = 'Default', SupportsShouldProcess = $true, ConfirmImpact='Medium')]
 	[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
+	[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingPositionalParameters", "", Justification="All public cmdlets use named parameters; any remaining triggers are false positives or internal methods.")]
 	[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseShouldProcessForStateChangingFunctions", "", Justification="Top-level ShouldProcess invoked; inner creation functions also use ShouldProcess")]
 	[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSShouldProcess", "", Justification="False positive previously; pattern implemented below")]
 	param (
@@ -113,7 +114,7 @@ function Invoke-EasyPIMOrchestrator {
 	$null = $PSCmdlet.ShouldProcess("EasyPIM Orchestration lifecycle", "Execute")
 	# Normalize mode casing for internal logic (accepts initial/delta in any case)
 	$Mode = $Mode.ToLowerInvariant()
-	Write-SectionHeader "Starting EasyPIM Orchestration (Mode: $Mode)"
+	Write-SectionHeader -Message "Starting EasyPIM Orchestration (Mode: $Mode)"
 
 	# Display usage if no parameters are provided
 	if (-not $PSBoundParameters) {
@@ -132,7 +133,7 @@ function Invoke-EasyPIMOrchestrator {
 		# Session rule: prefer environment variables for TenantId / SubscriptionId when not explicitly supplied
 		if (-not $TenantId -or [string]::IsNullOrWhiteSpace($TenantId)) {
 			$TenantId = $env:tenantid
-			if ($TenantId) { Write-Host "ℹ️ Using TenantId from environment: $TenantId" -ForegroundColor DarkCyan } else { Write-Host "⚠️ TenantId not provided and $env:tenantid is empty." -ForegroundColor Yellow }
+			if ($TenantId) { Write-Host -Object "[INFO] Using TenantId from environment: $TenantId" -ForegroundColor DarkCyan } else { Write-Host -Object "[WARN] TenantId not provided and TENANTID env var is empty." -ForegroundColor Yellow }
 		}
 
 		# 2. Process and normalize config based on selected operations
@@ -155,7 +156,7 @@ function Invoke-EasyPIMOrchestrator {
 			($config.PSObject.Properties['AzureRoles'] -and $config.AzureRoles.PSObject.Properties['Policies'] -and $config.AzureRoles.Policies) -or
 			($config.PSObject.Properties['GroupRoles'] -and $config.GroupRoles.PSObject.Properties['Policies'] -and $config.GroupRoles.Policies)
 		)) {
-			Write-Host "🔧 Processing policy configurations..." -ForegroundColor Cyan
+			Write-Host -Object "[PROC] Processing policy configurations..." -ForegroundColor Cyan
 			$policyConfig = Initialize-EasyPIMPolicies -Config $config -PolicyOperations $PolicyOperations
 
 			# Filter policy config based on selected policy operations
@@ -203,7 +204,7 @@ function Invoke-EasyPIMOrchestrator {
 				}
 			}
 		} elseif ($SkipPolicies) {
-			Write-Host "⚠️ Skipping policy processing as requested by SkipPolicies parameter" -ForegroundColor Yellow
+			Write-Host -Object "[WARN] Skipping policy processing as requested by SkipPolicies parameter" -ForegroundColor Yellow
 		}
 
 		# Filter config based on selected operations
@@ -229,8 +230,8 @@ function Invoke-EasyPIMOrchestrator {
 		}
 
 	# Always perform principal & group validation before any policy or assignment operations
-		Write-Host "🧪 Validating principal and group IDs..." -ForegroundColor Cyan
-	$principalIds = New-Object System.Collections.Generic.HashSet[string]
+		Write-Host -Object "[TEST] Validating principal and group IDs..." -ForegroundColor Cyan
+		$principalIds = New-Object -TypeName "System.Collections.Generic.HashSet[string]"
 	$policyApproverRefs = @()
 		if ($processedConfig.PSObject.Properties.Name -contains 'Assignments' -and $processedConfig.Assignments) {
 			$assign = $processedConfig.Assignments
@@ -285,7 +286,7 @@ function Invoke-EasyPIMOrchestrator {
 					}
 				}
 			}
-			Write-Verbose ("[Orchestrator] Collected {0} approver references ({1} unique) from policyConfig.EntraRolePolicies" -f $approverRefsFound, $policyApproverRefs.Count)
+			Write-Verbose -Message ("[Orchestrator] Collected {0} approver references ({1} unique) from policyConfig.EntraRolePolicies" -f $approverRefsFound, $policyApproverRefs.Count)
 		}
 		# Fallback: if not found via policyConfig, inspect processedConfig attachment for visibility
 		if (-not $hasEntraPolicies -or $approverRefsFound -eq 0) {
@@ -312,7 +313,7 @@ function Invoke-EasyPIMOrchestrator {
 						}
 					}
 				}
-				Write-Verbose ("[Orchestrator] Collected {0} approver references ({1} unique) from processedConfig.EntraRolePolicies" -f $approverRefsFound, $policyApproverRefs.Count)
+				Write-Verbose -Message ("[Orchestrator] Collected {0} approver references ({1} unique) from processedConfig.EntraRolePolicies" -f $approverRefsFound, $policyApproverRefs.Count)
 			}
 		}
 		$validationResults = @()
@@ -324,9 +325,9 @@ function Invoke-EasyPIMOrchestrator {
 				if ($script:principalObjectCache -and $script:principalObjectCache.ContainsKey($principalIdIter)) {
 					$obj = $script:principalObjectCache[$principalIdIter]
 				} else {
-					try { $obj = Invoke-Graph -Endpoint "directoryObjects/$principalIdIter" -ErrorAction Stop } catch {
-						Write-Verbose "Suppressed directory object fetch failure for ${principalIdIter}: $($_.Exception.Message)"
-					}
+						try { $obj = Invoke-Graph -Endpoint "directoryObjects/$principalIdIter" -ErrorAction Stop } catch {
+							Write-Verbose -Message "Suppressed directory object fetch failure for ${principalIdIter}: $($_.Exception.Message)"
+						}
 				}
 				if ($obj -and $obj.'@odata.type') { $type = $obj.'@odata.type' }
 				if ($type -eq '#microsoft.graph.group') {
@@ -334,32 +335,32 @@ function Invoke-EasyPIMOrchestrator {
 						$g = Get-MgGroup -GroupId $principalIdIter -Property Id,DisplayName -ErrorAction SilentlyContinue
 						if ($g) { $displayName = $g.DisplayName }
 					} catch {
-						Write-Verbose "Suppressed group lookup failure for ${principalIdIter}: $($_.Exception.Message)"
+						Write-Verbose -Message "Suppressed group lookup failure for ${principalIdIter}: $($_.Exception.Message)"
 					}
 				}
 			}
 			$validationResults += [pscustomobject]@{ PrincipalId = $principalIdIter; Exists = $exists; Type = $type; DisplayName = $displayName }
 		}
-		$missing = $validationResults | Where-Object { -not $_.Exists }
+	$missing = $validationResults | Where-Object -FilterScript { -not $_.Exists }
 		if ($missing.Count -gt 0) {
-			Write-Host "⚠️ Principal validation failed:" -ForegroundColor Yellow
+			Write-Host -Object "[WARN] Principal validation failed:" -ForegroundColor Yellow
 			foreach ($m in $missing) {
-				$refRoles = ($policyApproverRefs | Where-Object { $_.PrincipalId -eq $m.PrincipalId } | Select-Object -ExpandProperty RoleName -Unique)
+				$refRoles = ($policyApproverRefs | Where-Object -FilterScript { $_.PrincipalId -eq $m.PrincipalId } | Select-Object -ExpandProperty RoleName -Unique)
 				if ($refRoles) {
-					Write-Host "   • $($m.PrincipalId): DOES NOT EXIST (referenced as Approver for Entra role(s): $([string]::Join(', ', $refRoles)))" -ForegroundColor Red
+					Write-Host -Object "   - $($m.PrincipalId): DOES NOT EXIST (referenced as Approver for Entra role(s): $([string]::Join(', ', $refRoles)))" -ForegroundColor Red
 				} else {
-					Write-Host "   • $($m.PrincipalId): DOES NOT EXIST" -ForegroundColor Red
+					Write-Host -Object "   - $($m.PrincipalId): DOES NOT EXIST" -ForegroundColor Red
 				}
 			}
 			if ($WhatIfPreference) {
-				Write-Host "Proceeding due to -WhatIf (preview) to allow cleanup delta visibility. These principals will be ignored." -ForegroundColor Yellow
+				Write-Host -Object "Proceeding due to -WhatIf (preview) to allow cleanup delta visibility. These principals will be ignored." -ForegroundColor Yellow
 			} else {
-				Write-Host "Aborting before any policy or assignment processing. Fix these IDs or run with -WhatIf to preview." -ForegroundColor Red
+				Write-Host -Object "Aborting before any policy or assignment processing. Fix these IDs or run with -WhatIf to preview." -ForegroundColor Red
 				return
 			}
 		} else {
 			$checked = $validationResults.Count
-			Write-Host "✅ Principal validation passed ($checked principals checked, 0 missing)" -ForegroundColor Green
+			Write-Host -Object "[OK] Principal validation passed ($checked principals checked, 0 missing)" -ForegroundColor Green
 		}
 
 		# Debug: show processed assignment counts (eligible/active) before policy & cleanup phases
@@ -370,12 +371,12 @@ function Invoke-EasyPIMOrchestrator {
 			$dbgEntraAct  = ($processedConfig.EntraIDRolesActive | Measure-Object).Count
 			$dbgGroupElig = ($processedConfig.GroupRoles    | Measure-Object).Count
 			$dbgGroupAct  = ($processedConfig.GroupRolesActive | Measure-Object).Count
-			Write-Host "[Orchestrator Debug] Assignment counts -> Azure(E:$dbgAzureElig A:$dbgAzureAct) Entra(E:$dbgEntraElig A:$dbgEntraAct) Groups(E:$dbgGroupElig A:$dbgGroupAct)" -ForegroundColor DarkCyan
-		} catch { Write-Host "[Orchestrator Debug] Failed to compute assignment debug counts: $($_.Exception.Message)" -ForegroundColor DarkYellow }
+			Write-Host -Object "[Orchestrator Debug] Assignment counts -> Azure(E:$dbgAzureElig A:$dbgAzureAct) Entra(E:$dbgEntraElig A:$dbgEntraAct) Groups(E:$dbgGroupElig A:$dbgGroupAct)" -ForegroundColor DarkCyan
+		} catch { Write-Host -Object "[Orchestrator Debug] Failed to compute assignment debug counts: $($_.Exception.Message)" -ForegroundColor DarkYellow }
 
 		if (-not $SubscriptionId -or [string]::IsNullOrWhiteSpace($SubscriptionId)) {
 			$SubscriptionId = $env:subscriptionid
-			if ($SubscriptionId) { Write-Host "ℹ️ Using SubscriptionId from environment: $SubscriptionId" -ForegroundColor DarkCyan } else { Write-Host "⚠️ SubscriptionId not provided and $env:subscriptionid is empty (Azure role operations may be limited)." -ForegroundColor Yellow }
+			if ($SubscriptionId) { Write-Host -Object "[INFO] Using SubscriptionId from environment: $SubscriptionId" -ForegroundColor DarkCyan } else { Write-Host -Object "[WARN] SubscriptionId not provided and SUBSCRIPTIONID env var is empty (Azure role operations may be limited)." -ForegroundColor Yellow }
 		}
 
 		# 3. Process policies FIRST (skip if requested) - CRITICAL: Policies must be applied before assignments to ensure compliance
@@ -392,7 +393,7 @@ function Invoke-EasyPIMOrchestrator {
 			$policyResults = New-EPOEasyPIMPolicy -Config $policyConfigObject -TenantId $TenantId -SubscriptionId $SubscriptionId -PolicyMode $effectivePolicyMode -WhatIf:$WhatIfPreference
 
 			if ($WhatIfPreference) {
-				Write-Host "✅ Policy dry-run completed (-WhatIf) - role policies appear correctly configured for assignment compliance" -ForegroundColor Green
+				Write-Host -Object "[OK] Policy dry-run completed (-WhatIf) - role policies appear correctly configured for assignment compliance" -ForegroundColor Green
 			} else {
 				$failed = 0; $succeeded = 0
 				try {
@@ -401,42 +402,42 @@ function Invoke-EasyPIMOrchestrator {
 						$succeeded = [int]$policyResults.Summary.Successful
 					}
 				} catch {
-					Write-Verbose ("[Orchestrator] Unable to read policy summary counts: {0}" -f $_.Exception.Message)
+					Write-Verbose -Message ("[Orchestrator] Unable to read policy summary counts: {0}" -f $_.Exception.Message)
 				}
 				if ($failed -gt 0) {
-					Write-Host "⚠️ Policy configuration completed with errors (Successful: $succeeded, Failed: $failed). Proceeding with assignments." -ForegroundColor Yellow
+					Write-Host -Object "[WARN] Policy configuration completed with errors (Successful: $succeeded, Failed: $failed). Proceeding with assignments." -ForegroundColor Yellow
 				} else {
-					Write-Host "✅ Policy configuration completed - proceeding with assignments using updated role policies" -ForegroundColor Green
+					Write-Host -Object "[OK] Policy configuration completed - proceeding with assignments using updated role policies" -ForegroundColor Green
 				}
 			}
 		} elseif ($SkipPolicies) {
-			Write-Warning "⚠️ Policy processing skipped - assignments may not comply with intended role policies"
+			Write-Warning -Message "Policy processing skipped - assignments may not comply with intended role policies"
 		}
 
 		# 4. Perform cleanup operations AFTER policy processing (skip if requested or if assignments are skipped)
 		$cleanupResults = if ($Operations -contains "All" -and -not $SkipCleanup -and -not $SkipAssignments) {
-			Write-Host "🧹 Performing cleanup operations based on updated policies..." -ForegroundColor Cyan
+			Write-Host -Object "[CLEANUP] Performing cleanup operations based on updated policies..." -ForegroundColor Cyan
 			Invoke-EasyPIMCleanup -Config $processedConfig -Mode $Mode -TenantId $TenantId -SubscriptionId $SubscriptionId -WhatIf:$WhatIfPreference -WouldRemoveExportPath $WouldRemoveExportPath
 		} else {
-			if ($SkipAssignments) { Write-Host "⚠️ Skipping cleanup because SkipAssignments was specified (no assignment delta expected)" -ForegroundColor Yellow }
-			elseif ($SkipCleanup) { Write-Host "⚠️ Skipping cleanup as requested by SkipCleanup parameter" -ForegroundColor Yellow }
-			else { Write-Host "⚠️ Skipping cleanup as specific operations were selected" -ForegroundColor Yellow }
+			if ($SkipAssignments) { Write-Host -Object "[WARN] Skipping cleanup because SkipAssignments was specified (no assignment delta expected)" -ForegroundColor Yellow }
+			elseif ($SkipCleanup) { Write-Host -Object "[WARN] Skipping cleanup as requested by SkipCleanup parameter" -ForegroundColor Yellow }
+			else { Write-Host -Object "[WARN] Skipping cleanup as specific operations were selected" -ForegroundColor Yellow }
 			$null
 		}
 
 		# High removal warning for initial mode
 		if ($cleanupResults -and $Mode -eq 'initial' -and -not $WhatIfPreference) {
-			$threshold = [int]([Environment]::GetEnvironmentVariable('EASYPIM_INITIAL_REMOVAL_WARN_THRESHOLD') | ForEach-Object { if ($_ -as [int]) { $_ } else { 10 } })
+			$threshold = [int]([Environment]::GetEnvironmentVariable('EASYPIM_INITIAL_REMOVAL_WARN_THRESHOLD') | ForEach-Object -Process { if ($_ -as [int]) { $_ } else { 10 } })
 			$removed = if ($cleanupResults.PSObject.Properties.Name -contains 'RemovedCount') { $cleanupResults.RemovedCount } else { $cleanupResults.Removed }
 			if ($removed -gt 0) {
 				$color = if ($removed -ge $threshold) { 'Red' } else { 'Yellow' }
-				Write-Host "⚠️ Initial mode removed $removed assignments (threshold=$threshold). Verify this matches intent. Use delta mode for add/update-only runs." -ForegroundColor $color
+				Write-Host -Object "[WARN] Initial mode removed $removed assignments (threshold=$threshold). Verify this matches intent. Use delta mode for add/update-only runs." -ForegroundColor $color
 			}
 		}
 
 		# 5. Process assignments AFTER policies are confirmed (skip if requested)
 		if (-not $SkipAssignments) {
-			Write-Host "👥 Creating assignments with role policies validated and applied..." -ForegroundColor Cyan
+			Write-Host -Object "[ASSIGN] Creating assignments with role policies validated and applied..." -ForegroundColor Cyan
 			# New-EasyPIMAssignments does not itself expose -WhatIf; inner Invoke-ResourceAssignment handles simulation.
 			$assignmentResults = New-EasyPIMAssignments -Config $processedConfig -TenantId $TenantId -SubscriptionId $SubscriptionId
 
@@ -447,11 +448,10 @@ function Invoke-EasyPIMOrchestrator {
 				$deferredSummary = Invoke-EPODeferredGroupPolicies -TenantId $TenantId -Mode $retryMode -WhatIf:$WhatIfPreference
 				if ($deferredSummary) {
 					$script:EasyPIM_DeferredGroupPoliciesSummary = $deferredSummary
-					Write-Host "┌──────────────── Deferred Group Policies Retry ────────────────" -ForegroundColor Cyan
-					Write-Host "│ Applied           : $($deferredSummary.Applied)" -ForegroundColor Cyan
-					Write-Host "│ Skipped           : $($deferredSummary.Skipped)" -ForegroundColor Cyan
-					Write-Host "│ Failed            : $($deferredSummary.Failed)" -ForegroundColor Cyan
-					Write-Host "└──────────────────────────────────────────────────────────────" -ForegroundColor Cyan
+					Write-Host -Object "Deferred Group Policies Retry:" -ForegroundColor Cyan
+					Write-Host -Object "  Applied: $($deferredSummary.Applied)" -ForegroundColor Cyan
+					Write-Host -Object "  Skipped: $($deferredSummary.Skipped)" -ForegroundColor Cyan
+					Write-Host -Object "  Failed : $($deferredSummary.Failed)" -ForegroundColor Cyan
 					# Optionally attach to policyResults summary counts
 					if ($policyResults -and $policyResults.Summary) {
 						$policyResults.Summary.TotalProcessed += ($deferredSummary.Applied + $deferredSummary.Skipped + $deferredSummary.Failed)
@@ -462,7 +462,7 @@ function Invoke-EasyPIMOrchestrator {
 				}
 			}
 		} else {
-			Write-Host "⚠️ Skipping assignment creation as requested" -ForegroundColor Yellow
+			Write-Host -Object "[WARN] Skipping assignment creation as requested" -ForegroundColor Yellow
 			$assignmentResults = $null
 		}
 
@@ -470,13 +470,13 @@ function Invoke-EasyPIMOrchestrator {
 	# Summary no longer distinguishes 'validate' policy mode; pass 'delta' and rely on -WhatIf for preview messaging upstream
 	$effectivePolicyMode = 'delta'
 	Write-EasyPIMSummary -CleanupResults $cleanupResults -AssignmentResults $assignmentResults -PolicyResults $policyResults -PolicyMode $effectivePolicyMode
-	Write-Host "Mode semantics: delta = add/update only (no removals), initial = full reconcile (destructive)." -ForegroundColor Gray
+	Write-Host -Object "Mode semantics: delta = add/update only (no removals), initial = full reconcile (destructive)." -ForegroundColor Gray
 
-		Write-Host "=== EasyPIM orchestration completed successfully ===" -ForegroundColor Green
+		Write-Host -Object "=== EasyPIM orchestration completed successfully ===" -ForegroundColor Green
 	}
 	catch {
-		Write-Error "❌ An error occurred: $($_.Exception.Message)"
-		Write-Verbose "Stack trace: $($_.ScriptStackTrace)"
+	Write-Error -Message "[ERROR] An error occurred: $($_.Exception.Message)"
+		Write-Verbose -Message "Stack trace: $($_.ScriptStackTrace)"
 		throw
 	}
 }
