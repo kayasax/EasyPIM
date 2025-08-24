@@ -88,23 +88,7 @@ FunctionsToExport = @(
     'Copy-PIMAzureResourceEligibleAssignment',
     'Copy-PIMEntraRoleEligibleAssignment',
     'Get-EasyPIMConfiguration',
-    'Test-PIMEndpointDiscovery',
-    # Orchestrator support (temporary public surface for split):
-    # These were internal EPO* helpers. Exported so the Orchestrator module can consume them via RequiredModules without dot-sourcing.
-    'Write-EasyPIMSummary',
-    'Initialize-EasyPIMAssignments',
-    'Initialize-EasyPIMPolicies',
-    'New-EPOEasyPIMPolicy',
-    'Invoke-EasyPIMCleanup',
-    'New-EasyPIMAssignments',
-    'Test-PrincipalExists',
-    'Invoke-Graph',
-    'Show-EasyPIMUsage',
-    'Write-SectionHeader',
-    'Invoke-EPODeferredGroupPolicies',
-    # Back-compat wrappers that proxy to EasyPIM.Orchestrator module
-    'Invoke-EasyPIMOrchestrator',
-    'Test-PIMPolicyDrift'
+    'Test-PIMEndpointDiscovery'
 )
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.

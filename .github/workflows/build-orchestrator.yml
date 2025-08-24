@@ -10,6 +10,9 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
+      - name: Install EasyPIM Core from Gallery
+        run: Install-Module -Name EasyPIM -Force -Scope CurrentUser
+        shell: pwsh
       - name: Install Prerequisites
         run: .\build\vsts-prerequisites.ps1
         shell: powershell
