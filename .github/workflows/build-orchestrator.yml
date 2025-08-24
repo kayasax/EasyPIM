@@ -17,6 +17,9 @@ jobs:
       - name: Install Prerequisites
         run: .\build\vsts-prerequisites.ps1
         shell: powershell
+      - name: Install EasyPIM Core from Gallery
+        run: Install-Module -Name EasyPIM -Force -Scope CurrentUser
+        shell: pwsh
       - name: Validate Orchestrator Only
         run: |
           $changed = git diff --name-only ${{ github.event.before }} ${{ github.sha }} | Select-String -Pattern '^EasyPIM.Orchestrator/'
