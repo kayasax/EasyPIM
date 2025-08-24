@@ -21,15 +21,27 @@ jobs:
       - name: Install EasyPIM Core from Gallery
         run: Install-Module -Name EasyPIM -Force -Scope CurrentUser
         shell: pwsh
+
       - name: Validate Orchestrator Only
         run: |
-          $changed = git diff --name-only ${{ github.event.before }} ${{ github.sha }} | Select-String -Pattern '^EasyPIM.Orchestrator/'
-          if ($changed) { .\build\vsts-validate.ps1 } else { Write-Host 'No Orchestrator changes detected, skipping validation.' }
+          if ("${{ github.event.before }}" -eq "0000000000000000000000000000000000000000") {
+            Write-Host 'Tag push or first commit: running validation.'
+            .\build\vsts-validate.ps1
+          } else {
+            $changed = git diff --name-only ${{ github.event.before }} ${{ github.sha }} | Select-String -Pattern '^EasyPIM.Orchestrator/'
+            if ($changed) { .\build\vsts-validate.ps1 } else { Write-Host 'No Orchestrator changes detected, skipping validation.' }
+          }
         shell: pwsh
+
       - name: Build Orchestrator Only
         run: |
-          $changed = git diff --name-only ${{ github.event.before }} ${{ github.sha }} | Select-String -Pattern '^EasyPIM.Orchestrator/'
-          if ($changed) { .\EasyPIM.Orchestrator\build\vsts-build-orchestrator.ps1 -ApiKey $env:APIKEY } else { Write-Host 'No Orchestrator changes detected, skipping build.' }
+          if ("${{ github.event.before }}" -eq "0000000000000000000000000000000000000000") {
+            Write-Host 'Tag push or first commit: running build.'
+            .\EasyPIM.Orchestrator\build\vsts-build-orchestrator.ps1 -ApiKey $env:APIKEY
+          } else {
+            $changed = git diff --name-only ${{ github.event.before }} ${{ github.sha }} | Select-String -Pattern '^EasyPIM.Orchestrator/'
+            if ($changed) { .\EasyPIM.Orchestrator\build\vsts-build-orchestrator.ps1 -ApiKey $env:APIKEY } else { Write-Host 'No Orchestrator changes detected, skipping build.' }
+          }
         shell: pwsh
         env:
           APIKEY: ${{ secrets.ApiKey }}
