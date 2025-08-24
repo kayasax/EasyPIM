@@ -3,8 +3,6 @@ on:
   push:
     tags:
       - 'orchestrator-v*'
-    paths:
-      - 'EasyPIM.Orchestrator/**'
   pull_request:
     paths:
       - 'EasyPIM.Orchestrator/**'
