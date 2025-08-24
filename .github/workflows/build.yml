@@ -3,17 +3,9 @@
 
 on:
   push:
-    branches:
-      - master
-      - main
-    paths:
-      - 'EasyPIM/**'
-  pull_request:
-    branches:
-      - master
-      - main
-    paths:
-      - 'EasyPIM/**'
+    tags:
+      - 'v*'
+      - 'orchestrator-v*'
 
 jobs:
   build:

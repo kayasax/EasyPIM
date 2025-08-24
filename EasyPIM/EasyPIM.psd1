@@ -87,11 +87,7 @@ FunctionsToExport = @(
     'Deny-PIMGroupPendingApproval',
     'Copy-PIMAzureResourceEligibleAssignment',
     'Copy-PIMEntraRoleEligibleAssignment',
-    'Get-EasyPIMConfiguration',
-    'Test-PIMEndpointDiscovery',
-    # Back-compat wrappers that proxy to EasyPIM.Orchestrator module
-    'Invoke-EasyPIMOrchestrator',
-    'Test-PIMPolicyDrift'
+    'Get-EasyPIMConfiguration'
 )
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.

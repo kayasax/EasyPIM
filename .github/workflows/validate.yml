@@ -1,15 +1,34 @@
-﻿on: [pull_request]
+﻿on:
+  push:
+    paths:
+      - 'EasyPIM/**'
+      - 'EasyPIM.Orchestrator/**'
+  pull_request:
+    paths:
+      - 'EasyPIM/**'
+      - 'EasyPIM.Orchestrator/**'
 
 jobs:
-  validate:
-
+  validate-easypim:
+    if: github.event_name == 'push' || github.event.pull_request.head.ref == 'EasyPIM' || contains(github.event.head_commit.modified, 'EasyPIM/')
     runs-on: windows-latest
-
     steps:
-    - uses: actions/checkout@v1
-    - name: Install Prerequisites
-      run: .\build\vsts-prerequisites.ps1
-      shell: powershell
-    - name: Validate
-      run: .\build\vsts-validate.ps1
-      shell: powershell
+      - uses: actions/checkout@v1
+      - name: Install Prerequisites
+        run: .\build\vsts-prerequisites.ps1
+        shell: powershell
+      - name: Validate EasyPIM Only
+        run: .\build\vsts-validate.ps1
+        shell: powershell
+
+  validate-orchestrator:
+    if: github.event_name == 'push' || github.event.pull_request.head.ref == 'EasyPIM.Orchestrator' || contains(github.event.head_commit.modified, 'EasyPIM.Orchestrator/')
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install Prerequisites
+        run: .\build\vsts-prerequisites.ps1
+        shell: powershell
+      - name: Validate Orchestrator Only
+        run: .\build\vsts-validate.ps1
+        shell: powershell
