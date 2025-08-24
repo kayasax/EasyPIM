@@ -1,7 +1,14 @@
 ﻿
 
+
 on:
   push:
+    branches:
+      - master
+      - main
+    paths:
+      - 'EasyPIM/**'
+  pull_request:
     branches:
       - master
       - main
@@ -18,11 +25,15 @@ jobs:
     - name: Install Prerequisites
       run: .\build\vsts-prerequisites.ps1
       shell: powershell
-    - name: Validate
-      run: .\build\vsts-validate.ps1
-      shell: powershell
-    - name: Build
-      run: .\build\vsts-build.ps1 -ApiKey $env:APIKEY
-      shell: powershell
+    - name: Validate EasyPIM Only
+      run: |
+        $changed = git diff --name-only ${{ github.event.before }} ${{ github.sha }} | Select-String -Pattern '^EasyPIM/'
+        if ($changed) { .\build\vsts-validate.ps1 } else { Write-Host 'No EasyPIM changes detected, skipping validation.' }
+      shell: pwsh
+    - name: Build EasyPIM Only
+      run: |
+        $changed = git diff --name-only ${{ github.event.before }} ${{ github.sha }} | Select-String -Pattern '^EasyPIM/'
+        if ($changed) { .\build\vsts-build.ps1 -ApiKey $env:APIKEY } else { Write-Host 'No EasyPIM changes detected, skipping build.' }
+      shell: pwsh
       env:
         APIKEY: ${{ secrets.ApiKey }}
