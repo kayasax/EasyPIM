@@ -10,7 +10,8 @@
     RequiredModules   = @('EasyPIM')
     FunctionsToExport = @(
         'Invoke-EasyPIMOrchestrator',
-        'Test-PIMPolicyDrift'
+        'Test-PIMPolicyDrift',
+        'Test-PIMEndpointDiscovery'
     )
     AliasesToExport   = @()
     CmdletsToExport   = @()
