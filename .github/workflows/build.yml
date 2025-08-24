@@ -1,8 +1,12 @@
-﻿on:
+﻿
+
+on:
   push:
     branches:
       - master
       - main
+    paths:
+      - 'EasyPIM/**'
 
 jobs:
   build:

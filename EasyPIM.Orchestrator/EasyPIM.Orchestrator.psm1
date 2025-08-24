@@ -1,4 +1,4 @@
-# EasyPIM.Orchestrator (Phase 1)
+
 # Dot-source existing orchestrator functions from the EasyPIM repository tree and export public entrypoints.
 
 $root = Split-Path -Parent $PSScriptRoot
@@ -10,6 +10,7 @@ $localFunctionFiles = @(
 	(Join-Path $PSScriptRoot 'functions/Test-PIMPolicyDrift.ps1')
 )
 foreach ($f in $localFunctionFiles) { if (Test-Path $f) { . $f } }
+
 
 # Source required internal helper from EasyPIM core (kept internal for now)
 $easyPIMInternalFiles = @(

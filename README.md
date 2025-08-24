@@ -6,7 +6,8 @@ EasyPIM is a PowerShell module created to help you manage Microsof Privileged Id
 Packed with more than 30 cmdlets, EasyPIM leverages the ARM and Graph APIs complexity to let you configure PIM **Azure Resources**, **Entra Roles** and **groups** settings and assignments in a simple way .  
 
 🆕 V1.9 Improves our Invoke-EasyPIMOrchestrator, your go-to way if you want to manage your PIM model from a config file.  
-**Check out our :  [step-by-step guide](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)**
+**Check out our :  [step-by-step guide](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)**  
+🌍 V1.10 EasyPIM now supports multi-cloud (Public, Governement, China, Germany) thanks to [Chase Dafnis](https://github.com/CHDAFNI-MSFT)! 
 
 ## Key features
 :boom: Support editing multiple roles at once  
@@ -17,9 +18,9 @@ Packed with more than 30 cmdlets, EasyPIM leverages the ARM and Graph APIs compl
 :boom: Backup all roles  
 :boom: New in V1.6 get PIM activity reporting  
 :boom: New in V1.7 Approve/Deny pending requests  
-:fire: V1.8.1 Invoke-EasyPIMOrchestrator :fire: [more info](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator)
-
-With the export function you can now edit your PIM settings in Excel then import back your changes :wink:
+:fire: V1.8.1 Invoke-EasyPIMOrchestrator :fire: [more info](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator)  
+👌 V1.9 Invoke-EasyPIM orchestrator now let you to define your PIM model (full spectrum: entra, azure, groups, policies, assignements, protected accounts) from a *single JSON file* !  
+👉 Check out the [step-by-step guide](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)
 
 🗒️Change log: [https://github.com/kayasax/EasyPIM/wiki/Changelog](https://github.com/kayasax/EasyPIM/wiki/Changelog)
 
@@ -78,8 +79,6 @@ New-PIMEntraRoleActiveAssignment -tenantID $tenantID -rolename "testrole" -princ
 ```
 
 More samples available in the [documentation](https://github.com/kayasax/EasyPIM/wiki/Documentation)
-
-##🗒️Change log: [https://github.com/kayasax/EasyPIM/wiki/Changelog](https://github.com/kayasax/EasyPIM/wiki/Changelog)
 
 ## Documentation
 [documentation](https://github.com/kayasax/EasyPIM/wiki/Documentation)

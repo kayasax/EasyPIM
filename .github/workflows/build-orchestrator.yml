@@ -1,0 +1,23 @@
+on:
+  push:
+    tags:
+      - 'orchestrator-v*'
+  release:
+    types: [published]
+
+jobs:
+  build-orchestrator:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install Prerequisites
+        run: .\build\vsts-prerequisites.ps1
+        shell: powershell
+      - name: Validate
+        run: .\build\vsts-validate.ps1
+        shell: powershell
+      - name: Build Orchestrator
+        run: .\EasyPIM.Orchestrator\build\vsts-build-orchestrator.ps1 -ApiKey $env:APIKEY
+        shell: powershell
+        env:
+          APIKEY: ${{ secrets.ApiKey }}
