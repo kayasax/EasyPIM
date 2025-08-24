@@ -4,6 +4,7 @@
 # Public wrapper: moved from internal/functions to functions to satisfy manifest export tests.
 function Test-PIMPolicyDrift {
 	[CmdletBinding()]
+	[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingPositionalParameters", "", Justification="Parameters are named at call sites; internal helper calls may trigger false positives.")]
 	param(
 		[Parameter(Mandatory)][string]$TenantId,
 		[Parameter(Mandatory)][string]$ConfigPath,
@@ -12,7 +13,7 @@ function Test-PIMPolicyDrift {
 		[switch]$PassThru
 	)
 
-	Write-Verbose "Starting PIM policy drift test for config: $ConfigPath"
+	Write-Verbose -Message "Starting PIM policy drift test for config: $ConfigPath"
 
 	try { $ConfigPath = (Resolve-Path -Path $ConfigPath -ErrorAction Stop).Path } catch { throw "Config file not found: $ConfigPath" }
 
@@ -20,9 +21,9 @@ function Test-PIMPolicyDrift {
 		param([string]$Content)
 		$noBlock    = [regex]::Replace($Content,'(?s)/\*.*?\*/','')
 		$noFullLine = [regex]::Replace($noBlock,'(?m)^[ \t]*//.*?$','')
-		$sb = New-Object System.Text.StringBuilder
+	$sb = New-Object -TypeName System.Text.StringBuilder
 		foreach ($line in $noFullLine -split "`n") {
-			$inString = $false; $escaped=$false; $out = New-Object System.Text.StringBuilder
+			$inString = $false; $escaped=$false; $out = New-Object -TypeName System.Text.StringBuilder
 			for ($i=0; $i -lt $line.Length; $i++) {
 				$ch = $line[$i]
 				if ($escaped) { [void]$out.Append($ch); $escaped=$false; continue }
@@ -38,21 +39,21 @@ function Test-PIMPolicyDrift {
 
 	$configRaw = Get-Content -Raw -Path $ConfigPath
 	try {
-		$clean = Remove-JsonComments -Content $configRaw
-		$json  = $clean | ConvertFrom-Json -ErrorAction Stop
+	$clean = Remove-JsonComments -Content $configRaw
+	$json  = $clean | ConvertFrom-Json -ErrorAction Stop
 	} catch {
-		Write-Verbose "Raw first 200: $($configRaw.Substring(0,[Math]::Min(200,$configRaw.Length)))"
+	Write-Verbose -Message "Raw first 200: $($configRaw.Substring(0,[Math]::Min(200,$configRaw.Length)))"
 		throw "Failed to parse config: $($_.Exception.Message)"
 	}
 	if (-not $json) { throw "Parsed JSON object is null - invalid configuration." }
 
-	function Get-ResolvedPolicyObject { param($p); if ($p.PSObject.Properties['ResolvedPolicy'] -and $p.ResolvedPolicy) { return $p.ResolvedPolicy }; return $p }
+	function Get-ResolvedPolicyObject { param([Parameter(Mandatory)][object]$Policy); if ($Policy.PSObject.Properties['ResolvedPolicy'] -and $Policy.ResolvedPolicy) { return $Policy.ResolvedPolicy }; return $Policy }
 
 	$expectedAzure=@(); $expectedEntra=@(); $expectedGroup=@(); $templates=@{}
 	if ($json.PSObject.Properties['PolicyTemplates']) {
-		foreach ($t in ($json.PolicyTemplates | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name)) { $templates[$t] = $json.PolicyTemplates.$t }
+	foreach ($t in ($json.PolicyTemplates | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name)) { $templates[$t] = $json.PolicyTemplates.$t }
 	}
-	function Resolve-Template { param($obj) if (-not $obj) { return $obj }; if ($obj.Template -and $templates.ContainsKey($obj.Template)) { $base = $templates[$obj.Template] | ConvertTo-Json -Depth 20 | ConvertFrom-Json; foreach ($p in $obj.PSObject.Properties) { $base | Add-Member -NotePropertyName $p.Name -NotePropertyValue $p.Value -Force }; return $base }; return $obj }
+	function Resolve-Template { param([Parameter(Mandatory)]$Object) if (-not $Object) { return $Object }; if ($Object.Template -and $templates.ContainsKey($Object.Template)) { $base = $templates[$Object.Template] | ConvertTo-Json -Depth 20 | ConvertFrom-Json; foreach ($p in $Object.PSObject.Properties) { $base | Add-Member -NotePropertyName $p.Name -NotePropertyValue $p.Value -Force }; return $base }; return $Object }
 
 	if ($json.PSObject.Properties['AzureRolePolicies']) { $expectedAzure += $json.AzureRolePolicies }
 	if ($json.PSObject.Properties['EntraRolePolicies']) { $expectedEntra += $json.EntraRolePolicies }
@@ -86,9 +87,9 @@ function Test-PIMPolicyDrift {
 		}
 	}
 
-	$expectedAzure = $expectedAzure | ForEach-Object { $_ | Add-Member -NotePropertyName ResolvedPolicy -NotePropertyValue (Resolve-Template $_) -Force; $_ }
-	$expectedEntra = $expectedEntra | ForEach-Object { $_ | Add-Member -NotePropertyName ResolvedPolicy -NotePropertyValue (Resolve-Template $_) -Force; $_ }
-	$expectedGroup = $expectedGroup | ForEach-Object { $_ | Add-Member -NotePropertyName ResolvedPolicy -NotePropertyValue (Resolve-Template $_) -Force; $_ }
+	$expectedAzure = $expectedAzure | ForEach-Object -Process { $_ | Add-Member -NotePropertyName ResolvedPolicy -NotePropertyValue (Resolve-Template -Object $_) -Force; $_ }
+	$expectedEntra = $expectedEntra | ForEach-Object -Process { $_ | Add-Member -NotePropertyName ResolvedPolicy -NotePropertyValue (Resolve-Template -Object $_) -Force; $_ }
+	$expectedGroup = $expectedGroup | ForEach-Object -Process { $_ | Add-Member -NotePropertyName ResolvedPolicy -NotePropertyValue (Resolve-Template -Object $_) -Force; $_ }
 
 	$fields = @('ActivationDuration','ActivationRequirement','ApprovalRequired','MaximumEligibilityDuration','AllowPermanentEligibility','MaximumActiveAssignmentDuration','AllowPermanentActiveAssignment')
 	$liveNameMap = @{ 'ActivationRequirement'='EnablementRules'; 'MaximumEligibilityDuration'='MaximumEligibleAssignmentDuration'; 'AllowPermanentEligibility'='AllowPermanentEligibleAssignment' }
@@ -102,18 +103,25 @@ function Test-PIMPolicyDrift {
 		if ($v -match '^(none|null|no(ne)?requirements?)$') { return '' }
 		# Split on comma / semicolon
 		$tokens = $v -split '[,;]+' | ForEach-Object { $_.Trim() } | Where-Object { $_ }
-		$norm = foreach ($t in $tokens) {
+	$norm = foreach ($t in $tokens) {
 			switch -Regex ($t) {
 				'^(mfa|multifactorauthentication)$' { 'MFA'; break }
 				'^(justification)$' { 'Justification'; break }
 				default { $t }
 			}
 		}
-		($norm | Sort-Object -Unique) -join ','
+	($norm | Sort-Object -Unique) -join ','
 	}
 
 	function Compare-Policy {
-		param([string]$Type,[string]$Name,[object]$Expected,[object]$Live,[string]$ExtraId=$null,[int]$ApproverCountExpected=$null)
+		param(
+			[Parameter(Mandatory)][string]$Type,
+			[Parameter(Mandatory)][string]$Name,
+			[Parameter()][object]$Expected,
+			[Parameter()][object]$Live,
+			[Parameter()][string]$ExtraId=$null,
+			[Parameter()][int]$ApproverCountExpected=$null
+		)
 		$differences=@()
 		foreach ($f in $fields) {
 			if ($Expected.PSObject.Properties[$f]) {
@@ -122,8 +130,8 @@ function Test-PIMPolicyDrift {
 				if ($exp -is [System.Collections.IEnumerable] -and -not ($exp -is [string])) { $exp = ($exp | ForEach-Object { "$_" }) -join ',' }
 				if ($liveVal -is [System.Collections.IEnumerable] -and -not ($liveVal -is [string])) { $liveVal = ($liveVal | ForEach-Object { "$_" }) -join ',' }
 				if ($f -eq 'ActivationRequirement' -or $f -eq 'ActiveAssignmentRequirement') {
-					$expNorm  = Convert-RequirementValue $exp
-					$liveNorm = Convert-RequirementValue $liveVal
+					$expNorm  = Convert-RequirementValue -Value $exp
+					$liveNorm = Convert-RequirementValue -Value $liveVal
 					if ($expNorm -ne $liveNorm) {
 						$displayExp  = if ($null -eq $exp -or $exp -eq '' -or $exp -eq 'None') { 'None' } else { $exp }
 						$displayLive = if ($null -eq $liveVal -or $liveVal -eq '' -or $liveVal -eq 'None') { 'None' } else { $liveVal }
@@ -148,14 +156,14 @@ function Test-PIMPolicyDrift {
 			if ($null -ne $liveApproverCount -and $liveApproverCount -ne $ApproverCountExpected) { $differences += "ApproversCount: expected=$ApproverCountExpected actual=$liveApproverCount" }
 		}
 		if ($differences.Count -gt 0) { $script:driftCount++; $status='Drift' } else { $status='Match' }
-		$script:results += [pscustomobject]@{ Type=$Type; Name=$Name; Target=$ExtraId; Status=$status; Differences=($differences -join '; ') }
+	$script:results += [pscustomobject]@{ Type=$Type; Name=$Name; Target=$ExtraId; Status=$status; Differences=($differences -join '; ') }
 	}
 
 	if ($expectedAzure.Count -gt 0 -and -not $SubscriptionId) {
-		Write-Warning "Azure role policies present but no -SubscriptionId provided; skipping Azure role validation."
+	Write-Warning -Message "Azure role policies present but no -SubscriptionId provided; skipping Azure role validation."
 	} elseif ($expectedAzure.Count -gt 0) {
 		foreach ($p in $expectedAzure) {
-			$r = Get-ResolvedPolicyObject $p
+			$r = Get-ResolvedPolicyObject -Policy $p
 			if (-not $p.Scope) { $script:results += [pscustomobject]@{ Type='AzureRole'; Name=$p.RoleName; Target='(missing scope)'; Status='Error'; Differences='Missing Scope' }; $script:driftCount++; continue }
 			try {
 				$live = Get-PIMAzureResourcePolicy -tenantID $TenantId -subscriptionID $SubscriptionId -rolename $p.RoleName -ErrorAction Stop
@@ -168,7 +176,7 @@ function Test-PIMPolicyDrift {
 
 	foreach ($p in $expectedEntra) {
 		if ($p._RoleNotFound) { $script:results += [pscustomobject]@{ Type='EntraRole'; Name=$p.RoleName; Target='/'; Status='SkippedRoleNotFound'; Differences='' }; continue }
-		$r = Get-ResolvedPolicyObject $p
+	$r = Get-ResolvedPolicyObject -Policy $p
 		try {
 			$live = Get-PIMEntraRolePolicy -tenantID $TenantId -rolename $p.RoleName -ErrorAction Stop
 			if ($live -is [System.Collections.IEnumerable] -and -not ($live -is [string])) { $live = @($live)[0] }
@@ -179,7 +187,7 @@ function Test-PIMPolicyDrift {
 	}
 
 	foreach ($p in $expectedGroup) {
-		$r = Get-ResolvedPolicyObject $p
+	$r = Get-ResolvedPolicyObject -Policy $p
 		if (-not $r.PSObject.Properties['ActivationRequirement'] -and $r.PSObject.Properties['EnablementRules'] -and $r.EnablementRules) { try { $r | Add-Member -NotePropertyName ActivationRequirement -NotePropertyValue $r.EnablementRules -Force } catch { $r.ActivationRequirement = $r.EnablementRules } }
 		if (-not $r.PSObject.Properties['ActivationDuration'] -and $r.PSObject.Properties['Duration'] -and $r.Duration) { try { $r | Add-Member -NotePropertyName ActivationDuration -NotePropertyValue $r.Duration -Force } catch { $r.ActivationDuration = $r.Duration } }
 		if (-not $p.GroupId -and $p.GroupName) {
@@ -187,7 +195,7 @@ function Test-PIMPolicyDrift {
 				$endpoint = "groups?`$filter=displayName eq '$($p.GroupName.Replace("'","''"))'"
 				$resp = invoke-graph -Endpoint $endpoint
 				if ($resp.value -and $resp.value.Count -gt 0) { $p | Add-Member -NotePropertyName GroupId -NotePropertyValue $resp.value[0].id -Force }
-			} catch { Write-Warning "Group resolution failed for '$($p.GroupName)': $($_.Exception.Message)" }
+			} catch { Write-Warning -Message "Group resolution failed for '$($p.GroupName)': $($_.Exception.Message)" }
 		}
 		$gid = $p.GroupId
 		if (-not $gid) {
@@ -205,21 +213,21 @@ function Test-PIMPolicyDrift {
 	}
 
 	if (-not $PassThru) {
-		Write-Host "Policy Verification Results:" -ForegroundColor Cyan
-		$script:results | Sort-Object Type, Name | Format-Table -AutoSize
-		$summary = $script:results | Group-Object Status | Select-Object Name,Count
-		Write-Host "`nSummary:" -ForegroundColor Cyan
-		$summary | Format-Table -AutoSize
+	Write-Host -Object "Policy Verification Results:" -ForegroundColor Cyan
+	$script:results | Sort-Object -Property Type, Name | Format-Table -AutoSize
+	$summary = $script:results | Group-Object -Property Status | Select-Object -Property Name,Count
+	Write-Host -Object "`nSummary:" -ForegroundColor Cyan
+	$summary | Format-Table -AutoSize
 		if ($script:results.Count -eq 0) {
-			Write-Host "No policies discovered in config (nothing compared)." -ForegroundColor Yellow
+			Write-Host -Object "No policies discovered in config (nothing compared)." -ForegroundColor Yellow
 		} else {
 			$script:driftCount = ($script:results | Where-Object { $_.Status -in 'Drift','Error' }).Count
-			if ($script:driftCount -eq 0) { Write-Host "All compared policy fields match expected values." -ForegroundColor Green }
-			else { Write-Host "Drift detected in $script:driftCount policy item(s)." -ForegroundColor Yellow }
+			if ($script:driftCount -eq 0) { Write-Host -Object "All compared policy fields match expected values." -ForegroundColor Green }
+			else { Write-Host -Object "Drift detected in $script:driftCount policy item(s)." -ForegroundColor Yellow }
 		}
 	}
 
-	if ($FailOnDrift -and ($script:results | Where-Object { $_.Status -in 'Drift','Error' })) {
+	if ($FailOnDrift -and ($script:results | Where-Object -FilterScript { $_.Status -in 'Drift','Error' })) {
 		throw "PIM policy drift detected."
 	}
 
