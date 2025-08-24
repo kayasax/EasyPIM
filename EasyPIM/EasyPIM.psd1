@@ -90,6 +90,8 @@ FunctionsToExport = @(
     'Get-EasyPIMConfiguration'
 )
 
+# NOTE: As of v1.10.0, orchestrator/test shims (Invoke-EasyPIMOrchestrator, Test-PIMEndpointDiscovery, Test-PIMPolicyDrift) have been removed from the core module. Please use the EasyPIM.Orchestrator module for orchestrator/test functionality. See release notes and migration guide for details.
+
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 # CmdletsToExport = '*'
 
