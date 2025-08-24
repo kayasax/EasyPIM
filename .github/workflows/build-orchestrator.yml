@@ -1,9 +1,13 @@
+
 on:
   push:
     tags:
       - 'orchestrator-v*'
-  release:
-    types: [published]
+    paths:
+      - 'EasyPIM.Orchestrator/**'
+  pull_request:
+    paths:
+      - 'EasyPIM.Orchestrator/**'
 
 jobs:
   build-orchestrator:
@@ -13,11 +17,15 @@ jobs:
       - name: Install Prerequisites
         run: .\build\vsts-prerequisites.ps1
         shell: powershell
-      - name: Validate
-        run: .\build\vsts-validate.ps1
-        shell: powershell
-      - name: Build Orchestrator
-        run: .\EasyPIM.Orchestrator\build\vsts-build-orchestrator.ps1 -ApiKey $env:APIKEY
-        shell: powershell
+      - name: Validate Orchestrator Only
+        run: |
+          $changed = git diff --name-only ${{ github.event.before }} ${{ github.sha }} | Select-String -Pattern '^EasyPIM.Orchestrator/'
+          if ($changed) { .\build\vsts-validate.ps1 } else { Write-Host 'No Orchestrator changes detected, skipping validation.' }
+        shell: pwsh
+      - name: Build Orchestrator Only
+        run: |
+          $changed = git diff --name-only ${{ github.event.before }} ${{ github.sha }} | Select-String -Pattern '^EasyPIM.Orchestrator/'
+          if ($changed) { .\EasyPIM.Orchestrator\build\vsts-build-orchestrator.ps1 -ApiKey $env:APIKEY } else { Write-Host 'No Orchestrator changes detected, skipping build.' }
+        shell: pwsh
         env:
           APIKEY: ${{ secrets.ApiKey }}
