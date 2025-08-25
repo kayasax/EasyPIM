@@ -10,6 +10,7 @@
     RequiredModules   = @(
         @{ ModuleName = 'EasyPIM'; ModuleVersion = '1.10.0' }
     )
+    # Repo-relative for dev import; build script will rewrite to 'shared\\EasyPIM.Shared\\EasyPIM.Shared.psd1' inside package
     NestedModules = @('..\\shared\\EasyPIM.Shared\\EasyPIM.Shared.psd1')
     FunctionsToExport = @(
         'Invoke-EasyPIMOrchestrator',

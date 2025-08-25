@@ -29,12 +29,3 @@ jobs:
         shell: pwsh
         env:
           APIKEY: ${{ secrets.ApiKey }}
-
-      - name: Publish Orchestrator Module to PowerShell Gallery
-        if: startsWith(github.ref, 'refs/tags/orchestrator-v')
-        env:
-          NUGET_API_KEY: ${{ secrets.POWERSHELL_GALLERY_API_KEY }}
-        run: |
-          Install-Module -Name PowerShellGet -Force -Scope CurrentUser
-          Publish-Module -Path EasyPIM.Orchestrator -NuGetApiKey $env:NUGET_API_KEY -Repository PSGallery -Verbose
-        shell: pwsh
