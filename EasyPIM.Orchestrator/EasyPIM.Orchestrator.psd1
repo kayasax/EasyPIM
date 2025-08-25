@@ -7,7 +7,9 @@
     Copyright         = '(c) Loïc MICHEL. All rights reserved.'
     Description       = 'Orchestrator for EasyPIM (Invoke-EasyPIMOrchestrator)'
     PowerShellVersion = '5.1'
-    RequiredModules   = @('EasyPIM')
+    RequiredModules   = @(
+        @{ ModuleName = 'EasyPIM'; ModuleVersion = '1.10.0' }
+    )
     FunctionsToExport = @(
         'Invoke-EasyPIMOrchestrator',
         'Test-PIMPolicyDrift',

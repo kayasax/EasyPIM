@@ -12,8 +12,8 @@ jobs:
     steps:
       - uses: actions/checkout@v1
 
-      - name: Install EasyPIM Core from Gallery
-        run: Install-Module -Name EasyPIM -Force -Scope CurrentUser
+      - name: Install EasyPIM Core from Gallery (>=1.10.0)
+        run: Install-Module -Name EasyPIM -MinimumVersion 1.10.0 -Force -Scope CurrentUser
         shell: pwsh
 
       - name: Install Prerequisites
