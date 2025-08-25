@@ -85,7 +85,7 @@ if ($pesterVersion.Major -ge 5) {
     # Pester v5 approach
     Write-Host "Using Pester v5 execution mode"
     Import-Module Pester -MinimumVersion 5.0.0
-    $config = [PesterConfiguration]::Default
+    $config = New-PesterConfiguration
     $config.TestResult.Enabled = $true
     $config.Output.Verbosity = $Output
 
@@ -111,23 +111,73 @@ if ($pesterVersion.Major -ge 5) {
         if (-not $files) { Write-Host "No matching general tests found after filters"; }
         else {
             if ($Parallel) {
-                Write-Host "Running general tests in parallel ($Workers workers)"
+                # Try Pester v5 parallel config; if not supported, fall back to sequential
                 $config.Run.Path = @($files.FullName)
                 $config.Run.PassThru = $true
-                $config.Run.Parallel.Enabled = $true
-                $config.Run.Parallel.Workers = [Math]::Max(1,$Workers)
                 $config.TestResult.OutputPath = Join-Path "$PSScriptRoot\..\TestResults" "TEST-General.xml"
-                $results = Invoke-Pester -Configuration $config
-
-                # Aggregate single run object
-                $totalRun += $results.TotalCount
-                $totalFailed += $results.FailedCount
-                $results.Tests | Where-Object Result -ne 'Passed' | ForEach-Object {
-                    $testresults += [pscustomobject]@{
-                        Block   = $_.Block
-                        Name    = "It $($_.Name)"
-                        Result  = $_.Result
-                        Message = $_.ErrorRecord.DisplayErrorMessage
+                $parallelSupported = $false
+                if (Get-Member -InputObject $config.Run -Name 'Parallel' -ErrorAction SilentlyContinue) {
+                    $parallelSupported = $true
+                    try {
+                        $config.Run.Parallel.Enabled = $true
+                        if (Get-Member -InputObject $config.Run.Parallel -Name 'Workers' -ErrorAction SilentlyContinue) {
+                            $config.Run.Parallel.Workers = [Math]::Max(1,$Workers)
+                        }
+                        if (Get-Member -InputObject $config.Run.Parallel -Name 'Throttle' -ErrorAction SilentlyContinue) {
+                            $config.Run.Parallel.Throttle = [Math]::Max(1,$Workers)
+                        }
+                    } catch {
+                        $parallelSupported = $false
+                    }
+                }
+                if ($parallelSupported) {
+                    Write-Host "Running general tests in parallel ($Workers workers)"
+                    $results = Invoke-Pester -Configuration $config
+                    # Aggregate single run object
+                    $totalRun += $results.TotalCount
+                    $totalFailed += $results.FailedCount
+                    $results.Tests | Where-Object Result -ne 'Passed' | ForEach-Object {
+                        $testresults += [pscustomobject]@{
+                            Block   = $_.Block
+                            Name    = "It $($_.Name)"
+                            Result  = $_.Result
+                            Message = $_.ErrorRecord.DisplayErrorMessage
+                        }
+                    }
+                } else {
+                    Write-Host "Parallel mode not supported; running sequentially." -ForegroundColor Yellow
+                    foreach ($file in $files) {
+                        Write-Host "  Executing $($file.Name)"
+                        $config.TestResult.OutputPath = Join-Path "$PSScriptRoot\..\TestResults" "TEST-$($file.BaseName).xml"
+                        $config.Run.Path = $file.FullName
+                        $config.Run.PassThru = $true
+                        $results = Invoke-Pester -Configuration $config
+                        # Process results (support both array and single objects)
+                        if ($results -is [System.Collections.IEnumerable] -and -not ($results -is [string])) {
+                            foreach ($result in $results) {
+                                $totalRun += $result.TotalCount
+                                $totalFailed += $result.FailedCount
+                                $result.Tests | Where-Object Result -ne 'Passed' | ForEach-Object {
+                                    $testresults += [pscustomobject]@{
+                                        Block   = $_.Block
+                                        Name    = "It $($_.Name)"
+                                        Result  = $_.Result
+                                        Message = $_.ErrorRecord.DisplayErrorMessage
+                                    }
+                                }
+                            }
+                        } else {
+                            $totalRun += $results.TotalCount
+                            $totalFailed += $results.FailedCount
+                            $results.Tests | Where-Object Result -ne 'Passed' | ForEach-Object {
+                                $testresults += [pscustomobject]@{
+                                    Block   = $_.Block
+                                    Name    = "It $($_.Name)"
+                                    Result  = $_.Result
+                                    Message = $_.ErrorRecord.DisplayErrorMessage
+                                }
+                            }
+                        }
                     }
                 }
             }

@@ -20,7 +20,7 @@ if (-not $WorkingDirectory) {
 # Prepare publish folder
 Write-Host "Creating and populating publishing directory"
 $publishDir = New-Item -Path $WorkingDirectory -Name publish -ItemType Directory -Force
-Copy-Item -Path "$($WorkingDirectory)\EasyPIM.Orchestrator" -Destination $publishDir.FullName -Recurse -Force
+Copy-Item -Path $WorkingDirectory -Destination $publishDir.FullName -Recurse -Force
 
 # Gather commands
 $text = @()

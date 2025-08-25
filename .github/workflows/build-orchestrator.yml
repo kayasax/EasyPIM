@@ -3,35 +3,29 @@ on:
   push:
     tags:
       - 'orchestrator-v*'
-  pull_request:
-    paths:
-      - 'EasyPIM.Orchestrator/**'
+  release:
+    types: [published]
 
 jobs:
   build-orchestrator:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
+
       - name: Install EasyPIM Core from Gallery
         run: Install-Module -Name EasyPIM -Force -Scope CurrentUser
         shell: pwsh
+
       - name: Install Prerequisites
         run: .\build\vsts-prerequisites.ps1
-        shell: powershell
-      - name: Install EasyPIM Core from Gallery
-        run: Install-Module -Name EasyPIM -Force -Scope CurrentUser
         shell: pwsh
 
+      - name: Validate
+        run: .\build\vsts-validate.ps1
+        shell: pwsh
 
-      - name: Build Orchestrator Only
-        run: |
-          if ("${{ github.event.before }}" -eq "0000000000000000000000000000000000000000") {
-            Write-Host 'Tag push or first commit: running build.'
-            .\EasyPIM.Orchestrator\build\vsts-build-orchestrator.ps1 -ApiKey $env:APIKEY
-          } else {
-            $changed = git diff --name-only ${{ github.event.before }} ${{ github.sha }} | Select-String -Pattern '^EasyPIM.Orchestrator/'
-            if ($changed) { .\EasyPIM.Orchestrator\build\vsts-build-orchestrator.ps1 -ApiKey $env:APIKEY } else { Write-Host 'No Orchestrator changes detected, skipping build.' }
-          }
+      - name: Build Orchestrator
+        run: .\EasyPIM.Orchestrator\build\vsts-build-orchestrator.ps1 -ApiKey $env:APIKEY
         shell: pwsh
         env:
           APIKEY: ${{ secrets.ApiKey }}

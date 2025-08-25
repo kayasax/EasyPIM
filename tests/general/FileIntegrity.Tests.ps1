@@ -52,6 +52,9 @@ Describe "Verifying integrity of module files" {
 				[byte[]]$byte = Get-Content -AsByteStream -ReadCount 4 -TotalCount 4 -Path $Path
 			}
 
+			# Handle empty or very short files safely
+			if (-not $byte -or $byte.Length -lt 4) { return 'Unknown' }
+
 			if ($byte[0] -eq 0xef -and $byte[1] -eq 0xbb -and $byte[2] -eq 0xbf) { 'UTF8 BOM' }
 			elseif ($byte[0] -eq 0xfe -and $byte[1] -eq 0xff) { 'Unicode' }
 			elseif ($byte[0] -eq 0 -and $byte[1] -eq 0 -and $byte[2] -eq 0xfe -and $byte[3] -eq 0xff) { 'UTF32' }
@@ -65,6 +68,8 @@ Describe "Verifying integrity of module files" {
 		$allFiles = Get-ChildItem -Path $moduleRoot -Recurse -File |
 			Where-Object { $_.Name -like '*.ps1' } |
 			Where-Object { $_.FullName -notlike (Join-Path $moduleRoot 'tests\*') } |
+			Where-Object { $_.FullName -notlike (Join-Path $moduleRoot 'functions\_REMOVED_SHIMS_BACKUP\*') } |
+			Where-Object { $_.FullName -notlike (Join-Path $moduleRoot 'backup\_REMOVED_SHIMS_BACKUP\*') } |
 			Where-Object { $_.FullName -notlike (Join-Path $testFolder '*') }
 		$testFiles = @()
 		if (Test-Path $testFolder) { $testFiles = Get-ChildItem -Path $testFolder -Recurse -File }
