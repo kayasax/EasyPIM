@@ -17,10 +17,23 @@ if (-not $WorkingDirectory) {
 }
 #endregion
 
-# Prepare publish folder
+# Prepare publish folder (use temp to avoid recursive self-copy)
 Write-Host "Creating and populating publishing directory"
-$publishDir = New-Item -Path $WorkingDirectory -Name publish -ItemType Directory -Force
-Copy-Item -Path $WorkingDirectory -Destination $publishDir.FullName -Recurse -Force
+$publishRoot = if ($env:RUNNER_TEMP) {
+    New-Item -Path $env:RUNNER_TEMP -Name ("easypim-orch-publish-" + ([guid]::NewGuid().ToString('N'))) -ItemType Directory -Force
+} else {
+    New-Item -Path ([System.IO.Path]::GetTempPath()) -Name ("easypim-orch-publish-" + ([guid]::NewGuid().ToString('N'))) -ItemType Directory -Force
+}
+# Maintain existing variable name semantics: $publishDir points to the publish root
+$publishDir = $publishRoot
+$moduleOutDir = New-Item -Path $publishDir.FullName -Name 'EasyPIM.Orchestrator' -ItemType Directory -Force
+
+# Copy module contents into publish folder, excluding any existing publish directory
+Get-ChildItem -LiteralPath $WorkingDirectory -Force | Where-Object { $_.Name -ne 'publish' } | ForEach-Object {
+    $dest = Join-Path $moduleOutDir.FullName $_.Name
+    Copy-Item -LiteralPath $_.FullName -Destination $dest -Recurse -Force
+}
+Write-Host ("Publish root: {0}" -f $publishDir.FullName) -ForegroundColor DarkCyan
 
 # Gather commands
 $text = @()
