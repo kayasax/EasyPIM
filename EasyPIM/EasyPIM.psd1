@@ -88,7 +88,10 @@ FunctionsToExport = @(
     'Deny-PIMGroupPendingApproval',
     'Copy-PIMAzureResourceEligibleAssignment',
     'Copy-PIMEntraRoleEligibleAssignment',
-    'Get-EasyPIMConfiguration'
+    'Get-EasyPIMConfiguration',
+    # Policy orchestration helpers used by EasyPIM.Orchestrator
+    'New-EPOEasyPIMPolicy',
+    'New-EasyPIMPolicies'
 )
 
 # NOTE: As of v1.10.0, orchestrator/test shims (Invoke-EasyPIMOrchestrator, Test-PIMEndpointDiscovery, Test-PIMPolicyDrift) have been removed from the core module. Please use the EasyPIM.Orchestrator module for orchestrator/test functionality. See release notes and migration guide for details.
