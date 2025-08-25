@@ -28,4 +28,4 @@ jobs:
         run: .\EasyPIM.Orchestrator\build\vsts-build-orchestrator.ps1 -ApiKey $env:APIKEY
         shell: pwsh
         env:
-          APIKEY: ${{ secrets.ApiKey }}
+          APIKEY: ${{ secrets.POWERSHELL_GALLERY_API_KEY }}
