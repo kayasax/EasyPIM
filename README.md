@@ -7,8 +7,8 @@
 EasyPIM is a PowerShell module created to help you manage Microsof Privileged Identity Management (PIM) either working with Entra ID, Azure RBAC or groups.
 Packed with more than 30 cmdlets, EasyPIM leverages the ARM and Graph APIs complexity to let you configure PIM **Azure Resources**, **Entra Roles** and **groups** settings and assignments in a simple way .
 
-🆕 Module split: the JSON-driven orchestrator is now a separate module: EasyPIM.Orchestrator (requires EasyPIM ≥ 1.10.0).
-**Orchestrated flow guide:** [step-by-step](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)
+🆕 Module split: the JSON-driven orchestrator is now a separate module: EasyPIM.Orchestrator (requires EasyPIM ≥ 1.10.0).  
+**Orchestrated flow guide:** [step-by-step](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)  
 🌍 V1.10 EasyPIM supports multi-cloud (Public, Government, China, Germany) thanks to [Chase Dafnis](https://github.com/CHDAFNI-MSFT)!
 
 ## Key features
