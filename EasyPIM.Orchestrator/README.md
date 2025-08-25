@@ -1,5 +1,35 @@
-# EasyPIM.Orchestrator (scaffolding)
+# EasyPIM.Orchestrator
 
-High-level orchestration: Invoke-EasyPIMOrchestrator, policy appliers, cleanup processors.
+JSON-driven orchestration for EasyPIM. This module runs end-to-end PIM configuration from a single JSON file.
 
-Status: Phase 1 scaffolding only. Not wired into the umbrella module yet.
+## Requirements
+- PowerShell 5.1 or 7.x
+- EasyPIM ≥ 1.10.0 (installed automatically when importing this module)
+
+## Install
+```pwsh
+Install-Module EasyPIM -MinimumVersion 1.10.0 -Scope CurrentUser
+Install-Module EasyPIM.Orchestrator -AllowPrerelease -Scope CurrentUser
+```
+
+## Commands
+- Invoke-EasyPIMOrchestrator – execute the JSON-driven flow
+- Test-PIMPolicyDrift – compare live vs. config
+- Test-PIMEndpointDiscovery – validate API endpoints for cloud environments
+
+```pwsh
+Import-Module EasyPIM.Orchestrator
+Get-Command -Module EasyPIM.Orchestrator
+```
+
+## Quick start
+```pwsh
+$tenant = '<tenantId>'
+$sub    = '<subscriptionId>'
+$config = '.\\pim-config.json'
+Invoke-EasyPIMOrchestrator -ConfigFilePath $config -TenantId $tenant -SubscriptionId $sub -Mode initial -WhatIf -WouldRemoveExportPath .\\LOGS
+```
+
+## Notes
+- This module is published separately on the Gallery: https://www.powershellgallery.com/packages/EasyPIM.Orchestrator
+- CI tag to trigger orchestrator build/publish: `orchestrator-v*`

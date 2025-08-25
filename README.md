@@ -5,9 +5,9 @@
 EasyPIM is a PowerShell module created to help you manage Microsof Privileged Identity Management (PIM) either working with Entra ID, Azure RBAC or groups.  
 Packed with more than 30 cmdlets, EasyPIM leverages the ARM and Graph APIs complexity to let you configure PIM **Azure Resources**, **Entra Roles** and **groups** settings and assignments in a simple way .  
 
-🆕 V1.9 Improves our Invoke-EasyPIMOrchestrator, your go-to way if you want to manage your PIM model from a config file.  
-**Check out our :  [step-by-step guide](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)**  
-🌍 V1.10 EasyPIM now supports multi-cloud (Public, Governement, China, Germany) thanks to [Chase Dafnis](https://github.com/CHDAFNI-MSFT)! 
+🆕 Module split: the JSON-driven orchestrator is now a separate module: EasyPIM.Orchestrator (requires EasyPIM ≥ 1.10.0).  
+**Orchestrated flow guide:** [step-by-step](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)  
+🌍 V1.10 EasyPIM supports multi-cloud (Public, Government, China, Germany) thanks to [Chase Dafnis](https://github.com/CHDAFNI-MSFT)! 
 
 ## Key features
 :boom: Support editing multiple roles at once  
@@ -18,22 +18,34 @@ Packed with more than 30 cmdlets, EasyPIM leverages the ARM and Graph APIs compl
 :boom: Backup all roles  
 :boom: New in V1.6 get PIM activity reporting  
 :boom: New in V1.7 Approve/Deny pending requests  
-:fire: V1.8.1 Invoke-EasyPIMOrchestrator :fire: [more info](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator)  
-👌 V1.9 Invoke-EasyPIM orchestrator now let you to define your PIM model (full spectrum: entra, azure, groups, policies, assignements, protected accounts) from a *single JSON file* !  
-👉 Check out the [step-by-step guide](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)
+:fire: Orchestrated flow (moved to EasyPIM.Orchestrator): [overview](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator)  
+👌 Define your full PIM model (Entra, Azure RBAC, Groups, policies, assignments, protected accounts) from a single JSON.  
+👉 Use the dedicated module EasyPIM.Orchestrator and follow the [step-by-step guide](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)
 
 🗒️Change log: [https://github.com/kayasax/EasyPIM/wiki/Changelog](https://github.com/kayasax/EasyPIM/wiki/Changelog)
 
 [📸 View the EasyPIM Gallery](Gallery.html)
 
 ## Installation
-This module is available on the PowerShell gallery: [https://www.powershellgallery.com/packages/EasyPIM](https://www.powershellgallery.com/packages/EasyPIM), install it with:
+Core module: [PowerShell Gallery / EasyPIM](https://www.powershellgallery.com/packages/EasyPIM)
 ```pwsh
 Install-Module -Name EasyPIM
 ```
 Updating from an older version:
 ```pwsh
 Update-Module -Name EasyPIM
+```
+
+Orchestrator (JSON-driven flow): [PowerShell Gallery / EasyPIM.Orchestrator](https://www.powershellgallery.com/packages/EasyPIM.Orchestrator)
+- Requires EasyPIM ≥ 1.10.0
+- Current release channel: prerelease (beta)
+```pwsh
+Install-Module -Name EasyPIM.Orchestrator -AllowPrerelease
+```
+Then:
+```pwsh
+Import-Module EasyPIM.Orchestrator
+Get-Command -Module EasyPIM.Orchestrator
 ```
 
 ## Sample usage
@@ -79,6 +91,22 @@ New-PIMEntraRoleActiveAssignment -tenantID $tenantID -rolename "testrole" -princ
 ```
 
 More samples available in the [documentation](https://github.com/kayasax/EasyPIM/wiki/Documentation)
+
+## Module split and migration
+- The following commands moved into the EasyPIM.Orchestrator module:
+    - Invoke-EasyPIMOrchestrator
+    - Test-PIMPolicyDrift
+    - Test-PIMEndpointDiscovery
+- After installing EasyPIM.Orchestrator, import it to access these commands. Any legacy shims in the core module will emit guidance and forward where applicable.
+
+## CI and releases
+- Tag patterns:
+    - core builds: `core-v*`
+    - orchestrator builds: `orchestrator-v*`
+    - legacy core build (also triggers): `v*`
+- PowerShell Gallery packages:
+    - EasyPIM (stable)
+    - EasyPIM.Orchestrator (prerelease channel during split hardening)
 
 ## Documentation
 [documentation](https://github.com/kayasax/EasyPIM/wiki/Documentation)
