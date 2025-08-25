@@ -12,16 +12,16 @@ Packed with more than 30 cmdlets, EasyPIM leverages the ARM and Graph APIs compl
 🌍 V1.10 EasyPIM supports multi-cloud (Public, Government, China, Germany) thanks to [Chase Dafnis](https://github.com/CHDAFNI-MSFT)!
 
 ## Key features
-:boom: Support editing multiple roles at once
-:boom: Copy settings from one role to another
-:boom: Copy eligible assignments from one user to another
-:boom: Export role settings to csv
-:boom: Import role settings from csv
-:boom: Backup all roles
-:boom: New in V1.6 get PIM activity reporting
-:boom: New in V1.7 Approve/Deny pending requests
-:fire: Orchestrated flow (moved to EasyPIM.Orchestrator): [overview](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator)
-👌 Define your full PIM model (Entra, Azure RBAC, Groups, policies, assignments, protected accounts) from a single JSON.
+:boom: Support editing multiple roles at once  
+:boom: Copy settings from one role to another  
+:boom: Copy eligible assignments from one user to another  
+:boom: Export role settings to csv  
+:boom: Import role settings from csv  
+:boom: Backup all roles  
+:boom: New in V1.6 get PIM activity reporting  
+:boom: New in V1.7 Approve/Deny pending requests  
+:fire: Orchestrated flow (moved to EasyPIM.Orchestrator): [overview](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator)  
+👌 Define your full PIM model (Entra, Azure RBAC, Groups, policies, assignments, protected accounts) from a single JSON.  
 👉 Use the dedicated module EasyPIM.Orchestrator and follow the [step-by-step guide](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)
 
 🗒️Change log: [https://github.com/kayasax/EasyPIM/wiki/Changelog](https://github.com/kayasax/EasyPIM/wiki/Changelog)
