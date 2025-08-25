@@ -38,6 +38,14 @@ Write-Host "Creating and populating publishing directory"
 $publishDir = New-Item -Path $WorkingDirectory -Name publish -ItemType Directory -Force
 Copy-Item -Path "$($WorkingDirectory)\EasyPIM" -Destination $publishDir.FullName -Recurse -Force
 
+# Include private shared module inside EasyPIM package under 'shared/'
+$sharedSrc = Join-Path (Split-Path $PSScriptRoot) 'shared\\EasyPIM.Shared'
+if (Test-Path $sharedSrc) {
+	$sharedDest = Join-Path "$($publishDir.FullName)\EasyPIM" 'shared\\EasyPIM.Shared'
+	New-Item -ItemType Directory -Path $sharedDest -Force | Out-Null
+	Copy-Item -Path (Join-Path $sharedSrc '*') -Destination $sharedDest -Recurse -Force
+}
+
 #region Gather text data to compile
 $text = @()
 
@@ -85,6 +93,15 @@ $psm1Path = "$($publishDir.FullName)\\EasyPIM\\EasyPIM.psm1"
 $utf8BomEncoding = [System.Text.UTF8Encoding]::new($true)
 [System.IO.File]::WriteAllText($psm1Path, $combinedContent, $utf8BomEncoding)
 Write-Host "Wrote EasyPIM.psm1 as UTF8 with BOM (enforced)" -ForegroundColor Yellow
+
+# Rewrite NestedModules path in manifest to point to packaged 'shared/..' before import/publish
+try {
+	$manifestPath = "$($publishDir.FullName)\\EasyPIM\\EasyPIM.psd1"
+	$rawMan = Get-Content $manifestPath -Raw -ErrorAction Stop
+	$rawMan = $rawMan -replace "\..\\\\shared\\\\EasyPIM\.Shared", 'shared\\EasyPIM.Shared'
+	Set-Content -Path $manifestPath -Value $rawMan -Encoding UTF8
+	Write-Host "Rewrote NestedModules path to packaged 'shared\\EasyPIM.Shared'" -ForegroundColor DarkCyan
+} catch { Write-Host "Manifest rewrite skipped/failed: $_" -ForegroundColor Yellow }
 
 # Verify BOM presence (EF BB BF)
 try {
