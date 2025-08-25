@@ -22,7 +22,7 @@ Describe "Verifying integrity of module files" {
 		$pesterModule = Get-Module -Name Pester -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
 		$pesterVersion = if ($pesterModule) { $pesterModule.Version } else { [Version]'0.0' }
 		$isLegacyPester = $pesterVersion.Major -lt 5
-		
+
 		function Get-FileEncoding
 		{
 		<#
@@ -86,7 +86,7 @@ Describe "Verifying integrity of module files" {
 				$pesterModule = Get-Module -Name Pester -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
 				$pesterVersion = if ($pesterModule) { $pesterModule.Version } else { [Version]'0.0' }
 				$isLegacyPester = $pesterVersion.Major -lt 5
-				
+
 				if ($isLegacyPester) {
 					$encoding = Get-FileEncoding -Path $file.FullName
 					$encoding | Should Match '^(UTF8 BOM|Unknown)$'
@@ -100,7 +100,7 @@ Describe "Verifying integrity of module files" {
 				$pesterModule = Get-Module -Name Pester -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
 				$pesterVersion = if ($pesterModule) { $pesterModule.Version } else { [Version]'0.0' }
 				$isLegacyPester = $pesterVersion.Major -lt 5
-				
+
 				if ($isLegacyPester) {
 					($file | Select-String "\s$" | Where-Object { $_.Line.Trim().Length -gt 0}).LineNumber | Should BeNullOrEmpty
 				} else {
@@ -117,7 +117,7 @@ Describe "Verifying integrity of module files" {
 				$pesterModule = Get-Module -Name Pester -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
 				$pesterVersion = if ($pesterModule) { $pesterModule.Version } else { [Version]'0.0' }
 				$isLegacyPester = $pesterVersion.Major -lt 5
-				
+
 				if ($isLegacyPester) {
 					$parseErrors | Should BeNullOrEmpty
 				} else {
@@ -134,7 +134,7 @@ Describe "Verifying integrity of module files" {
 						$pesterModule = Get-Module -Name Pester -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
 						$pesterVersion = if ($pesterModule) { $pesterModule.Version } else { [Version]'0.0' }
 						$isLegacyPester = $pesterVersion.Major -lt 5
-						
+
 						if ($isLegacyPester) {
 							$tokens | Where-Object Text -EQ $command | Should BeNullOrEmpty
 						} else {
@@ -167,7 +167,7 @@ Describe "Verifying integrity of module files" {
 				$pesterModule = Get-Module -Name Pester -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
 				$pesterVersion = if ($pesterModule) { $pesterModule.Version } else { [Version]'0.0' }
 				$isLegacyPester = $pesterVersion.Major -lt 5
-				
+
 				if ($isLegacyPester) {
 					Get-FileEncoding -Path $file.FullName | Should Be 'UTF8 BOM'
 				} else {
@@ -180,7 +180,7 @@ Describe "Verifying integrity of module files" {
 				$pesterModule = Get-Module -Name Pester -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
 				$pesterVersion = if ($pesterModule) { $pesterModule.Version } else { [Version]'0.0' }
 				$isLegacyPester = $pesterVersion.Major -lt 5
-				
+
 				if ($isLegacyPester) {
 					($file | Select-String "\s$" | Where-Object { $_.Line.Trim().Length -gt 0 } | Measure-Object).Count | Should Be 0
 				} else {

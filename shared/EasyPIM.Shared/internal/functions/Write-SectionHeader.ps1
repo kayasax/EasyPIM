@@ -6,7 +6,10 @@ function Write-SectionHeader {
         [string]$Message
     )
 
-    Write-Host "`n┌────────────────────────────────────────────────────┐" -ForegroundColor Cyan
-    Write-Host "│ $Message" -ForegroundColor Cyan
-    Write-Host "└────────────────────────────────────────────────────┘`n" -ForegroundColor Cyan
+    # ASCII-only to avoid CI encoding/parser issues
+    Write-Host "" -ForegroundColor Cyan
+    Write-Host "+----------------------------------------------------+" -ForegroundColor Cyan
+    Write-Host "| $Message" -ForegroundColor Cyan
+    Write-Host "+----------------------------------------------------+" -ForegroundColor Cyan
+    Write-Host "" -ForegroundColor Cyan
 }
