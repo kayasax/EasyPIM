@@ -4,4 +4,4 @@ foreach ($file in Get-ChildItem -Path (Join-Path $PSScriptRoot 'internal') -Filt
 }
 
 # Export only the minimal helpers needed by parent modules
-Export-ModuleMember -Function @('Write-SectionHeader','Initialize-EasyPIMAssignments')
+Export-ModuleMember -Function @('Write-SectionHeader','Initialize-EasyPIMAssignments','Initialize-EasyPIMPolicies')
