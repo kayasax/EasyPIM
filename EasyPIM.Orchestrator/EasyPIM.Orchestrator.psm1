@@ -1,4 +1,17 @@
 
+# Ensure private shared helpers are available (Write-SectionHeader, Initialize-EasyPIMAssignments, etc.)
+# Try packaged relative path first (used after build), then repo-relative for local dev.
+$sharedCandidates = @(
+	(Join-Path $PSScriptRoot 'shared/EasyPIM.Shared/EasyPIM.Shared.psd1'),
+	(Join-Path (Split-Path -Parent $PSScriptRoot) 'shared/EasyPIM.Shared/EasyPIM.Shared.psd1')
+)
+foreach ($cand in $sharedCandidates) {
+	if (Test-Path $cand) {
+		try { Import-Module $cand -Scope Local -ErrorAction Stop | Out-Null } catch {}
+		break
+	}
+}
+
 # Dot-source existing orchestrator functions from the EasyPIM repository tree and export public entrypoints.
 
 $root = Split-Path -Parent $PSScriptRoot
