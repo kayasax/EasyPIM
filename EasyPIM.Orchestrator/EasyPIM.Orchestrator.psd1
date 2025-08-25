@@ -22,7 +22,7 @@
         Tags = @('EasyPIM','Orchestrator')
         ProjectUri = 'https://github.com/kayasax/EasyPIM'
         LicenseUri = 'https://github.com/kayasax/EasyPIM/blob/main/LICENSE'
-    Prerelease = 'beta7'
+    Prerelease = 'beta8'
 ReleaseNotes = @'
 PRE-RELEASE: This is a beta version of the EasyPIM.Orchestrator module. It is not intended for production use and may change without notice.
 Use for testing and feedback only. Breaking changes may occur before the first stable release.
