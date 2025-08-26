@@ -42,9 +42,9 @@ function New-EPOEasyPIMPolicies {
         [Parameter(Mandatory=$false)]
         [string]$SubscriptionId,
 
-    [Parameter(Mandatory=$false)]
-    [ValidateSet('delta','initial')]
-    [string]$PolicyMode = 'delta'
+        [Parameter(Mandatory=$false)]
+        [ValidateSet('delta','initial')]
+        [string]$PolicyMode = 'delta'
     )
 
     Write-Verbose "Starting New-EPOEasyPIMPolicies in $PolicyMode mode"
@@ -83,7 +83,7 @@ function New-EPOEasyPIMPolicies {
                     "Approval Required: $($resolvedPolicy.ApprovalRequired)"
                 )
                 if ($resolvedPolicy.ApprovalRequired -and $resolvedPolicy.PSObject.Properties['Approvers'] -and $resolvedPolicy.Approvers) {
-                    $approverList = $resolvedPolicy.Approvers | ForEach-Object { "$($_.description) ($($_.id))" }
+                    $approverList = $resolvedPolicy.Approvers | ForEach-Object { "$(($_.description) ? $_.description : $_.Name) ($(($_.id) ? $_.id : $_.Id))" }
                     $policyDetails += "Approvers: $($approverList -join ', ')"
                 }
                 if ($resolvedPolicy.PSObject.Properties['AuthenticationContext_Enabled'] -and $resolvedPolicy.AuthenticationContext_Enabled) {
@@ -96,8 +96,8 @@ function New-EPOEasyPIMPolicies {
             $whatIfMessage = "Apply Azure Role Policy configurations:`n$($whatIfDetails -join "`n")"
             if ($PSCmdlet.ShouldProcess($whatIfMessage, "Azure Role Policies")) {
                 Write-Host "[PROC] Processing Azure Role Policies..." -ForegroundColor Cyan
-                if (-not $SubscriptionId) {
-                    $errorMsg = "SubscriptionId is required for Azure Role Policies"
+                if (-not $SubscriptionId -and -not ($Config.AzureRolePolicies | Where-Object { $_.Scope })) {
+                    $errorMsg = "SubscriptionId is required for Azure Role Policies if no Scope is provided per policy"
                     Write-Error $errorMsg
                     $results.Errors += $errorMsg
                 } else {
@@ -175,7 +175,7 @@ function New-EPOEasyPIMPolicies {
                     $policyDetails += "Approval Required: $($policy.ApprovalRequired)"
                     if ($policy.ApprovalRequired) {
                         if ($policy.PSObject.Properties['Approvers'] -and $policy.Approvers) {
-                            $approverList = $policy.Approvers | ForEach-Object { if ($_.PSObject.Properties['description'] -and $_.PSObject.Properties['id']) { "$($_.description) ($($_.id))" } else { "$_" } }
+                            $approverList = $policy.Approvers | ForEach-Object { if ($_.PSObject.Properties['description'] -and $_.PSObject.Properties['id']) { "$(($_.description) ? $_.description : $_.Name) ($(($_.id) ? $_.id : $_.Id))" } else { "$_" } }
                             $policyDetails += "Approvers: $($approverList -join ', ')"
                         } else { $policyDetails += "[WARNING: ApprovalRequired is true but no Approvers specified!]" }
                     }
@@ -254,7 +254,7 @@ function New-EPOEasyPIMPolicies {
                     "Approval Required: $($resolvedPolicy.ApprovalRequired)"
                 )
                 if ($resolvedPolicy.ApprovalRequired -and $resolvedPolicy.PSObject.Properties['Approvers'] -and $resolvedPolicy.Approvers) {
-                    $approverList = $resolvedPolicy.Approvers | ForEach-Object { "$($_.description) ($($_.id))" }
+                    $approverList = $resolvedPolicy.Approvers | ForEach-Object { "$(($_.description) ? $_.description : $_.Name) ($(($_.id) ? $_.id : $_.Id))" }
                     $policyDetails += "Approvers: $($approverList -join ', ')"
                 }
                 if ($resolvedPolicy.PSObject.Properties['AuthenticationContext_Enabled'] -and $resolvedPolicy.AuthenticationContext_Enabled) { $policyDetails += "Authentication Context: $($resolvedPolicy.AuthenticationContext_Value)" }

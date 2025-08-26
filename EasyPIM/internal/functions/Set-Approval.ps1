@@ -167,10 +167,37 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
 #>
 
         if ($entraRole) {
+            # Normalize approvers: avoid treating arbitrary strings as approver objects
+            # - If it's a whitespace/empty string, treat as null
+            # - If it looks like a serialized hashtable list from Get-EntraRoleConfig (e.g. @{"id"="..."},@{...}), parse it
+            if ($Approvers -is [string]) {
+                $apTxt = $Approvers.Trim()
+                if ([string]::IsNullOrWhiteSpace($apTxt)) {
+                    $Approvers = $null
+                }
+                elseif ($apTxt.StartsWith('[') -or $apTxt.StartsWith('{')) {
+                    # Try JSON first (preferred safe format)
+                    try {
+                        $parsed = $apTxt | ConvertFrom-Json -ErrorAction Stop
+                        if ($parsed -is [array]) { $Approvers = $parsed }
+                        elseif ($parsed) { $Approvers = @($parsed) } else { $Approvers = $null }
+                    } catch { Write-Verbose "Approvers string was not valid JSON; skipping approver subjects."; $Approvers = $null }
+                }
+                else {
+                    # Unknown string format; ignore to avoid generating empty subject entries
+                    $Approvers = $null
+                }
+            }
+
             # Build approvers array JSON safely (no trailing commas)
             $approverItems = ''
             $approverGroups = 0; $approverUsers = 0
-            if ($null -ne $Approvers -and ($Approvers | Measure-Object).Count -gt 0) {
+            # If approval is NOT required, force an empty approver list regardless of config/current policy
+            if ($ApprovalRequired -eq $false -or $req -eq 'false') {
+                $approverItems = ''
+                $approverGroups = 0; $approverUsers = 0
+            }
+            elseif ($null -ne $Approvers -and -not ($Approvers -is [string]) -and (($Approvers | Measure-Object).Count -gt 0)) {
                 $parts = @()
                 foreach ($a in $Approvers) {
                     $id = $a.Id
@@ -180,12 +207,15 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
                     if (-not $name) { $name = $a.description }
                     # Determine approver subject set type for Graph (@odata.type)
                     $type = $a.Type; if (-not $type) { $type = $a.type }
+                    if (-not $type -and $a.PSObject.Properties['userType']) { $type = $a.userType }
                     $odataType = '#microsoft.graph.singleUser'
                     $idPropName = 'userId'
                     if (-not [string]::IsNullOrWhiteSpace($type)) {
                         $t = ($type.ToString()).Trim().ToLowerInvariant()
                         if ($t -eq 'group' -or $t -eq 'groupmembers') { $odataType = '#microsoft.graph.groupMembers'; $idPropName = 'groupId' }
                     }
+                    # Skip invalid/empty IDs to avoid Graph FormatException (Unrecognized Guid format)
+                    if ([string]::IsNullOrWhiteSpace([string]$id)) { Write-Verbose "Skipping approver with empty id in approver list."; continue }
                     if ($odataType -eq '#microsoft.graph.groupMembers') { $approverGroups++ } else { $approverUsers++ }
                     $parts += @"
                                 {

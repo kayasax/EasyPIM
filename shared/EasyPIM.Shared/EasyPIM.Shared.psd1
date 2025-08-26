@@ -7,8 +7,17 @@
     Copyright         = '(c) EasyPIM. All rights reserved.'
     Description       = 'Private shared helpers used internally by EasyPIM modules.'
     PowerShellVersion = '5.1'
-    # Export a minimal set so parent modules can consume them without re-exporting publicly
-    FunctionsToExport = @('Write-SectionHeader','Initialize-EasyPIMAssignments','Initialize-EasyPIMPolicies')
+    # Export helpers consumed by EasyPIM Core and Orchestrator
+    FunctionsToExport = @(
+        'Write-SectionHeader',
+        'Initialize-EasyPIMAssignments',
+        'Initialize-EasyPIMPolicies',
+        'invoke-graph',
+        'Test-PrincipalExists',
+        'Test-GroupEligibleForPIM',
+        'Invoke-ARM',
+        'Get-PIMAzureEnvironmentEndpoint'
+    )
     AliasesToExport   = @()
     CmdletsToExport   = @()
     PrivateData       = @{ PSData = @{ Tags = @('EasyPIM','Shared','Private') } }

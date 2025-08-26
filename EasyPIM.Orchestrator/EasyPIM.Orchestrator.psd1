@@ -7,9 +7,7 @@
     Copyright         = '(c) Loïc MICHEL. All rights reserved.'
     Description       = 'Orchestrator for EasyPIM (Invoke-EasyPIMOrchestrator)'
     PowerShellVersion = '5.1'
-    RequiredModules   = @(
-        @{ ModuleName = 'EasyPIM'; ModuleVersion = '1.10.0' }
-    )
+    # RequiredModules intentionally omitted for dev: orchestrator imports EasyPIM explicitly from repo in psm1
     # Repo-relative for dev import; build script will rewrite to 'shared\\EasyPIM.Shared\\EasyPIM.Shared.psd1' inside package
     NestedModules = @('..\\shared\\EasyPIM.Shared\\EasyPIM.Shared.psd1')
     FunctionsToExport = @(

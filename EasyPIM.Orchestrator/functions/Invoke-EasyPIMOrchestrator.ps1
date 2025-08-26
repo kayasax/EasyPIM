@@ -136,6 +136,31 @@ function Invoke-EasyPIMOrchestrator {
 			if ($TenantId) { Write-Host -Object "[INFO] Using TenantId from environment: $TenantId" -ForegroundColor DarkCyan } else { Write-Host -Object "[WARN] TenantId not provided and TENANTID env var is empty." -ForegroundColor Yellow }
 		}
 
+		# Propagate tenant/subscription to shared helpers
+		try {
+			$script:tenantID = $TenantId
+			Set-Variable -Scope Global -Name tenantID -Value $TenantId -Force
+		} catch {}
+
+		# Initialize subscription context EARLY for downstream helpers (Invoke-ARM, get-config)
+		if (-not $SubscriptionId -or [string]::IsNullOrWhiteSpace($SubscriptionId)) {
+			$SubscriptionId = $env:subscriptionid
+			if (-not $SubscriptionId) {
+				try {
+					$azCtx = Get-AzContext -ErrorAction SilentlyContinue
+					if ($azCtx -and $azCtx.Subscription -and $azCtx.Subscription.Id) { $SubscriptionId = $azCtx.Subscription.Id }
+				} catch {}
+			}
+			if ($SubscriptionId) { Write-Verbose ("[Orchestrator] Resolved SubscriptionId early: {0}" -f $SubscriptionId) }
+			else { Write-Verbose "[Orchestrator] No SubscriptionId resolved yet (will continue; callers also pass explicit IDs)" }
+		}
+		try {
+			if ($SubscriptionId) {
+				$script:subscriptionID = $SubscriptionId
+				Set-Variable -Scope Global -Name subscriptionID -Value $SubscriptionId -Force
+			}
+		} catch {}
+
 		# 2. Process and normalize config based on selected operations
 		$processedConfig = Initialize-EasyPIMAssignments -Config $config
 
@@ -232,6 +257,8 @@ function Invoke-EasyPIMOrchestrator {
 	# Always perform principal & group validation before any policy or assignment operations
 		Write-Host -Object "[TEST] Validating principal and group IDs..." -ForegroundColor Cyan
 		$principalIds = New-Object -TypeName "System.Collections.Generic.HashSet[string]"
+		Write-Verbose ("[Orchestrator] TenantId in context before validation: {0}" -f ($TenantId))
+		try { $tpeCmd = Get-Command Test-PrincipalExists -ErrorAction SilentlyContinue; if($tpeCmd){ Write-Host ("[Debug] Using Test-PrincipalExists from: {0} ({1})" -f $tpeCmd.Source,$tpeCmd.Path) -ForegroundColor DarkGray } else { Write-Host "[Debug] Test-PrincipalExists not found in scope" -ForegroundColor Yellow } } catch {}
 	$policyApproverRefs = @()
 		if ($processedConfig.PSObject.Properties.Name -contains 'Assignments' -and $processedConfig.Assignments) {
 			$assign = $processedConfig.Assignments
@@ -318,6 +345,7 @@ function Invoke-EasyPIMOrchestrator {
 		}
 		$validationResults = @()
 		foreach ($principalIdIter in $principalIds) {
+			Write-Verbose ("[Debug] Checking principal: {0}" -f $principalIdIter)
 			$exists = Test-PrincipalExists -PrincipalId $principalIdIter
 			$type = $null; $displayName = $null
 			if ($exists) {
@@ -331,11 +359,14 @@ function Invoke-EasyPIMOrchestrator {
 				}
 				if ($obj -and $obj.'@odata.type') { $type = $obj.'@odata.type' }
 				if ($type -eq '#microsoft.graph.group') {
-					try {
-						$g = Get-MgGroup -GroupId $principalIdIter -Property Id,DisplayName -ErrorAction SilentlyContinue
-						if ($g) { $displayName = $g.DisplayName }
-					} catch {
-						Write-Verbose -Message "Suppressed group lookup failure for ${principalIdIter}: $($_.Exception.Message)"
+					$doLookup = $false
+					if ($VerbosePreference) { $doLookup = $true }
+					elseif ($env:EASYPIM_VERBOSE_PRINCIPAL) { $doLookup = $true }
+					if ($doLookup) {
+						try {
+							$g = Get-MgGroup -GroupId $principalIdIter -Property Id,DisplayName -ErrorAction SilentlyContinue
+							if ($g) { $displayName = $g.DisplayName }
+						} catch { Write-Verbose -Message "Suppressed group lookup failure for ${principalIdIter}: $($_.Exception.Message)" }
 					}
 				}
 			}
@@ -374,10 +405,17 @@ function Invoke-EasyPIMOrchestrator {
 			Write-Host -Object "[Orchestrator Debug] Assignment counts -> Azure(E:$dbgAzureElig A:$dbgAzureAct) Entra(E:$dbgEntraElig A:$dbgEntraAct) Groups(E:$dbgGroupElig A:$dbgGroupAct)" -ForegroundColor DarkCyan
 		} catch { Write-Host -Object "[Orchestrator Debug] Failed to compute assignment debug counts: $($_.Exception.Message)" -ForegroundColor DarkYellow }
 
+		# Re-affirm subscription context later as well, but avoid noisy logs
 		if (-not $SubscriptionId -or [string]::IsNullOrWhiteSpace($SubscriptionId)) {
 			$SubscriptionId = $env:subscriptionid
 			if ($SubscriptionId) { Write-Host -Object "[INFO] Using SubscriptionId from environment: $SubscriptionId" -ForegroundColor DarkCyan } else { Write-Host -Object "[WARN] SubscriptionId not provided and SUBSCRIPTIONID env var is empty (Azure role operations may be limited)." -ForegroundColor Yellow }
 		}
+		try {
+			if ($SubscriptionId) {
+				$script:subscriptionID = $SubscriptionId
+				Set-Variable -Scope Global -Name subscriptionID -Value $SubscriptionId -Force
+			}
+		} catch {}
 
 		# 3. Process policies FIRST (skip if requested) - CRITICAL: Policies must be applied before assignments to ensure compliance
 		$policyResults = $null
@@ -417,7 +455,7 @@ function Invoke-EasyPIMOrchestrator {
 		# 4. Perform cleanup operations AFTER policy processing (skip if requested or if assignments are skipped)
 		$cleanupResults = if ($Operations -contains "All" -and -not $SkipCleanup -and -not $SkipAssignments) {
 			Write-Host -Object "[CLEANUP] Performing cleanup operations based on updated policies..." -ForegroundColor Cyan
-			Invoke-EasyPIMCleanup -Config $processedConfig -Mode $Mode -TenantId $TenantId -SubscriptionId $SubscriptionId -WhatIf:$WhatIfPreference -WouldRemoveExportPath $WouldRemoveExportPath
+			Invoke-EasyPIMCleanup -Config $processedConfig -Mode $Mode -TenantId $TenantId -SubscriptionId $SubscriptionId -WouldRemoveExportPath $WouldRemoveExportPath
 		} else {
 			if ($SkipAssignments) { Write-Host -Object "[WARN] Skipping cleanup because SkipAssignments was specified (no assignment delta expected)" -ForegroundColor Yellow }
 			elseif ($SkipCleanup) { Write-Host -Object "[WARN] Skipping cleanup as requested by SkipCleanup parameter" -ForegroundColor Yellow }

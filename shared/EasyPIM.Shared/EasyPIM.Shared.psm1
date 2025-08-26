@@ -3,5 +3,14 @@ foreach ($file in Get-ChildItem -Path (Join-Path $PSScriptRoot 'internal') -Filt
     . $file.FullName
 }
 
-# Export only the minimal helpers needed by parent modules
-Export-ModuleMember -Function @('Write-SectionHeader','Initialize-EasyPIMAssignments','Initialize-EasyPIMPolicies')
+# Export shared helpers used by parent modules
+Export-ModuleMember -Function @(
+    'Write-SectionHeader',
+    'Initialize-EasyPIMAssignments',
+    'Initialize-EasyPIMPolicies',
+    'invoke-graph',
+    'Test-PrincipalExists',
+    'Test-GroupEligibleForPIM',
+    'Invoke-ARM',
+    'Get-PIMAzureEnvironmentEndpoint'
+)

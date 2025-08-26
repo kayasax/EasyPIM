@@ -1,18 +1,18 @@
 ﻿<#
       .Synopsis
-       Define if approval is required to activate a role, and who are the approvers
+       Define if approval is required to activate a role, and who are the approvers (CSV parsing wrapper)
       .Description
-       rule 4 in https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview#activation-rules
+       Wrapper for Set-Approval that handles CSV-format approval settings
       .Parameter ApprovalRequired
        Do we need an approval to activate a role?
       .Parameter Approvers
-        Who is the approver?
+        Who is the approver? (CSV format)
         .PARAMETER entrarole
         set to true if configuration is for an entra role
       .EXAMPLE
-        PS> Set-Approval -ApprovalRequired $true -Approvers @(@{"Id"=$UID;"Name"="John":"Type"="user"}, @{"Id"=$GID;"Name"="Group1":"Type"="group"})
+        PS> Set-ApprovalFromCSV -ApprovalRequired "TRUE" -Approvers "@{Id=abc-123;Name=John;Type=user}"
 
-        define John and Group1 as approvers and require approval
+        define John as approver and require approval
 
       .Link
 
@@ -30,152 +30,73 @@ function Set-ApprovalFromCSV  {
         [Parameter(Mandatory=$false)]
         [switch]$entraRole
     )
-    write-verbose "Set-ApprovalFromCSV"
-    if ($null -eq $Approvers) { $Approvers = $script:config.Approvers }
-if ($ApprovalRequired -eq "FALSE") { $req = "false" }else { $req = "true" }
 
-    if (!$entraRole) {
-        $rule = '
-        {
-        "setting": {'
-        if ($null -ne $ApprovalRequired) {
-            $rule += '"isApprovalRequired":' + $req + ','
-        }
+    Write-Verbose "Set-ApprovalFromCSV: ApprovalRequired=$ApprovalRequired, Approvers=$Approvers, entraRole=$entraRole"
 
-        $rule += '
-        "isApprovalRequiredForExtension": false,
-        "isRequestorJustificationRequired": true,
-        "approvalMode": "SingleStage",
-        "approvalStages": [
-            {
-            "approvalStageTimeOutInDays": 1,
-            "isApproverJustificationRequired": true,
-            "escalationTimeInMinutes": 0,
-        '
-
-        if ($null -ne $Approvers) {
-            #at least one approver required if approval is enable
-            $Approvers = $Approvers -replace ",$" # remove the last comma
-            # turn approvers list to an array
-            $Approvers= $Approvers -replace "^","@("
-            $Approvers= $Approvers -replace "$",")"
-            #write-verbose "APPROVERS: $Approvers"
-            #then turn the sting into an array of hash table
-
-            $Appr = Invoke-Expression $Approvers
-
-            $rule += '
-            "primaryApprovers": [
-            '
-            $cpt = 0
-            $Appr| ForEach-Object {
-
-                $id = $_.id
-                $name = $_.description
-                $type = $_.userType
-
-                if ($cpt -gt 0) {
-                    $rule += ","
-                }
-                $rule += '
-                {
-                    "id": "'+ $id + '",
-                    "description": "'+ $name + '",
-                    "isBackup": false,
-                    "userType": "'+ $type + '"
-                }
-                '
-                $cpt++
-            }
-        }
-
-        $rule += '
-            ],
-        "isEscalationEnabled": false,
-            "escalationApprovers": null
-                    }]
-                 },
-        "id": "Approval_EndUser_Assignment",
-        "ruleType": "RoleManagementPolicyApprovalRule",
-        "target": {
-            "caller": "EndUser",
-            "operations": [
-                "All"
-            ],
-            "level": "Assignment",
-            "targetObjects": null,
-            "inheritableSettings": null,
-            "enforcedSettings": null
-
-        }}'
+    # Convert string approval required to boolean
+    $approvalBool = $null
+    if (-not [string]::IsNullOrWhiteSpace($ApprovalRequired)) {
+        $approvalBool = ($ApprovalRequired.ToUpper() -eq 'TRUE' -or $ApprovalRequired -eq '1')
     }
 
+    # Parse approvers from CSV format
+    $approversList = $null
+    if (-not [string]::IsNullOrWhiteSpace($Approvers)) {
+        $approversList = ConvertTo-ApproverList -text $Approvers
+    }
+
+    # Call the main Set-Approval function
     if ($entraRole) {
+        return Set-Approval -ApprovalRequired $approvalBool -Approvers $approversList -entraRole
+    } else {
+        return Set-Approval -ApprovalRequired $approvalBool -Approvers $approversList
+    }
+}
 
-        $rule = '
-            {
-                "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyApprovalRule",
-                "id": "Approval_EndUser_Assignment",
-                "target": {
-                    "caller": "EndUser",
-                    "operations": [
-                        "All"
-                    ],
-                    "level": "Assignment",
-                    "inheritableSettings": [],
-                    "enforcedSettings": []
-                },
-                "setting": {
-                    "isApprovalRequired": '
-        $rule += $req
-        $rule += ',
-                    "isApprovalRequiredForExtension": false,
-                    "isRequestorJustificationRequired": true,
-                    "approvalMode": "SingleStage",
-                    "approvalStages": [
-                        {
-                            "approvalStageTimeOutInDays": 1,
-                            "isApproverJustificationRequired": true,
-                            "escalationTimeInMinutes": 0,
-                            "isEscalationEnabled": false,
-                            "primaryApprovers": ['
-        if (($null -ne $Approvers) -and ("" -ne $Approvers)) {
-            #at least one approver required if approval is enable
+function ConvertTo-ApproverList {
+    param([string]$text)
+    $result = @()
+    if ([string]::IsNullOrWhiteSpace($text)) { return $result }
 
-            $cpt = 0
-            # write-verbose "approvers: $approvers"
-            $Approvers = $Approvers -replace ",$" # remove the last comma
-            #then turn the sting into an array of hash table
-            $list = Invoke-Expression $Approvers
-            $list | ForEach-Object {
-                $id = $_.id
-                $type = $_.userType
+    # Normalize by removing wrapping array parentheses that older logic added
+    $t = $text.Trim()
 
-                if ($cpt -gt 0) { $rule += "," }
+    # Find all @{...} segments if present, otherwise treat the entire string as one segment
+    $segments = @()
+    $rx = [regex]'@\{([^}]*)\}'
+    $rxMatches = $rx.Matches($t)
+    if ($rxMatches.Count -gt 0) {
+        foreach ($m in $rxMatches) { $segments += $m.Groups[1].Value }
+    } else {
+        $segments = @($t)
+    }
 
-                $odataType = '#microsoft.graph.singleUser'
-                $idPropName = 'userId'
-                if ($type -and ($type.ToString().Trim().ToLowerInvariant() -eq 'group')) { $odataType = '#microsoft.graph.groupMembers'; $idPropName = 'groupId' }
+    foreach ($seg in $segments) {
+        $segTxt = ($seg -replace '^\s*\{', '' -replace '\}\s*$', '').Trim()
+        # Extract fields by regex (support separators ':' or '=') and optional quotes
+        $id = $null; $userType = $null; $name = $null; $description = $null
 
-                $rule += '
-            {
-                "@odata.type": "'+ $odataType + '",
-                "'+ $idPropName + '": "'+ $id + '"
-            }
-            '
-                $cpt++
+        $idMatch = [regex]::Match($segTxt, '(?i)\bid\b\s*[:=]\s*"?([0-9a-f\-]{5,})"?')
+        if ($idMatch.Success) { $id = $idMatch.Groups[1].Value }
+
+        $typeMatch = [regex]::Match($segTxt, '(?i)\buserType\b\s*[:=]\s*"?([A-Za-z]+)"?')
+        if ($typeMatch.Success) { $userType = $typeMatch.Groups[1].Value }
+
+        # Use a simpler regex pattern that avoids quote escaping issues
+        $nameMatch = [regex]::Match($segTxt, '(?i)\bname\b\s*[:=]\s*"?([^;"]+)"?')
+        if ($nameMatch.Success) { $name = $nameMatch.Groups[1].Value }
+
+        $descMatch = [regex]::Match($segTxt, '(?i)\bdescription\b\s*[:=]\s*"?([^;"]+)"?')
+        if ($descMatch.Success) { $description = $descMatch.Groups[1].Value }
+
+        if (-not [string]::IsNullOrWhiteSpace($id)) {
+            $result += [pscustomobject]@{
+                Id          = $id
+                Name        = $name
+                Type        = $userType
+                Description = $description
             }
         }
-        $rule += '
-
-
-                            ],
-                            "escalationApprovers": []
-                        }
-                    ]
-                }
-            }'
-
     }
-    return $rule
+    return $result
 }

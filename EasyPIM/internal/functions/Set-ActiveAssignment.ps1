@@ -21,11 +21,17 @@
 #>
 function Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment, [switch]$EntraRole) {
     write-verbose "Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment)"
-    if ( ($true -eq $AllowPermanentActiveAssignment) -or ("true" -eq $AllowPermanentActiveAssignment) -and ("false" -ne $AllowPermanentActiveAssignment)) {
-        $expire2 = "false"
+
+    # Determine if expiration is required (i.e., permanent assignments are NOT allowed)
+    $isPermanentAllowed = $false
+    if ($AllowPermanentActiveAssignment -eq $true -or $AllowPermanentActiveAssignment -eq "true") {
+        $isPermanentAllowed = $true
     }
-    else {
-        $expire2 = "true"
+
+    if ($isPermanentAllowed) {
+        $expire2 = "false"  # No expiration required - permanent assignments allowed
+    } else {
+        $expire2 = "true"   # Expiration required - permanent assignments NOT allowed
     }
 
     $rule = '

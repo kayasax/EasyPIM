@@ -25,7 +25,7 @@ function Update-Policy  {
     write-Verbose "script:scope = $script:scope"
     #write-verbose "rules: $rules"
     $scope = $script:scope
-    $ARMhost = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM'
+    $ARMhost = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM' -Verbose:$false
     #$ARMendpoint = "$ARMhost/$scope/providers/Microsoft.Authorization"
 
     $body = '
@@ -45,7 +45,20 @@ function Update-Policy  {
     write-verbose "Patch URI : $restURI"
     $response = Invoke-RestMethod -Uri $restUri -Method PATCH -Headers $authHeader -Body $body -verbose:$false
     #>
+  # Try to extract SubscriptionId from scope (if scope is at subscription level)
+  $subId = $null
+  try {
+    $m = [regex]::Match($scope, '^subscriptions/([0-9a-fA-F\-]{36})')
+    if ($m.Success) { $subId = $m.Groups[1].Value }
+  } catch {
+    Write-Verbose "Update-Policy: failed to extract SubscriptionId from scope '$scope': $($_.Exception.Message)"
+  }
+
+  if ($subId) {
+    $response = invoke-ARM -restURI $restUri -Method "PATCH" -Body $body -SubscriptionId $subId
+  } else {
     $response = invoke-ARM -restURI $restUri -Method "PATCH" -Body $body
+  }
     #
     return $response
 }
