@@ -6,7 +6,6 @@ foreach ($file in Get-ChildItem -Path (Join-Path $PSScriptRoot 'internal') -Filt
 # Export shared helpers used by parent modules
 Export-ModuleMember -Function @(
     'Write-SectionHeader',
-    'Initialize-EasyPIMAssignments',
     'Initialize-EasyPIMPolicies',
     'invoke-graph',
     'Test-PrincipalExists',

@@ -10,7 +10,6 @@
     # Export helpers consumed by EasyPIM Core and Orchestrator
     FunctionsToExport = @(
         'Write-SectionHeader',
-        'Initialize-EasyPIMAssignments',
         'Initialize-EasyPIMPolicies',
         'invoke-graph',
         'Test-PrincipalExists',
