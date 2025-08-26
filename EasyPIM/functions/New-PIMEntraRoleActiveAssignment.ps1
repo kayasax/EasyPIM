@@ -163,29 +163,34 @@ function New-PIMEntraRoleActiveAssignment {
         # Determine applicable policy maxima
         $policyMaxActive = $config.MaximumActiveAssignmentDuration
         $policyActivationMax = $config.ActivationDuration  # end-user activation (may also be enforced)
-        # if Duration is not provided we will take the maximum active assignment value
+        
+        # For active assignments, use ActivationDuration as the primary limit since MaximumActiveAssignmentDuration may be PT0S (disabled)
+        $effectiveLimit = $policyActivationMax
+        if (!$effectiveLimit -and $policyMaxActive) { $effectiveLimit = $policyMaxActive }
+        
+        # if Duration is not provided we will take the effective limit
         if (!($PSBoundParameters.Keys.Contains('duration'))) {
-            $duration = $policyMaxActive
+            $duration = $effectiveLimit
         } else {
-            # user specified a duration: validate against both policy maxima (whichever is lower and defined)
+            # Normalize duration BEFORE validation (P1H -> PT1H for Graph compliance)
+            if ($duration -match '^P[0-9]+[HMS]$') {
+                $normalized = ($duration -replace '^P','PT')
+                Write-Verbose "Normalizing duration '$duration' -> '$normalized' for Graph compliance"
+                $duration = $normalized
+            }
+            
+            # user specified a duration: validate against the effective limit
             $reqIso = $duration
             $reqTs = ConvertFrom-ISO8601Duration $reqIso
-            $activeTs = ConvertFrom-ISO8601Duration $policyMaxActive
-            $activationTs = ConvertFrom-ISO8601Duration $policyActivationMax
-            $effectiveLimitTs = $null; $effectiveLimitIso = $null; $origin = $null
-            if ($activeTs -and $activationTs) {
-                if ($activeTs -le $activationTs) { $effectiveLimitTs = $activeTs; $effectiveLimitIso = $policyMaxActive; $origin = 'MaximumActiveAssignmentDuration' }
-                else { $effectiveLimitTs = $activationTs; $effectiveLimitIso = $policyActivationMax; $origin = 'ActivationDuration' }
-            } elseif ($activeTs) { $effectiveLimitTs = $activeTs; $effectiveLimitIso = $policyMaxActive; $origin = 'MaximumActiveAssignmentDuration' }
-            elseif ($activationTs) { $effectiveLimitTs = $activationTs; $effectiveLimitIso = $policyActivationMax; $origin = 'ActivationDuration' }
+            $effectiveLimitTs = ConvertFrom-ISO8601Duration $effectiveLimit
             if ($reqTs -and $effectiveLimitTs -and $reqTs -gt $effectiveLimitTs -and -not $permanent) {
                 $humanReq = Format-TimeSpanHuman $reqTs
                 $humanMax = Format-TimeSpanHuman $effectiveLimitTs
-                throw "Requested active assignment duration '$reqIso' ($humanReq) exceeds policy limit '$effectiveLimitIso' ($humanMax) sourced from $origin for role $rolename. Remove -Duration to use the maximum or choose a smaller value."
+                throw "Requested active assignment duration '$reqIso' ($humanReq) exceeds policy limit '$effectiveLimit' ($humanMax) for role $rolename. Remove -Duration to use the maximum or choose a smaller value."
             }
         }
-        Write-Verbose ("Duration selection: requested='{0}' | MaxActive='{1}' | Activation='{2}' => using='{3}'" -f $duration,$policyMaxActive,$policyActivationMax,$duration)
-        # Normalize non-standard short ISO8601 forms like P1H -> PT1H (Graph expects the 'T' when time components present)
+        Write-Verbose ("Duration selection: effective limit='{0}' (from ActivationDuration='{1}', fallback MaxActive='{2}') => using='{3}'" -f $effectiveLimit,$policyActivationMax,$policyMaxActive,$duration)
+        # Additional normalization for any remaining non-standard forms 
         if ($duration -match '^P[0-9]+[HMS]$') {
             $normalized = ($duration -replace '^P','PT')
             Write-Verbose "Normalizing duration '$duration' -> '$normalized' for Graph compliance"

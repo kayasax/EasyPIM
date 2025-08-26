@@ -28,11 +28,12 @@ function New-EasyPIMAssignments {
 		)
 		try {
 			& $Script
+			Write-Host "  ✅ Created: $Context" -ForegroundColor Green
 			$true
 		} catch {
 			$emsg = $_.Exception.Message
-			if ($emsg -match 'RoleAssignmentExists') { Write-Verbose ("[Assignments] Exists->Skip: {0}" -f $Context); return $true }
-			Write-Verbose ("[Assignments] Failed: {0}: {1}" -f $Context, $emsg)
+			if ($emsg -match 'RoleAssignmentExists') { Write-Host "  ⏭️ Skipped existing: $Context" -ForegroundColor Yellow; return $true }
+			Write-Host "  ❌ Failed: $Context - $emsg" -ForegroundColor Red
 			$false
 		}
 	}
@@ -49,7 +50,7 @@ function New-EasyPIMAssignments {
 					$role = Get-PIMEntraRolePolicy -tenantID $TenantId -rolename $roleName -ErrorAction Stop
 					$existsActive = Get-PIMEntraRoleActiveAssignment -tenantID $TenantId -principalID $a.principalId -rolename $roleName -ErrorAction SilentlyContinue
 					$existsElig = Get-PIMEntraRoleEligibleAssignment -tenantID $TenantId -principalID $a.principalId -rolename $roleName -ErrorAction SilentlyContinue
-					if ($existsActive -or $existsElig) { Write-Verbose "[Assignments] Exists: $ctx"; $summary.Skipped++; continue }
+					if ($existsActive -or $existsElig) { Write-Host "  ⏭️ Skipped existing: $ctx" -ForegroundColor Yellow; $summary.Skipped++; continue }
 				} catch { Write-Verbose ("[Assignments] Pre-check skipped for ${ctx}: {0}" -f $_.Exception.Message) }
 				$sb = {
 					if ($a.assignmentType -match 'Active') {
@@ -83,7 +84,7 @@ function New-EasyPIMAssignments {
 				try {
 					$existsActive = Get-PIMAzureResourceActiveAssignment -tenantID $TenantId -subscriptionID $SubscriptionId -scope $scope -principalID $a.principalId -rolename $roleName -ErrorAction SilentlyContinue
 					$existsElig = Get-PIMAzureResourceEligibleAssignment -tenantID $TenantId -subscriptionID $SubscriptionId -scope $scope -principalID $a.principalId -rolename $roleName -ErrorAction SilentlyContinue
-					if ($existsActive -or $existsElig) { Write-Verbose "[Assignments] Exists: $ctx"; $summary.Skipped++; continue }
+					if ($existsActive -or $existsElig) { Write-Host "  ⏭️ Skipped existing: $ctx" -ForegroundColor Yellow; $summary.Skipped++; continue }
 				} catch { Write-Verbose ("[Assignments] Pre-check skipped for ${ctx}: {0}" -f $_.Exception.Message) }
 				$sb = {
 					if ($a.assignmentType -match 'Active') {
@@ -120,7 +121,7 @@ function New-EasyPIMAssignments {
 				try {
 					$existsActive = Get-PIMGroupActiveAssignment -tenantID $TenantId -groupID $groupId -principalID $a.principalId -type $groupType -ErrorAction SilentlyContinue
 					$existsElig = Get-PIMGroupEligibleAssignment -tenantID $TenantId -groupID $groupId -principalID $a.principalId -type $groupType -ErrorAction SilentlyContinue
-					if ($existsActive -or $existsElig) { Write-Verbose "[Assignments] Exists: $ctx"; $summary.Skipped++; continue }
+					if ($existsActive -or $existsElig) { Write-Host "  ⏭️ Skipped existing: $ctx" -ForegroundColor Yellow; $summary.Skipped++; continue }
 				} catch { Write-Verbose ("[Assignments] Pre-check skipped for ${ctx}: {0}" -f $_.Exception.Message) }
 				$sb = {
 					if ($a.assignmentType -match 'Active') {

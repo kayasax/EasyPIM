@@ -51,8 +51,12 @@ function Get-PIMGroupEligibleAssignment {
         [string]$groupID,
         [string]$rolename,
         [string]$principalName,
-        [string]$userPrincipalName
-    )    try {
+        [string]$principalID,
+        [string]$userPrincipalName,
+        [string]$type
+    )
+    
+    try {
         $script:tenantID = $tenantID
 
         # Resolve userPrincipalName to object ID if provided
@@ -68,13 +72,21 @@ function Get-PIMGroupEligibleAssignment {
             catch {
                 Write-Warning "Could not resolve userPrincipalName '$userPrincipalName': $($_.Exception.Message)"
                 # Return empty result if user not found
-                Write-Output "0 eligible assignment(s) found for group $groupID in tenant $tenantID"
                 return @()
             }
+        } elseif ($PSBoundParameters.Keys.Contains('principalID')) {
+            # Use the provided object ID directly
+            $resolvedPrincipalId = $principalID
+            Write-Verbose "Using provided object ID: $resolvedPrincipalId"
         }
 
         # Build Graph API filter for better performance
         $graphFilters = @("groupId eq '$groupID'")  # groupID is always required
+
+        # Add type filter if specified (member/owner)
+        if ($PSBoundParameters.Keys.Contains('type') -and $type) {
+            $graphFilters += "accessId eq '$type'"
+        }
 
         # Use resolved principal ID if we got one from userPrincipalName
         if ($resolvedPrincipalId) {
@@ -122,7 +134,6 @@ function Get-PIMGroupEligibleAssignment {
         # No need for PowerShell filtering for userPrincipalName since it's resolved to object ID
         # and filtered efficiently at the Graph API level
 
-        Write-Output "$($resu.Count) eligible assignment(s) found for group $groupID in tenant $tenantID"
         return $resu
     }
     catch {

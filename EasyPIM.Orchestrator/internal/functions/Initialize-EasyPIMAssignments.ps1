@@ -11,12 +11,15 @@ function Initialize-EasyPIMAssignments {
     # Start with a clean copy of the config
     $result = $Config | ConvertTo-Json -Depth 100 | ConvertFrom-Json
 
-    # Initialize legacy assignment arrays
+    # Initialize legacy assignment arrays with proper ArrayList objects to support Add() operations
     foreach ($name in 'AzureRoles','AzureRolesActive','EntraIDRoles','EntraIDRolesActive','GroupRoles','GroupRolesActive','ProtectedUsers') {
         if (-not $result.PSObject.Properties[$name]) {
-            $result | Add-Member -MemberType NoteProperty -Name $name -Value @()
+            $result | Add-Member -MemberType NoteProperty -Name $name -Value ([System.Collections.ArrayList]@())
         } elseif ($null -eq $result.$name) {
-            $result.$name = @()
+            $result.$name = [System.Collections.ArrayList]@()
+        } else {
+            # Convert existing array to ArrayList if needed
+            $result.$name = [System.Collections.ArrayList]@($result.$name)
         }
     }
 
@@ -46,10 +49,10 @@ function Initialize-EasyPIMAssignments {
 
                         # Split by assignment type
                         if ($assignment.assignmentType -eq "Active") {
-                            $result.EntraIDRolesActive += $assignmentObj
+                            $null = $result.EntraIDRolesActive.Add($assignmentObj)
                         } else {
                             # Default to Eligible
-                            $result.EntraIDRoles += $assignmentObj
+                            $null = $result.EntraIDRoles.Add($assignmentObj)
                         }
                     }
                 }
@@ -81,10 +84,10 @@ function Initialize-EasyPIMAssignments {
 
                         # Split by assignment type
                         if ($assignment.assignmentType -eq "Active") {
-                            $result.AzureRolesActive += $assignmentObj
+                            $null = $result.AzureRolesActive.Add($assignmentObj)
                         } else {
                             # Default to Eligible
-                            $result.AzureRoles += $assignmentObj
+                            $null = $result.AzureRoles.Add($assignmentObj)
                         }
                     }
                 }
@@ -116,10 +119,10 @@ function Initialize-EasyPIMAssignments {
 
                         # Split by assignment type
                         if ($assignment.assignmentType -eq "Active") {
-                            $result.GroupRolesActive += $assignmentObj
+                            $null = $result.GroupRolesActive.Add($assignmentObj)
                         } else {
                             # Default to Eligible
-                            $result.GroupRoles += $assignmentObj
+                            $null = $result.GroupRoles.Add($assignmentObj)
                         }
                     }
                 }

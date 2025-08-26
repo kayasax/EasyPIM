@@ -235,6 +235,51 @@ function Invoke-EasyPIMOrchestrator {
 		# Filter config based on selected operations
 		if ($Operations -notcontains "All") {
 			$filteredConfig = @{}
+			# Always preserve ProtectedUsers when filtering
+			if ($processedConfig.PSObject.Properties.Name -contains 'ProtectedUsers') {
+				$filteredConfig.ProtectedUsers = $processedConfig.ProtectedUsers
+			}
+			
+			# Filter the Assignments block based on selected operations
+			if ($processedConfig.PSObject.Properties.Name -contains 'Assignments') {
+				$filteredAssignments = [PSCustomObject]@{}
+				Write-Verbose "[Filter Debug] Original Assignments sections: $($processedConfig.Assignments.PSObject.Properties.Name -join ', ')"
+				foreach ($op in $Operations) {
+					Write-Verbose "[Filter Debug] Processing operation: $op"
+					switch ($op) {
+						"AzureRoles" {
+							if ($processedConfig.Assignments.PSObject.Properties.Name -contains 'AzureRoles') {
+								$filteredAssignments | Add-Member -NotePropertyName 'AzureRoles' -NotePropertyValue $processedConfig.Assignments.AzureRoles
+								Write-Verbose "[Filter Debug] Added AzureRoles to filtered assignments"
+							}
+						}
+						"EntraRoles" {
+							if ($processedConfig.Assignments.PSObject.Properties.Name -contains 'EntraRoles') {
+								$filteredAssignments | Add-Member -NotePropertyName 'EntraRoles' -NotePropertyValue $processedConfig.Assignments.EntraRoles
+								Write-Verbose "[Filter Debug] Added EntraRoles to filtered assignments"
+							}
+						}
+						"GroupRoles" {
+							if ($processedConfig.Assignments.PSObject.Properties.Name -contains 'Groups') {
+								$filteredAssignments | Add-Member -NotePropertyName 'Groups' -NotePropertyValue $processedConfig.Assignments.Groups
+								Write-Verbose "[Filter Debug] Added Groups to filtered assignments"
+							}
+							if ($processedConfig.Assignments.PSObject.Properties.Name -contains 'GroupRoles') {
+								$filteredAssignments | Add-Member -NotePropertyName 'GroupRoles' -NotePropertyValue $processedConfig.Assignments.GroupRoles
+								Write-Verbose "[Filter Debug] Added GroupRoles to filtered assignments"
+							}
+						}
+					}
+				}
+				Write-Verbose "[Filter Debug] Filtered Assignments sections: $($filteredAssignments.PSObject.Properties.Name -join ', ')"
+				if ($filteredAssignments.PSObject.Properties.Name.Count -gt 0) {
+					$filteredConfig.Assignments = $filteredAssignments
+					Write-Verbose "[Filter Debug] Assignments block preserved with $($filteredAssignments.PSObject.Properties.Name.Count) sections"
+				} else {
+					Write-Verbose "[Filter Debug] No matching assignment sections found, Assignments block will be empty"
+				}
+			}
+			
 			foreach ($op in $Operations) {
 				switch ($op) {
 					"AzureRoles" {
