@@ -3,7 +3,7 @@ $__easypim_vp = $VerbosePreference
 try {
 	$VerbosePreference = 'SilentlyContinue'
 
-# Load orchestrator's own internal helper functions (simple, reliable approach)
+# Load orchestrator's own internal helper functions (simple duplication approach)
 $internalPaths = @(
     (Join-Path $PSScriptRoot 'internal'),
     (Join-Path $PSScriptRoot 'internal/functions')
@@ -13,23 +13,6 @@ foreach ($internalPath in $internalPaths) {
     if (Test-Path $internalPath) {
         foreach ($file in Get-ChildItem -Path $internalPath -Filter *.ps1 -Recurse) {
             . $file.FullName
-        }
-    }
-}
-
-# Import EasyPIM.Shared only for functions not duplicated internally
-$sharedCandidates = @(
-    (Join-Path (Split-Path -Parent $PSScriptRoot) 'shared/EasyPIM.Shared/EasyPIM.Shared.psd1'),
-    (Join-Path $PSScriptRoot 'shared/EasyPIM.Shared/EasyPIM.Shared.psd1')
-)
-foreach ($cand in $sharedCandidates) {
-    if (Test-Path $cand) {
-        try {
-            Import-Module $cand -Force -Global -ErrorAction Stop
-            Write-Verbose "✅ Loaded EasyPIM.Shared module for additional functions"
-            break
-        } catch {
-            Write-Verbose "⚠️ Failed to import EasyPIM.Shared: $($_.Exception.Message)"
         }
     }
 }# Import local EasyPIM core module - REQUIRED for orchestrator functions to work
