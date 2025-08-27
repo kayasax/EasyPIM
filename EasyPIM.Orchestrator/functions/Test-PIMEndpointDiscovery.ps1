@@ -4,20 +4,14 @@ function Test-PIMEndpointDiscovery {
         [switch]$NoCache
     )
 
-function Test-PIMEndpointDiscovery {
-    [CmdletBinding()]
-    param(
-        [switch]$NoCache
-    )
-
     # Check Azure PowerShell connection (gracefully handle missing Az module)
     try {
         if (Get-Command Get-AzContext -ErrorAction SilentlyContinue) {
             $az = Get-AzContext -ErrorAction SilentlyContinue
-            if (-not $az) { 
-                Write-Host "Azure: Not connected (use Connect-AzAccount)" -ForegroundColor Yellow 
-            } else { 
-                Write-Host "Azure: $($az.Environment.Name)" -ForegroundColor Green 
+            if (-not $az) {
+                Write-Host "Azure: Not connected (use Connect-AzAccount)" -ForegroundColor Yellow
+            } else {
+                Write-Host "Azure: $($az.Environment.Name)" -ForegroundColor Green
             }
         } else {
             Write-Host "Azure: Az module not available" -ForegroundColor Gray
@@ -30,10 +24,10 @@ function Test-PIMEndpointDiscovery {
     try {
         if (Get-Command Get-MgContext -ErrorAction SilentlyContinue) {
             $mg = Get-MgContext -ErrorAction SilentlyContinue
-            if (-not $mg) { 
-                Write-Host "Graph: Not connected (use Connect-MgGraph)" -ForegroundColor Yellow 
-            } else { 
-                Write-Host "Graph: $($mg.Environment)" -ForegroundColor Green 
+            if (-not $mg) {
+                Write-Host "Graph: Not connected (use Connect-MgGraph)" -ForegroundColor Yellow
+            } else {
+                Write-Host "Graph: $($mg.Environment)" -ForegroundColor Green
             }
         } else {
             Write-Host "Graph: Microsoft.Graph module not available" -ForegroundColor Gray

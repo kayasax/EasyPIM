@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Test if a principal (user or group) exists in Azure AD
 

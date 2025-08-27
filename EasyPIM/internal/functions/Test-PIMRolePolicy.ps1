@@ -1,4 +1,4 @@
-function Test-PIMRolePolicy {
+﻿function Test-PIMRolePolicy {
     <#
     .SYNOPSIS
     Tests PIM role policy configuration to diagnose ExpirationRule and other validation failures

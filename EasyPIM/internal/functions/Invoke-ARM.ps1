@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Invoke Azure Resource Manager (ARM) API calls
 

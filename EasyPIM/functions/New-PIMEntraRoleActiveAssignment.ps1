@@ -1,4 +1,4 @@
-<#
+﻿<#
     .Synopsis
     Create an active assignement for the role $rolename and for the principal $principalID
     .Description
