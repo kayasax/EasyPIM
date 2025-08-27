@@ -48,7 +48,7 @@ function Invoke-ARM {
     try {
         # Get Azure access token
         $tokenObj = Get-AzAccessToken -ResourceUrl "https://management.azure.com/"
-        
+
         # Handle SecureString token conversion
         if ($tokenObj.Token -is [System.Security.SecureString]) {
             $token = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenObj.Token))

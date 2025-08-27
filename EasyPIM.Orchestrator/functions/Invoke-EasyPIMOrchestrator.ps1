@@ -131,7 +131,7 @@ function Invoke-EasyPIMOrchestrator {
 			Write-Host "  Connect-MgGraph -Scopes 'RoleManagement.ReadWrite.Directory'" -ForegroundColor Green
 			throw "Microsoft Graph authentication required. Please run Connect-MgGraph first."
 		}
-		
+
 		# Check if we have required Graph scopes
 		$requiredScopes = @('RoleManagement.ReadWrite.Directory')
 		$currentScopes = $mgContext.Scopes
@@ -141,9 +141,9 @@ function Invoke-EasyPIMOrchestrator {
 			Write-Host "  Connect-MgGraph -Scopes 'RoleManagement.ReadWrite.Directory'" -ForegroundColor Green
 			throw "Microsoft Graph requires RoleManagement.ReadWrite.Directory scope."
 		}
-		
+
 		Write-Host "[AUTH] Microsoft Graph connection verified (Account: $($mgContext.Account))" -ForegroundColor Green
-		
+
 		# Check Azure PowerShell authentication
 		$azContext = Get-AzContext -ErrorAction SilentlyContinue
 		if (-not $azContext) {

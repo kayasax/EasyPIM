@@ -1,0 +1,97 @@
+name: Test Orchestrator Module Loading
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ chore/orchestrator-hardening ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-module-loading:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup PowerShell
+      shell: pwsh
+      run: |
+        Write-Host "PowerShell version: $($PSVersionTable.PSVersion)" -ForegroundColor Green
+
+    - name: Test Module Import and Helper Loading
+      shell: pwsh
+      run: |
+        Write-Host "=== Testing EasyPIM.Orchestrator Module Loading ===" -ForegroundColor Cyan
+
+        # Set verbose preference to see detailed loading info
+        $VerbosePreference = 'Continue'
+
+        # Test 1: Import orchestrator module
+        Write-Host "`n1. Testing orchestrator module import..." -ForegroundColor Yellow
+        try {
+          Import-Module './EasyPIM.Orchestrator/EasyPIM.Orchestrator.psd1' -Force -Verbose
+          Write-Host "✅ Orchestrator module imported successfully" -ForegroundColor Green
+        } catch {
+          Write-Host "❌ Failed to import orchestrator module: $($_.Exception.Message)" -ForegroundColor Red
+          exit 1
+        }
+
+        # Test 2: Test orchestrator functions work (internal functions are not globally accessible by design)
+        Write-Host "`n2. Testing orchestrator functions work correctly..." -ForegroundColor Yellow
+
+        try {
+          Write-Host "Testing Test-PIMEndpointDiscovery..." -ForegroundColor Gray
+          Test-PIMEndpointDiscovery
+          Write-Host "✅ Test-PIMEndpointDiscovery executed successfully (external modules not required for testing)" -ForegroundColor Green
+        } catch {
+          Write-Host "❌ Test-PIMEndpointDiscovery failed: $($_.Exception.Message)" -ForegroundColor Red
+          exit 1
+        }
+
+        try {
+          Write-Host "Testing Invoke-EasyPIMOrchestrator availability..." -ForegroundColor Gray
+          $testResult = Get-Command Invoke-EasyPIMOrchestrator -ErrorAction Stop
+          Write-Host "✅ Invoke-EasyPIMOrchestrator is available" -ForegroundColor Green
+        } catch {
+          Write-Host "❌ Invoke-EasyPIMOrchestrator not found: $($_.Exception.Message)" -ForegroundColor Red
+          exit 1
+        }
+
+        # Test 3: Show module information
+        Write-Host "`n3. Module information..." -ForegroundColor Yellow
+        $modules = Get-Module EasyPIM*
+        foreach ($module in $modules) {
+          Write-Host "Module: $($module.Name) v$($module.Version) from $($module.Path)" -ForegroundColor Cyan
+        }
+
+        Write-Host "`n🎉 All tests passed! Orchestrator module loading works correctly in GitHub Actions." -ForegroundColor Green
+
+    - name: Test Module Loading Paths
+      shell: pwsh
+      run: |
+        Write-Host "=== Testing Module Loading Path Resolution ===" -ForegroundColor Cyan
+
+        # Check what paths were attempted
+        Write-Host "`nChecking expected paths..." -ForegroundColor Yellow
+
+        $expectedPaths = @(
+          './EasyPIM/internal/functions'
+        )
+
+        foreach ($path in $expectedPaths) {
+          if (Test-Path $path) {
+            Write-Host "✅ Path exists: $path" -ForegroundColor Green
+            if ($path -like "*/functions") {
+              $files = Get-ChildItem $path -Filter "*.ps1" | Select-Object -First 3
+              Write-Host "   Sample files: $($files.Name -join ', ')..." -ForegroundColor Gray
+            }
+          } else {
+            Write-Host "❌ Path missing: $path" -ForegroundColor Red
+          }
+        }
+
+        # Show current working directory and structure
+        Write-Host "`nCurrent directory: $(Get-Location)" -ForegroundColor Yellow
+        Write-Host "Directory structure:" -ForegroundColor Yellow
+        Get-ChildItem -Directory | ForEach-Object { Write-Host "  📁 $($_.Name)" -ForegroundColor Gray }
