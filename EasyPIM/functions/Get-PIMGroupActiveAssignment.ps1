@@ -50,7 +50,7 @@ function Get-PIMGroupActiveAssignment {
         [string]$type,
         [switch]$summary
     )
-    
+
     try {
         $script:tenantID = $tenantID
 

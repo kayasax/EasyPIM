@@ -55,7 +55,7 @@ function Get-PIMGroupEligibleAssignment {
         [string]$userPrincipalName,
         [string]$type
     )
-    
+
     try {
         $script:tenantID = $tenantID
 

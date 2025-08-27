@@ -1,5 +1,5 @@
 function Write-EasyPIMSummary {
-	[CmdletBinding()]
+	[CmdletBinding(SupportsShouldProcess=$true)]
 	[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
 	param (
 		[Parameter()]

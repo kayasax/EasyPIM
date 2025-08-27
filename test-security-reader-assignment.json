@@ -1,0 +1,15 @@
+{
+  "Assignments": {
+    "EntraRoles": [
+      {
+        "RoleDefinitionName": "Security Reader",
+        "PrincipalId": "csv-test@yespapa.eu",
+        "StartDateTime": "2025-01-21T16:00:00Z",
+        "EndDateTime": "2025-01-21T20:00:00Z",
+        "AssignmentType": "Active",
+        "DirectoryScopeId": "/",
+        "Justification": "Testing EasyPIM orchestrator after fixing InvalidRoleAssignmentRequest error"
+      }
+    ]
+  }
+}

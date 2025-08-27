@@ -146,7 +146,7 @@ function New-PIMGroupEligibleAssignment {
 '
         $endpoint = "/identityGovernance/privilegedAccess/group/EligibilityScheduleRequests"
         write-verbose "patch body : $body"
-        
+
         if ($PSCmdlet.ShouldProcess("Group $groupID", "Create PIM Eligible Assignment")) {
             $response = invoke-graph -Endpoint $endpoint -Method "POST" -body $body
             Return $response

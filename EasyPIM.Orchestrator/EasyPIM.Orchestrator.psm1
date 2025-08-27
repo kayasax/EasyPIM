@@ -3,33 +3,60 @@ $__easypim_vp = $VerbosePreference
 try {
 	$VerbosePreference = 'SilentlyContinue'
 
-# Ensure private shared helpers are available (Write-SectionHeader, Initialize-EasyPIMAssignments, etc.)
-# Try packaged relative path first (used after build), then repo-relative for local dev.
-$sharedCandidates = @(
-	(Join-Path (Split-Path -Parent $PSScriptRoot) 'shared/EasyPIM.Shared/EasyPIM.Shared.psd1'),
-	(Join-Path $PSScriptRoot 'shared/EasyPIM.Shared/EasyPIM.Shared.psd1')
+# Load orchestrator's own internal helper functions (simple, reliable approach)
+$internalPaths = @(
+    (Join-Path $PSScriptRoot 'internal'),
+    (Join-Path $PSScriptRoot 'internal/functions')
 )
-foreach ($cand in $sharedCandidates) {
-	if (Test-Path $cand) {
-		try {
-			if (Get-Module -Name 'EasyPIM.Shared' -ErrorAction SilentlyContinue) { Remove-Module -Name 'EasyPIM.Shared' -Force -ErrorAction SilentlyContinue }
-			Import-Module $cand -Force -ErrorAction Stop | Out-Null
-		} catch {}
-		break
-	}
+
+foreach ($internalPath in $internalPaths) {
+    if (Test-Path $internalPath) {
+        foreach ($file in Get-ChildItem -Path $internalPath -Filter *.ps1 -Recurse) {
+            . $file.FullName
+        }
+    }
 }
 
-# Prefer local EasyPIM core module when present so orchestrator uses in-repo functions
+# Import EasyPIM.Shared only for functions not duplicated internally
+$sharedCandidates = @(
+    (Join-Path (Split-Path -Parent $PSScriptRoot) 'shared/EasyPIM.Shared/EasyPIM.Shared.psd1'),
+    (Join-Path $PSScriptRoot 'shared/EasyPIM.Shared/EasyPIM.Shared.psd1')
+)
+foreach ($cand in $sharedCandidates) {
+    if (Test-Path $cand) {
+        try {
+            Import-Module $cand -Force -Global -ErrorAction Stop
+            Write-Verbose "✅ Loaded EasyPIM.Shared module for additional functions"
+            break
+        } catch {
+            Write-Verbose "⚠️ Failed to import EasyPIM.Shared: $($_.Exception.Message)"
+        }
+    }
+}# Import local EasyPIM core module - REQUIRED for orchestrator functions to work
+$coreImportSuccess = $false
 try {
-	if (Get-Module -Name 'EasyPIM' -ErrorAction SilentlyContinue) { Remove-Module -Name 'EasyPIM' -Force -ErrorAction SilentlyContinue }
+	# Try local EasyPIM core module paths
 	$easyPIMCandidates = @(
 		(Join-Path (Split-Path -Parent $PSScriptRoot) 'EasyPIM/EasyPIM.psd1'),
 		(Join-Path $PSScriptRoot '../EasyPIM/EasyPIM.psd1')
 	)
+
 	foreach ($cand in $easyPIMCandidates) {
-		if (Test-Path $cand) { Import-Module $cand -Force -ErrorAction Stop | Out-Null; break }
+		if (Test-Path $cand) {
+			Write-Host "🔧 Importing EasyPIM core module from: $cand" -ForegroundColor DarkGray
+			Import-Module $cand -Force -ErrorAction Stop
+			$coreImportSuccess = $true
+			Write-Host "✅ Successfully imported local EasyPIM core module" -ForegroundColor Green
+			break
+		}
 	}
-} catch { Write-Verbose "EasyPIM core import skipped: $($_.Exception.Message)" }
+
+	if (-not $coreImportSuccess) {
+		Write-Host "⚠️  Local EasyPIM core module not found in expected paths. Orchestrator functions may not work correctly." -ForegroundColor Yellow
+	}
+} catch {
+	Write-Host "❌ Failed to import EasyPIM core module: $($_.Exception.Message). Orchestrator functions may not work correctly." -ForegroundColor Red
+}
 
 # Version check (opt-out with EASYPIM_NO_VERSION_CHECK=1)
 if (-not $env:EASYPIM_NO_VERSION_CHECK) {
@@ -82,10 +109,7 @@ $localFunctionFiles = @(
 foreach ($f in $localFunctionFiles) { if (Test-Path $f) { . $f } }
 
 
-# Load this module's own internal helpers (kept private)
-foreach ($file in Get-ChildItem -Path (Join-Path $PSScriptRoot 'internal/functions') -Filter *.ps1 -Recurse) {
-	. $file.FullName
-}
+# NOTE: Internal functions are already loaded above
 
 # Export only the public entrypoints
 Export-ModuleMember -Function @(

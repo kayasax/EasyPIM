@@ -23,10 +23,10 @@ jobs:
       shell: pwsh
       run: |
         Write-Host "=== Testing EasyPIM.Orchestrator Module Loading ===" -ForegroundColor Cyan
-        
+
         # Set verbose preference to see detailed loading info
         $VerbosePreference = 'Continue'
-        
+
         # Test 1: Import orchestrator module
         Write-Host "`n1. Testing orchestrator module import..." -ForegroundColor Yellow
         try {
@@ -36,12 +36,12 @@ jobs:
           Write-Host "❌ Failed to import orchestrator module: $($_.Exception.Message)" -ForegroundColor Red
           exit 1
         }
-        
+
         # Test 2: Check if helper functions are available
         Write-Host "`n2. Testing helper function availability..." -ForegroundColor Yellow
-        $requiredFunctions = @('Write-SectionHeader', 'invoke-graph', 'Test-PrincipalExists', 'Initialize-EasyPIMPolicies')
+        $requiredFunctions = @('Write-SectionHeader', 'invoke-graph', 'Test-PrincipalExists', 'Initialize-EasyPIMPolicies', 'Get-PIMAzureEnvironmentEndpoint')
         $missingFunctions = @()
-        
+
         foreach ($func in $requiredFunctions) {
           if (Get-Command $func -ErrorAction SilentlyContinue) {
             Write-Host "✅ $func is available" -ForegroundColor Green
@@ -50,12 +50,12 @@ jobs:
             $missingFunctions += $func
           }
         }
-        
+
         if ($missingFunctions.Count -gt 0) {
           Write-Host "`nMissing functions: $($missingFunctions -join ', ')" -ForegroundColor Red
           exit 1
         }
-        
+
         # Test 3: Test orchestrator function
         Write-Host "`n3. Testing orchestrator function..." -ForegroundColor Yellow
         try {
@@ -65,29 +65,29 @@ jobs:
           Write-Host "❌ Invoke-EasyPIMOrchestrator not found: $($_.Exception.Message)" -ForegroundColor Red
           exit 1
         }
-        
+
         # Test 4: Show module information
         Write-Host "`n4. Module information..." -ForegroundColor Yellow
         $modules = Get-Module EasyPIM*
         foreach ($module in $modules) {
           Write-Host "Module: $($module.Name) v$($module.Version) from $($module.Path)" -ForegroundColor Cyan
         }
-        
+
         Write-Host "`n🎉 All tests passed! Orchestrator module loading works correctly in GitHub Actions." -ForegroundColor Green
 
     - name: Test Module Loading Paths
       shell: pwsh
       run: |
         Write-Host "=== Testing Module Loading Path Resolution ===" -ForegroundColor Cyan
-        
+
         # Check what paths were attempted
         Write-Host "`nChecking expected paths..." -ForegroundColor Yellow
-        
+
         $expectedPaths = @(
           './EasyPIM/internal/functions'
           './shared/EasyPIM.Shared/EasyPIM.Shared.psd1'
         )
-        
+
         foreach ($path in $expectedPaths) {
           if (Test-Path $path) {
             Write-Host "✅ Path exists: $path" -ForegroundColor Green
@@ -99,7 +99,7 @@ jobs:
             Write-Host "❌ Path missing: $path" -ForegroundColor Red
           }
         }
-        
+
         # Show current working directory and structure
         Write-Host "`nCurrent directory: $(Get-Location)" -ForegroundColor Yellow
         Write-Host "Directory structure:" -ForegroundColor Yellow

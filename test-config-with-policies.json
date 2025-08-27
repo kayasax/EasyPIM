@@ -1,0 +1,27 @@
+{
+  "EntraRoles": {
+    "Policies": [
+      {
+        "DisplayName": "Security Reader Policy",
+        "RoleDefinitionName": "Security Reader",
+        "Settings": {
+          "maximumGrantPeriod": "PT8H",
+          "approvalRequired": false
+        }
+      }
+    ]
+  },
+  "Assignments": {
+    "EntraRoles": [
+      {
+        "RoleDefinitionName": "Security Reader",
+        "PrincipalId": "user@domain.com",
+        "StartDateTime": "2025-01-21T10:00:00Z",
+        "EndDateTime": "2025-01-21T18:00:00Z",
+        "AssignmentType": "Active",
+        "DirectoryScopeId": "/",
+        "Justification": "Test assignment"
+      }
+    ]
+  }
+}

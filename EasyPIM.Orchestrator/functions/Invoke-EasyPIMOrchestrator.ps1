@@ -239,7 +239,7 @@ function Invoke-EasyPIMOrchestrator {
 			if ($processedConfig.PSObject.Properties.Name -contains 'ProtectedUsers') {
 				$filteredConfig.ProtectedUsers = $processedConfig.ProtectedUsers
 			}
-			
+
 			# Filter the Assignments block based on selected operations
 			if ($processedConfig.PSObject.Properties.Name -contains 'Assignments') {
 				$filteredAssignments = [PSCustomObject]@{}
@@ -279,7 +279,7 @@ function Invoke-EasyPIMOrchestrator {
 					Write-Verbose "[Filter Debug] No matching assignment sections found, Assignments block will be empty"
 				}
 			}
-			
+
 			foreach ($op in $Operations) {
 				switch ($op) {
 					"AzureRoles" {
@@ -398,7 +398,7 @@ function Invoke-EasyPIMOrchestrator {
 				if ($script:principalObjectCache -and $script:principalObjectCache.ContainsKey($principalIdIter)) {
 					$obj = $script:principalObjectCache[$principalIdIter]
 				} else {
-						try { $obj = Invoke-Graph -Endpoint "directoryObjects/$principalIdIter" -ErrorAction Stop } catch {
+						try { $obj = invoke-graph -Endpoint "directoryObjects/$principalIdIter" -ErrorAction Stop } catch {
 							Write-Verbose -Message "Suppressed directory object fetch failure for ${principalIdIter}: $($_.Exception.Message)"
 						}
 				}

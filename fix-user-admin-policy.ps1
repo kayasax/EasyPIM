@@ -27,7 +27,7 @@ try {
         -ApprovalRequired $true
 
     Write-Host "SUCCESS: User Administrator policy updated!" -ForegroundColor Green
-    
+
     # Verify the change
     Write-Host "`nVerifying policy update:" -ForegroundColor Cyan
     $updatedPolicy = Get-PIMEntraRolePolicy -tenantID $env:TENANTID -rolename "User Administrator"
@@ -35,7 +35,7 @@ try {
     Write-Host "  AllowPermanentActiveAssignment: $($updatedPolicy.AllowPermanentActiveAssignment)"
     Write-Host "  ActivationDuration: $($updatedPolicy.ActivationDuration)"
     Write-Host "  ApprovalRequired: $($updatedPolicy.ApprovalRequired)"
-    
+
 } catch {
     Write-Host "ERROR applying policy: $($_.Exception.Message)" -ForegroundColor Red
 }

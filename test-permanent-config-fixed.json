@@ -1,0 +1,19 @@
+{
+  "ProtectedUsers": [],
+  "TenantID": "9b08d26c-2c4e-45c8-9313-b700c2ee6e3d",
+  "Assignments": {
+    "EntraRoles": [
+      {
+        "roleName": "User Administrator",
+        "assignments": [
+          {
+            "principalId": "12345678-1234-1234-1234-123456789012",
+            "assignmentType": "Active",
+            "permanent": true,
+            "justification": "Test permanent assignment that should work with PT0S policy"
+          }
+        ]
+      }
+    ]
+  }
+}
