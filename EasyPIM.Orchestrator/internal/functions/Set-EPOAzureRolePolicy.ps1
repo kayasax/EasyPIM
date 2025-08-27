@@ -43,9 +43,18 @@ function Set-EPOAzureRolePolicy {
     if ($resolved.PSObject.Properties['AuthenticationContext_Value']) { $params.AuthenticationContext_Value = $resolved.AuthenticationContext_Value }
     if ($resolved.PSObject.Properties['ApprovalRequired']) { $params.ApprovalRequired = $resolved.ApprovalRequired }
     if ($resolved.PSObject.Properties['Approvers']) { $params.Approvers = $resolved.Approvers }
-    if ($resolved.PSObject.Properties['MaximumEligibilityDuration']) { $params.MaximumEligibilityDuration = $resolved.MaximumEligibilityDuration }
+    if ($resolved.PSObject.Properties['MaximumEligibilityDuration'] -and $resolved.MaximumEligibilityDuration) { $params.MaximumEligibilityDuration = $resolved.MaximumEligibilityDuration }
     if ($resolved.PSObject.Properties['AllowPermanentEligibility']) { $params.AllowPermanentEligibility = $resolved.AllowPermanentEligibility }
-    if ($resolved.PSObject.Properties['MaximumActiveAssignmentDuration']) { $params.MaximumActiveAssignmentDuration = $resolved.MaximumActiveAssignmentDuration }
+    # PT0S prevention: Only set MaximumActiveAssignmentDuration if it has a non-empty value to prevent PT0S conversion
+    if ($resolved.PSObject.Properties['MaximumActiveAssignmentDuration'] -and $resolved.MaximumActiveAssignmentDuration) { 
+        # Additional validation to ensure value is not PT0S and meets minimum requirement
+        $duration = [string]$resolved.MaximumActiveAssignmentDuration
+        if ($duration -ne "PT0S" -and $duration -ne "PT0M" -and $duration -ne "PT0H" -and $duration -ne "P0D") {
+            $params.MaximumActiveAssignmentDuration = $resolved.MaximumActiveAssignmentDuration 
+        } else {
+            Write-Warning "[PT0S Prevention] Skipping MaximumActiveAssignmentDuration '$duration' for Azure role '$($PolicyDefinition.RoleName)' - zero duration values are not allowed"
+        }
+    }
     if ($resolved.PSObject.Properties['AllowPermanentActiveAssignment']) { $params.AllowPermanentActiveAssignment = $resolved.AllowPermanentActiveAssignment }
     foreach ($n in $resolved.PSObject.Properties | Where-Object { $_.Name -like 'Notification_*' }) { $params[$n.Name] = $n.Value }
 

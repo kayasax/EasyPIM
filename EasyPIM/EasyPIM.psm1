@@ -3,23 +3,10 @@ try {
     # Suppress verbose during module import; restore afterwards
     $VerbosePreference = 'SilentlyContinue'
 
-# Ensure shared helpers are available for internal use (Invoke-ARM, invoke-graph, Initialize-EasyPIMPolicies, etc.)
-# Try packaged relative path first (used after build), then repo-relative for local dev.
-$sharedCandidates = @(
-    (Join-Path $PSScriptRoot 'shared/EasyPIM.Shared/EasyPIM.Shared.psd1'),
-    (Join-Path (Split-Path -Parent $PSScriptRoot) 'shared/EasyPIM.Shared/EasyPIM.Shared.psd1')
-)
-foreach ($cand in $sharedCandidates) {
-    if (Test-Path $cand) {
-        try {
-            if (Get-Module -Name 'EasyPIM.Shared' -ErrorAction SilentlyContinue) { Remove-Module -Name 'EasyPIM.Shared' -Force -ErrorAction SilentlyContinue }
-            Import-Module $cand -Force -ErrorAction Stop | Out-Null
-        } catch {}
-        break
-    }
-}
+# Note: Shared module removed in favor of internal function duplication approach
+# Core EasyPIM module now works standalone without shared dependencies
 
-foreach ($file in Get-ChildItem -Path "$PSScriptRoot/internal/functions" -Filter *.ps1 -Recurse | Where-Object { $_.BaseName -notmatch '^(New-EPO|Set-EPO|Invoke-EPO|EPO_)' -and $_.BaseName -notin @('Test-PrincipalExists','Invoke-graph','Invoke-ARM','EPO_Test-GroupEligibleForPIM','New-EasyPIMAssignments','Initialize-EasyPIMPolicies','Shim-Test-PIMPolicyDrift') } ) {
+foreach ($file in Get-ChildItem -Path "$PSScriptRoot/internal/functions" -Filter *.ps1 -Recurse | Where-Object { $_.BaseName -notmatch '^(New-EPO|Set-EPO|Invoke-EPO|EPO_)' -and $_.BaseName -notin @('Test-PrincipalExists','EPO_Test-GroupEligibleForPIM','New-EasyPIMAssignments','Initialize-EasyPIMPolicies','Shim-Test-PIMPolicyDrift') } ) {
     . $file.FullName
 }
 

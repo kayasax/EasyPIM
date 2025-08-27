@@ -82,7 +82,6 @@ jobs:
 
         $expectedPaths = @(
           './EasyPIM/internal/functions'
-          './shared/EasyPIM.Shared/EasyPIM.Shared.psd1'
         )
 
         foreach ($path in $expectedPaths) {
