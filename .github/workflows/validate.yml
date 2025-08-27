@@ -9,6 +9,7 @@
       - 'EasyPIM/**'
       - 'EasyPIM.Orchestrator/**'
       - 'shared/**'
+  workflow_dispatch:
 
 jobs:
   validate-easypim:
