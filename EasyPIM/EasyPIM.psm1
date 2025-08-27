@@ -1,12 +1,4 @@
-﻿$__easypim_core_vp = $VerbosePreference
-try {
-    # Suppress verbose during module import; restore afterwards
-    $VerbosePreference = 'SilentlyContinue'
-
-# Note: Shared module removed in favor of internal function duplication approach
-# Core EasyPIM module now works standalone without shared dependencies
-
-foreach ($file in Get-ChildItem -Path "$PSScriptRoot/internal/functions" -Filter *.ps1 -Recurse | Where-Object { $_.BaseName -notmatch '^(New-EPO|Set-EPO|Invoke-EPO|EPO_)' -and $_.BaseName -notin @('Test-PrincipalExists','EPO_Test-GroupEligibleForPIM','New-EasyPIMAssignments','Initialize-EasyPIMPolicies','Shim-Test-PIMPolicyDrift') } ) {
+﻿foreach ($file in Get-ChildItem -Path "$PSScriptRoot/internal/functions" -Filter *.ps1 -Recurse) {
     . $file.FullName
 }
 
@@ -69,7 +61,3 @@ Export-ModuleMember -Function @(
     'Copy-PIMEntraRoleEligibleAssignment',
     'Get-EasyPIMConfiguration'
 ) -Alias @() -Variable @()
-
-} finally {
-    $VerbosePreference = $__easypim_core_vp
-}
