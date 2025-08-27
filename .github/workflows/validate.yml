@@ -3,16 +3,16 @@
     paths:
       - 'EasyPIM/**'
       - 'EasyPIM.Orchestrator/**'
-  - 'shared/**'
+      - 'shared/**'
   pull_request:
     paths:
       - 'EasyPIM/**'
       - 'EasyPIM.Orchestrator/**'
-  - 'shared/**'
+      - 'shared/**'
 
 jobs:
   validate-easypim:
-  if: github.event_name == 'push' || github.event.pull_request.head.ref == 'EasyPIM' || contains(github.event.head_commit.modified, 'EasyPIM/') || contains(github.event.head_commit.modified, 'shared/')
+    if: github.event_name == 'push' || github.event.pull_request.head.ref == 'EasyPIM' || contains(github.event.head_commit.modified, 'EasyPIM/') || contains(github.event.head_commit.modified, 'shared/')
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
@@ -24,7 +24,7 @@ jobs:
         shell: powershell
 
   validate-orchestrator:
-  if: github.event_name == 'push' || github.event.pull_request.head.ref == 'EasyPIM.Orchestrator' || contains(github.event.head_commit.modified, 'EasyPIM.Orchestrator/') || contains(github.event.head_commit.modified, 'shared/')
+    if: github.event_name == 'push' || github.event.pull_request.head.ref == 'EasyPIM.Orchestrator' || contains(github.event.head_commit.modified, 'EasyPIM.Orchestrator/') || contains(github.event.head_commit.modified, 'shared/')
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
