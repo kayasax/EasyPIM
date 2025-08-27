@@ -39,7 +39,7 @@ jobs:
 
         # Test 2: Test orchestrator functions work (internal functions are not globally accessible by design)
         Write-Host "`n2. Testing orchestrator functions work correctly..." -ForegroundColor Yellow
-        
+
         try {
           Write-Host "Testing Test-PIMEndpointDiscovery..." -ForegroundColor Gray
           $result = Test-PIMEndpointDiscovery

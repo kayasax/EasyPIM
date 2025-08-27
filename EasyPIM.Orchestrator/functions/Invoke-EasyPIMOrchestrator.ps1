@@ -122,6 +122,48 @@ function Invoke-EasyPIMOrchestrator {
 		return
 	}
 
+	# Check Microsoft Graph authentication before proceeding
+	try {
+		$mgContext = Get-MgContext -ErrorAction SilentlyContinue
+		if (-not $mgContext -or -not $mgContext.Account) {
+			Write-Host "[AUTH] Microsoft Graph authentication required for EasyPIM operations." -ForegroundColor Yellow
+			Write-Host "[AUTH] Please connect to Microsoft Graph with appropriate scopes:" -ForegroundColor Yellow
+			Write-Host "  Connect-MgGraph -Scopes 'RoleManagement.ReadWrite.Directory'" -ForegroundColor Green
+			throw "Microsoft Graph authentication required. Please run Connect-MgGraph first."
+		}
+		
+		# Check if we have required Graph scopes
+		$requiredScopes = @('RoleManagement.ReadWrite.Directory')
+		$currentScopes = $mgContext.Scopes
+		if (-not $currentScopes -or ($requiredScopes | Where-Object { $_ -notin $currentScopes })) {
+			Write-Host "[AUTH] Insufficient Microsoft Graph permissions detected." -ForegroundColor Yellow
+			Write-Host "[AUTH] Please reconnect with required scopes:" -ForegroundColor Yellow
+			Write-Host "  Connect-MgGraph -Scopes 'RoleManagement.ReadWrite.Directory'" -ForegroundColor Green
+			throw "Microsoft Graph requires RoleManagement.ReadWrite.Directory scope."
+		}
+		
+		Write-Host "[AUTH] Microsoft Graph connection verified (Account: $($mgContext.Account))" -ForegroundColor Green
+		
+		# Check Azure PowerShell authentication
+		$azContext = Get-AzContext -ErrorAction SilentlyContinue
+		if (-not $azContext) {
+			Write-Host ""
+			Write-Host "[ERROR] No Azure PowerShell authentication found!" -ForegroundColor Red
+			Write-Host "[AUTH] Please connect to Azure with appropriate permissions:" -ForegroundColor Yellow
+			if ($TenantId) {
+				Write-Host "  Connect-AzAccount -TenantId '$TenantId'" -ForegroundColor Green
+			} else {
+				Write-Host "  Connect-AzAccount" -ForegroundColor Green
+				Write-Host "  # Or specify tenant: Connect-AzAccount -TenantId 'your-tenant-id'" -ForegroundColor Gray
+			}
+			throw "Azure PowerShell authentication required. Please run Connect-AzAccount first."
+		}
+		Write-Host "[AUTH] Azure PowerShell connection verified (Account: $($azContext.Account), Subscription: $($azContext.Subscription.Name))" -ForegroundColor Green
+	} catch {
+		Write-Error "Authentication check failed: $($_.Exception.Message)"
+		return
+	}
+
 	try {
 		# 1. Load configuration
 		$config = if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {

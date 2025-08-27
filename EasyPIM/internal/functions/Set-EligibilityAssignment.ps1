@@ -19,7 +19,7 @@
 #>
 function Set-EligibilityAssignment($MaximumEligibilityDuration, $AllowPermanentEligibility, [switch]$entraRole) {
     write-verbose "Set-EligibilityAssignment: $MaximumEligibilityDuration $AllowPermanentEligibility"
-    
+
     # PT0S Prevention: Validate and sanitize MaximumEligibilityDuration to prevent zero duration values
     if ($MaximumEligibilityDuration) {
         $duration = [string]$MaximumEligibilityDuration
@@ -33,7 +33,7 @@ function Set-EligibilityAssignment($MaximumEligibilityDuration, $AllowPermanentE
         Write-Warning "[PT0S Prevention] Empty MaximumEligibilityDuration with permanent not allowed - using minimum fallback P1D"
         $MaximumEligibilityDuration = "P1D"
     }
-    
+
     $max = $MaximumEligibilityDuration
 
     if ( ($true -eq $AllowPermanentEligibility) -or ("true" -eq $AllowPermanentEligibility) -and ("false" -ne $AllowPermanentEligibility)) {

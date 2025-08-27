@@ -47,8 +47,15 @@ function Invoke-ARM {
 
     try {
         # Get Azure access token
-        $token = (Get-AzAccessToken -ResourceUrl "https://management.azure.com/").Token
+        $tokenObj = Get-AzAccessToken -ResourceUrl "https://management.azure.com/"
         
+        # Handle SecureString token conversion
+        if ($tokenObj.Token -is [System.Security.SecureString]) {
+            $token = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenObj.Token))
+        } else {
+            $token = $tokenObj.Token
+        }
+
         $headers = @{
             'Authorization' = "Bearer $token"
             'Content-Type'  = 'application/json'
@@ -67,7 +74,7 @@ function Invoke-ARM {
         Write-Verbose "Making ARM API call: $method $restURI"
         $response = Invoke-RestMethod @params
         return $response
-        
+
     } catch {
         Write-Error "ARM API call failed: $($_.Exception.Message)"
         Write-Verbose "Failed URI: $restURI"

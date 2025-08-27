@@ -21,7 +21,7 @@
 #>
 function Set-ActiveAssignmentFromCSV($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment, [switch]$EntraRole) {
     write-verbose "Set-ActiveAssignmentFromCSV($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment)"
-    
+
     # PT0S Prevention: Validate and sanitize MaximumActiveAssignmentDuration to prevent zero duration values
     if ($MaximumActiveAssignmentDuration) {
         $duration = [string]$MaximumActiveAssignmentDuration
@@ -35,7 +35,7 @@ function Set-ActiveAssignmentFromCSV($MaximumActiveAssignmentDuration, $AllowPer
         Write-Warning "[PT0S Prevention] Empty MaximumActiveAssignmentDuration with permanent not allowed - using minimum fallback PT5M"
         $MaximumActiveAssignmentDuration = "PT5M"
     }
-    
+
     if ( "true" -eq $AllowPermanentActiveAssignment) {
         $expire2 = "false"
     }

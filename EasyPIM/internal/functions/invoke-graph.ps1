@@ -74,7 +74,7 @@ function invoke-graph {
 
     try {
         $response = Invoke-MgGraphRequest -Uri $uri -Method $Method -Body $body
-        
+
         # Handle pagination if enabled and response contains @odata.nextLink
         if (-not $NoPagination -and $response.'@odata.nextLink') {
             $allResults = @()
@@ -83,7 +83,7 @@ function invoke-graph {
             } else {
                 $allResults += $response
             }
-            
+
             $nextLink = $response.'@odata.nextLink'
             while ($nextLink) {
                 $nextResponse = Invoke-MgGraphRequest -Uri $nextLink -Method GET
@@ -94,10 +94,10 @@ function invoke-graph {
                 }
                 $nextLink = $nextResponse.'@odata.nextLink'
             }
-            
+
             return @{ value = $allResults }
         }
-        
+
         return $response
     } catch {
         Write-Error "Graph API call failed: $($_.Exception.Message)"
