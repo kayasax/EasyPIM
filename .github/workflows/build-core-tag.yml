@@ -2,6 +2,7 @@ on:
   push:
     tags:
       - 'core-v*'
+  workflow_dispatch:
 
 jobs:
   build-core:
@@ -18,4 +19,4 @@ jobs:
         run: .\build\vsts-build.ps1 -ApiKey $env:APIKEY
         shell: powershell
         env:
-          APIKEY: ${{ secrets.ApiKey }}
+          APIKEY: ${{ secrets.POWERSHELL_GALLERY_API_KEY }}
