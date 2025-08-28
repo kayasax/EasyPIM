@@ -2,14 +2,32 @@
 
 [![Orchestrator Version](https://img.shields.io/powershellgallery/v/EasyPIM.Orchestrator.svg?style=flat&logo=powershell&label=Orchestrator%20Version)](https://www.powershellgallery.com/packages/EasyPIM.Orchestrator) [![Orchestrator Downloads](https://img.shields.io/powershellgallery/dt/EasyPIM.Orchestrator.svg?style=flat&logo=powershell&label=Orchestrator%20Downloads)](https://www.powershellgallery.com/packages/EasyPIM.Orchestrator)
 
+## 🚀 Major Release: EasyPIM v2.0 & Orchestrator v1.0
+
+**📢 NEW: v2.0.0-beta1 Available for Testing!**
+- 🎯 **Major architectural milestone**: Complete module separation
+- 🔧 **ARM API compatibility fixes**: Resolves InvalidResourceType errors  
+- 🛡️ **Enhanced policy validation**: Proactive error detection with clear guidance
+- 📏 **Parameter standardization**: Consistent naming with backward compatibility
+- 🏗️ **Production-ready orchestrator**: Feature-complete v1.0.0-beta1
+
+**Beta Installation:**
+```pwsh
+# Install both modules for complete functionality
+Install-Module -Name EasyPIM -AllowPrerelease          # v2.0.0-beta1
+Install-Module -Name EasyPIM.Orchestrator -AllowPrerelease  # v1.0.0-beta1
+```
+
+⚠️ **Breaking Changes in v2.0**: Parameter `assignee` renamed to `principalId` (alias provided for compatibility)
+
 ## Introduction
 
-EasyPIM is a PowerShell module created to help you manage Microsof Privileged Identity Management (PIM) either working with Entra ID, Azure RBAC or groups.
-Packed with more than 30 cmdlets, EasyPIM leverages the ARM and Graph APIs complexity to let you configure PIM **Azure Resources**, **Entra Roles** and **groups** settings and assignments in a simple way .
+EasyPIM is a PowerShell module created to help you manage Microsoft Privileged Identity Management (PIM) either working with Entra ID, Azure RBAC or groups.
+Packed with more than 30 cmdlets, EasyPIM leverages the ARM and Graph APIs complexity to let you configure PIM **Azure Resources**, **Entra Roles** and **groups** settings and assignments in a simple way.
 
-🆕 Module split: the JSON-driven orchestrator is now a separate module: EasyPIM.Orchestrator (requires EasyPIM ≥ 1.10.0).
+🆕 **Module separation complete**: The JSON-driven orchestrator is now a standalone module: EasyPIM.Orchestrator (requires EasyPIM ≥ 2.0.0).
 **Orchestrated flow guide:** [step-by-step](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)
-🌍 V1.10 EasyPIM supports multi-cloud (Public, Government, China, Germany) thanks to [Chase Dafnis](https://github.com/CHDAFNI-MSFT)!
+🌍 EasyPIM supports multi-cloud (Public, Government, China, Germany) thanks to [Chase Dafnis](https://github.com/CHDAFNI-MSFT)!
 
 ## Key features
 :boom: Support editing multiple roles at once
@@ -29,6 +47,8 @@ Packed with more than 30 cmdlets, EasyPIM leverages the ARM and Graph APIs compl
 [📸 View the EasyPIM Gallery](Gallery.html)
 
 ## Installation
+
+### Stable Release (v1.x)
 Core module: [PowerShell Gallery / EasyPIM](https://www.powershellgallery.com/packages/EasyPIM)
 ```pwsh
 Install-Module -Name EasyPIM
@@ -38,16 +58,26 @@ Updating from an older version:
 Update-Module -Name EasyPIM
 ```
 
+### Beta Release (v2.0) - Recommended for Testing
+**🚀 Major architectural improvements with ARM API fixes**
+```pwsh
+# Install both modules for complete functionality
+Install-Module -Name EasyPIM -AllowPrerelease          # v2.0.0-beta1
+Install-Module -Name EasyPIM.Orchestrator -AllowPrerelease  # v1.0.0-beta1
+```
+
+### Legacy Orchestrator (for v1.x compatibility)
 Orchestrator (JSON-driven flow): [PowerShell Gallery / EasyPIM.Orchestrator](https://www.powershellgallery.com/packages/EasyPIM.Orchestrator)
-- Requires EasyPIM ≥ 1.10.0
-- Current release channel: prerelease (beta)
+- Requires EasyPIM ≥ 1.10.0 (stable) or ≥ 2.0.0 (beta)
 ```pwsh
 Install-Module -Name EasyPIM.Orchestrator -AllowPrerelease
 ```
-Then:
+
+### Getting Started
 ```pwsh
-Import-Module EasyPIM.Orchestrator
-Get-Command -Module EasyPIM.Orchestrator
+Import-Module EasyPIM
+Import-Module EasyPIM.Orchestrator  # For orchestration features
+Get-Command -Module EasyPIM*
 ```
 
 ## Sample usage
