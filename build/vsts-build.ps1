@@ -82,6 +82,13 @@ Get-ChildItem -Path "$($publishDir.FullName)\EasyPIM\internal\scripts\" -Recurse
 # Join with consistent line endings
 $combinedContent = $text -join "`r`n`r`n"
 
+# Add the Export-ModuleMember section from the original .psm1
+$originalPsm1 = Get-Content "$($WorkingDirectory)\EasyPIM\EasyPIM.psm1" -Raw
+$exportSection = ($originalPsm1 -split "Export-ModuleMember")[1]
+if ($exportSection) {
+    $combinedContent += "`r`n`r`n# Export public functions`r`nExport-ModuleMember" + $exportSection
+}
+
 Write-Host ("Flatten build collected characters: length={0}" -f $combinedContent.Length)
 # Always write UTF8 WITH BOM for Windows PowerShell 5.1 compatibility
 $psm1Path = "$($publishDir.FullName)\\EasyPIM\\EasyPIM.psm1"
