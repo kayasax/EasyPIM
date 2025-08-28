@@ -1,6 +1,6 @@
 @{
     RootModule        = 'EasyPIM.Orchestrator.psm1'
-    ModuleVersion     = '1.0.0'
+    ModuleVersion     = '1.0.1'
     GUID              = 'b6f9b3c9-bc6a-4d4b-8c51-7c45d42157cd'
     Author            = 'Loïc MICHEL'
     CompanyName       = 'EasyPIM'
@@ -30,7 +30,7 @@
         LicenseUri = 'https://github.com/kayasax/EasyPIM/blob/main/LICENSE'
     Prerelease = 'beta1'
 ReleaseNotes = @'
-🚀 EasyPIM.Orchestrator v1.0.0-beta1 - Production-Ready Beta Release
+🚀 EasyPIM.Orchestrator v1.0.1-beta1 - Production-Ready Beta Release
 
 MAJOR MILESTONE: Module separation and architectural improvements complete!
 
@@ -40,6 +40,7 @@ MAJOR MILESTONE: Module separation and architectural improvements complete!
 - Parameter standardization: 'principalId' (with 'assignee' alias for compatibility)
 - Standalone orchestrator module with proper dependency management
 - Auto-configuration of permanent assignment flags based on duration specifications
+- Dependency resolution improvements: now depends on stable EasyPIM v2.0.0
 
 ⚠️ BETA TESTING:
 - Comprehensive testing completed but real-world validation needed
