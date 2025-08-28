@@ -117,8 +117,8 @@ PrivateData = @{
 
     PSData = @{
 
-        # Prerelease designation for beta versions
-        Prerelease = 'beta1'
+        # Promoted to stable release - removing prerelease designation
+        # Prerelease = 'beta1'
 
         # Tags applied to this module. These help with module discovery in online galleries.
         Tags = @("Azure","PIM","EntraID","PrivilegedIdentityManagement")

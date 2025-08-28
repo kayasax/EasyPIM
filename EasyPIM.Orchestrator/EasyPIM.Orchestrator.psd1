@@ -8,7 +8,7 @@
     Description       = 'Orchestrator for EasyPIM (Invoke-EasyPIMOrchestrator)'
     PowerShellVersion = '5.1'
 
-    # Required modules to support EasyPIM core module dependencies
+    # Required modules including stable EasyPIM core dependency
     RequiredModules   = @(
         @{ModuleName='EasyPIM'; ModuleVersion='2.0.0'},
         'Az.Accounts',
