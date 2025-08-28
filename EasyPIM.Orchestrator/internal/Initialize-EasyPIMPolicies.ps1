@@ -123,9 +123,52 @@ function Resolve-PolicyConfiguration {
         [Parameter(Mandatory = $true)] [ValidateSet('AzureRole','EntraRole','Group')] [string]$PolicyType
     )
 
+    # Helper function to auto-configure permanent assignment flags based on duration settings
+    function Set-AutoPermanentFlags {
+        param([PSCustomObject]$Policy, [string]$RoleName)
+
+        if (-not $Policy) { return }
+
+        $autoConfigured = @()
+
+        # Auto-configure AllowPermanentEligibility based on MaximumEligibilityDuration
+        if ($Policy.PSObject.Properties['MaximumEligibilityDuration'] -and
+            $Policy.MaximumEligibilityDuration -and
+            $Policy.MaximumEligibilityDuration -ne '') {
+
+            if (-not $Policy.PSObject.Properties['AllowPermanentEligibility']) {
+                $Policy | Add-Member -NotePropertyName 'AllowPermanentEligibility' -NotePropertyValue $false
+                $autoConfigured += "AllowPermanentEligibility=false (MaximumEligibilityDuration specified)"
+            }
+        }
+
+        # Auto-configure AllowPermanentActiveAssignment based on MaximumActiveAssignmentDuration
+        if ($Policy.PSObject.Properties['MaximumActiveAssignmentDuration'] -and
+            $Policy.MaximumActiveAssignmentDuration -and
+            $Policy.MaximumActiveAssignmentDuration -ne '') {
+
+            if (-not $Policy.PSObject.Properties['AllowPermanentActiveAssignment']) {
+                $Policy | Add-Member -NotePropertyName 'AllowPermanentActiveAssignment' -NotePropertyValue $false
+                $autoConfigured += "AllowPermanentActiveAssignment=false (MaximumActiveAssignmentDuration specified)"
+            }
+        }
+
+        # Log auto-configuration for transparency
+        if ($autoConfigured.Count -gt 0) {
+            Write-Verbose "[Auto-Config] ${RoleName}: $($autoConfigured -join ', ')"
+        }
+    }
+
     Write-Verbose "Resolving policy configuration for $PolicyType"
     $resolvedPolicy = @{}
-    foreach ($property in $PolicyDefinition.PSObject.Properties) { $resolvedPolicy[$property.Name] = $property.Value }
+
+    # Copy non-empty properties from PolicyDefinition first
+    foreach ($property in $PolicyDefinition.PSObject.Properties) {
+        # Only copy non-empty values to allow template defaults to fill in blanks
+        if ($null -ne $property.Value -and $property.Value -ne '') {
+            $resolvedPolicy[$property.Name] = $property.Value
+        }
+    }
 
     switch ($PolicyType) {
         'AzureRole' { if (-not $PolicyDefinition.RoleName) { throw 'AzureRole policy missing required property: RoleName' }
@@ -140,12 +183,27 @@ function Resolve-PolicyConfiguration {
 
     switch ($policySource.ToLower()) {
         'inline'   { if (-not $PolicyDefinition.policy) { throw 'Inline policy source specified but policy property is missing' }
-                     $resolvedPolicy.ResolvedPolicy = $PolicyDefinition.policy }
+                     $resolvedPolicy.ResolvedPolicy = $PolicyDefinition.policy
+                     Set-AutoPermanentFlags -Policy $resolvedPolicy.ResolvedPolicy -RoleName $PolicyDefinition.RoleName }
         'template' { $templateName = $PolicyDefinition.template; if (-not $templateName) { $templateName = $PolicyDefinition.policyTemplate }
                      if (-not $templateName) { throw 'Template policy source specified but neither template nor policyTemplate property is provided' }
                      if (-not $Templates.ContainsKey($templateName)) { throw "Template '$templateName' not found in PolicyTemplates" }
                      $templatePolicy = $Templates[$templateName]
-                     $resolvedPolicy.ResolvedPolicy = $templatePolicy }
+
+                     # Merge template policy with PolicyDefinition, allowing template to provide defaults for empty values
+                     $mergedPolicy = @{}
+                     # Start with template values as defaults
+                     foreach ($templateProp in $templatePolicy.PSObject.Properties) {
+                         $mergedPolicy[$templateProp.Name] = $templateProp.Value
+                     }
+                     # Override with non-empty PolicyDefinition values
+                     foreach ($property in $PolicyDefinition.PSObject.Properties) {
+                         if ($null -ne $property.Value -and $property.Value -ne '' -and $property.Name -notin @('policySource', 'template', 'policyTemplate', 'policy')) {
+                             $mergedPolicy[$property.Name] = $property.Value
+                         }
+                     }
+                     $resolvedPolicy.ResolvedPolicy = [PSCustomObject]$mergedPolicy
+                     Set-AutoPermanentFlags -Policy $resolvedPolicy.ResolvedPolicy -RoleName $PolicyDefinition.RoleName }
         default    { throw "Unknown policySource: $policySource" }
     }
 

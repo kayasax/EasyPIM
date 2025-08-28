@@ -127,11 +127,20 @@ function New-PIMAzureResourceActiveAssignment {
     if(!($PSBoundParameters.Keys.Contains('duration'))){
         $duration = $config.MaximumActiveAssignmentDuration
     } else {
-    $normalized = Convert-IsoDuration -Duration $duration
+        $normalized = Convert-IsoDuration -Duration $duration
         $duration = $normalized
         try { $reqTs = [System.Xml.XmlConvert]::ToTimeSpan($duration) } catch { throw "Duration '$duration' cannot be parsed: $($_.Exception.Message)" }
-    $policyTs = $null; if($config.MaximumActiveAssignmentDuration){ try{ $policyTs=[System.Xml.XmlConvert]::ToTimeSpan($config.MaximumActiveAssignmentDuration) } catch { Write-Verbose "Suppressed MaximumActiveAssignmentDuration parse: $($_.Exception.Message)" } }
+        
+        # Validate against policy maximum active assignment duration
+        $policyTs = $null; if($config.MaximumActiveAssignmentDuration){ try{ $policyTs=[System.Xml.XmlConvert]::ToTimeSpan($config.MaximumActiveAssignmentDuration) } catch { Write-Verbose "Suppressed MaximumActiveAssignmentDuration parse: $($_.Exception.Message)" } }
         if($policyTs -and $reqTs -gt $policyTs -and -not $permanent){ throw "Requested active assignment duration '$duration' exceeds policy maximum '$($config.MaximumActiveAssignmentDuration)' for role $rolename." }
+
+        # Validate against policy activation duration limit (this is the key validation that was missing!)
+        $activationTs = $null; if($config.ActivationDuration){ try{ $activationTs=[System.Xml.XmlConvert]::ToTimeSpan($config.ActivationDuration) } catch { Write-Verbose "Suppressed ActivationDuration parse: $($_.Exception.Message)" } }
+        if($activationTs -and $reqTs -gt $activationTs -and -not $permanent){
+            $errorMessage = "POLICY VALIDATION FAILED: Active assignment duration '$duration' exceeds activation limit '$($config.ActivationDuration)' for role '$rolename'. Solutions: 1) Reduce duration to '$($config.ActivationDuration)' or less, 2) Update role policy, 3) Use permanent assignment."
+            throw $errorMessage
+        }
     }
     if($duration -and $duration -match '^P[0-9]+[HMS]$'){ $duration = Convert-IsoDuration -Duration $duration }
     write-verbose "assignement duration will be : $duration"

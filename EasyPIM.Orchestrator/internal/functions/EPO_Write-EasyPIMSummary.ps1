@@ -76,6 +76,14 @@
 				elseif ($null -ne $CleanupResults.Protected) { $CleanupResults.Protected }
 				else { 0 }
 
+		# Enhanced cleanup feedback with analysis details
+		if ($CleanupResults.PSObject.Properties.Name -contains 'AnalysisCompleted' -and $CleanupResults.AnalysisCompleted) {
+			Write-Host "| [INFO] Analysis: $($CleanupResults.DesiredAssignments) desired assignments analyzed" -ForegroundColor White
+			if ($CleanupResults.PSObject.Properties.Name -contains 'CleanupStatus') {
+				Write-Host "| [INFO] Status  : $($CleanupResults.CleanupStatus)" -ForegroundColor DarkGray
+			}
+		}
+		
 		Write-Host "| [OK] Kept    : $kept" -ForegroundColor White
 		Write-Host "| [DEL] Removed : $removed" -ForegroundColor White
 		if ($CleanupResults.PSObject.Properties.Name -contains 'WouldRemoveCount') {

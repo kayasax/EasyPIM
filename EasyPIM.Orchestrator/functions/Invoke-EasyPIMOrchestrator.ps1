@@ -541,8 +541,15 @@ function Invoke-EasyPIMOrchestrator {
 
 		# 4. Perform cleanup operations AFTER policy processing (skip if requested or if assignments are skipped)
 		$cleanupResults = if ($Operations -contains "All" -and -not $SkipCleanup -and -not $SkipAssignments) {
-			Write-Host -Object "[CLEANUP] Performing cleanup operations based on updated policies..." -ForegroundColor Cyan
-			Invoke-EasyPIMCleanup -Config $processedConfig -Mode $Mode -TenantId $TenantId -SubscriptionId $SubscriptionId -WouldRemoveExportPath $WouldRemoveExportPath
+			Write-Host -Object "[CLEANUP] Analyzing existing assignments against configuration..." -ForegroundColor Cyan
+			$cleanupResult = Invoke-EasyPIMCleanup -Config $processedConfig -Mode $Mode -TenantId $TenantId -SubscriptionId $SubscriptionId -WouldRemoveExportPath $WouldRemoveExportPath
+			if ($cleanupResult -and $cleanupResult.PSObject.Properties.Name -contains 'AnalysisCompleted' -and $cleanupResult.AnalysisCompleted) {
+				Write-Host -Object "[CLEANUP] Analysis complete. Found $($cleanupResult.DesiredAssignments) desired assignments." -ForegroundColor Cyan
+				if ($Mode -eq 'delta') {
+					Write-Host -Object "[CLEANUP] Delta mode: No assignments will be removed (add/update only)." -ForegroundColor DarkGray
+				}
+			}
+			$cleanupResult
 		} else {
 			if ($SkipAssignments) { Write-Host -Object "[WARN] Skipping cleanup because SkipAssignments was specified (no assignment delta expected)" -ForegroundColor Yellow }
 			elseif ($SkipCleanup) { Write-Host -Object "[WARN] Skipping cleanup as requested by SkipCleanup parameter" -ForegroundColor Yellow }
@@ -562,9 +569,14 @@ function Invoke-EasyPIMOrchestrator {
 
 		# 5. Process assignments AFTER policies are confirmed (skip if requested)
 		if (-not $SkipAssignments) {
-			Write-Host -Object "[ASSIGN] Creating assignments with role policies validated and applied..." -ForegroundColor Cyan
+			Write-Host -Object "[ASSIGN] Creating assignments with validated role policies..." -ForegroundColor Cyan
 			# New-EasyPIMAssignments does not itself expose -WhatIf; inner Invoke-ResourceAssignment handles simulation.
 			$assignmentResults = New-EasyPIMAssignments -Config $processedConfig -TenantId $TenantId -SubscriptionId $SubscriptionId
+			
+			if ($assignmentResults) {
+				$totalAttempted = ($assignmentResults.Created + $assignmentResults.Failed + $assignmentResults.Skipped)
+				Write-Host -Object "[ASSIGN] Assignment processing complete: $totalAttempted total, $($assignmentResults.Created) created, $($assignmentResults.Failed) failed, $($assignmentResults.Skipped) skipped" -ForegroundColor Cyan
+			}
 
 			# After assignments, attempt deferred group policies if any
 			if (Get-Command -Name Invoke-EPODeferredGroupPolicies -ErrorAction SilentlyContinue) {

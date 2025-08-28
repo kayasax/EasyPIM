@@ -15,38 +15,44 @@ foreach ($internalPath in $internalPaths) {
             . $file.FullName
         }
     }
-}# Import EasyPIM core module - REQUIRED for orchestrator functions to work
-$coreImportSuccess = $false
-try {
-	# Try local EasyPIM core module paths for development
-	$easyPIMCandidates = @(
-		(Join-Path (Split-Path -Parent $PSScriptRoot) 'EasyPIM/EasyPIM.psd1'),
-		(Join-Path $PSScriptRoot '../EasyPIM/EasyPIM.psd1')
-	)
+}
 
-	foreach ($cand in $easyPIMCandidates) {
-		if (Test-Path $cand) {
-			Write-Verbose "Importing local EasyPIM core module from: $cand"
-			Import-Module $cand -Force -ErrorAction Stop
-			$coreImportSuccess = $true
-			Write-Verbose "Successfully imported local EasyPIM core module"
-			break
-		}
-	}
+# NOTE: EasyPIM core module is now automatically loaded via RequiredModules in manifest
+# However, in local development, we want to ensure the LOCAL version is loaded, not Gallery version
 
-	# If local module not found, try installed EasyPIM from Gallery
-	if (-not $coreImportSuccess) {
-		Write-Verbose "Local EasyPIM not found, trying installed/Gallery module..."
-		try {
-			Import-Module 'EasyPIM' -Force -ErrorAction Stop
-			$coreImportSuccess = $true
-			Write-Verbose "Successfully imported EasyPIM module from Gallery/installed location"
-		} catch {
-			Write-Warning "Could not import EasyPIM module locally or from Gallery: $($_.Exception.Message)"
-		}
-	}
-} catch {
-	Write-Warning "Failed to import EasyPIM core module: $($_.Exception.Message). Orchestrator functions may not work correctly."
+# Detect if we're running in local development environment
+$isLocalDevelopment = $PSScriptRoot -and 
+    ($PSScriptRoot -like "*\EasyPIM*" -or $PSScriptRoot -like "*EasyPIM*")
+
+if ($isLocalDevelopment) {
+    # In local development, check if we got the local version or Gallery version
+    $loadedEasyPIM = Get-Module -Name EasyPIM -ErrorAction SilentlyContinue
+    if ($loadedEasyPIM -and $loadedEasyPIM.ModuleBase -notlike "*$PSScriptRoot*") {
+        Write-Verbose "Gallery EasyPIM loaded in dev environment, attempting to load local version..."
+        
+        # Try to load local version instead
+        $localCandidates = @(
+            (Join-Path (Split-Path -Parent $PSScriptRoot) 'EasyPIM/EasyPIM.psd1'),
+            (Join-Path $PSScriptRoot '../EasyPIM/EasyPIM.psd1')
+        )
+        
+        foreach ($cand in $localCandidates) {
+            if (Test-Path $cand) {
+                try {
+                    Remove-Module EasyPIM -Force -ErrorAction SilentlyContinue
+                    $absolutePath = (Resolve-Path $cand).Path
+                    Write-Verbose "Loading local EasyPIM from: $absolutePath"
+                    Import-Module $absolutePath -Force -Global -ErrorAction Stop
+                    Write-Verbose "Successfully loaded local EasyPIM core module for development"
+                    break
+                } catch {
+                    Write-Warning "Could not load local EasyPIM: $($_.Exception.Message)"
+                    # Reload the Gallery version if local fails
+                    Import-Module EasyPIM -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+    }
 }
 
 # Version check - only when not in local development

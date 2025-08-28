@@ -6,6 +6,9 @@ function New-EasyPIMAssignments {
 		[Parameter()] [string]$SubscriptionId
 	)
 
+	# Store original verbose preference to restore later
+	$script:originalVerbosePreference = $VerbosePreference
+
 	$summary = [pscustomobject]@{
 		Created        = 0
 		Skipped        = 0
@@ -28,13 +31,34 @@ function New-EasyPIMAssignments {
 		)
 		try {
 			& $Script
-			Write-Host "  ✅ Created: $Context" -ForegroundColor Green
+			Write-Host "  ✅ Assignment created: $Context" -ForegroundColor Green
 			$true
 		} catch {
 			$emsg = $_.Exception.Message
-			if ($emsg -match 'RoleAssignmentExists') { Write-Host "  ⏭️ Skipped existing: $Context" -ForegroundColor Yellow; return $true }
-			Write-Host "  ❌ Failed: $Context - $emsg" -ForegroundColor Red
-			$false
+			
+			# Handle different types of errors with appropriate messages
+			if ($emsg -match 'RoleAssignmentExists|The Role assignment already exists') {
+				Write-Host "  ⏭️ Skipped existing: $Context" -ForegroundColor Yellow
+				return $true
+			}
+			elseif ($emsg -match 'POLICY VALIDATION FAILED') {
+				# Extract just the clear policy message, suppress ARM 400 errors
+				$policyMsg = $emsg -replace '.*inner=', '' -replace 'Error, script did not terminate gracefuly \| inner=', ''
+				Write-Host "  🚫 Policy conflict: $Context" -ForegroundColor Magenta
+				Write-Host "     $policyMsg" -ForegroundColor Yellow
+				return $false
+			}
+			elseif ($emsg -match 'ARM API call failed.*400.*Bad Request' -and $emsg -match 'principalID') {
+				# Suppress verbose ARM 400 errors that we know are policy-related
+				Write-Host "  🚫 Assignment failed: $Context - Policy validation or parameter issue" -ForegroundColor Magenta
+				return $false
+			}
+			else {
+				# Other genuine errors
+				Write-Host "  ❌ Assignment failed: $Context" -ForegroundColor Red
+				Write-Host "     Error: $emsg" -ForegroundColor Yellow
+				return $false
+			}
 		}
 	}
 
@@ -48,15 +72,21 @@ function New-EasyPIMAssignments {
 				# Idempotency: skip if already assigned (active or eligible) for directory scope '/'
 				try {
 					$role = Get-PIMEntraRolePolicy -tenantID $TenantId -rolename $roleName -ErrorAction Stop
+					$VerbosePreference = 'SilentlyContinue'  # Suppress confusing "0 assignments found" messages
 					$existsActive = Get-PIMEntraRoleActiveAssignment -tenantID $TenantId -principalID $a.principalId -rolename $roleName -ErrorAction SilentlyContinue
 					$existsElig = Get-PIMEntraRoleEligibleAssignment -tenantID $TenantId -principalID $a.principalId -rolename $roleName -ErrorAction SilentlyContinue
+					$VerbosePreference = $script:originalVerbosePreference
 					if ($existsActive -or $existsElig) {
 						$existingType = if ($existsActive) { "Active" } else { "Eligible" }
 						Write-Host "  ⏭️ Skipped existing: $ctx [Found: $existingType]" -ForegroundColor Yellow
 						$summary.Skipped++
 						continue
 					}
-				} catch { Write-Verbose ("[Assignments] Pre-check skipped for ${ctx}: {0}" -f $_.Exception.Message) }
+				} catch { 
+					$VerbosePreference = $script:originalVerbosePreference
+					# Pre-check failed, but assignment will still be attempted
+					Write-Verbose ("[Assignments] Entra pre-check skipped for ${ctx} (will attempt assignment anyway): {0}" -f $_.Exception.Message) 
+				}
 				$sb = {
 					if ($a.assignmentType -match 'Active') {
 						$params = @{ tenantID = $TenantId; rolename = $roleName; principalID = $a.principalId }
@@ -87,10 +117,16 @@ function New-EasyPIMAssignments {
 				if ($whatIf) { $summary.PlannedCreated++ ; continue }
 				# Idempotency: naive check via active/eligible getters if available; otherwise proceed
 				try {
-					$existsActive = Get-PIMAzureResourceActiveAssignment -tenantID $TenantId -subscriptionID $SubscriptionId -scope $scope -principalID $a.principalId -rolename $roleName -ErrorAction SilentlyContinue
-					$existsElig = Get-PIMAzureResourceEligibleAssignment -tenantID $TenantId -subscriptionID $SubscriptionId -scope $scope -principalID $a.principalId -rolename $roleName -ErrorAction SilentlyContinue
+					$VerbosePreference = 'SilentlyContinue'  # Suppress confusing verbose output
+					$existsActive = Get-PIMAzureResourceActiveAssignment -tenantID $TenantId -subscriptionID $SubscriptionId -scope $scope -principalId $a.principalId -ErrorAction SilentlyContinue
+					$existsElig = Get-PIMAzureResourceEligibleAssignment -tenantID $TenantId -subscriptionID $SubscriptionId -scope $scope -principalId $a.principalId -ErrorAction SilentlyContinue
+					$VerbosePreference = $script:originalVerbosePreference
 					if ($existsActive -or $existsElig) { Write-Host "  ⏭️ Skipped existing: $ctx" -ForegroundColor Yellow; $summary.Skipped++; continue }
-				} catch { Write-Verbose ("[Assignments] Pre-check skipped for ${ctx}: {0}" -f $_.Exception.Message) }
+				} catch { 
+					$VerbosePreference = $script:originalVerbosePreference
+					# Pre-check failed, but assignment will still be attempted
+					Write-Verbose ("[Assignments] Azure pre-check skipped for ${ctx} (will attempt assignment anyway): {0}" -f $_.Exception.Message) 
+				}
 				$sb = {
 					if ($a.assignmentType -match 'Active') {
 						$params = @{ tenantID = $TenantId; subscriptionID = $SubscriptionId; scope = $scope; rolename = $roleName; principalID = $a.principalId }
@@ -124,10 +160,16 @@ function New-EasyPIMAssignments {
 				if ($whatIf) { $summary.PlannedCreated++ ; continue }
 				# Idempotency: check existing elig/active for group PIM
 				try {
+					$VerbosePreference = 'SilentlyContinue'  # Suppress confusing verbose output
 					$existsActive = Get-PIMGroupActiveAssignment -tenantID $TenantId -groupID $groupId -principalID $a.principalId -type $groupType -ErrorAction SilentlyContinue
 					$existsElig = Get-PIMGroupEligibleAssignment -tenantID $TenantId -groupID $groupId -principalID $a.principalId -type $groupType -ErrorAction SilentlyContinue
+					$VerbosePreference = $script:originalVerbosePreference
 					if ($existsActive -or $existsElig) { Write-Host "  ⏭️ Skipped existing: $ctx" -ForegroundColor Yellow; $summary.Skipped++; continue }
-				} catch { Write-Verbose ("[Assignments] Pre-check skipped for ${ctx}: {0}" -f $_.Exception.Message) }
+				} catch { 
+					$VerbosePreference = $script:originalVerbosePreference
+					# Pre-check failed, but assignment will still be attempted
+					Write-Verbose ("[Assignments] Group pre-check skipped for ${ctx} (will attempt assignment anyway): {0}" -f $_.Exception.Message) 
+				}
 				$sb = {
 					if ($a.assignmentType -match 'Active') {
 						$params = @{ tenantID = $TenantId; groupID = $groupId; type = $groupType; principalID = $a.principalId }

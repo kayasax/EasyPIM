@@ -53,7 +53,16 @@ function Set-EPOEntraRolePolicy {
     if ($resolved.PSObject.Properties['ApprovalRequired']) { $params.ApprovalRequired = $resolved.ApprovalRequired }
     # Only pass Approvers if approval is actually required to avoid generating empty approval rules
     if ($resolved.PSObject.Properties['Approvers'] -and $resolved.ApprovalRequired -ne $false) { $params.Approvers = $resolved.Approvers }
-    if ($resolved.PSObject.Properties['MaximumEligibilityDuration'] -and $resolved.MaximumEligibilityDuration) { $params.MaximumEligibilityDuration = $resolved.MaximumEligibilityDuration }
+    # PT0S prevention: Only set MaximumEligibilityDuration if it has a non-empty value to prevent PT0S conversion
+    if ($resolved.PSObject.Properties['MaximumEligibilityDuration'] -and $resolved.MaximumEligibilityDuration) {
+        # Additional validation to ensure value is not PT0S and meets minimum requirement
+        $duration = [string]$resolved.MaximumEligibilityDuration
+        if ($duration -ne "PT0S" -and $duration -ne "PT0M" -and $duration -ne "PT0H" -and $duration -ne "P0D") {
+            $params.MaximumEligibilityDuration = $resolved.MaximumEligibilityDuration
+        } else {
+            Write-Warning "[PT0S Prevention] Skipping MaximumEligibilityDuration '$duration' for role '$($PolicyDefinition.RoleName)' - zero duration values are not allowed"
+        }
+    }
     if ($resolved.PSObject.Properties['AllowPermanentEligibility']) { $params.AllowPermanentEligibility = $resolved.AllowPermanentEligibility }
     # PT0S prevention: Only set MaximumActiveAssignmentDuration if it has a non-empty value to prevent PT0S conversion
     if ($resolved.PSObject.Properties['MaximumActiveAssignmentDuration'] -and $resolved.MaximumActiveAssignmentDuration) {
