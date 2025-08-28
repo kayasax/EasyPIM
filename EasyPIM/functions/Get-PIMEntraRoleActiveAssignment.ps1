@@ -61,7 +61,7 @@ function Get-PIMEntraRoleActiveAssignment {
             catch {
                 Write-Warning "Could not resolve userPrincipalName '$userPrincipalName': $($_.Exception.Message)"
                 # Return empty result if user not found
-                Write-Output "0 $rolename active assignment(s) found for tenant $tenantID"
+                Write-Verbose "0 $rolename active assignment(s) found for tenant $tenantID (user not found)"
                 return @()
             }
         }
@@ -122,7 +122,7 @@ function Get-PIMEntraRoleActiveAssignment {
         # and filtered efficiently at the Graph API level
 
     # Emit count as informational host output (not part of pipeline) to keep CSV exports clean
-    Write-Host "$($resu.Count) $rolename active assignment(s) found for tenant $tenantID" -ForegroundColor Cyan
+    Write-Verbose "$($resu.Count) $rolename active assignment(s) found for tenant $tenantID"
     return $resu
     }
     catch {

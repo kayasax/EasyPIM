@@ -8,8 +8,8 @@
     .Parameter subscriptionID
     subscription ID
     .Parameter scope
-    use scope parameter if you want to work at other scope than a subscription    .PARAMETER assignee
-    Filter assignment using userprincipalname or objectID
+    use scope parameter if you want to work at other scope than a subscription    .PARAMETER principalId
+    Filter assignment using userPrincipalName or objectID (alias: assignee for backward compatibility)
     .PARAMETER userPrincipalName
     Filter by userPrincipalName (UPN). Will resolve to object ID for efficient ARM API filtering.
     .Parameter summary
@@ -45,8 +45,9 @@ function Get-PIMAzureResourceEligibleAssignment {
         $subscriptionID,
         [Parameter()]
         [String]
-        $scope,        [String]
-        $assignee,
+        $scope,        [Alias('assignee')]
+        [String]
+        $principalId,
         [String]
         $userPrincipalName,
         [switch]
@@ -94,10 +95,10 @@ function Get-PIMAzureResourceEligibleAssignment {
         # the downside is we will not get assignment with a future start date
         $armEndpoint = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM'
         if ($PSBoundParameters.Keys.Contains('includeFutureAssignments')) {
-            $restURI = "$($armEndpoint.TrimEnd('/'))/$scope/providers/Microsoft.Authorization/roleEligibilitySchedules?api-version=2020-10-01"
+            $restURI = "$($armEndpoint.TrimEnd('/'))/$scope/providers/Microsoft.Authorization/roleEligibilitySchedules?api-version=2020-10-01-preview"
         }
         else {
-            $restURI = "$($armEndpoint.TrimEnd('/'))/$scope/providers/Microsoft.Authorization/roleEligibilityScheduleInstances?api-version=2020-10-01"
+            $restURI = "$($armEndpoint.TrimEnd('/'))/$scope/providers/Microsoft.Authorization/roleEligibilityScheduleInstances?api-version=2020-10-01-preview"
         }
 
         # Determine which principal ID to use for filtering
@@ -105,19 +106,19 @@ function Get-PIMAzureResourceEligibleAssignment {
         if ($resolvedPrincipalId) {
             $effectivePrincipalId = $resolvedPrincipalId
         }
-        elseif ($PSBoundParameters.Keys.Contains('assignee')) {
-            if($assignee -match ".+@.*\..+") { # if this is a UPN we will use graph to get the objectID
+        elseif ($PSBoundParameters.Keys.Contains('principalId')) {
+            if($principalId -match ".+@.*\..+") { # if this is a UPN we will use graph to get the objectID
                 try{
-                    $resu=invoke-graph -endpoint "users/$assignee" -Method GET -version "beta"
+                    $resu=invoke-graph -endpoint "users/$principalId" -Method GET -version "beta"
                     $effectivePrincipalId = $resu.id
                 }
                 catch {
-                    Write-Warning "User $assignee not found in the tenant"
+                    Write-Warning "User $principalId not found in the tenant"
                     return @()
                 }
             }
             else {
-                $effectivePrincipalId = $assignee
+                $effectivePrincipalId = $principalId
             }
         }
 

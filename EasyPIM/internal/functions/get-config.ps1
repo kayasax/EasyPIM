@@ -20,8 +20,14 @@
      #>
 function get-config ($scope, $rolename, $copyFrom = $null) {
 
-    $ARMhost = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM'
+    $ARMhost = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM' -Verbose:$false
     $ARMendpoint = "$($ARMhost.TrimEnd('/'))/$scope/providers/Microsoft.Authorization"
+    # Try to extract SubscriptionId from scope (if scope is at subscription level)
+    $subId = $null
+    try { $m = [regex]::Match($scope, '^subscriptions/([0-9a-fA-F\-]{36})'); if ($m.Success) { $subId = $m.Groups[1].Value } }
+    catch {
+        Write-Verbose "get-config: failed to extract SubscriptionId from scope '$scope': $($_.Exception.Message)"
+    }
     try {
 
 
@@ -30,7 +36,8 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
 
         write-verbose " #1 Get role definition for the role $rolename assignable at the scope $scope at $restUri"
         #$response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
-        $response = Invoke-ARM -restURI $restUri -method "get" -body $null
+    if ($subId) { $response = Invoke-ARM -restURI $restUri -method "get" -body $null -SubscriptionId $subId }
+    else { $response = Invoke-ARM -restURI $restUri -method "get" -body $null }
         $roleID = $response.value.id
         #if ($null -eq $roleID) { throw "An exception occured : can't find a roleID for $rolename at scope $scope" }
         Write-Verbose ">> RodeId = $roleID"
@@ -45,7 +52,8 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
         $restUri = "$ARMendpoint/roleManagementPolicyAssignments?api-version=2020-10-01&`$filter=roleDefinitionId eq '$roleID'"
         write-verbose " #2 Get the Assignment for $rolename at $restUri"
         #$response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
-        $response = Invoke-ARM -restURI $restUri -Method Get
+    if ($subId) { $response = Invoke-ARM -restURI $restUri -Method Get -SubscriptionId $subId }
+    else { $response = Invoke-ARM -restURI $restUri -Method Get }
         $policyId = $response.value.properties.policyId #.split('/')[-1]
         Write-Verbose ">> policy ID = $policyId"
 
@@ -53,7 +61,8 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
         $restUri = "$ARMhost/$policyId/?api-version=2020-10-01"
         write-verbose " #3 get role policy at $restUri"
         #$response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
-        $response = Invoke-ARM -restURI $restUri -Method Get
+    if ($subId) { $response = Invoke-ARM -restURI $restUri -Method Get -SubscriptionId $subId }
+    else { $response = Invoke-ARM -restURI $restUri -Method Get }
 
         #Write-Verbose "copy from = $copyFrom"
         if ($null -ne $copyFrom) {

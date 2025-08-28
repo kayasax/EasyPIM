@@ -1,33 +1,24 @@
 #Requires -Version 5.1
-
 function New-EPOEasyPIMPolicies {
     <#
     .SYNOPSIS
     Apply EasyPIM policies across Azure, Entra, and Groups.
-
     .DESCRIPTION
     Processes the provided configuration object, generating and applying policy rules for Azure Resource roles, Entra roles, and Group roles based on PolicyMode (delta/initial). Supports -WhatIf for preview and returns a summarized result object.
-
     .PARAMETER Config
     The PSCustomObject configuration previously loaded (e.g., via Get-EasyPIMConfiguration).
-
     .PARAMETER TenantId
     The target Entra tenant ID.
-
     .PARAMETER SubscriptionId
     The Azure subscription ID for Azure Resource role policies.
-
     .PARAMETER PolicyMode
     One of delta or initial to control application behavior.
-
     .EXAMPLE
     New-EPOEasyPIMPolicies -Config $cfg -TenantId $tid -SubscriptionId $sub -PolicyMode delta -WhatIf
     Previews configured policy changes without making modifications.
-
     .EXAMPLE
     New-EPOEasyPIMPolicies -Config $cfg -TenantId $tid -SubscriptionId $sub -PolicyMode delta
     Applies additive changes for roles and groups where needed.
-
     .NOTES
     Returns a summary object with per-domain results and counts.
     #>
@@ -35,20 +26,15 @@ function New-EPOEasyPIMPolicies {
     param (
         [Parameter(Mandatory=$true)]
         [PSCustomObject]$Config,
-
         [Parameter(Mandatory=$true)]
         [string]$TenantId,
-
         [Parameter(Mandatory=$false)]
         [string]$SubscriptionId,
-
-    [Parameter(Mandatory=$false)]
-    [ValidateSet('delta','initial')]
-    [string]$PolicyMode = 'delta'
+        [Parameter(Mandatory=$false)]
+        [ValidateSet('delta','initial')]
+        [string]$PolicyMode = 'delta'
     )
-
     Write-Verbose "Starting New-EPOEasyPIMPolicies in $PolicyMode mode"
-
     $results = @{
         AzureRolePolicies = @()
         EntraRolePolicies = @()
@@ -62,7 +48,6 @@ function New-EPOEasyPIMPolicies {
             RolesNotFound = 0
         }
     }
-
     try {
         # If the provided Config has no policy sections, nothing to do
         if (-not ($Config.PSObject.Properties['AzureRolePolicies'] -or $Config.PSObject.Properties['EntraRolePolicies'] -or $Config.PSObject.Properties['GroupPolicies'])) {
@@ -83,7 +68,11 @@ function New-EPOEasyPIMPolicies {
                     "Approval Required: $($resolvedPolicy.ApprovalRequired)"
                 )
                 if ($resolvedPolicy.ApprovalRequired -and $resolvedPolicy.PSObject.Properties['Approvers'] -and $resolvedPolicy.Approvers) {
-                    $approverList = $resolvedPolicy.Approvers | ForEach-Object { "$($_.description) ($($_.id))" }
+                    $approverList = $resolvedPolicy.Approvers | ForEach-Object {
+                        $desc = if ($_.description) { $_.description } else { $_.Name }
+                        $idValue = if ($_.id) { $_.id } else { $_.Id }
+                        "$desc ($idValue)"
+                    }
                     $policyDetails += "Approvers: $($approverList -join ', ')"
                 }
                 if ($resolvedPolicy.PSObject.Properties['AuthenticationContext_Enabled'] -and $resolvedPolicy.AuthenticationContext_Enabled) {
@@ -96,8 +85,8 @@ function New-EPOEasyPIMPolicies {
             $whatIfMessage = "Apply Azure Role Policy configurations:`n$($whatIfDetails -join "`n")"
             if ($PSCmdlet.ShouldProcess($whatIfMessage, "Azure Role Policies")) {
                 Write-Host "[PROC] Processing Azure Role Policies..." -ForegroundColor Cyan
-                if (-not $SubscriptionId) {
-                    $errorMsg = "SubscriptionId is required for Azure Role Policies"
+                if (-not $SubscriptionId -and -not ($Config.AzureRolePolicies | Where-Object { $_.Scope })) {
+                    $errorMsg = "SubscriptionId is required for Azure Role Policies if no Scope is provided per policy"
                     Write-Error $errorMsg
                     $results.Errors += $errorMsg
                 } else {
@@ -149,7 +138,6 @@ function New-EPOEasyPIMPolicies {
                 $results.Summary.Skipped += $Config.AzureRolePolicies.Count
             }
         }
-
         # Entra Role Policies
         if ($Config.PSObject.Properties['EntraRolePolicies'] -and $Config.EntraRolePolicies -and $Config.EntraRolePolicies.Count -gt 0) {
             foreach ($policyDef in $Config.EntraRolePolicies) {
@@ -162,7 +150,6 @@ function New-EPOEasyPIMPolicies {
                     else { if (-not $policyDef.PSObject.Properties['_RoleNotFound']) { $policyDef | Add-Member -NotePropertyName _RoleNotFound -NotePropertyValue $false -Force } else { $policyDef._RoleNotFound = $false } }
                 } catch { Write-Warning "Failed to resolve Entra role '$($policyDef.RoleName)': $($_.Exception.Message)" }
             }
-
             $whatIfDetails = @()
             foreach ($policyDef in $Config.EntraRolePolicies) {
                 $policy = $policyDef.ResolvedPolicy; if (-not $policy) { $policy = $policyDef }
@@ -175,7 +162,15 @@ function New-EPOEasyPIMPolicies {
                     $policyDetails += "Approval Required: $($policy.ApprovalRequired)"
                     if ($policy.ApprovalRequired) {
                         if ($policy.PSObject.Properties['Approvers'] -and $policy.Approvers) {
-                            $approverList = $policy.Approvers | ForEach-Object { if ($_.PSObject.Properties['description'] -and $_.PSObject.Properties['id']) { "$($_.description) ($($_.id))" } else { "$_" } }
+                            $approverList = $policy.Approvers | ForEach-Object {
+                                if ($_.PSObject.Properties['description'] -and $_.PSObject.Properties['id']) {
+                                    $desc = if ($_.description) { $_.description } else { $_.Name }
+                                    $idValue = if ($_.id) { $_.id } else { $_.Id }
+                                    "$desc ($idValue)"
+                                } else {
+                                    "$_"
+                                }
+                            }
                             $policyDetails += "Approvers: $($approverList -join ', ')"
                         } else { $policyDetails += "[WARNING: ApprovalRequired is true but no Approvers specified!]" }
                     }
@@ -239,7 +234,6 @@ function New-EPOEasyPIMPolicies {
                 }
             }
         }
-
         # Group Policies
         if ($Config.PSObject.Properties['GroupPolicies'] -and $Config.GroupPolicies -and $Config.GroupPolicies.Count -gt 0) {
             $whatIfDetails = @()
@@ -254,7 +248,11 @@ function New-EPOEasyPIMPolicies {
                     "Approval Required: $($resolvedPolicy.ApprovalRequired)"
                 )
                 if ($resolvedPolicy.ApprovalRequired -and $resolvedPolicy.PSObject.Properties['Approvers'] -and $resolvedPolicy.Approvers) {
-                    $approverList = $resolvedPolicy.Approvers | ForEach-Object { "$($_.description) ($($_.id))" }
+                    $approverList = $resolvedPolicy.Approvers | ForEach-Object {
+                        $desc = if ($_.description) { $_.description } else { $_.Name }
+                        $idValue = if ($_.id) { $_.id } else { $_.Id }
+                        "$desc ($idValue)"
+                    }
                     $policyDetails += "Approvers: $($approverList -join ', ')"
                 }
                 if ($resolvedPolicy.PSObject.Properties['AuthenticationContext_Enabled'] -and $resolvedPolicy.AuthenticationContext_Enabled) { $policyDetails += "Authentication Context: $($resolvedPolicy.AuthenticationContext_Value)" }
@@ -312,7 +310,6 @@ function New-EPOEasyPIMPolicies {
                 $results.Summary.Skipped += $Config.GroupPolicies.Count
             }
         }
-
         Write-Verbose "New-EPOEasyPIMPolicies completed. Processed: $($results.Summary.TotalProcessed), Successful: $($results.Summary.Successful), Failed: $($results.Summary.Failed)"
         return $results
     } catch { Write-Error "Failed to process PIM policies: $($_.Exception.Message)"; throw }

@@ -122,6 +122,48 @@ function Invoke-EasyPIMOrchestrator {
 		return
 	}
 
+	# Check Microsoft Graph authentication before proceeding
+	try {
+		$mgContext = Get-MgContext -ErrorAction SilentlyContinue
+		if (-not $mgContext -or -not $mgContext.Account) {
+			Write-Host "[AUTH] Microsoft Graph authentication required for EasyPIM operations." -ForegroundColor Yellow
+			Write-Host "[AUTH] Please connect to Microsoft Graph with appropriate scopes:" -ForegroundColor Yellow
+			Write-Host "  Connect-MgGraph -Scopes 'RoleManagement.ReadWrite.Directory'" -ForegroundColor Green
+			throw "Microsoft Graph authentication required. Please run Connect-MgGraph first."
+		}
+
+		# Check if we have required Graph scopes
+		$requiredScopes = @('RoleManagement.ReadWrite.Directory')
+		$currentScopes = $mgContext.Scopes
+		if (-not $currentScopes -or ($requiredScopes | Where-Object { $_ -notin $currentScopes })) {
+			Write-Host "[AUTH] Insufficient Microsoft Graph permissions detected." -ForegroundColor Yellow
+			Write-Host "[AUTH] Please reconnect with required scopes:" -ForegroundColor Yellow
+			Write-Host "  Connect-MgGraph -Scopes 'RoleManagement.ReadWrite.Directory'" -ForegroundColor Green
+			throw "Microsoft Graph requires RoleManagement.ReadWrite.Directory scope."
+		}
+
+		Write-Host "[AUTH] Microsoft Graph connection verified (Account: $($mgContext.Account))" -ForegroundColor Green
+
+		# Check Azure PowerShell authentication
+		$azContext = Get-AzContext -ErrorAction SilentlyContinue
+		if (-not $azContext) {
+			Write-Host ""
+			Write-Host "[ERROR] No Azure PowerShell authentication found!" -ForegroundColor Red
+			Write-Host "[AUTH] Please connect to Azure with appropriate permissions:" -ForegroundColor Yellow
+			if ($TenantId) {
+				Write-Host "  Connect-AzAccount -TenantId '$TenantId'" -ForegroundColor Green
+			} else {
+				Write-Host "  Connect-AzAccount" -ForegroundColor Green
+				Write-Host "  # Or specify tenant: Connect-AzAccount -TenantId 'your-tenant-id'" -ForegroundColor Gray
+			}
+			throw "Azure PowerShell authentication required. Please run Connect-AzAccount first."
+		}
+		Write-Host "[AUTH] Azure PowerShell connection verified (Account: $($azContext.Account), Subscription: $($azContext.Subscription.Name))" -ForegroundColor Green
+	} catch {
+		Write-Error "Authentication check failed: $($_.Exception.Message)"
+		return
+	}
+
 	try {
 		# 1. Load configuration
 		$config = if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
@@ -135,6 +177,31 @@ function Invoke-EasyPIMOrchestrator {
 			$TenantId = $env:tenantid
 			if ($TenantId) { Write-Host -Object "[INFO] Using TenantId from environment: $TenantId" -ForegroundColor DarkCyan } else { Write-Host -Object "[WARN] TenantId not provided and TENANTID env var is empty." -ForegroundColor Yellow }
 		}
+
+		# Propagate tenant/subscription to shared helpers
+		try {
+			$script:tenantID = $TenantId
+			Set-Variable -Scope Global -Name tenantID -Value $TenantId -Force
+		} catch {}
+
+		# Initialize subscription context EARLY for downstream helpers (Invoke-ARM, get-config)
+		if (-not $SubscriptionId -or [string]::IsNullOrWhiteSpace($SubscriptionId)) {
+			$SubscriptionId = $env:subscriptionid
+			if (-not $SubscriptionId) {
+				try {
+					$azCtx = Get-AzContext -ErrorAction SilentlyContinue
+					if ($azCtx -and $azCtx.Subscription -and $azCtx.Subscription.Id) { $SubscriptionId = $azCtx.Subscription.Id }
+				} catch {}
+			}
+			if ($SubscriptionId) { Write-Verbose ("[Orchestrator] Resolved SubscriptionId early: {0}" -f $SubscriptionId) }
+			else { Write-Verbose "[Orchestrator] No SubscriptionId resolved yet (will continue; callers also pass explicit IDs)" }
+		}
+		try {
+			if ($SubscriptionId) {
+				$script:subscriptionID = $SubscriptionId
+				Set-Variable -Scope Global -Name subscriptionID -Value $SubscriptionId -Force
+			}
+		} catch {}
 
 		# 2. Process and normalize config based on selected operations
 		$processedConfig = Initialize-EasyPIMAssignments -Config $config
@@ -210,6 +277,51 @@ function Invoke-EasyPIMOrchestrator {
 		# Filter config based on selected operations
 		if ($Operations -notcontains "All") {
 			$filteredConfig = @{}
+			# Always preserve ProtectedUsers when filtering
+			if ($processedConfig.PSObject.Properties.Name -contains 'ProtectedUsers') {
+				$filteredConfig.ProtectedUsers = $processedConfig.ProtectedUsers
+			}
+
+			# Filter the Assignments block based on selected operations
+			if ($processedConfig.PSObject.Properties.Name -contains 'Assignments') {
+				$filteredAssignments = [PSCustomObject]@{}
+				Write-Verbose "[Filter Debug] Original Assignments sections: $($processedConfig.Assignments.PSObject.Properties.Name -join ', ')"
+				foreach ($op in $Operations) {
+					Write-Verbose "[Filter Debug] Processing operation: $op"
+					switch ($op) {
+						"AzureRoles" {
+							if ($processedConfig.Assignments.PSObject.Properties.Name -contains 'AzureRoles') {
+								$filteredAssignments | Add-Member -NotePropertyName 'AzureRoles' -NotePropertyValue $processedConfig.Assignments.AzureRoles
+								Write-Verbose "[Filter Debug] Added AzureRoles to filtered assignments"
+							}
+						}
+						"EntraRoles" {
+							if ($processedConfig.Assignments.PSObject.Properties.Name -contains 'EntraRoles') {
+								$filteredAssignments | Add-Member -NotePropertyName 'EntraRoles' -NotePropertyValue $processedConfig.Assignments.EntraRoles
+								Write-Verbose "[Filter Debug] Added EntraRoles to filtered assignments"
+							}
+						}
+						"GroupRoles" {
+							if ($processedConfig.Assignments.PSObject.Properties.Name -contains 'Groups') {
+								$filteredAssignments | Add-Member -NotePropertyName 'Groups' -NotePropertyValue $processedConfig.Assignments.Groups
+								Write-Verbose "[Filter Debug] Added Groups to filtered assignments"
+							}
+							if ($processedConfig.Assignments.PSObject.Properties.Name -contains 'GroupRoles') {
+								$filteredAssignments | Add-Member -NotePropertyName 'GroupRoles' -NotePropertyValue $processedConfig.Assignments.GroupRoles
+								Write-Verbose "[Filter Debug] Added GroupRoles to filtered assignments"
+							}
+						}
+					}
+				}
+				Write-Verbose "[Filter Debug] Filtered Assignments sections: $($filteredAssignments.PSObject.Properties.Name -join ', ')"
+				if ($filteredAssignments.PSObject.Properties.Name.Count -gt 0) {
+					$filteredConfig.Assignments = $filteredAssignments
+					Write-Verbose "[Filter Debug] Assignments block preserved with $($filteredAssignments.PSObject.Properties.Name.Count) sections"
+				} else {
+					Write-Verbose "[Filter Debug] No matching assignment sections found, Assignments block will be empty"
+				}
+			}
+
 			foreach ($op in $Operations) {
 				switch ($op) {
 					"AzureRoles" {
@@ -232,6 +344,8 @@ function Invoke-EasyPIMOrchestrator {
 	# Always perform principal & group validation before any policy or assignment operations
 		Write-Host -Object "[TEST] Validating principal and group IDs..." -ForegroundColor Cyan
 		$principalIds = New-Object -TypeName "System.Collections.Generic.HashSet[string]"
+		Write-Verbose ("[Orchestrator] TenantId in context before validation: {0}" -f ($TenantId))
+		try { $tpeCmd = Get-Command Test-PrincipalExists -ErrorAction SilentlyContinue; if($tpeCmd){ Write-Host ("[Debug] Using Test-PrincipalExists from: {0} ({1})" -f $tpeCmd.Source,$tpeCmd.Path) -ForegroundColor DarkGray } else { Write-Host "[Debug] Test-PrincipalExists not found in scope" -ForegroundColor Yellow } } catch {}
 	$policyApproverRefs = @()
 		if ($processedConfig.PSObject.Properties.Name -contains 'Assignments' -and $processedConfig.Assignments) {
 			$assign = $processedConfig.Assignments
@@ -318,6 +432,7 @@ function Invoke-EasyPIMOrchestrator {
 		}
 		$validationResults = @()
 		foreach ($principalIdIter in $principalIds) {
+			Write-Verbose ("[Debug] Checking principal: {0}" -f $principalIdIter)
 			$exists = Test-PrincipalExists -PrincipalId $principalIdIter
 			$type = $null; $displayName = $null
 			if ($exists) {
@@ -325,17 +440,20 @@ function Invoke-EasyPIMOrchestrator {
 				if ($script:principalObjectCache -and $script:principalObjectCache.ContainsKey($principalIdIter)) {
 					$obj = $script:principalObjectCache[$principalIdIter]
 				} else {
-						try { $obj = Invoke-Graph -Endpoint "directoryObjects/$principalIdIter" -ErrorAction Stop } catch {
+						try { $obj = invoke-graph -Endpoint "directoryObjects/$principalIdIter" -ErrorAction Stop } catch {
 							Write-Verbose -Message "Suppressed directory object fetch failure for ${principalIdIter}: $($_.Exception.Message)"
 						}
 				}
 				if ($obj -and $obj.'@odata.type') { $type = $obj.'@odata.type' }
 				if ($type -eq '#microsoft.graph.group') {
-					try {
-						$g = Get-MgGroup -GroupId $principalIdIter -Property Id,DisplayName -ErrorAction SilentlyContinue
-						if ($g) { $displayName = $g.DisplayName }
-					} catch {
-						Write-Verbose -Message "Suppressed group lookup failure for ${principalIdIter}: $($_.Exception.Message)"
+					$doLookup = $false
+					if ($VerbosePreference) { $doLookup = $true }
+					elseif ($env:EASYPIM_VERBOSE_PRINCIPAL) { $doLookup = $true }
+					if ($doLookup) {
+						try {
+							$g = Get-MgGroup -GroupId $principalIdIter -Property Id,DisplayName -ErrorAction SilentlyContinue
+							if ($g) { $displayName = $g.DisplayName }
+						} catch { Write-Verbose -Message "Suppressed group lookup failure for ${principalIdIter}: $($_.Exception.Message)" }
 					}
 				}
 			}
@@ -374,10 +492,17 @@ function Invoke-EasyPIMOrchestrator {
 			Write-Host -Object "[Orchestrator Debug] Assignment counts -> Azure(E:$dbgAzureElig A:$dbgAzureAct) Entra(E:$dbgEntraElig A:$dbgEntraAct) Groups(E:$dbgGroupElig A:$dbgGroupAct)" -ForegroundColor DarkCyan
 		} catch { Write-Host -Object "[Orchestrator Debug] Failed to compute assignment debug counts: $($_.Exception.Message)" -ForegroundColor DarkYellow }
 
+		# Re-affirm subscription context later as well, but avoid noisy logs
 		if (-not $SubscriptionId -or [string]::IsNullOrWhiteSpace($SubscriptionId)) {
 			$SubscriptionId = $env:subscriptionid
 			if ($SubscriptionId) { Write-Host -Object "[INFO] Using SubscriptionId from environment: $SubscriptionId" -ForegroundColor DarkCyan } else { Write-Host -Object "[WARN] SubscriptionId not provided and SUBSCRIPTIONID env var is empty (Azure role operations may be limited)." -ForegroundColor Yellow }
 		}
+		try {
+			if ($SubscriptionId) {
+				$script:subscriptionID = $SubscriptionId
+				Set-Variable -Scope Global -Name subscriptionID -Value $SubscriptionId -Force
+			}
+		} catch {}
 
 		# 3. Process policies FIRST (skip if requested) - CRITICAL: Policies must be applied before assignments to ensure compliance
 		$policyResults = $null
@@ -416,8 +541,15 @@ function Invoke-EasyPIMOrchestrator {
 
 		# 4. Perform cleanup operations AFTER policy processing (skip if requested or if assignments are skipped)
 		$cleanupResults = if ($Operations -contains "All" -and -not $SkipCleanup -and -not $SkipAssignments) {
-			Write-Host -Object "[CLEANUP] Performing cleanup operations based on updated policies..." -ForegroundColor Cyan
-			Invoke-EasyPIMCleanup -Config $processedConfig -Mode $Mode -TenantId $TenantId -SubscriptionId $SubscriptionId -WhatIf:$WhatIfPreference -WouldRemoveExportPath $WouldRemoveExportPath
+			Write-Host -Object "[CLEANUP] Analyzing existing assignments against configuration..." -ForegroundColor Cyan
+			$cleanupResult = Invoke-EasyPIMCleanup -Config $processedConfig -Mode $Mode -TenantId $TenantId -SubscriptionId $SubscriptionId -WouldRemoveExportPath $WouldRemoveExportPath
+			if ($cleanupResult -and $cleanupResult.PSObject.Properties.Name -contains 'AnalysisCompleted' -and $cleanupResult.AnalysisCompleted) {
+				Write-Host -Object "[CLEANUP] Analysis complete. Found $($cleanupResult.DesiredAssignments) desired assignments." -ForegroundColor Cyan
+				if ($Mode -eq 'delta') {
+					Write-Host -Object "[CLEANUP] Delta mode: No assignments will be removed (add/update only)." -ForegroundColor DarkGray
+				}
+			}
+			$cleanupResult
 		} else {
 			if ($SkipAssignments) { Write-Host -Object "[WARN] Skipping cleanup because SkipAssignments was specified (no assignment delta expected)" -ForegroundColor Yellow }
 			elseif ($SkipCleanup) { Write-Host -Object "[WARN] Skipping cleanup as requested by SkipCleanup parameter" -ForegroundColor Yellow }
@@ -437,9 +569,14 @@ function Invoke-EasyPIMOrchestrator {
 
 		# 5. Process assignments AFTER policies are confirmed (skip if requested)
 		if (-not $SkipAssignments) {
-			Write-Host -Object "[ASSIGN] Creating assignments with role policies validated and applied..." -ForegroundColor Cyan
+			Write-Host -Object "[ASSIGN] Creating assignments with validated role policies..." -ForegroundColor Cyan
 			# New-EasyPIMAssignments does not itself expose -WhatIf; inner Invoke-ResourceAssignment handles simulation.
 			$assignmentResults = New-EasyPIMAssignments -Config $processedConfig -TenantId $TenantId -SubscriptionId $SubscriptionId
+
+			if ($assignmentResults) {
+				$totalAttempted = ($assignmentResults.Created + $assignmentResults.Failed + $assignmentResults.Skipped)
+				Write-Host -Object "[ASSIGN] Assignment processing complete: $totalAttempted total, $($assignmentResults.Created) created, $($assignmentResults.Failed) failed, $($assignmentResults.Skipped) skipped" -ForegroundColor Cyan
+			}
 
 			# After assignments, attempt deferred group policies if any
 			if (Get-Command -Name Invoke-EPODeferredGroupPolicies -ErrorAction SilentlyContinue) {

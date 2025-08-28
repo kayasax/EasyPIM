@@ -1,3 +1,4 @@
 {
-    "azureAutomation.directory.basePath": "c:/temp"
+    "azureAutomation.directory.basePath": "c:/temp",
+    "files.encoding": "utf8bom"
 }

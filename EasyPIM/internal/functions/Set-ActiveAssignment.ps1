@@ -21,11 +21,31 @@
 #>
 function Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment, [switch]$EntraRole) {
     write-verbose "Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentActiveAssignment)"
-    if ( ($true -eq $AllowPermanentActiveAssignment) -or ("true" -eq $AllowPermanentActiveAssignment) -and ("false" -ne $AllowPermanentActiveAssignment)) {
-        $expire2 = "false"
+
+    # PT0S Prevention: Validate and sanitize MaximumActiveAssignmentDuration to prevent zero duration values
+    if ($MaximumActiveAssignmentDuration) {
+        $duration = [string]$MaximumActiveAssignmentDuration
+        # Check for zero duration values that would result in PT0S
+        if ($duration -eq "PT0S" -or $duration -eq "PT0M" -or $duration -eq "PT0H" -or $duration -eq "P0D" -or [string]::IsNullOrWhiteSpace($duration)) {
+            Write-Warning "[PT0S Prevention] MaximumActiveAssignmentDuration '$duration' would result in PT0S - using minimum fallback PT5M"
+            $MaximumActiveAssignmentDuration = "PT5M"
+        }
+    } elseif ([string]::IsNullOrWhiteSpace($MaximumActiveAssignmentDuration) -and $AllowPermanentActiveAssignment -ne $true -and $AllowPermanentActiveAssignment -ne "true") {
+        # If duration is empty/null but permanent is not allowed, provide fallback
+        Write-Warning "[PT0S Prevention] Empty MaximumActiveAssignmentDuration with permanent not allowed - using minimum fallback PT5M"
+        $MaximumActiveAssignmentDuration = "PT5M"
     }
-    else {
-        $expire2 = "true"
+
+    # Determine if expiration is required (i.e., permanent assignments are NOT allowed)
+    $isPermanentAllowed = $false
+    if ($AllowPermanentActiveAssignment -eq $true -or $AllowPermanentActiveAssignment -eq "true") {
+        $isPermanentAllowed = $true
+    }
+
+    if ($isPermanentAllowed) {
+        $expire2 = "false"  # No expiration required - permanent assignments allowed
+    } else {
+        $expire2 = "true"   # Expiration required - permanent assignments NOT allowed
     }
 
     $rule = '

@@ -45,7 +45,7 @@ function Get-PIMAzureResourcePendingApproval {
 
         $out = @()
         $armEndpoint = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM'
-        $response = invoke-AzRestMethod -Uri "$($armEndpoint.TrimEnd('/'))/providers/Microsoft.Authorization/roleAssignmentScheduleRequests?api-version=2020-10-01&`$filter=asApprover()"
+        $response = invoke-AzRestMethod -Uri "$($armEndpoint.TrimEnd('/'))/providers/Microsoft.Authorization/roleAssignmentScheduleRequests?api-version=2020-10-01-preview&`$filter=asApprover()"
         $pendingApproval = $response.Content | convertfrom-json
         if ($null -ne $pendingApproval.value.properties) {
             $pendingApproval.value.properties | ForEach-Object {

@@ -37,7 +37,7 @@
 #>
 function New-PIMGroupActiveAssignment {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param (
         [Parameter(Position = 0, Mandatory = $true)]
         [String]
@@ -141,8 +141,11 @@ function New-PIMGroupActiveAssignment {
 '
         $endpoint = "/identityGovernance/privilegedAccess/group/assignmentScheduleRequests"
         write-verbose "patch body : $body"
-        $response = invoke-graph -Endpoint $endpoint -Method "POST" -body $body
-        return $response
+
+        if ($PSCmdlet.ShouldProcess("Group $groupID", "Create PIM Active Assignment")) {
+            $response = invoke-graph -Endpoint $endpoint -Method "POST" -body $body
+            return $response
+        }
     }
     catch {
         MyCatch $_
