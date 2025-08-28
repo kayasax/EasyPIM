@@ -6,7 +6,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.10.1'
+ModuleVersion = '2.0.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -117,6 +117,9 @@ PrivateData = @{
 
     PSData = @{
 
+        # Prerelease designation for beta versions
+        Prerelease = 'beta1'
+
         # Tags applied to this module. These help with module discovery in online galleries.
         Tags = @("Azure","PIM","EntraID","PrivilegedIdentityManagement")
 
@@ -131,40 +134,38 @@ PrivateData = @{
 
         # ReleaseNotes of this module
     ReleaseNotes = @'
-    v1.10.0 Release Notes (2025-08-23):
+    🚀 EasyPIM v2.0.0-beta1 - Major Architectural Milestone (2025-08-28):
 
-    Multi-cloud Azure environment support (Chase Dafnis)
-    - Enhanced Get-PIMAzureEnvironmentEndpoint for multi-cloud environments (Commercial, US Government, China, Germany)
-    - Added comprehensive endpoint discovery and validation for all Azure cloud environments
-    - Improved custom dependency management with Test-EasyPIMDependencies function.
+    BREAKING CHANGES:
+    - Module separation: EasyPIM.Orchestrator now available as standalone module
+    - Parameter standardization: 'assignee' renamed to 'principalId' (alias provided for compatibility)
+    - ARM API compatibility improvements may affect existing scripts
 
-    v1.9.4 Release Notes (2025-08-22):
+    ✅ NEW FEATURES:
+    - ARM API fixes: Resolved InvalidResourceType and NoRegisteredProviderFound errors
+    - Enhanced policy validation with proactive error detection and clear user guidance
+    - Auto-configuration of permanent assignment flags based on duration specifications
+    - Parameter consistency across all Azure resource assignment functions
+    - Improved module dependency management
 
-    Group policy PATCH stability
-    - Filter out null rule entries before PATCH to avoid Graph schema errors (rules: [ null ]).
-    - Re-filter during per-rule isolation; isolation triggers only after a global PATCH failure.
-    - Policy summary now increments Failed on apply errors (no false "Applied" on error paths).
+    🔧 TECHNICAL IMPROVEMENTS:
+    - Fixed query parameter formatting in ARM API calls (eliminated double question marks)
+    - Updated API versions to 2020-10-01-preview for endpoint compatibility
+    - Enhanced error handling with actionable guidance for policy conflicts
+    - Microsoft Graph session preservation during module imports
 
-    Diagnostics
-    - Clearer isolation output (rule index, id, and type), retains body preview on failures.
+    ⚠️ BETA TESTING NOTES:
+    - Comprehensive testing completed but real-world validation needed
+    - Install EasyPIM.Orchestrator separately for full orchestration features
+    - Report issues: https://github.com/kayasax/EasyPIM/issues
+    - Production use not recommended until stable release
 
-    Notes: This is a patch-only release. No public API changes.
+    📋 MIGRATION GUIDE:
+    - Update scripts using 'assignee' parameter to 'principalId' (alias available for compatibility)
+    - Install both EasyPIM and EasyPIM.Orchestrator for complete functionality
+    - Test workflows thoroughly before production deployment
 
-    v1.9.3 Release Notes (2025-08-21):
-
-    Entra policy stability and correctness
-    - Fixed unifiedRoleManagementPolicyApprovalRule payloads to use Graph subject sets (@odata.type + userId/groupId).
-    - Normalized eligibility durations: convert PnY to day-based (PnD) and only include maximumDuration when expirationRequired=true.
-    - Improved InvalidPolicy diagnostics with per-rule isolation and PATCH body previews.
-
-    Authentication Context harmonization
-    - When Authentication Context is enabled for a role, MFA is always stripped from EndUser enablement to avoid MfaAndAcrsConflict.
-    - Still emit enablement rule to clear any prior MFA settings.
-
-    Notifications
-    - Flattened template properties and fixed boolean handling (.ToString().ToLower()) to prevent crashes.
-
-    Contributors: Loïc MICHEL (original author), Chase Dafnis (multi-cloud / Azure environment support)
+    Contributors: Loïc MICHEL (original author), Chase Dafnis (multi-cloud support), GitHub Copilot
     Docs: https://github.com/kayasax/EasyPIM/wiki
 '@
 
