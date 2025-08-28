@@ -21,7 +21,7 @@ foreach ($internalPath in $internalPaths) {
 # However, in local development, we want to ensure the LOCAL version is loaded, not Gallery version
 
 # Detect if we're running in local development environment
-$isLocalDevelopment = $PSScriptRoot -and 
+$isLocalDevelopment = $PSScriptRoot -and
     ($PSScriptRoot -like "*\EasyPIM*" -or $PSScriptRoot -like "*EasyPIM*")
 
 if ($isLocalDevelopment) {
@@ -29,13 +29,13 @@ if ($isLocalDevelopment) {
     $loadedEasyPIM = Get-Module -Name EasyPIM -ErrorAction SilentlyContinue
     if ($loadedEasyPIM -and $loadedEasyPIM.ModuleBase -notlike "*$PSScriptRoot*") {
         Write-Verbose "Gallery EasyPIM loaded in dev environment, attempting to load local version..."
-        
+
         # Try to load local version instead
         $localCandidates = @(
             (Join-Path (Split-Path -Parent $PSScriptRoot) 'EasyPIM/EasyPIM.psd1'),
             (Join-Path $PSScriptRoot '../EasyPIM/EasyPIM.psd1')
         )
-        
+
         foreach ($cand in $localCandidates) {
             if (Test-Path $cand) {
                 try {

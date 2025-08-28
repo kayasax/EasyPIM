@@ -7,15 +7,15 @@
     Copyright         = '(c) Loïc MICHEL. All rights reserved.'
     Description       = 'Orchestrator for EasyPIM (Invoke-EasyPIMOrchestrator)'
     PowerShellVersion = '5.1'
-    
+
     # Required modules to support EasyPIM core module dependencies
     RequiredModules   = @(
         'EasyPIM',
         'Az.Accounts',
-        'Microsoft.Graph.Authentication', 
+        'Microsoft.Graph.Authentication',
         'Microsoft.Graph.Identity.Governance'
     )
-    
+
     # No nested modules - using simple internal function duplication approach
     FunctionsToExport = @(
         'Invoke-EasyPIMOrchestrator',

@@ -35,7 +35,7 @@ function New-EasyPIMAssignments {
 			$true
 		} catch {
 			$emsg = $_.Exception.Message
-			
+
 			# Handle different types of errors with appropriate messages
 			if ($emsg -match 'RoleAssignmentExists|The Role assignment already exists') {
 				Write-Host "  ⏭️ Skipped existing: $Context" -ForegroundColor Yellow
@@ -82,10 +82,10 @@ function New-EasyPIMAssignments {
 						$summary.Skipped++
 						continue
 					}
-				} catch { 
+				} catch {
 					$VerbosePreference = $script:originalVerbosePreference
 					# Pre-check failed, but assignment will still be attempted
-					Write-Verbose ("[Assignments] Entra pre-check skipped for ${ctx} (will attempt assignment anyway): {0}" -f $_.Exception.Message) 
+					Write-Verbose ("[Assignments] Entra pre-check skipped for ${ctx} (will attempt assignment anyway): {0}" -f $_.Exception.Message)
 				}
 				$sb = {
 					if ($a.assignmentType -match 'Active') {
@@ -122,10 +122,10 @@ function New-EasyPIMAssignments {
 					$existsElig = Get-PIMAzureResourceEligibleAssignment -tenantID $TenantId -subscriptionID $SubscriptionId -scope $scope -principalId $a.principalId -ErrorAction SilentlyContinue
 					$VerbosePreference = $script:originalVerbosePreference
 					if ($existsActive -or $existsElig) { Write-Host "  ⏭️ Skipped existing: $ctx" -ForegroundColor Yellow; $summary.Skipped++; continue }
-				} catch { 
+				} catch {
 					$VerbosePreference = $script:originalVerbosePreference
 					# Pre-check failed, but assignment will still be attempted
-					Write-Verbose ("[Assignments] Azure pre-check skipped for ${ctx} (will attempt assignment anyway): {0}" -f $_.Exception.Message) 
+					Write-Verbose ("[Assignments] Azure pre-check skipped for ${ctx} (will attempt assignment anyway): {0}" -f $_.Exception.Message)
 				}
 				$sb = {
 					if ($a.assignmentType -match 'Active') {
@@ -165,10 +165,10 @@ function New-EasyPIMAssignments {
 					$existsElig = Get-PIMGroupEligibleAssignment -tenantID $TenantId -groupID $groupId -principalID $a.principalId -type $groupType -ErrorAction SilentlyContinue
 					$VerbosePreference = $script:originalVerbosePreference
 					if ($existsActive -or $existsElig) { Write-Host "  ⏭️ Skipped existing: $ctx" -ForegroundColor Yellow; $summary.Skipped++; continue }
-				} catch { 
+				} catch {
 					$VerbosePreference = $script:originalVerbosePreference
 					# Pre-check failed, but assignment will still be attempted
-					Write-Verbose ("[Assignments] Group pre-check skipped for ${ctx} (will attempt assignment anyway): {0}" -f $_.Exception.Message) 
+					Write-Verbose ("[Assignments] Group pre-check skipped for ${ctx} (will attempt assignment anyway): {0}" -f $_.Exception.Message)
 				}
 				$sb = {
 					if ($a.assignmentType -match 'Active') {

@@ -11,7 +11,7 @@ function Invoke-EasyPIMCleanup {
 	Write-Verbose "[Cleanup] Starting cleanup (mode=$Mode)"
 	if ($PSCmdlet.ShouldProcess('Cleanup operations', 'Invoke EasyPIM cleanup')) {
 		# Orchestrator-only cleanup fallback (no dependency on core module)
-		$results = [pscustomobject]@{ 
+		$results = [pscustomobject]@{
 			Kept=0; Removed=0; Skipped=0; Protected=0; WouldRemoveCount=0
 			AnalysisCompleted=$false; DesiredAssignments=0; Mode=$Mode
 			CleanupStatus="Cleanup not performed"

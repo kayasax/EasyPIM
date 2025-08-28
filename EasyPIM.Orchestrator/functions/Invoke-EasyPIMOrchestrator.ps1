@@ -572,7 +572,7 @@ function Invoke-EasyPIMOrchestrator {
 			Write-Host -Object "[ASSIGN] Creating assignments with validated role policies..." -ForegroundColor Cyan
 			# New-EasyPIMAssignments does not itself expose -WhatIf; inner Invoke-ResourceAssignment handles simulation.
 			$assignmentResults = New-EasyPIMAssignments -Config $processedConfig -TenantId $TenantId -SubscriptionId $SubscriptionId
-			
+
 			if ($assignmentResults) {
 				$totalAttempted = ($assignmentResults.Created + $assignmentResults.Failed + $assignmentResults.Skipped)
 				Write-Host -Object "[ASSIGN] Assignment processing complete: $totalAttempted total, $($assignmentResults.Created) created, $($assignmentResults.Failed) failed, $($assignmentResults.Skipped) skipped" -ForegroundColor Cyan

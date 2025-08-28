@@ -83,7 +83,7 @@
 				Write-Host "| [INFO] Status  : $($CleanupResults.CleanupStatus)" -ForegroundColor DarkGray
 			}
 		}
-		
+
 		Write-Host "| [OK] Kept    : $kept" -ForegroundColor White
 		Write-Host "| [DEL] Removed : $removed" -ForegroundColor White
 		if ($CleanupResults.PSObject.Properties.Name -contains 'WouldRemoveCount') {
