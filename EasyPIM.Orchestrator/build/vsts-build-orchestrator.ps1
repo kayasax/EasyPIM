@@ -99,12 +99,33 @@ try {
         Write-Host "Static parse validation passed (no syntax errors)." -ForegroundColor Green
     }
 
-    # Install required modules for validation
-    Write-Host "Installing required modules for validation..." -ForegroundColor Yellow
-    Install-Module EasyPIM -RequiredVersion 2.0.1 -Force -Scope CurrentUser -ErrorAction Stop
-    Install-Module Az.Accounts -Force -Scope CurrentUser -ErrorAction SilentlyContinue
-    Install-Module Microsoft.Graph.Authentication -Force -Scope CurrentUser -ErrorAction SilentlyContinue
-    Install-Module Microsoft.Graph.Identity.Governance -Force -Scope CurrentUser -ErrorAction SilentlyContinue
+    # Install required modules for validation (read from manifest to keep in sync)
+    Write-Host "Installing required modules for validation (from manifest)..." -ForegroundColor Yellow
+    $manifestPath = Join-Path $moduleOutDir.FullName 'EasyPIM.Orchestrator.psd1'
+    $manifest = Import-PowerShellDataFile -Path $manifestPath -ErrorAction Stop
+    foreach ($req in $manifest.RequiredModules) {
+        try {
+            if ($req -is [string]) {
+                Write-Host " - Installing $req" -ForegroundColor DarkYellow
+                Install-Module -Name $req -Force -Scope CurrentUser -ErrorAction SilentlyContinue
+            } elseif ($req.PSObject.Properties['ModuleName']) {
+                $name = $req.ModuleName
+                $version = $null
+                if ($req.PSObject.Properties['ModuleVersion']) { $version = $req.ModuleVersion }
+                elseif ($req.PSObject.Properties['RequiredVersion']) { $version = $req.RequiredVersion }
+                if ($version) {
+                    Write-Host " - Installing $name@$version" -ForegroundColor DarkYellow
+                    Install-Module -Name $name -RequiredVersion $version -Force -Scope CurrentUser -ErrorAction Stop
+                } else {
+                    Write-Host " - Installing $name (no specific version)" -ForegroundColor DarkYellow
+                    Install-Module -Name $name -Force -Scope CurrentUser -ErrorAction SilentlyContinue
+                }
+            }
+        } catch {
+            Write-Warning "Failed to install module dependency '$req': $($_.Exception.Message)"
+            throw
+        }
+    }
 
     Import-Module -Name "$($publishDir.FullName)\EasyPIM.Orchestrator\EasyPIM.Orchestrator.psd1" -Force -ErrorAction Stop
     Write-Host "Module imported successfully!" -ForegroundColor Green
