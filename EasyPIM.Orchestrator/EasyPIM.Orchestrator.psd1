@@ -10,7 +10,7 @@
 
     # Required modules including stable EasyPIM core dependency
     RequiredModules   = @(
-    @{ModuleName='EasyPIM'; ModuleVersion='2.0.3'},
+    @{ModuleName='EasyPIM'; ModuleVersion='2.0.4'},
         'Az.Accounts',
         'Microsoft.Graph.Authentication',
         'Microsoft.Graph.Identity.Governance'
