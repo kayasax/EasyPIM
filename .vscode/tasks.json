@@ -84,6 +84,16 @@
 				"-Command",
 				"git add -A; git commit -m \"docs(arch): module split plan; remove validate mode across code/docs; default to delta\""
 			]
+		},
+		{
+			"label": "Release: commit and push",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"git add -A; git commit -m \"chore(release): bump core to 2.0.2, orchestrator to 1.0.5; align workflows; E2E test fix; add release notes\"; git push -u origin feature/business-rules-validation"
+			]
 		}
 	]
 }

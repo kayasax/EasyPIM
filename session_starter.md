@@ -1,3 +1,4 @@
+| 2025-08-29 | **🔍 POLICY DRIFT ANALYSIS COMPLETED**: COMPREHENSIVE SUCCESS! Identified and resolved root cause of policy drift detection issues. **ISSUE**: Microsoft Entra PIM automatically removes MultiFactorAuthentication requirements when Authentication Context is enabled to prevent MfaAndAcrsConflict. Template specified 'MultiFactorAuthentication,Justification' + AuthContext but live policy showed 'Justification' only, causing false drift detection. **SOLUTION**: Enhanced Test-PIMPolicyDrift function with Authentication Context awareness - when MFA removal is detected due to AuthContext being enabled, it's treated as expected behavior, not drift. Added comprehensive documentation explaining Microsoft's behavior. **VERIFICATION**: Drift detection now returns 0 drift items for AuthContext scenarios while maintaining all other drift detection capabilities. Orchestrator execution and policy validation working perfectly! |
 | 2025-08-28 | **🎉 READY FOR PUBLICATION**: Version updates committed and ready for PowerShell Gallery! ✅ EasyPIM v2.0.0-beta1 (major milestone: module separation) ✅ EasyPIM.Orchestrator v1.0.0-beta1 (production-ready orchestration) ✅ Enhanced release notes with breaking changes and migration guidance ✅ Dependency management corrected ✅ Module manifests validated ✅ Changes pushed to trigger CI validation. **STATUS**: Ready for PowerShell Gallery publication with prerelease tags for community testing. Major architectural milestone achieved! |
 | 2025-08-28 | **🎉 COMPREHENSIVE SUCCESS COMMITTED**: ARM API fixes, parameter standardization, and orchestrator enhancements successfully committed (commit 703cb86)! ✅ All InvalidResourceType/NoRegisteredProviderFound errors resolved ✅ Query parameter formatting fixed ✅ API versions updated to preview ✅ Parameter naming standardized with backward compatibility ✅ Module dependencies corrected ✅ Policy validation system working perfectly ✅ Full orchestrator workflow executing successfully (7/7 policies, 9/9 assignments processed). **PRODUCTION READY**: EasyPIM.Orchestrator module hardening project officially COMPLETE and ready for merge! |
 | 2025-08-28 | **🔧 ARM API PARAMETER FIXES**: COMPREHENSIVE RESOLUTION! Fixed critical ARM API errors causing InvalidResourceType and NoRegisteredProviderFound failures. **ROOT CAUSE**: Query parameter formatting errors (double question marks: `?api-version=2020-10-01?$filter=...`) and incompatible API versions. **SOLUTION**: ✅ Fixed query parameter concatenation from `"?$filter="` to `"&$filter="` in Get-PIMAzureResourceActiveAssignment.ps1 ✅ Updated API versions from "2020-10-01" to "2020-10-01-preview" across Get-PIMAzureResourceActiveAssignment.ps1, Get-PIMAzureResourceEligibleAssignment.ps1, and Get-PIMAzureResourcePendingApproval.ps1 ✅ Parameter standardization completed with 'principalId' naming and 'assignee' alias for backward compatibility ✅ Module dependencies corrected with RequiredModules architecture. All Azure resource role assignment operations now execute successfully! |
@@ -76,7 +77,7 @@ The EasyPIM module provides comprehensive PIM management capabilities. The proje
 
 3. **SYSTEMATIC TROUBLESHOOTING SEQUENCE**
    - Step 1: Search official documentation for the specific technology/error
-   - Step 2: Analyze documented limitations and supported scenarios  
+   - Step 2: Analyze documented limitations and supported scenarios
    - Step 3: Implement solution based on documented best practices
    - Step 4: Validate implementation against documentation requirements
 
@@ -212,6 +213,7 @@ The EasyPIM module provides comprehensive PIM management capabilities. The proje
 
 | Date       | Summary of Update                                      |
 |------------|-------------------------------------------------------|
+| 2025-08-29 | **✅ PUBLICATION SUCCESS STRATEGY**: Resolved PowerShell Gallery "version already exists" error by implementing proper version management workflow. Added comprehensive building & publishing documentation to session starter with prerequisites, step-by-step procedures, common issues, and validation workflows. Bumped EasyPIM.Orchestrator from v1.0.3-beta1 to v1.0.4-beta1 and triggered workflow. Build script fixes from previous session (path corrections, Export-ModuleMember preservation) now properly validated. **STATUS**: Orchestrator v1.0.4-beta1 publishing in progress with corrected build process. |
 | 2025-01-25 | **✅ STRATEGIC PIVOT: STABLE RELEASE APPROACH**: After multiple attempts to resolve PowerShellGet prerelease dependency issues, implemented superior strategy: promote EasyPIM from v2.0.0-beta1 to v2.0.0 stable release. Removed Prerelease='beta1' from EasyPIM.psd1, updated orchestrator to depend on stable EasyPIM v2.0.0, removed -AllowPrerelease flags from build scripts, updated workflows to use stable versions. This eliminates all System.Version constraints and prerelease dependency resolution issues. Created core-v2.0.0 tag to trigger stable publication. Key insight: sometimes changing the problem is better than fighting the constraints. ARM API fixes remain. Clean, standard PowerShell Gallery publication approach. |
 | 2025-08-27 | **✅ ORCHESTRATOR HARDENING COMPLETED**: Implemented clean internal function duplication approach for EasyPIM.Orchestrator. Resolved InvalidRoleAssignmentRequest errors by fixing JSON structure in New-PIMEntraRoleActiveAssignment. Eliminated complex shared module loading in favor of simple internal function duplication (Write-SectionHeader, invoke-graph, Test-PrincipalExists, Initialize-EasyPIMPolicies, Get-PIMAzureEnvironmentEndpoint). Removed EasyPIM.Shared dependency from orchestrator manifest. Internal functions properly scoped within module (not globally accessible by design). All orchestrator public functions work correctly. Created GitHub Actions workflow to validate module loading in CI/CD environments. Branch `chore/orchestrator-hardening` ready for merge. |
 | 2025-08-26 | **✅ ORCHESTRATOR ASSIGNMENT PROCESSING COMPLETED**: Resolved orchestrator assignment creation issues by fixing module loading conflicts between installed PSGallery modules and local development versions. Enhanced group assignment functions with principalID parameter support and proper WhatIf compatibility. Implemented user-friendly colored logging (⏭️ Yellow for skipped existing assignments, ✅ Green for successful creation, ❌ Red for failures) making assignment operations visible without requiring -Verbose flag. All core orchestration functionality now working correctly including idempotency checks, operations filtering, and clear operational feedback. |
@@ -431,7 +433,7 @@ git push origin core-v2.0.2
 ### **EasyPIM.Orchestrator Module Publication**
 
 ```powershell
-# 1. Update version in manifest  
+# 1. Update version in manifest
 # Edit EasyPIM.Orchestrator/EasyPIM.Orchestrator.psd1 - bump ModuleVersion
 
 # 2. Local build validation (recommended)
@@ -455,7 +457,7 @@ ModuleVersion = '1.0.5'    # In .psd1
 Prerelease = 'beta1'       # Keep prerelease tag
 ```
 
-**Scenario 2: Core Stable Release**  
+**Scenario 2: Core Stable Release**
 ```powershell
 # Current: v2.0.1 → Next: v2.0.2
 ModuleVersion = '2.0.2'    # In .psd1
@@ -472,7 +474,7 @@ ModuleVersion = '2.0.2'    # In .psd1
 
 **Orchestrator Build (`EasyPIM.Orchestrator/build/vsts-build-orchestrator.ps1`)**:
 - Embeds internal functions (`Write-SectionHeader`, `Initialize-EasyPIMPolicies`)
-- Extracts and preserves Export-ModuleMember statements  
+- Extracts and preserves Export-ModuleMember statements
 - Validates module import to catch syntax errors
 - Uses correct module output paths (`$moduleOutDir.FullName`)
 
