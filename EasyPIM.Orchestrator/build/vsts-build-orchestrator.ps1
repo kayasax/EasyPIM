@@ -84,6 +84,14 @@ try {
     } else {
         Write-Host "Static parse validation passed (no syntax errors)." -ForegroundColor Green
     }
+    
+    # Install required modules for validation
+    Write-Host "Installing required modules for validation..." -ForegroundColor Yellow
+    Install-Module EasyPIM -RequiredVersion 2.0.1 -Force -Scope CurrentUser -ErrorAction Stop
+    Install-Module Az.Accounts -Force -Scope CurrentUser -ErrorAction SilentlyContinue
+    Install-Module Microsoft.Graph.Authentication -Force -Scope CurrentUser -ErrorAction SilentlyContinue
+    Install-Module Microsoft.Graph.Identity.Governance -Force -Scope CurrentUser -ErrorAction SilentlyContinue
+    
     Import-Module -Name "$($publishDir.FullName)\EasyPIM.Orchestrator\EasyPIM.Orchestrator.psd1" -Force -ErrorAction Stop
     Write-Host "Module imported successfully!" -ForegroundColor Green
     Remove-Module -Name EasyPIM.Orchestrator -ErrorAction SilentlyContinue
