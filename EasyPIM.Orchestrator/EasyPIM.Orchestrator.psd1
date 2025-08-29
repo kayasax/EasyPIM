@@ -1,6 +1,6 @@
 @{
     RootModule        = 'EasyPIM.Orchestrator.psm1'
-    ModuleVersion     = '1.0.1'
+    ModuleVersion     = '1.0.2'
     GUID              = 'b6f9b3c9-bc6a-4d4b-8c51-7c45d42157cd'
     Author            = 'Loïc MICHEL'
     CompanyName       = 'EasyPIM'
@@ -10,7 +10,7 @@
 
     # Required modules including stable EasyPIM core dependency
     RequiredModules   = @(
-        @{ModuleName='EasyPIM'; ModuleVersion='2.0.0'},
+        @{ModuleName='EasyPIM'; ModuleVersion='2.0.1'},
         'Az.Accounts',
         'Microsoft.Graph.Authentication',
         'Microsoft.Graph.Identity.Governance'
