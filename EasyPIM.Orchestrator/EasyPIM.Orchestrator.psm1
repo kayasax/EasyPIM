@@ -63,7 +63,7 @@ $isLocalDevelopment = $MyInvocation.MyCommand.Path -and
 if (-not $isLocalDevelopment -and -not $env:EASYPIM_NO_VERSION_CHECK) {
 	try {
 		# Only check versions when running from installed module location
-		$latestInfo = Find-Module -Name 'EasyPIM.Orchestrator' -AllowPrerelease -ErrorAction Stop
+    $latestInfo = Find-Module -Name 'EasyPIM.Orchestrator' -ErrorAction Stop
 		$currentVersion = $MyInvocation.MyCommand.Module.Version
 
 		if ($currentVersion -lt [version]$latestInfo.Version) {

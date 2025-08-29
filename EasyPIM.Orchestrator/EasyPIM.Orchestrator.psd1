@@ -1,6 +1,6 @@
 @{
     RootModule        = 'EasyPIM.Orchestrator.psm1'
-    ModuleVersion     = '1.0.5'
+    ModuleVersion     = '1.0.6'
     GUID              = 'b6f9b3c9-bc6a-4d4b-8c51-7c45d42157cd'
     Author            = 'Loïc MICHEL'
     CompanyName       = 'EasyPIM'
@@ -10,7 +10,7 @@
 
     # Required modules including stable EasyPIM core dependency
     RequiredModules   = @(
-    @{ModuleName='EasyPIM'; ModuleVersion='2.0.2'},
+    @{ModuleName='EasyPIM'; ModuleVersion='2.0.3'},
         'Az.Accounts',
         'Microsoft.Graph.Authentication',
         'Microsoft.Graph.Identity.Governance'
@@ -28,11 +28,10 @@
         Tags = @('EasyPIM','Orchestrator')
         ProjectUri = 'https://github.com/kayasax/EasyPIM'
         LicenseUri = 'https://github.com/kayasax/EasyPIM/blob/main/LICENSE'
-    Prerelease = 'beta1'
 ReleaseNotes = @'
-🚀 EasyPIM.Orchestrator v1.0.1-beta1 - Production-Ready Beta Release
+🚀 EasyPIM.Orchestrator v1.0.6 - Stable Release
 
-MAJOR MILESTONE: Module separation and architectural improvements complete!
+MAJOR MILESTONE: Module separation and architectural improvements complete and validated end-to-end.
 
 ✅ NEW FEATURES:
 - ARM API compatibility fixes (resolves InvalidResourceType/NoRegisteredProviderFound errors)
@@ -42,14 +41,12 @@ MAJOR MILESTONE: Module separation and architectural improvements complete!
 - Auto-configuration of permanent assignment flags based on duration specifications
 - Dependency resolution improvements: now depends on stable EasyPIM v2.0.0
 
-⚠️ BETA TESTING:
-- Comprehensive testing completed but real-world validation needed
-- Compatible with EasyPIM v2.0.0-beta1
-- Report issues: https://github.com/kayasax/EasyPIM/issues
-- Production use not recommended until stable release
+Stabilization notes:
+- Comprehensive tests passed locally (6k+), plus end-to-end remediation and drift checks.
+- Compatible with EasyPIM >= 2.0.2.
 
 📋 REQUIREMENTS:
-- EasyPIM v2.0.0-beta1 (automatically installed)
+- EasyPIM v2.0.2 (automatically installed)
 - PowerShell 5.1+
 - Az.Accounts, Microsoft.Graph modules
 '@

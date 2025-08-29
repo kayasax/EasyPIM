@@ -6,7 +6,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.0.2'
+ModuleVersion = '2.0.3'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -134,7 +134,7 @@ PrivateData = @{
 
         # ReleaseNotes of this module
     ReleaseNotes = @'
-    🚀 EasyPIM v2.0.0-beta1 - Major Architectural Milestone (2025-08-28):
+    🚀 EasyPIM v2.0.0 - Major Architectural Milestone (2025-08-28):
 
     BREAKING CHANGES:
     - Module separation: EasyPIM.Orchestrator now available as standalone module
@@ -154,23 +154,22 @@ PrivateData = @{
     - Enhanced error handling with actionable guidance for policy conflicts
     - Microsoft Graph session preservation during module imports
 
-    ⚠️ BETA TESTING NOTES:
-    - Comprehensive testing completed but real-world validation needed
-    - Install EasyPIM.Orchestrator separately for full orchestration features
-    - Report issues: https://github.com/kayasax/EasyPIM/issues
-    - Production use not recommended until stable release
-
     📋 MIGRATION GUIDE:
     - Update scripts using 'assignee' parameter to 'principalId' (alias available for compatibility)
     - Install both EasyPIM and EasyPIM.Orchestrator for complete functionality
     - Test workflows thoroughly before production deployment
 
-    Contributors: Loïc MICHEL (original author), Chase Dafnis (multi-cloud support), GitHub Copilot
+    Contributors: Loïc MICHEL (original author), Chase Dafnis (multi-cloud support)
     Docs: https://github.com/kayasax/EasyPIM/wiki
 '@
 
-    # Appended in 2.0.2
+    # Appended in 2.0.2 and 2.0.3
     AdditionalReleaseNotes = @'
+    2.0.3 (2025-08-29)
+    - Stable release polish: removed prerelease references; validated end-to-end scenario passes
+    - E2E test improvements: auto-connect to Graph/Az, comprehensive policy options exercise (Step 14)
+    - Docs/readme alignment for stable installs
+
     2.0.2 (2025-08-29)
     - Centralized business rules (MFA vs. Authentication Context) via internal Test-PIMPolicyBusinessRules
     - Drift detection aligned with policy-setting logic; PSCustomObject normalization

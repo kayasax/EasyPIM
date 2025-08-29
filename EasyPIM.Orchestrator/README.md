@@ -8,8 +8,8 @@ JSON-driven orchestration for EasyPIM. This module runs end-to-end PIM configura
 
 ## Install
 ```pwsh
-Install-Module EasyPIM -MinimumVersion 1.10.0 -Scope CurrentUser
-Install-Module EasyPIM.Orchestrator -AllowPrerelease -Scope CurrentUser
+Install-Module EasyPIM -MinimumVersion 2.0.2 -Scope CurrentUser
+Install-Module EasyPIM.Orchestrator -Scope CurrentUser
 ```
 
 ## Commands
