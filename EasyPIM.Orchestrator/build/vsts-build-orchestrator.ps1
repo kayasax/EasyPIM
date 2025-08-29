@@ -108,7 +108,7 @@ try {
             if ($req -is [string]) {
                 Write-Host " - Installing $req" -ForegroundColor DarkYellow
                 Install-Module -Name $req -Force -Scope CurrentUser -ErrorAction SilentlyContinue
-                try { Import-Module -Name $req -ErrorAction Stop | Out-Null } catch { Write-Verbose "(optional) Could not pre-import $req: $($_.Exception.Message)" }
+                try { Import-Module -Name $req -ErrorAction Stop | Out-Null } catch { Write-Verbose "(optional) Could not pre-import $req`: $($_.Exception.Message)" }
             } elseif ($req.PSObject.Properties['ModuleName']) {
                 $name = $req.ModuleName
                 $version = $null
@@ -117,11 +117,11 @@ try {
                 if ($version) {
                     Write-Host " - Installing $name@$version" -ForegroundColor DarkYellow
                     Install-Module -Name $name -RequiredVersion $version -Force -Scope CurrentUser -ErrorAction Stop
-                    try { Import-Module -Name $name -RequiredVersion $version -ErrorAction Stop | Out-Null } catch { Write-Verbose "(optional) Could not pre-import $name@$version: $($_.Exception.Message)" }
+                    try { Import-Module -Name $name -RequiredVersion $version -ErrorAction Stop | Out-Null } catch { Write-Verbose "(optional) Could not pre-import $name@$version`: $($_.Exception.Message)" }
                 } else {
                     Write-Host " - Installing $name (no specific version)" -ForegroundColor DarkYellow
                     Install-Module -Name $name -Force -Scope CurrentUser -ErrorAction SilentlyContinue
-                    try { Import-Module -Name $name -ErrorAction Stop | Out-Null } catch { Write-Verbose "(optional) Could not pre-import $name: $($_.Exception.Message)" }
+                    try { Import-Module -Name $name -ErrorAction Stop | Out-Null } catch { Write-Verbose "(optional) Could not pre-import $name`: $($_.Exception.Message)" }
                 }
             }
         } catch {
