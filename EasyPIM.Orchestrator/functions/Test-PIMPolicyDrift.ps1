@@ -202,9 +202,10 @@ function Test-PIMPolicyDrift {
 					$policyForBusinessRules | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value
 				}
 				$businessRuleResult = Test-PIMPolicyBusinessRules -PolicySettings $policyForBusinessRules -CurrentPolicy $Live -ApplyAdjustments
-				$hasBusinessRuleAdjustment = $businessRuleResult.HasChanges					if ($hasBusinessRuleAdjustment) {
-						$adjustedExp = $businessRuleResult.AdjustedSettings.$f
-						$adjustedExpNorm = Convert-RequirementValue -Value $adjustedExp
+				$hasBusinessRuleAdjustment = $businessRuleResult.HasChanges
+				if ($hasBusinessRuleAdjustment) {
+					$adjustedExp = $businessRuleResult.AdjustedSettings.$f
+					$adjustedExpNorm = Convert-RequirementValue -Value $adjustedExp
 						
 						if ($adjustedExpNorm -eq $liveNorm) {
 							# This is expected behavior due to business rules, not drift
