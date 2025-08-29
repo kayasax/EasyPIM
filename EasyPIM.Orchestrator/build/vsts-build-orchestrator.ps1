@@ -62,10 +62,31 @@ Get-ChildItem -Path "$($publishDir.FullName)\EasyPIM.Orchestrator\functions" -Re
 # Join with consistent line endings
 $combinedContent = $text -join "`r`n`r`n"
 
-Write-Host ("Flatten build collected characters: length={0}" -f $combinedContent.Length)
+# Instead of replacing the entire .psm1, we need to preserve the original structure
+# and embed the function content inline. The orchestrator .psm1 has dynamic loading
+# that we need to preserve.
+
+# Read the original .psm1 file
+$originalPsm1 = Get-Content "$($WorkingDirectory)\EasyPIM.Orchestrator\EasyPIM.Orchestrator.psm1" -Raw
+
+# Create a hybrid approach: keep the original loading logic but embed functions
+$hybridContent = @"
+# Flattened build - functions embedded directly instead of dynamic loading
+$combinedContent
+
+# Original module logic (minus the dynamic loading section)
+"@
+
+# Extract just the Export-ModuleMember section and final cleanup from original
+$exportMatch = [regex]::Match($originalPsm1, '(# Export only the public entrypoints.*?}\s*finally\s*{.*?})', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+if ($exportMatch.Success) {
+    $hybridContent += "`r`n`r`n" + $exportMatch.Groups[1].Value
+}
+
+Write-Host ("Flatten build collected characters: length={0}" -f $hybridContent.Length)
 $psm1Path = "$($publishDir.FullName)\EasyPIM.Orchestrator\EasyPIM.Orchestrator.psm1"
 $utf8BomEncoding = [System.Text.UTF8Encoding]::new($true)
-[System.IO.File]::WriteAllText($psm1Path, $combinedContent, $utf8BomEncoding)
+[System.IO.File]::WriteAllText($psm1Path, $hybridContent, $utf8BomEncoding)
 Write-Host "Wrote EasyPIM.Orchestrator.psm1 as UTF8 with BOM (enforced)" -ForegroundColor Yellow
 
 # Note: Shared module removed - no manifest rewrite needed
