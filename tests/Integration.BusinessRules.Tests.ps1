@@ -22,8 +22,22 @@ Describe "EasyPIM End-to-End Business Rules Validation" -Tag "Integration", "Liv
         $script:SubscriptionId = $env:SubscriptionID
         $script:ConfigPath = "$PSScriptRoot\validation.json"
         $script:TestRoleName = "Guest Inviter"
-        $script:OriginalActivationDuration = "PT2H"  # From Standard template
-        $script:ModifiedActivationDuration = "PT4H"  # Test change
+
+        # Test configuration - comprehensive policy changes
+        $script:OriginalSettings = @{
+            ActivationDuration = "PT2H"                            # From Standard template
+            ActivationRequirement = "MultiFactorAuthentication,Justification"
+            ApprovalRequired = $false
+            MaximumEligibleAssignmentDuration = "P365D"
+        }
+
+        $script:ModifiedSettings = @{
+            ActivationDuration = "PT4H"                            # Changed duration
+            ActivationRequirement = "Justification"                # Removed MFA
+            ApprovalRequired = $true                               # Enabled approval
+            Approvers = @("2ab3f204-9c6f-409d-a9bd-6e302a0132db")  # Use approver from HighSecurity template
+            MaximumEligibleAssignmentDuration = "P180D"           # Reduced max duration
+        }
         
         Write-Host "🔬 Starting End-to-End Business Rules Validation Test" -ForegroundColor Cyan
         Write-Host "   Tenant: $script:TenantId" -ForegroundColor Gray
@@ -107,7 +121,7 @@ Describe "EasyPIM End-to-End Business Rules Validation" -Tag "Integration", "Liv
             # Run the orchestrator to fix the drift
             Write-Host "   🔄 Running Invoke-EasyPIMOrchestrator to remediate drift" -ForegroundColor Yellow
             
-            $orchestratorResult = Invoke-EasyPIMOrchestrator -TenantId $script:TenantId -SubscriptionId $script:SubscriptionId -ConfigurationFile $script:ConfigPath -ValidateOnly:$false
+            $orchestratorResult = Invoke-EasyPIMOrchestrator -TenantId $script:TenantId -SubscriptionId $script:SubscriptionId -ConfigFilePath $script:ConfigPath -ValidateOnly:$false
             
             # Orchestrator should complete successfully
             $orchestratorResult | Should -Not -BeNullOrEmpty
