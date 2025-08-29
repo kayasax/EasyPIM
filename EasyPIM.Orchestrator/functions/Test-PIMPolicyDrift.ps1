@@ -53,6 +53,11 @@ Module: EasyPIM.Orchestrator (requires EasyPIM core module)
 Author: Kayasax and contributors
 License: MIT (same as EasyPIM)
 
+Authentication Context and MFA Requirements:
+Microsoft Entra PIM automatically removes MultiFactorAuthentication requirements when
+Authentication Context is enabled to prevent MfaAndAcrsConflict. This is expected
+behavior and will not be flagged as drift by this function.
+
 .LINK
 https://github.com/kayasax/EasyPIM
 #>
@@ -189,10 +194,44 @@ function Test-PIMPolicyDrift {
 				if ($f -eq 'ActivationRequirement' -or $f -eq 'ActiveAssignmentRequirement') {
 					$expNorm  = Convert-RequirementValue -Value $exp
 					$liveNorm = Convert-RequirementValue -Value $liveVal
+
+					# Apply business rules validation using the internal function
+					# Pass the entire Expected settings as PSCustomObject to maintain property access
+					$policyForBusinessRules = [PSCustomObject]@{}
+					$Expected.PSObject.Properties | ForEach-Object { 
+						$policyForBusinessRules | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value 
+					}
+					$businessRuleResult = Test-PIMPolicyBusinessRules -PolicySettings $policyForBusinessRules -CurrentPolicy $Live -ApplyAdjustments
+					$hasBusinessRuleAdjustment = $businessRuleResult.HasChanges
+					
+					if ($hasBusinessRuleAdjustment) {
+						$adjustedExp = $businessRuleResult.AdjustedSettings.$f
+						$adjustedExpNorm = Convert-RequirementValue -Value $adjustedExp
+						
+						if ($adjustedExpNorm -eq $liveNorm) {
+							# This is expected behavior due to business rules, not drift
+							if ($businessRuleResult.Conflicts -and $businessRuleResult.Conflicts.Count -gt 0) {
+								Write-Verbose "$Name - Business rule applied: $($businessRuleResult.Conflicts[0]) (expected behavior, not drift)"
+							}
+							continue  # Skip adding to differences
+						} else {
+							# Still drift even after business rule adjustments
+							$expNorm = $adjustedExpNorm
+							$exp = $adjustedExp
+						}
+					}
+
 					if ($expNorm -ne $liveNorm) {
 						$displayExp  = if ($null -eq $exp -or $exp -eq '' -or $exp -eq 'None') { 'None' } else { $exp }
 						$displayLive = if ($null -eq $liveVal -or $liveVal -eq '' -or $liveVal -eq 'None') { 'None' } else { $liveVal }
-						$differences += ("{0}: expected='{1}' actual='{2}'" -f $f,$displayExp,$displayLive)
+						$driftMessage = "{0}: expected='{1}' actual='{2}'" -f $f,$displayExp,$displayLive
+
+						# Add explanatory notes for business rule conflicts
+						if ($hasBusinessRuleAdjustment) {
+							$driftMessage += " (Note: Expected value adjusted for Authentication Context business rules)"
+						}
+
+						$differences += $driftMessage
 					}
 				}
 				else {

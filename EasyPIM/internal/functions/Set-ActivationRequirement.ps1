@@ -26,9 +26,14 @@ function Set-ActivationRequirement($ActivationRequirement, [switch]$entraRole) {
                 }
                 elseif (-not ($ActivationRequirement -is [System.Collections.IEnumerable])) { $ActivationRequirement = @($ActivationRequirement) }
 
-        # Entra normalization: remove MFA when AC is enabled upstream may forget; also treat 'MFA' alias as MultiFactorAuthentication
+        # Entra normalization: treat 'MFA' alias as MultiFactorAuthentication, but preserve MFA unless AC is enabled
         if ($entraRole -and $ActivationRequirement.Count -gt 0) {
-                $ActivationRequirement = @($ActivationRequirement | ForEach-Object { $_.ToString().Trim() } | Where-Object { $_ -and ($_ -ne 'MFA') -and ($_ -ne 'MultiFactorAuthentication') })
+                # Normalize MFA alias and trim whitespace, but do NOT remove MultiFactorAuthentication 
+                # (MFA removal should only happen when Authentication Context is explicitly enabled)
+                $ActivationRequirement = @($ActivationRequirement | ForEach-Object { 
+                    $item = $_.ToString().Trim()
+                    if ($item -eq 'MFA') { 'MultiFactorAuthentication' } else { $item }
+                } | Where-Object { $_ })
         }
 
         # Empty or explicit None -> empty array

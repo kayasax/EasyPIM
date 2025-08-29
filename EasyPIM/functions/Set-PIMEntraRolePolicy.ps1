@@ -42,7 +42,17 @@ function Set-PIMEntraRolePolicy {
                 # WARNING: options are CASE SENSITIVE
                 $script:valid = $true
                 $acceptedValues = @("None", "Justification", "MultiFactorAuthentication", "Ticketing")
-                $_ | ForEach-Object { if (!( $acceptedValues -Ccontains $_)) { $script:valid = $false } }
+                # Handle both arrays and comma-separated strings
+                $itemsToCheck = @()
+                $_ | ForEach-Object { 
+                    if ($_ -is [string] -and $_ -match ',') {
+                        # Split comma-separated string and trim whitespace
+                        $itemsToCheck += ($_ -split ',') | ForEach-Object { $_.Trim() }
+                    } else {
+                        $itemsToCheck += $_
+                    }
+                }
+                $itemsToCheck | ForEach-Object { if (!( $acceptedValues -Ccontains $_)) { $script:valid = $false } }
                 return $script:valid
             })]
         [System.String[]]
@@ -55,7 +65,17 @@ function Set-PIMEntraRolePolicy {
                 # WARNING: options are CASE SENSITIVE
                 $script:valid = $true
                 $acceptedValues = @("None", "Justification", "MultiFactorAuthentication")
-                $_ | ForEach-Object { if (!( $acceptedValues -Ccontains $_)) { $script:valid = $false } }
+                # Handle both arrays and comma-separated strings
+                $itemsToCheck = @()
+                $_ | ForEach-Object { 
+                    if ($_ -is [string] -and $_ -match ',') {
+                        # Split comma-separated string and trim whitespace
+                        $itemsToCheck += ($_ -split ',') | ForEach-Object { $_.Trim() }
+                    } else {
+                        $itemsToCheck += $_
+                    }
+                }
+                $itemsToCheck | ForEach-Object { if (!( $acceptedValues -Ccontains $_)) { $script:valid = $false } }
                 return $script:valid
             })]
         [System.String[]]
@@ -203,18 +223,49 @@ function Set-PIMEntraRolePolicy {
 
             if ($PSBoundParameters.Keys.Contains('ActivationRequirement')) {
                 $ar = $ActivationRequirement
-                # If Authentication Context is being enabled in the same patch, remove MFA to avoid conflict
-                if ($PSBoundParameters.Keys.Contains('AuthenticationContext_Enabled') -and ($AuthenticationContext_Enabled -eq $true)) {
-                    if ($ar -and ($ar -contains 'MultiFactorAuthentication')) {
-                        Write-Verbose "Removing 'MultiFactorAuthentication' from Enablement_EndUser_Assignment because Authentication Context is enabled (avoids MfaAndAcrsConflict)"
-                        $ar = @($ar | Where-Object { $_ -ne 'MultiFactorAuthentication' })
+                # Normalize comma-separated strings to arrays for proper processing
+                # Handle both single strings and arrays containing comma-separated strings
+                $normalizedAr = @()
+                foreach ($item in $ar) {
+                    if ($item -is [string] -and $item -match ',') {
+                        $normalizedAr += ($item -split ',') | ForEach-Object { $_.Trim() }
+                    } else {
+                        $normalizedAr += $item
                     }
                 }
+                $ar = $normalizedAr
+                
+                # Apply business rules using shared validation function (local to EasyPIM module)
+                $testSettings = [PSCustomObject]@{ ActivationRequirement = $ar }
+                if ($PSBoundParameters.Keys.Contains('AuthenticationContext_Enabled')) {
+                    $testSettings | Add-Member -NotePropertyName 'AuthenticationContext_Enabled' -NotePropertyValue $AuthenticationContext_Enabled
+                }
+                $businessRuleResult = Test-PIMPolicyBusinessRules -PolicySettings $testSettings -CurrentPolicy $script:config -ApplyAdjustments
+                
+                if ($businessRuleResult.Conflicts.Count -gt 0) {
+                    foreach ($conflict in $businessRuleResult.Conflicts) {
+                        Write-Warning $conflict.Message
+                    }
+                }
+                
+                $ar = $businessRuleResult.AdjustedSettings.ActivationRequirement
                 $rules += Set-ActivationRequirement $ar -EntraRole
             }
 
             if ($PSBoundParameters.Keys.Contains('ActiveAssignmentRequirement')) {
-                $rules += Set-ActiveAssignmentRequirement $ActiveAssignmentRequirement -EntraRole
+                $aar = $ActiveAssignmentRequirement
+                # Normalize comma-separated strings to arrays for proper processing
+                # Handle both single strings and arrays containing comma-separated strings
+                $normalizedAar = @()
+                foreach ($item in $aar) {
+                    if ($item -is [string] -and $item -match ',') {
+                        $normalizedAar += ($item -split ',') | ForEach-Object { $_.Trim() }
+                    } else {
+                        $normalizedAar += $item
+                    }
+                }
+                $aar = $normalizedAar
+                $rules += Set-ActiveAssignmentRequirement $aar -EntraRole
             }
             if ($PSBoundParameters.Keys.Contains('AuthenticationContext_Enabled')) {
                 if (!($PSBoundParameters.Keys.Contains('AuthenticationContext_Value'))) {
@@ -314,12 +365,12 @@ function Set-PIMEntraRolePolicy {
             }
 
             # Bringing all the rules together and patch the policy
-            $allrules = $rules -join ','
-            #Write-Verbose "All rules: $allrules"
+            # Pass rules array directly to preserve JSON object structure and @odata.type fields
+            #Write-Verbose "All rules: $($rules -join ', ')"
 
             #Patching the policy
             if ($PSCmdlet.ShouldProcess($_, "Udpdating policy")) {
-               $null = Update-EntraRolePolicy $script:config.policyID $allrules
+               $null = Update-EntraRolePolicy $script:config.policyID $rules
             }
 
         }
