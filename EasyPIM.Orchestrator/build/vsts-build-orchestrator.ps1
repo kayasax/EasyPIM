@@ -108,6 +108,7 @@ try {
             if ($req -is [string]) {
                 Write-Host " - Installing $req" -ForegroundColor DarkYellow
                 Install-Module -Name $req -Force -Scope CurrentUser -ErrorAction SilentlyContinue
+                try { Import-Module -Name $req -ErrorAction Stop | Out-Null } catch { Write-Verbose "(optional) Could not pre-import $req: $($_.Exception.Message)" }
             } elseif ($req.PSObject.Properties['ModuleName']) {
                 $name = $req.ModuleName
                 $version = $null
@@ -116,14 +117,26 @@ try {
                 if ($version) {
                     Write-Host " - Installing $name@$version" -ForegroundColor DarkYellow
                     Install-Module -Name $name -RequiredVersion $version -Force -Scope CurrentUser -ErrorAction Stop
+                    try { Import-Module -Name $name -RequiredVersion $version -ErrorAction Stop | Out-Null } catch { Write-Verbose "(optional) Could not pre-import $name@$version: $($_.Exception.Message)" }
                 } else {
                     Write-Host " - Installing $name (no specific version)" -ForegroundColor DarkYellow
                     Install-Module -Name $name -Force -Scope CurrentUser -ErrorAction SilentlyContinue
+                    try { Import-Module -Name $name -ErrorAction Stop | Out-Null } catch { Write-Verbose "(optional) Could not pre-import $name: $($_.Exception.Message)" }
                 }
             }
         } catch {
             Write-Warning "Failed to install module dependency '$req': $($_.Exception.Message)"
             throw
+        }
+    }
+
+    # Ensure EasyPIM is loaded; prefer installed version but fall back to local workspace copy if needed
+    $coreLoaded = Get-Module -Name EasyPIM -ListAvailable | Where-Object { $_.Version -ge [version]'2.0.3' } | Select-Object -First 1
+    if (-not $coreLoaded) {
+        $localCore = Join-Path (Split-Path $WorkingDirectory -Parent) 'EasyPIM\EasyPIM.psd1'
+        if (Test-Path $localCore) {
+            Write-Host " - Importing local EasyPIM core from workspace for validation: $localCore" -ForegroundColor DarkYellow
+            Import-Module $localCore -Force -ErrorAction Stop
         }
     }
 
