@@ -6,7 +6,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.0.1'
+ModuleVersion = '2.0.2'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -167,6 +167,15 @@ PrivateData = @{
 
     Contributors: Loïc MICHEL (original author), Chase Dafnis (multi-cloud support), GitHub Copilot
     Docs: https://github.com/kayasax/EasyPIM/wiki
+'@
+
+    # Appended in 2.0.2
+    AdditionalReleaseNotes = @'
+    2.0.2 (2025-08-29)
+    - Centralized business rules (MFA vs. Authentication Context) via internal Test-PIMPolicyBusinessRules
+    - Drift detection aligned with policy-setting logic; PSCustomObject normalization
+    - Fixed parameter parsing for requirements and booleans; improved Approver handling
+    - Added end-to-end tests; lint fixes (trailing spaces); minor robustness improvements
 '@
 
     # AdditionalReleaseNotes of this module
