@@ -1,5 +1,5 @@
 # Shared business rule validation for PIM policies (Orchestrator module copy)
-# This function contains the same logic as the core EasyPIM module for handling 
+# This function contains the same logic as the core EasyPIM module for handling
 # Authentication Context vs MFA conflicts and other business rules.
 
 function Test-PIMPolicyBusinessRules {
@@ -85,7 +85,7 @@ function Test-PIMPolicyBusinessRules {
         }
     }
     
-    # Check ActiveAssignmentRequirement for MFA conflicts  
+    # Check ActiveAssignmentRequirement for MFA conflicts
     if ($PolicySettings.PSObject.Properties['ActiveAssignmentRequirement']) {
         $requirements = $PolicySettings.ActiveAssignmentRequirement
         

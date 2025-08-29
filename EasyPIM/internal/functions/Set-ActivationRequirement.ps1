@@ -28,14 +28,13 @@ function Set-ActivationRequirement($ActivationRequirement, [switch]$entraRole) {
 
         # Entra normalization: treat 'MFA' alias as MultiFactorAuthentication, but preserve MFA unless AC is enabled
         if ($entraRole -and $ActivationRequirement.Count -gt 0) {
-                # Normalize MFA alias and trim whitespace, but do NOT remove MultiFactorAuthentication 
+                # Normalize MFA alias and trim whitespace, but do NOT remove MultiFactorAuthentication
                 # (MFA removal should only happen when Authentication Context is explicitly enabled)
-                $ActivationRequirement = @($ActivationRequirement | ForEach-Object { 
+                $ActivationRequirement = @($ActivationRequirement | ForEach-Object {
                     $item = $_.ToString().Trim()
                     if ($item -eq 'MFA') { 'MultiFactorAuthentication' } else { $item }
                 } | Where-Object { $_ })
         }
-
         # Empty or explicit None -> empty array
         if ($ActivationRequirement.Count -eq 0 -or ($ActivationRequirement.Count -eq 1 -and ($ActivationRequirement[0] -eq '' -or $ActivationRequirement[0] -eq 'None'))) {
                 Write-Verbose 'Activation requirement is empty/None'

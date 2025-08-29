@@ -44,7 +44,7 @@ function Set-PIMEntraRolePolicy {
                 $acceptedValues = @("None", "Justification", "MultiFactorAuthentication", "Ticketing")
                 # Handle both arrays and comma-separated strings
                 $itemsToCheck = @()
-                $_ | ForEach-Object { 
+                $_ | ForEach-Object {
                     if ($_ -is [string] -and $_ -match ',') {
                         # Split comma-separated string and trim whitespace
                         $itemsToCheck += ($_ -split ',') | ForEach-Object { $_.Trim() }
@@ -67,7 +67,7 @@ function Set-PIMEntraRolePolicy {
                 $acceptedValues = @("None", "Justification", "MultiFactorAuthentication")
                 # Handle both arrays and comma-separated strings
                 $itemsToCheck = @()
-                $_ | ForEach-Object { 
+                $_ | ForEach-Object {
                     if ($_ -is [string] -and $_ -match ',') {
                         # Split comma-separated string and trim whitespace
                         $itemsToCheck += ($_ -split ',') | ForEach-Object { $_.Trim() }

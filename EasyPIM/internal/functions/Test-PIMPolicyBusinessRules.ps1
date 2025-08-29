@@ -85,7 +85,7 @@ function Test-PIMPolicyBusinessRules {
         }
     }
     
-    # Check ActiveAssignmentRequirement for MFA conflicts  
+    # Check ActiveAssignmentRequirement for MFA conflicts
     if ($PolicySettings.PSObject.Properties['ActiveAssignmentRequirement']) {
         $requirements = $PolicySettings.ActiveAssignmentRequirement
         

@@ -197,14 +197,12 @@ function Test-PIMPolicyDrift {
 
 					# Apply business rules validation using the internal function
 					# Pass the entire Expected settings as PSCustomObject to maintain property access
-					$policyForBusinessRules = [PSCustomObject]@{}
-					$Expected.PSObject.Properties | ForEach-Object { 
-						$policyForBusinessRules | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value 
-					}
-					$businessRuleResult = Test-PIMPolicyBusinessRules -PolicySettings $policyForBusinessRules -CurrentPolicy $Live -ApplyAdjustments
-					$hasBusinessRuleAdjustment = $businessRuleResult.HasChanges
-					
-					if ($hasBusinessRuleAdjustment) {
+				$policyForBusinessRules = [PSCustomObject]@{}
+				$Expected.PSObject.Properties | ForEach-Object {
+					$policyForBusinessRules | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value
+				}
+				$businessRuleResult = Test-PIMPolicyBusinessRules -PolicySettings $policyForBusinessRules -CurrentPolicy $Live -ApplyAdjustments
+				$hasBusinessRuleAdjustment = $businessRuleResult.HasChanges					if ($hasBusinessRuleAdjustment) {
 						$adjustedExp = $businessRuleResult.AdjustedSettings.$f
 						$adjustedExpNorm = Convert-RequirementValue -Value $adjustedExp
 						
