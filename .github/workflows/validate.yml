@@ -4,34 +4,79 @@
       - 'EasyPIM/**'
       - 'EasyPIM.Orchestrator/**'
       - 'shared/**'
+      - 'tests/**'
+      - 'build/**'
   pull_request:
     paths:
       - 'EasyPIM/**'
       - 'EasyPIM.Orchestrator/**'
       - 'shared/**'
+      - 'tests/**'
+      - 'build/**'
   workflow_dispatch:
 
 jobs:
+  # Detect which modules have changes
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      easypim: ${{ steps.changes.outputs.easypim }}
+      orchestrator: ${{ steps.changes.outputs.orchestrator }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            easypim:
+              - 'EasyPIM/**'
+              - 'shared/**'
+              - 'tests/**'
+              - 'build/**'
+            orchestrator:
+              - 'EasyPIM.Orchestrator/**'
+              - 'shared/**'
+              - 'tests/**'
+              - 'build/**'
+
   validate-easypim:
-    if: github.event_name == 'push' || github.event.pull_request.head.ref == 'EasyPIM' || contains(github.event.head_commit.modified, 'EasyPIM/') || contains(github.event.head_commit.modified, 'shared/')
+    needs: detect-changes
+    if: needs.detect-changes.outputs.easypim == 'true'
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
       - name: Install Prerequisites
         run: .\build\vsts-prerequisites.ps1
         shell: pwsh
-      - name: Validate EasyPIM Only
-        run: .\build\vsts-validate.ps1
+      - name: Validate EasyPIM Module
+        run: .\tests\pester.ps1 -Include "functions/*", "general/*", "Integration.Tests.ps1", "Import-ModuleChecks.Tests.ps1" -Output "Detailed" -Fast
         shell: pwsh
 
   validate-orchestrator:
-    if: github.event_name == 'push' || github.event.pull_request.head.ref == 'EasyPIM.Orchestrator' || contains(github.event.head_commit.modified, 'EasyPIM.Orchestrator/') || contains(github.event.head_commit.modified, 'shared/')
+    needs: detect-changes
+    if: needs.detect-changes.outputs.orchestrator == 'true'
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
       - name: Install Prerequisites
         run: .\build\vsts-prerequisites.ps1
         shell: pwsh
-      - name: Validate Orchestrator Only
-        run: .\build\vsts-validate.ps1
+      - name: Validate Orchestrator Module
+        run: .\tests\pester.ps1 -Include "orchestrator/*", "general/*", "Integration.BusinessRules.Tests.ps1" -Output "Detailed" -Fast
+        shell: pwsh
+
+  # Run all tests when workflow is manually triggered or when both modules are affected
+  validate-all:
+    needs: detect-changes
+    if: github.event_name == 'workflow_dispatch' || (needs.detect-changes.outputs.easypim == 'true' && needs.detect-changes.outputs.orchestrator == 'true')
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Prerequisites
+        run: .\build\vsts-prerequisites.ps1
+        shell: pwsh
+      - name: Validate All Modules
+        run: .\tests\pester.ps1 -Output "Detailed" -Fast
         shell: pwsh
