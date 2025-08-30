@@ -61,15 +61,15 @@ function New-EPOEasyPIMPolicies {
             $whatIfDetails = @()
             foreach ($policyDef in $Config.AzureRolePolicies) {
                 $resolvedPolicy = if ($policyDef.ResolvedPolicy) { $policyDef.ResolvedPolicy } else { $policyDef }
-                
+
                 # Check if this is a protected Azure role and add warning to WhatIf display
                 $protectedAzureRoles = @("Owner","User Access Administrator")
                 $isProtected = $protectedAzureRoles -contains $policyDef.RoleName
                 $protectedWarning = if ($isProtected) {
-                    if (-not $AllowProtectedRoles) { " [⚠️ PROTECTED - BLOCKED]" } 
+                    if (-not $AllowProtectedRoles) { " [⚠️ PROTECTED - BLOCKED]" }
                     else { " [⚠️ PROTECTED - OVERRIDE ENABLED]" }
                 } else { "" }
-                
+
                 $policyDetails = @(
                     "Role: '$($policyDef.RoleName)'$protectedWarning",
                     "Scope: '$($policyDef.Scope)'",
@@ -164,15 +164,15 @@ function New-EPOEasyPIMPolicies {
             $whatIfDetails = @()
             foreach ($policyDef in $Config.EntraRolePolicies) {
                 $policy = $policyDef.ResolvedPolicy; if (-not $policy) { $policy = $policyDef }
-                
+
                 # Check if this is a protected role and add warning to WhatIf display
                 $protectedRoles = @("Global Administrator","Privileged Role Administrator","Security Administrator","User Access Administrator")
                 $isProtected = $protectedRoles -contains $policyDef.RoleName
                 $protectedWarning = if ($isProtected) {
-                    if (-not $AllowProtectedRoles) { " [⚠️ PROTECTED - BLOCKED]" } 
+                    if (-not $AllowProtectedRoles) { " [⚠️ PROTECTED - BLOCKED]" }
                     else { " [⚠️ PROTECTED - OVERRIDE ENABLED]" }
                 } else { "" }
-                
+
                 $roleLabel = if ($policyDef.PSObject.Properties['_RoleNotFound'] -and $policyDef._RoleNotFound) { "Role: '$($policyDef.RoleName)' [NOT FOUND - SKIPPED]" } else { "Role: '$($policyDef.RoleName)'$protectedWarning" }
                 $policyDetails = @( $roleLabel )
                 if ($policy.PSObject.Properties['ActivationDuration'] -and $policy.ActivationDuration) { $policyDetails += "Activation Duration: $($policy.ActivationDuration)" } else { $policyDetails += "Activation Duration: Not specified" }

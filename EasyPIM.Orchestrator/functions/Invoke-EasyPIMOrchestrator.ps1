@@ -1,45 +1,32 @@
 <#
 .SYNOPSIS
 Invokes the EasyPIM end-to-end orchestration (policies, cleanup, assignments) with safety validation.
-
 .DESCRIPTION
 Loads a configuration (file or Key Vault secret), validates principals, (optionally) applies/validates role & group policies,
 performs cleanup (initial full reconcile or delta additive mode), and provisions assignments. Designed for progressive
 adoption using -WhatIf previews and an explicit destructive 'initial' mode.
-
 .PARAMETER ConfigFilePath
 Path to a JSON configuration file containing ProtectedUsers, PolicyTemplates, role policies, and Assignments blocks.
-
 .PARAMETER KeyVaultName
 Name of Azure Key Vault containing a secret that stores the JSON configuration (alternative to ConfigFilePath).
-
 .PARAMETER SecretName
 Name of the Key Vault secret that holds the JSON configuration.
-
 .PARAMETER TenantId
 Target Entra (Azure AD) tenant GUID. If omitted, attempts to use $env:tenantid.
-
 .PARAMETER SubscriptionId
 Target Azure subscription GUID for Azure Resource role policy/assignment operations. If omitted, attempts $env:subscriptionid.
-
 .PARAMETER Mode
 Assignment cleanup mode: 'delta' (add/update only) or 'initial' (destructive reconcile removing undeclared assignments, except ProtectedUsers).
-
 .PARAMETER Operations
 Filter which assignment domains (AzureRoles, EntraRoles, GroupRoles) to process. Default 'All'.
-
 .PARAMETER PolicyOperations
 Filter which policy domains to process. Default 'All'.
-
 .PARAMETER SkipAssignments
 Skip the assignment creation phase (useful for policy-only validation or cleanup-only scenarios).
-
 .PARAMETER SkipCleanup
 Skip cleanup (no removal / WouldRemove evaluation). Assignments still created if not skipped.
-
 .PARAMETER SkipPolicies
 Skip policy processing; existing policies are left untouched.
-
 .PARAMETER WouldRemoveExportPath
 Directory OR file path to export the full list of assignments that WOULD be removed during a -WhatIf run (or that WERE removed in a non -WhatIf initial run).
 Behavior:
@@ -48,28 +35,22 @@ Behavior:
 	* If the extension is '.csv', a CSV file (headers: PrincipalId,PrincipalName,RoleName,Scope,ResourceType,Mode) is produced; otherwise JSON.
 	* File is ALWAYS written even under -WhatIf to provide a tangible audit artifact (empty list => empty JSON array or header-only CSV).
 Use cases: change review, audit evidence, diffing consecutive previews, verifying ProtectedUsers coverage before destructive apply.
-
 .PARAMETER AllowProtectedRoles
-Allow policy changes to protected roles (Entra: Global Administrator, Privileged Role Administrator, Security Administrator, User Access Administrator; Azure: Owner, User Access Administrator). 
+Allow policy changes to protected roles (Entra: Global Administrator, Privileged Role Administrator, Security Administrator, User Access Administrator; Azure: Owner, User Access Administrator).
 WARNING: This bypasses critical security safeguards. Policy changes to these roles will be logged and require explicit confirmation.
 Use with extreme caution and only with proper authorization and change management processes.
-
 .EXAMPLE
 Invoke-EasyPIMOrchestrator -ConfigFilePath .\pim-config.json -TenantId $env:tenantid -SubscriptionId $env:subscriptionid -Mode initial -WhatIf -WouldRemoveExportPath .\LOGS
 Produces a preview (no changes) and writes a timestamped JSON file under .\LOGS listing every assignment that would be removed by an initial reconcile.
-
 .EXAMPLE
 Invoke-EasyPIMOrchestrator -ConfigFilePath .\pim-config.json -TenantId <tenant> -SubscriptionId <sub> -Mode initial -WhatIf -WouldRemoveExportPath .\preview.csv
 Same preview, but exports CSV (because extension is .csv) suitable for Excel review / sign-off.
-
 .EXAMPLE
 Invoke-EasyPIMOrchestrator -ConfigFilePath .\pim-config.json -TenantId <tenant> -SubscriptionId <sub> -AllowProtectedRoles -WhatIf
 Preview policy changes including protected roles (Global Administrator, Owner, etc.). Requires explicit confirmation when applied without -WhatIf.
 WARNING: Only use -AllowProtectedRoles with proper authorization and change management approval.
-
 .NOTES
 Always run destructive 'initial' mode with -WhatIf first; inspect summary and export file, adjust ProtectedUsers, then re-run without -WhatIf.
-
 .LINK
 https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator
 #>
@@ -82,59 +63,44 @@ function Invoke-EasyPIMOrchestrator {
 	param (
 		[Parameter(Mandatory = $true, ParameterSetName = 'KeyVault')]
 		[string]$KeyVaultName,
-
 		[Parameter(Mandatory = $true, ParameterSetName = 'KeyVault')]
 		[string]$SecretName,
-
 		[Parameter(Mandatory = $false)]
 		[string]$SubscriptionId,
-
 		[Parameter(Mandatory = $true, ParameterSetName = 'FilePath')]
 		[string]$ConfigFilePath,
-
 		[Parameter(Mandatory = $false)]
 		[ValidateSet("initial", "delta")]
 		[string]$Mode = "delta",
-
 		[Parameter(Mandatory = $false)]
 		[string]$TenantId,
-
 		[Parameter(Mandatory = $false)]
 		[ValidateSet("All", "AzureRoles", "EntraRoles", "GroupRoles")]
 		[string[]]$Operations = @("All"),
-
 		[Parameter(Mandatory = $false)]
 		[switch]$SkipAssignments,
-
 		[Parameter(Mandatory = $false)]
 		[switch]$SkipCleanup,
-
 		[Parameter(Mandatory = $false)]
 		[switch]$SkipPolicies,
-
 		[Parameter(Mandatory = $false)]
 	[ValidateSet("All", "AzureRoles", "EntraRoles", "GroupRoles")]
 	[string[]]$PolicyOperations = @("All"),
-
 		[Parameter(Mandatory = $false)]
 		[string]$WouldRemoveExportPath,
-
 		[Parameter(Mandatory = $false)]
 		[switch]$AllowProtectedRoles
 	)
-
 	# Non-gating ShouldProcess: still emits WhatIf message but always executes body for rich simulation output.
 	$null = $PSCmdlet.ShouldProcess("EasyPIM Orchestration lifecycle", "Execute")
 	# Normalize mode casing for internal logic (accepts initial/delta in any case)
 	$Mode = $Mode.ToLowerInvariant()
 	Write-SectionHeader -Message "Starting EasyPIM Orchestration (Mode: $Mode)"
-
 	# Display usage if no parameters are provided
 	if (-not $PSBoundParameters) {
 		Show-EasyPIMUsage
 		return
 	}
-
 	# Check Microsoft Graph authentication before proceeding
 	try {
 		$mgContext = Get-MgContext -ErrorAction SilentlyContinue
@@ -144,7 +110,6 @@ function Invoke-EasyPIMOrchestrator {
 			Write-Host "  Connect-MgGraph -Scopes 'RoleManagement.ReadWrite.Directory'" -ForegroundColor Green
 			throw "Microsoft Graph authentication required. Please run Connect-MgGraph first."
 		}
-
 		# Check if we have required Graph scopes
 		$requiredScopes = @('RoleManagement.ReadWrite.Directory')
 		$currentScopes = $mgContext.Scopes
@@ -154,9 +119,7 @@ function Invoke-EasyPIMOrchestrator {
 			Write-Host "  Connect-MgGraph -Scopes 'RoleManagement.ReadWrite.Directory'" -ForegroundColor Green
 			throw "Microsoft Graph requires RoleManagement.ReadWrite.Directory scope."
 		}
-
 		Write-Host "[AUTH] Microsoft Graph connection verified (Account: $($mgContext.Account))" -ForegroundColor Green
-
 		# Check Azure PowerShell authentication
 		$azContext = Get-AzContext -ErrorAction SilentlyContinue
 		if (-not $azContext) {
@@ -176,7 +139,6 @@ function Invoke-EasyPIMOrchestrator {
 		Write-Error "Authentication check failed: $($_.Exception.Message)"
 		return
 	}
-
 	try {
 		# 1. Load configuration
 		$config = if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
@@ -184,19 +146,16 @@ function Invoke-EasyPIMOrchestrator {
 		} else {
 			Get-EasyPIMConfiguration -ConfigFilePath $ConfigFilePath
 		}
-
 		# Session rule: prefer environment variables for TenantId / SubscriptionId when not explicitly supplied
 		if (-not $TenantId -or [string]::IsNullOrWhiteSpace($TenantId)) {
 			$TenantId = $env:tenantid
 			if ($TenantId) { Write-Host -Object "[INFO] Using TenantId from environment: $TenantId" -ForegroundColor DarkCyan } else { Write-Host -Object "[WARN] TenantId not provided and TENANTID env var is empty." -ForegroundColor Yellow }
 		}
-
 		# Propagate tenant/subscription to shared helpers
 		try {
 			$script:tenantID = $TenantId
 			Set-Variable -Scope Global -Name tenantID -Value $TenantId -Force
 		} catch {}
-
 		# Initialize subscription context EARLY for downstream helpers (Invoke-ARM, get-config)
 		if (-not $SubscriptionId -or [string]::IsNullOrWhiteSpace($SubscriptionId)) {
 			$SubscriptionId = $env:subscriptionid
@@ -215,17 +174,14 @@ function Invoke-EasyPIMOrchestrator {
 				Set-Variable -Scope Global -Name subscriptionID -Value $SubscriptionId -Force
 			}
 		} catch {}
-
 		# 2. Process and normalize config based on selected operations
 		$processedConfig = Initialize-EasyPIMAssignments -Config $config
-
 		# 2.1. Process policy configurations if present
 		$policyConfig = $null
 		# If user constrained Operations but did not explicitly set PolicyOperations, mirror the Operations filter for policies
 		if (-not $PSBoundParameters.ContainsKey('PolicyOperations') -and $PSBoundParameters.ContainsKey('Operations') -and ($Operations -notcontains 'All')) {
 			$PolicyOperations = $Operations
 		}
-
 		if (-not $SkipPolicies -and (
 			($config.PSObject.Properties['AzureRolePolicies'] -and $config.AzureRolePolicies) -or
 			($config.PSObject.Properties['EntraRolePolicies'] -and $config.EntraRolePolicies) -or
@@ -238,7 +194,6 @@ function Invoke-EasyPIMOrchestrator {
 		)) {
 			Write-Host -Object "[PROC] Processing policy configurations..." -ForegroundColor Cyan
 			$policyConfig = Initialize-EasyPIMPolicies -Config $config -PolicyOperations $PolicyOperations -AllowProtectedRoles:$AllowProtectedRoles
-
 			# Filter policy config based on selected policy operations
 			if ($PolicyOperations -notcontains "All") {
 				$filteredPolicyConfig = @{}
@@ -286,7 +241,6 @@ function Invoke-EasyPIMOrchestrator {
 		} elseif ($SkipPolicies) {
 			Write-Host -Object "[WARN] Skipping policy processing as requested by SkipPolicies parameter" -ForegroundColor Yellow
 		}
-
 		# Filter config based on selected operations
 		if ($Operations -notcontains "All") {
 			$filteredConfig = @{}
@@ -294,7 +248,6 @@ function Invoke-EasyPIMOrchestrator {
 			if ($processedConfig.PSObject.Properties.Name -contains 'ProtectedUsers') {
 				$filteredConfig.ProtectedUsers = $processedConfig.ProtectedUsers
 			}
-
 			# Filter the Assignments block based on selected operations
 			if ($processedConfig.PSObject.Properties.Name -contains 'Assignments') {
 				$filteredAssignments = [PSCustomObject]@{}
@@ -334,7 +287,6 @@ function Invoke-EasyPIMOrchestrator {
 					Write-Verbose "[Filter Debug] No matching assignment sections found, Assignments block will be empty"
 				}
 			}
-
 			foreach ($op in $Operations) {
 				switch ($op) {
 					"AzureRoles" {
@@ -353,7 +305,6 @@ function Invoke-EasyPIMOrchestrator {
 			}
 			$processedConfig = $filteredConfig
 		}
-
 	# Always perform principal & group validation before any policy or assignment operations
 		Write-Host -Object "[TEST] Validating principal and group IDs..." -ForegroundColor Cyan
 		$principalIds = New-Object -TypeName "System.Collections.Generic.HashSet[string]"
@@ -493,7 +444,6 @@ function Invoke-EasyPIMOrchestrator {
 			$checked = $validationResults.Count
 			Write-Host -Object "[OK] Principal validation passed ($checked principals checked, 0 missing)" -ForegroundColor Green
 		}
-
 		# Debug: show processed assignment counts (eligible/active) before policy & cleanup phases
 		try {
 			$dbgAzureElig = ($processedConfig.AzureRoles    | Measure-Object).Count
@@ -504,7 +454,6 @@ function Invoke-EasyPIMOrchestrator {
 			$dbgGroupAct  = ($processedConfig.GroupRolesActive | Measure-Object).Count
 			Write-Host -Object "[Orchestrator Debug] Assignment counts -> Azure(E:$dbgAzureElig A:$dbgAzureAct) Entra(E:$dbgEntraElig A:$dbgEntraAct) Groups(E:$dbgGroupElig A:$dbgGroupAct)" -ForegroundColor DarkCyan
 		} catch { Write-Host -Object "[Orchestrator Debug] Failed to compute assignment debug counts: $($_.Exception.Message)" -ForegroundColor DarkYellow }
-
 		# Re-affirm subscription context later as well, but avoid noisy logs
 		if (-not $SubscriptionId -or [string]::IsNullOrWhiteSpace($SubscriptionId)) {
 			$SubscriptionId = $env:subscriptionid
@@ -516,7 +465,6 @@ function Invoke-EasyPIMOrchestrator {
 				Set-Variable -Scope Global -Name subscriptionID -Value $SubscriptionId -Force
 			}
 		} catch {}
-
 		# 3. Process policies FIRST (skip if requested) - CRITICAL: Policies must be applied before assignments to ensure compliance
 		$policyResults = $null
 		if (-not $SkipPolicies -and $policyConfig -and (
@@ -526,25 +474,21 @@ function Invoke-EasyPIMOrchestrator {
 		)) {
 			# Policy functions no longer support a separate 'validate' mode. Always use 'delta'; rely on -WhatIf for preview.
 			$effectivePolicyMode = "delta"
-			
 			# Protected roles safety check: identify and confirm if protected roles are being modified
 			if ($AllowProtectedRoles -and -not $WhatIfPreference) {
 				$protectedEntraRoles = @("Global Administrator","Privileged Role Administrator","Security Administrator","User Access Administrator")
 				$protectedAzureRoles = @("Owner","User Access Administrator")
 				$protectedRolesFound = @()
-				
 				# Check for protected Entra roles
 				if ($policyConfig.ContainsKey('EntraRolePolicies') -and $policyConfig.EntraRolePolicies) {
 					$protectedEntraFound = $policyConfig.EntraRolePolicies | Where-Object { $protectedEntraRoles -contains $_.RoleName } | ForEach-Object { "Entra: $($_.RoleName)" }
 					if ($protectedEntraFound) { $protectedRolesFound += $protectedEntraFound }
 				}
-				
 				# Check for protected Azure roles
 				if ($policyConfig.ContainsKey('AzureRolePolicies') -and $policyConfig.AzureRolePolicies) {
 					$protectedAzureFound = $policyConfig.AzureRolePolicies | Where-Object { $protectedAzureRoles -contains $_.RoleName } | ForEach-Object { "Azure: $($_.RoleName)" }
 					if ($protectedAzureFound) { $protectedRolesFound += $protectedAzureFound }
 				}
-				
 				if ($protectedRolesFound.Count -gt 0) {
 					Write-Host ""
 					Write-Host "⚠️  SECURITY WARNING: Protected Role Policy Changes Detected" -ForegroundColor Red
@@ -559,7 +503,6 @@ function Invoke-EasyPIMOrchestrator {
 					Write-Host ""
 					Write-Host "This action will be logged for audit purposes." -ForegroundColor Cyan
 					Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Red
-					
 					$confirmation = Read-Host "Type 'CONFIRM-PROTECTED-OVERRIDE' to proceed"
 					if ($confirmation -ne 'CONFIRM-PROTECTED-OVERRIDE') {
 						throw "Protected role policy modification cancelled by user. Run without -AllowProtectedRoles to skip protected roles."
@@ -567,11 +510,9 @@ function Invoke-EasyPIMOrchestrator {
 					Write-Host "[SECURITY] User confirmed protected role policy override - proceeding with changes" -ForegroundColor Green
 				}
 			}
-			
 			# Convert hashtable to PSCustomObject for the policy function
 			$policyConfigObject = [PSCustomObject]$policyConfig
 			$policyResults = New-EPOEasyPIMPolicy -Config $policyConfigObject -TenantId $TenantId -SubscriptionId $SubscriptionId -PolicyMode $effectivePolicyMode -AllowProtectedRoles:$AllowProtectedRoles -WhatIf:$WhatIfPreference
-
 			if ($WhatIfPreference) {
 				Write-Host -Object "[OK] Policy dry-run completed (-WhatIf) - role policies appear correctly configured for assignment compliance" -ForegroundColor Green
 			} else {
@@ -593,7 +534,6 @@ function Invoke-EasyPIMOrchestrator {
 		} elseif ($SkipPolicies) {
 			Write-Warning -Message "Policy processing skipped - assignments may not comply with intended role policies"
 		}
-
 		# 4. Perform cleanup operations AFTER policy processing (skip if requested or if assignments are skipped)
 		$cleanupResults = if ($Operations -contains "All" -and -not $SkipCleanup -and -not $SkipAssignments) {
 			Write-Host -Object "[CLEANUP] Analyzing existing assignments against configuration..." -ForegroundColor Cyan
@@ -611,7 +551,6 @@ function Invoke-EasyPIMOrchestrator {
 			else { Write-Host -Object "[WARN] Skipping cleanup as specific operations were selected" -ForegroundColor Yellow }
 			$null
 		}
-
 		# High removal warning for initial mode
 		if ($cleanupResults -and $Mode -eq 'initial' -and -not $WhatIfPreference) {
 			$threshold = [int]([Environment]::GetEnvironmentVariable('EASYPIM_INITIAL_REMOVAL_WARN_THRESHOLD') | ForEach-Object -Process { if ($_ -as [int]) { $_ } else { 10 } })
@@ -621,18 +560,15 @@ function Invoke-EasyPIMOrchestrator {
 				Write-Host -Object "[WARN] Initial mode removed $removed assignments (threshold=$threshold). Verify this matches intent. Use delta mode for add/update-only runs." -ForegroundColor $color
 			}
 		}
-
 		# 5. Process assignments AFTER policies are confirmed (skip if requested)
 		if (-not $SkipAssignments) {
 			Write-Host -Object "[ASSIGN] Creating assignments with validated role policies..." -ForegroundColor Cyan
 			# New-EasyPIMAssignments does not itself expose -WhatIf; inner Invoke-ResourceAssignment handles simulation.
 			$assignmentResults = New-EasyPIMAssignments -Config $processedConfig -TenantId $TenantId -SubscriptionId $SubscriptionId
-
 			if ($assignmentResults) {
 				$totalAttempted = ($assignmentResults.Created + $assignmentResults.Failed + $assignmentResults.Skipped)
 				Write-Host -Object "[ASSIGN] Assignment processing complete: $totalAttempted total, $($assignmentResults.Created) created, $($assignmentResults.Failed) failed, $($assignmentResults.Skipped) skipped" -ForegroundColor Cyan
 			}
-
 			# After assignments, attempt deferred group policies if any
 			if (Get-Command -Name Invoke-EPODeferredGroupPolicies -ErrorAction SilentlyContinue) {
 				# Deferred group policies follow the same rule: always use 'delta' mode; -WhatIf controls preview only.
@@ -657,13 +593,11 @@ function Invoke-EasyPIMOrchestrator {
 			Write-Host -Object "[WARN] Skipping assignment creation as requested" -ForegroundColor Yellow
 			$assignmentResults = $null
 		}
-
 		# 6. Display summary
 	# Summary no longer distinguishes 'validate' policy mode; pass 'delta' and rely on -WhatIf for preview messaging upstream
 	$effectivePolicyMode = 'delta'
 	Write-EasyPIMSummary -CleanupResults $cleanupResults -AssignmentResults $assignmentResults -PolicyResults $policyResults -PolicyMode $effectivePolicyMode
 	Write-Host -Object "Mode semantics: delta = add/update only (no removals), initial = full reconcile (destructive)." -ForegroundColor Gray
-
 		Write-Host -Object "=== EasyPIM orchestration completed successfully ===" -ForegroundColor Green
 	}
 	catch {
