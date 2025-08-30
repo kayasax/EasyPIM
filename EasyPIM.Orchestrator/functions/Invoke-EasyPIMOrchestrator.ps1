@@ -143,19 +143,19 @@ function Invoke-EasyPIMOrchestrator {
 		# Initialize telemetry for this execution
 		$telemetryStartTime = Get-Date
 		$sessionId = [System.Guid]::NewGuid().ToString()
-		
+
 		# 1. Load configuration
 		$config = if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
 			Get-EasyPIMConfiguration -KeyVaultName $KeyVaultName -SecretName $SecretName
 		} else {
 			Get-EasyPIMConfiguration -ConfigFilePath $ConfigFilePath
 		}
-		
+
 		# Check telemetry consent on first run (only for file-based configs)
 		if ($PSCmdlet.ParameterSetName -ne 'KeyVault') {
 			Test-TelemetryConfiguration -ConfigPath $ConfigFilePath
 		}
-		
+
 		# Send startup telemetry (non-blocking)
 		$startupProperties = @{
 			"execution_mode" = if ($WhatIfPreference) { "WhatIf" } else { $Mode }
@@ -623,11 +623,11 @@ function Invoke-EasyPIMOrchestrator {
 	Write-EasyPIMSummary -CleanupResults $cleanupResults -AssignmentResults $assignmentResults -PolicyResults $policyResults -PolicyMode $effectivePolicyMode
 	Write-Host -Object "Mode semantics: delta = add/update only (no removals), initial = full reconcile (destructive)." -ForegroundColor Gray
 		Write-Host -Object "=== EasyPIM orchestration completed successfully ===" -ForegroundColor Green
-		
+
 		# Send completion telemetry (non-blocking)
 		$telemetryEndTime = Get-Date
 		$executionDuration = ($telemetryEndTime - $telemetryStartTime).TotalSeconds
-		
+
 		$completionProperties = @{
 			"execution_mode" = if ($WhatIfPreference) { "WhatIf" } else { $Mode }
 			"protected_roles_override" = $AllowProtectedRoles.IsPresent
@@ -636,7 +636,7 @@ function Invoke-EasyPIMOrchestrator {
 			"errors_encountered" = 0
 			"session_id" = $sessionId
 		}
-		
+
 		# Add result counts if available
 		if ($assignmentResults) {
 			$completionProperties["assignments_created"] = $assignmentResults.Created
@@ -652,7 +652,7 @@ function Invoke-EasyPIMOrchestrator {
 			$completionProperties["policies_successful"] = $policyResults.Summary.Successful
 			$completionProperties["policies_failed"] = $policyResults.Summary.Failed
 		}
-		
+
 		# Send completion telemetry (non-blocking, only for file-based configs)
 		if ($PSCmdlet.ParameterSetName -ne 'KeyVault') {
 			Send-TelemetryEvent -EventName "orchestrator_completion" -Properties $completionProperties -ConfigPath $ConfigFilePath
@@ -668,15 +668,15 @@ function Invoke-EasyPIMOrchestrator {
 				"error_type" = $_.Exception.GetType().Name
 				"session_id" = $sessionId
 			}
-			
+
 			if ($telemetryStartTime) {
 				$errorDuration = ((Get-Date) - $telemetryStartTime).TotalSeconds
 				$errorProperties["execution_duration_seconds"] = [math]::Round($errorDuration, 2)
 			}
-			
+
 			Send-TelemetryEvent -EventName "orchestrator_error" -Properties $errorProperties -ConfigPath $ConfigFilePath
 		}
-		
+
 	Write-Error -Message "[ERROR] An error occurred: $($_.Exception.Message)"
 		Write-Verbose -Message "Stack trace: $($_.ScriptStackTrace)"
 		throw

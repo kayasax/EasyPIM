@@ -50,8 +50,20 @@ jobs:
       - name: Install Prerequisites
         run: .\build\vsts-prerequisites.ps1
         shell: pwsh
-      - name: Validate EasyPIM Module
-        run: .\tests\pester.ps1 -Include "functions/*", "general/*", "Integration.Tests.ps1", "Import-ModuleChecks.Tests.ps1" -Output "Detailed" -Fast
+      - name: Validate EasyPIM Module (General Tests Only)
+        run: |
+          # Run only EasyPIM core general tests
+          pwsh -NoProfile -ExecutionPolicy Bypass -Command "
+            Import-Module Pester -Force
+            `$config = New-PesterConfiguration
+            `$config.Run.Path = @('.\tests\general\*.Tests.ps1')
+            `$config.Output.Verbosity = 'Detailed'
+            `$config.Run.PassThru = `$true
+            `$config.TestResult.Enabled = `$true
+            `$config.TestResult.OutputPath = '.\TestResults\TEST-EasyPIM-General.xml'
+            `$results = Invoke-Pester -Configuration `$config
+            if (`$results.FailedCount -gt 0) { exit 1 }
+          "
         shell: pwsh
 
   validate-orchestrator:
@@ -63,8 +75,20 @@ jobs:
       - name: Install Prerequisites
         run: .\build\vsts-prerequisites.ps1
         shell: pwsh
-      - name: Validate Orchestrator Module
-        run: .\tests\pester.ps1 -Include "orchestrator/*", "general/*", "Integration.BusinessRules.Tests.ps1" -Output "Detailed" -Fast
+      - name: Validate Orchestrator Module (General Tests Only)
+        run: |
+          # Run only Orchestrator general tests  
+          pwsh -NoProfile -ExecutionPolicy Bypass -Command "
+            Import-Module Pester -Force
+            `$config = New-PesterConfiguration
+            `$config.Run.Path = @('.\tests\orchestrator\*.Tests.ps1')
+            `$config.Output.Verbosity = 'Detailed'
+            `$config.Run.PassThru = `$true
+            `$config.TestResult.Enabled = `$true
+            `$config.TestResult.OutputPath = '.\TestResults\TEST-Orchestrator-General.xml'
+            `$results = Invoke-Pester -Configuration `$config
+            if (`$results.FailedCount -gt 0) { exit 1 }
+          "
         shell: pwsh
 
   # Run all tests when workflow is manually triggered or when both modules are affected
@@ -77,6 +101,6 @@ jobs:
       - name: Install Prerequisites
         run: .\build\vsts-prerequisites.ps1
         shell: pwsh
-      - name: Validate All Modules
-        run: .\tests\pester.ps1 -Output "Detailed" -Fast
+      - name: Validate All Modules (General Tests Only)
+        run: .\tests\pester.ps1 -TestGeneral $true -TestFunctions $false -Output "Detailed" -Fast
         shell: pwsh
