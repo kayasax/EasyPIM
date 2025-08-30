@@ -1,59 +1,92 @@
-| 2025-08-29 | **🔍 POLICY DRIFT ANALYSIS COMPLETED**: COMPREHENSIVE SUCCESS! Identified and resolved root cause of policy drift detection issues. **ISSUE**: Microsoft Entra PIM automatically removes MultiFactorAuthentication requirements when Authentication Context is enabled to prevent MfaAndAcrsConflict. Template specified 'MultiFactorAuthentication,Justification' + AuthContext but live policy showed 'Justification' only, causing false drift detection. **SOLUTION**: Enhanced Test-PIMPolicyDrift function with Authentication Context awareness - when MFA removal is detected due to AuthContext being enabled, it's treated as expected behavior, not drift. Added comprehensive documentation explaining Microsoft's behavior. **VERIFICATION**: Drift detection now returns 0 drift items for AuthContext scenarios while maintaining all other drift detection capabilities. Orchestrator execution and policy validation working perfectly! |
-| 2025-08-28 | **🎉 READY FOR PUBLICATION**: Version updates committed and ready for PowerShell Gallery! ✅ EasyPIM v2.0.0-beta1 (major milestone: module separation) ✅ EasyPIM.Orchestrator v1.0.0-beta1 (production-ready orchestration) ✅ Enhanced release notes with breaking changes and migration guidance ✅ Dependency management corrected ✅ Module manifests validated ✅ Changes pushed to trigger CI validation. **STATUS**: Ready for PowerShell Gallery publication with prerelease tags for community testing. Major architectural milestone achieved! |
-| 2025-08-28 | **🎉 COMPREHENSIVE SUCCESS COMMITTED**: ARM API fixes, parameter standardization, and orchestrator enhancements successfully committed (commit 703cb86)! ✅ All InvalidResourceType/NoRegisteredProviderFound errors resolved ✅ Query parameter formatting fixed ✅ API versions updated to preview ✅ Parameter naming standardized with backward compatibility ✅ Module dependencies corrected ✅ Policy validation system working perfectly ✅ Full orchestrator workflow executing successfully (7/7 policies, 9/9 assignments processed). **PRODUCTION READY**: EasyPIM.Orchestrator module hardening project officially COMPLETE and ready for merge! |
-| 2025-08-28 | **🔧 ARM API PARAMETER FIXES**: COMPREHENSIVE RESOLUTION! Fixed critical ARM API errors causing InvalidResourceType and NoRegisteredProviderFound failures. **ROOT CAUSE**: Query parameter formatting errors (double question marks: `?api-version=2020-10-01?$filter=...`) and incompatible API versions. **SOLUTION**: ✅ Fixed query parameter concatenation from `"?$filter="` to `"&$filter="` in Get-PIMAzureResourceActiveAssignment.ps1 ✅ Updated API versions from "2020-10-01" to "2020-10-01-preview" across Get-PIMAzureResourceActiveAssignment.ps1, Get-PIMAzureResourceEligibleAssignment.ps1, and Get-PIMAzureResourcePendingApproval.ps1 ✅ Parameter standardization completed with 'principalId' naming and 'assignee' alias for backward compatibility ✅ Module dependencies corrected with RequiredModules architecture. All Azure resource role assignment operations now execute successfully! |
-| 2025-08-28 | **🔧 MICROSOFT GRAPH SESSION FIX**: CRITICAL DISCOVERY! Found root cause of Microsoft Graph disconnections - the orchestrator module was using `Import-Module -Force` which force-reloads `Microsoft.Graph.Authentication` and disconnects existing sessions. Fixed by checking if EasyPIM module is already loaded before force-reloading, preserving user's Microsoft Graph authentication. This explains why users had to reconnect after importing the orchestrator module! |
-| 2025-08-28 | **🎯 COMPREHENSIVE SOLUTION IMPLEMENTED**: ✅ Added proactive policy validation that prevents ARM API 400 errors with clear user guidance ✅ Fixed validation.json PT8H→PT2H duration mismatch ✅ Enhanced error messages for policy conflicts ✅ Auto-configuration working perfectly. VALIDATION WORKS: Manual testing shows perfect "POLICY VALIDATION FAILED" messages when duration exceeds policy limits. Users now get actionable guidance BEFORE API failures. Ready for production use! |
-| 2025-08-28 | **✅ VALIDATION SUCCESS**: Implemented proactive policy validation that catches duration mismatches BEFORE ARM API calls! Function correctly validates PT8H request against PT2H policy limit with clear error: "POLICY VALIDATION FAILED: Active assignment duration 'PT8H' exceeds activation limit 'PT2H' for role 'Tag Contributor'". However, orchestrator still shows old ARM errors - need to investigate orchestrator code path differences. Manual function testing shows validation working perfectly. |
-| 2025-08-28 | **🔍 ROOT CAUSE IDENTIFIED**: Azure assignment failures are NOT module loading issues - they're policy validation failures! Tag Contributor policy allows max `PT2H` activation but assignment requests `PT8H`. The "principalID parameter not found" error message is misleading - the real issue is in ARM API 400 Bad Request due to duration policy conflicts. Need to align assignment durations with policy maximums or adjust policy templates. |
-| 2025-08-28 | **⚠️ AZURE ASSIGNMENT MODULE ISSUE**: After auto-configuration fix, Azure role assignments failing with "parameter cannot be found that matches parameter name 'principalID'" error. Issue appears to be module loading conflict - old function definitions cached in memory while new ones exist on disk. **SOLUTION**: Remove and re-import both EasyPIM and EasyPIM.Orchestrator modules to refresh function definitions. The principalID parameter exists in the files but PowerShell is seeing older cached versions. |
-| 2025-08-28 | **🤖 SMART AUTO-CONFIGURATION**: Implemented intelligent auto-configuration of permanent assignment flags! When MaximumEligibilityDuration or MaximumActiveAssignmentDuration are specified in policies, the system now automatically sets AllowPermanentEligibility=false and AllowPermanentActiveAssignment=false respectively. Users no longer need to manually specify both duration AND permanent flags - the system infers the correct settings and logs the auto-configuration. Added Set-AutoPermanentFlags helper function in Resolve-PolicyConfiguration for both template and inline policies. |
-| 2025-08-28 | **🎯 PT0S ROOT CAUSE IDENTIFIED**: Found the real issue! PT0S occurs when AllowPermanent*=true but MaximumDuration values are also specified. Per Microsoft Graph schema, maximumDuration field should be EXCLUDED when isExpirationRequired=false (permanent allowed). **SOLUTION**: Template should explicitly set AllowPermanentEligibility=false and AllowPermanentActiveAssignment=false when specifying duration limits. The issue was that current Azure config had permanent=true, template didn't override it, so durations were ignored and Azure defaulted to PT0S. Updated HighSecurity template in validation.json to properly control permanent assignment settings. |
-| 2025-08-27 | **🐛 PIM DURATION ISSUE FIXED**: Resolved critical bug causing PIM policies to set maximum durations to 00:00:00 (audit log issue). **ROOT CAUSE**: Policy resolution in Initialize-EasyPIMPolicies.ps1 was copying empty duration values from PolicyDefinition that overrode template defaults. **SOLUTION**: Modified Resolve-PolicyConfiguration to only copy non-empty values and properly merge template defaults. Enhanced PT0S prevention for MaximumEligibilityDuration to match MaximumActiveAssignmentDuration protection level. Templates now properly provide defaults for empty PolicyDefinition values. |
-| 2025-08-27 | **✅ CI PIPELINE FIXED**: Resolved GitHub Actions failures caused by broken YAML syntax in validate.yml workflow. Fixed indentation issues in paths arrays and job conditionals. CI should now run properly for orchestrator hardening branch. Remaining minor issues: UTF-8 BOM markers in some files and Test-PIMRolePolicy export cleanup needed. | 2025-08-27 | **� CI PIPELINE FIXED**: Resolved GitHub Actions failures caused by broken YAML syntax in validate.yml workflow. Fixed indentation issues in paths arrays and job conditionals. CI should now run properly for orchestrator hardening branch. Remaining minor issues: UTF-8 BOM markers in some files and Test-PIMRolePolicy export cleanup needed. |
-| 2025-08-27 | **�🔐 AUTHENTICATION CRISIS RESOLVED**: Major authentication issue fixed after user exhaustive testing session. **ROOT CAUSE**: Invoke-ARM functions in both core and orchestrator modules were not handling SecureString tokens properly from Get-AzAccessToken, causing 401 Unauthorized errors despite valid Azure context. **SOLUTION**: Enhanced both Invoke-ARM implementations to detect and convert SecureString tokens to plain text. **ORCHESTRATOR HARDENING**: Added comprehensive auth checks for both Microsoft Graph and Azure PowerShell with helpful error messages and connection guidance. **REPO CLEANUP**: Removed shared module directory and test files from root as requested. All changes committed and pushed to chore/orchestrator-hardening branch. |
-| 2025-08-27 | **🏗️ CRITICAL ARCHITECTURE LESSONS**: Major module architecture discoveries and fixes. **SHARED MODULE ELIMINATION**: Successfully removed shared module dependency as requested, implementing clean internal function duplication approach. **CRITICAL FUNCTION DISCOVERY**: Found that invoke-graph and Invoke-ARM functions were MISSING from core EasyPIM module but referenced throughout codebase - created these essential functions to restore module functionality. **PT0S PREVENTION COMPLETED**: Full implementation of zero-duration protection system with PT5M/P1D minimums across all assignment functions. **CLEAN ARCHITECTURE ACHIEVED**: EasyPIM.Orchestrator now works with internal function copies, no shared dependencies, proper module scoping. All systems tested and validated. |
-| 2025-08-27 | **🛡️ PT0S PREVENTION SYSTEM IMPLEMENTED**: Comprehensive protection against PT0S (zero duration) policy values that cause ExpirationRule failures. Added validation in Set-ActiveAssignment, Set-EligibilityAssignment, orchestrator policy functions, and CSV import functions. Uses PT5M minimum for active assignments and P1D for eligibility. All protection tested and working. |
-| 2025-08-27 | **🎯 CRITICAL DISCOVERY**: ExpirationRule validation failure root cause found! Issue was MaximumActiveAssignmentDuration=PT0S (zero duration) in role policy. Fixed by updating to P365D in Azure Portal. Enhanced error handling and diagnostics added to detect this scenario. |
-| 2025-08-11 | Step 13 (destructive reconcile) validated: safety preview, export, and AU skip logic confirmed. |
-# 🧠 AI Session Starter: Project Memory
+# 🧠 EasyPIM Session Starter
 
-This file serves as the persistent memory for the AI assistant across sessions in this workspace. It should be updated regularly to reflect the current state, goals, and progress of the project.
+## 📘### Current Work
+- ✅ **COMPLETED Issue #137**: Added `-AllowProtectedRoles` parameter to override protected roles with comprehensive safety framework
+- **Branch**: `feature/issue-137-protected-roles-override` 
+- **Status**: Implementation complete - ready for testing
+- **Achievement**: Full parameter flow with confirmation prompts, audit logging, and security warnings
+- **Next**: Test implementation and validate safety measures work correctly
+
+**Implementation Summary:**
+- ✅ Added `-AllowProtectedRoles` parameter to main orchestrator
+- ✅ Implemented parameter flow through entire function chain  
+- ✅ Added interactive confirmation with 'CONFIRM-PROTECTED-OVERRIDE' requirement
+- ✅ Enhanced audit logging with timestamps and Windows Event Log integration
+- ✅ Visual security warnings with clear risk messaging
+- ✅ Comprehensive help documentation with examples
+- ✅ Semantic parameter naming for better user experienceect Overview
+**EasyPIM** - PowerShell module for Microsoft Entra PIM management with two-module architecture:
+- **EasyPIM** (Core): Individual PIM functions, backup/restore, policies
+- **EasyPIM.Orchestrator**: Comprehensive configuration management via `Invoke-EasyPIMOrchestrator`
+
+**Current Status**: Production ready, stable releases on PowerShell Gallery
+
+## 🔧 Current Technical State
+
+### Versions
+- **EasyPIM Core**: v2.0.5 (stable) - published Aug 29, 2025
+- **EasyPIM.Orchestrator**: v1.0.6 (stable)
+
+### Recent CI/CD Improvements
+- ✅ **Gallery Version Checking**: Build scripts now fail-fast if version already exists
+- ✅ **Proactive Conflict Detection**: Prevents wasted CI cycles from version conflicts
+- ✅ **Systematic Reliability**: No more repeated pipeline failures
+
+### Architecture
+- **Module Split**: Core + Orchestrator with clean dependencies
+- **Build Process**: Flattened modules with UTF-8 BOM, Gallery version validation
+- **CI/CD**: GitHub Actions with tag-based publishing (core-v*, orchestrator-v*)
+
+## 📅 Recent Key Updates
+
+| Date | Update |
+|------|--------|
+| 2025-08-30 | **Issue #137**: Created branch `feature/issue-137-protected-roles-override` to implement -Force flag for overriding protected roles in orchestrator. Issue #138 confirmed resolved in v2.0.5. |
+| 2025-08-29 | **CI/CD Reliability**: Added proactive Gallery version checking to prevent repeated pipeline failures. Core bumped to v2.0.5. |
+| 2025-08-29 | **Documentation**: Updated Step-by-step Guide for module split architecture with installation and authentication guidance. |
+| 2025-08-28 | **Stable Release**: Promoted to stable versions, removed prerelease tags. Module separation milestone achieved. |
+| 2025-08-27 | **Architecture**: Module split completed with clean internal function duplication, no shared dependencies. |
+
+## 🎯 Immediate Context
+
+### Current Work
+- � **Active Issue**: #137 - Add `-Force` flag to override protected roles (Owner, User Access Administrator, Global Admin) in orchestrator
+- **Branch**: `feature/issue-137-protected-roles-override`
+- **Goal**: Allow initial tenant configuration and drift monitoring while maintaining safety warnings
+- **Scope**: Orchestrator module enhancement with user confirmation for risky operations### What Works
+- ✅ E2E business rules testing validates both modules
+- ✅ Gallery version checking prevents CI/CD conflicts
+- ✅ Build scripts generate proper flattened modules
+- ✅ Documentation updated for two-module architecture
+
+### Next Actions Available
+- [ ] Monitor CI/CD pipeline for core v2.0.5 publication
+- [ ] Update orchestrator version if needed
+- [ ] Continue development with reliable build process
+
+## 🧠 Assistant Memory
+
+### Key Technical Lessons
+- **Gallery Conflicts**: Always check version availability before building
+- **Module Loading**: Use explicit paths for development vs PSGallery versions
+- **Function Architecture**: All referenced functions must exist in module structure
+- **CI/CD Reliability**: Fail-fast approach saves development time
+
+### Development Pattern
+- Use `.\build\vsts-build.ps1` for core module builds with Gallery checking
+- Use `.\EasyPIM.Orchestrator\build\vsts-build-orchestrator.ps1` for orchestrator builds
+- Tag format: `core-vX.Y.Z` and `orchestrator-vX.Y.Z` for CI/CD triggers
+- Always validate locally before pushing tags
 
 ---
-
-## 📘 Project Overview
-
-**Project Name:** EasyPIM - PowerShell Module for Microsoft Entra PIM Management
-
-**Description:** A PowerShell module created to help manage Microsoft Entra Privileged Identity Management (PIM). Packed with more than 30 cmdlets, EasyPIM leverages the ARM and Graph APIs to configure PIM **Azure Resources**, **Entra Roles** and **groups** settings and assignments in a simple way.
-
-**Primary Goals:**
-- Provide comprehensive PIM management capabilities through PowerShell
-- Enable bulk operations and automation for PIM settings
-- Support export/import functionality for PIM policies
-- Maintain high code quality with PSScriptAnalyzer compliance
-- Support GitHub Actions CI/CD pipeline
-
-**Key Technologies / Tools:**
-- PowerShell 5.1+
-- Microsoft Graph API
-- Azure Resource Management (ARM) API
-- Pester for unit testing
-- PSScriptAnalyzer for code quality
-- GitHub Actions for CI/CD
-
-**Repository:**
-- Published on PowerShell Gallery: https://www.powershellgallery.com/packages/EasyPIM
-- Source code: https://github.com/kayasax/EasyPIM
-- **Current version: 1.9.4** 🚀
+*Last updated: 2025-08-29 - Streamlined for clarity and focus*
 
 ---
 
 ## 🧠 Assistant Memory
 
 **Current Understanding:**
-The EasyPIM module provides comprehensive PIM management capabilities. The project has a well-structured codebase with functions for Azure Resources, Entra Roles, and Groups. It includes export/import functionality, but there's currently a bug in the import process for Entra Role settings.
+The EasyPIM module provides comprehensive PIM management capabilities. The project has a well-structured codebase with functions for Azure Resources, Entra Roles, and Groups. It includes export/import functionality.
 
 **Known Constraints or Requirements:**
 - Must follow PowerShell best practices and pass PSScriptAnalyzer checks
@@ -153,15 +186,6 @@ The EasyPIM module provides comprehensive PIM management capabilities. The proje
 - **Orchestrator Module Verified**: Test-PIMEndpointDiscovery works correctly after all fixes
 - **Repository Status**: Clean and ready for production deployment
 
-**Technical Resolution Summary:**
-- ✅ PowerShell syntax validation: FIXED (duplicate function removed)
-- ✅ PSScriptAnalyzer BOM compliance: FIXED (UTF-8 BOM added to 6 files)
-- ✅ YAML workflow syntax: FIXED (indentation corrected in validate.yml)
-- ✅ Module functionality: VERIFIED (endpoint discovery works correctly)
-- ✅ All test suites: PASSING (6764/6764 tests successful)
-- All Pester tests (8122) passing after enhancements; analyzer clean.
-- Ready to begin Step 6: Azure role policy (inline) WhatIf validation using -SkipAssignments.
-
 ### Run Conventions (hard rules)
 - Always use environment variables for cloud context: `$env:TENANTID` and `$env:SUBSCRIPTIONID`. Do NOT use dummy IDs.
 - Prefer -WhatIf for validation unless the user explicitly asks to apply changes.
@@ -213,6 +237,7 @@ The EasyPIM module provides comprehensive PIM management capabilities. The proje
 
 | Date       | Summary of Update                                      |
 |------------|-------------------------------------------------------|
+| 2025-08-29 | **🚀 CI/CD RELIABILITY REVOLUTION**: Implemented systematic solution to prevent repeated PowerShell Gallery version conflicts that were causing pipeline frustration. ✅ **PROACTIVE VERSION CHECKING**: Added early Gallery conflict detection to both build scripts (core & orchestrator) using Find-Module - fails fast with clear guidance before any build investment ✅ **VERSION MANAGEMENT**: Bumped EasyPIM core from 2.0.4 → 2.0.5 after Gallery check caught existing version conflict ✅ **BUILD VALIDATION**: Confirmed new version checking works perfectly - build succeeded with "✅ Version 2.0.5 is available for publish" message ✅ **STABLE RELEASE**: Created and pushed tag core-v2.0.5 to trigger CI/CD publication ✅ **SYSTEMATIC IMPROVEMENT**: Replaced reactive "one-time fixes" with proactive fail-fast approach that saves development time and prevents future frustration. **KEY INSIGHT**: Gallery version conflicts now detected early in build process, eliminating wasted CI cycles and repeated pipeline failures! |
 | 2025-08-29 | **✅ PUBLICATION SUCCESS STRATEGY**: Resolved PowerShell Gallery "version already exists" error by implementing proper version management workflow. Added comprehensive building & publishing documentation to session starter with prerequisites, step-by-step procedures, common issues, and validation workflows. Bumped EasyPIM.Orchestrator from v1.0.3-beta1 to v1.0.4-beta1 and triggered workflow. Build script fixes from previous session (path corrections, Export-ModuleMember preservation) now properly validated. **STATUS**: Orchestrator v1.0.4-beta1 publishing in progress with corrected build process. |
 | 2025-01-25 | **✅ STRATEGIC PIVOT: STABLE RELEASE APPROACH**: After multiple attempts to resolve PowerShellGet prerelease dependency issues, implemented superior strategy: promote EasyPIM from v2.0.0-beta1 to v2.0.0 stable release. Removed Prerelease='beta1' from EasyPIM.psd1, updated orchestrator to depend on stable EasyPIM v2.0.0, removed -AllowPrerelease flags from build scripts, updated workflows to use stable versions. This eliminates all System.Version constraints and prerelease dependency resolution issues. Created core-v2.0.0 tag to trigger stable publication. Key insight: sometimes changing the problem is better than fighting the constraints. ARM API fixes remain. Clean, standard PowerShell Gallery publication approach. |
 | 2025-08-27 | **✅ ORCHESTRATOR HARDENING COMPLETED**: Implemented clean internal function duplication approach for EasyPIM.Orchestrator. Resolved InvalidRoleAssignmentRequest errors by fixing JSON structure in New-PIMEntraRoleActiveAssignment. Eliminated complex shared module loading in favor of simple internal function duplication (Write-SectionHeader, invoke-graph, Test-PrincipalExists, Initialize-EasyPIMPolicies, Get-PIMAzureEnvironmentEndpoint). Removed EasyPIM.Shared dependency from orchestrator manifest. Internal functions properly scoped within module (not globally accessible by design). All orchestrator public functions work correctly. Created GitHub Actions workflow to validate module loading in CI/CD environments. Branch `chore/orchestrator-hardening` ready for merge. |
@@ -272,15 +297,6 @@ The EasyPIM module provides comprehensive PIM management capabilities. The proje
 | 2025-08-19 | Follow-up: Simplified behavior. MFA is always removed when Authentication Context is enabled to avoid MfaAndAcrsConflict (no toggle). Branch `fix/issue-121-followup` updated. |
 
 ---
-
-## ✅ Next Steps
-
-**IMMEDIATE ACTIONS AVAILABLE:**
-- [ ] **Create Pull Request**: Create PR to merge the enhanced orchestrator feature to main
-- [ ] **Deploy v1.9.0**: Publish to PowerShell Gallery with full orchestrator capabilities
-- [ ] **Release Announcement**: Announce v1.9.0 with policy orchestrator features
-- [ ] **Integration Testing**: Test the feature in production PIM environments
-- [ ] **Update Documentation**: Integrate policy usage guide into main documentation
 
 ### Module Split (Core + Orchestrator) – Next Steps
 - [x] Phase 2: Move implementations to EasyPIM.Orchestrator; wrappers in Core
@@ -525,7 +541,3 @@ ModuleVersion = '2.0.2'    # In .psd1
 - Languages: PowerShell (~752kB), HTML (~1.6kB)
 - Latest GitHub Release: V1.1.0 (older than module manifest v1.9.2)
 
-Next steps:
-- Publish EasyPIM v1.9.2 to PowerShell Gallery (if not already)
-- Create GitHub Release v1.9.2 with release notes matching manifest
-- Update README badges/references if any version strings are stale

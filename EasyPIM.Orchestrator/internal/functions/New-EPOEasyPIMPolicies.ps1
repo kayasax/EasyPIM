@@ -32,7 +32,9 @@ function New-EPOEasyPIMPolicies {
         [string]$SubscriptionId,
         [Parameter(Mandatory=$false)]
         [ValidateSet('delta','initial')]
-        [string]$PolicyMode = 'delta'
+        [string]$PolicyMode = 'delta',
+        [Parameter(Mandatory=$false)]
+        [switch]$AllowProtectedRoles
     )
     Write-Verbose "Starting New-EPOEasyPIMPolicies in $PolicyMode mode"
     $results = @{
@@ -93,7 +95,7 @@ function New-EPOEasyPIMPolicies {
                     foreach ($policyDef in $Config.AzureRolePolicies) {
                         $results.Summary.TotalProcessed++
                         try {
-                            $policyResult = Set-EPOAzureRolePolicy -PolicyDefinition $policyDef -TenantId $TenantId -SubscriptionId $SubscriptionId -Mode $PolicyMode
+                            $policyResult = Set-EPOAzureRolePolicy -PolicyDefinition $policyDef -TenantId $TenantId -SubscriptionId $SubscriptionId -Mode $PolicyMode -AllowProtectedRoles:$AllowProtectedRoles
                             $results.AzureRolePolicies += $policyResult
                             if ($policyResult.Status -like "*Protected*") {
                                 $results.Summary.Skipped++
@@ -187,7 +189,7 @@ function New-EPOEasyPIMPolicies {
                     if ($policyDef.PSObject.Properties['_RoleNotFound'] -and $policyDef._RoleNotFound) { $results.EntraRolePolicies += [PSCustomObject]@{ RoleName = $policyDef.RoleName; Status = 'SkippedRoleNotFound'; Mode = $PolicyMode; Details = 'Role displayName not found during pre-validation' }; $results.Summary.Skipped++; continue }
                     $results.Summary.TotalProcessed++
                     try {
-                        $policyResult = Set-EPOEntraRolePolicy -PolicyDefinition $policyDef -TenantId $TenantId -Mode $PolicyMode
+                        $policyResult = Set-EPOEntraRolePolicy -PolicyDefinition $policyDef -TenantId $TenantId -Mode $PolicyMode -AllowProtectedRoles:$AllowProtectedRoles
                         $results.EntraRolePolicies += $policyResult
                         if ($policyResult.Status -like "*Protected*") {
                             $results.Summary.Skipped++

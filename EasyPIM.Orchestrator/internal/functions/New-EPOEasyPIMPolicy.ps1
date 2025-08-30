@@ -14,11 +14,14 @@ function New-EPOEasyPIMPolicy {
 
         [Parameter(Mandatory=$false)]
         [ValidateSet('delta','initial')]
-        [string]$PolicyMode = 'delta'
+        [string]$PolicyMode = 'delta',
+
+        [Parameter(Mandatory=$false)]
+        [switch]$AllowProtectedRoles
     )
 
     Write-Verbose "[Orchestrator] Delegating to New-EPOEasyPIMPolicies (mode: $PolicyMode)"
     $target = "Tenant $TenantId"
     $null = $PSCmdlet.ShouldProcess($target, "Apply policies")
-    return New-EPOEasyPIMPolicies -Config $Config -TenantId $TenantId -SubscriptionId $SubscriptionId -PolicyMode $PolicyMode -WhatIf:$WhatIfPreference
+    return New-EPOEasyPIMPolicies -Config $Config -TenantId $TenantId -SubscriptionId $SubscriptionId -PolicyMode $PolicyMode -AllowProtectedRoles:$AllowProtectedRoles -WhatIf:$WhatIfPreference
 }

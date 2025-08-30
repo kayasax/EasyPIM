@@ -49,6 +49,11 @@ Behavior:
 	* File is ALWAYS written even under -WhatIf to provide a tangible audit artifact (empty list => empty JSON array or header-only CSV).
 Use cases: change review, audit evidence, diffing consecutive previews, verifying ProtectedUsers coverage before destructive apply.
 
+.PARAMETER AllowProtectedRoles
+Allow policy changes to protected roles (Entra: Global Administrator, Privileged Role Administrator, Security Administrator, User Access Administrator; Azure: Owner, User Access Administrator). 
+WARNING: This bypasses critical security safeguards. Policy changes to these roles will be logged and require explicit confirmation.
+Use with extreme caution and only with proper authorization and change management processes.
+
 .EXAMPLE
 Invoke-EasyPIMOrchestrator -ConfigFilePath .\pim-config.json -TenantId $env:tenantid -SubscriptionId $env:subscriptionid -Mode initial -WhatIf -WouldRemoveExportPath .\LOGS
 Produces a preview (no changes) and writes a timestamped JSON file under .\LOGS listing every assignment that would be removed by an initial reconcile.
@@ -56,6 +61,11 @@ Produces a preview (no changes) and writes a timestamped JSON file under .\LOGS 
 .EXAMPLE
 Invoke-EasyPIMOrchestrator -ConfigFilePath .\pim-config.json -TenantId <tenant> -SubscriptionId <sub> -Mode initial -WhatIf -WouldRemoveExportPath .\preview.csv
 Same preview, but exports CSV (because extension is .csv) suitable for Excel review / sign-off.
+
+.EXAMPLE
+Invoke-EasyPIMOrchestrator -ConfigFilePath .\pim-config.json -TenantId <tenant> -SubscriptionId <sub> -AllowProtectedRoles -WhatIf
+Preview policy changes including protected roles (Global Administrator, Owner, etc.). Requires explicit confirmation when applied without -WhatIf.
+WARNING: Only use -AllowProtectedRoles with proper authorization and change management approval.
 
 .NOTES
 Always run destructive 'initial' mode with -WhatIf first; inspect summary and export file, adjust ProtectedUsers, then re-run without -WhatIf.
@@ -107,7 +117,10 @@ function Invoke-EasyPIMOrchestrator {
 	[string[]]$PolicyOperations = @("All"),
 
 		[Parameter(Mandatory = $false)]
-		[string]$WouldRemoveExportPath
+		[string]$WouldRemoveExportPath,
+
+		[Parameter(Mandatory = $false)]
+		[switch]$AllowProtectedRoles
 	)
 
 	# Non-gating ShouldProcess: still emits WhatIf message but always executes body for rich simulation output.
@@ -224,7 +237,7 @@ function Invoke-EasyPIMOrchestrator {
 			($config.PSObject.Properties['GroupRoles'] -and $config.GroupRoles.PSObject.Properties['Policies'] -and $config.GroupRoles.Policies)
 		)) {
 			Write-Host -Object "[PROC] Processing policy configurations..." -ForegroundColor Cyan
-			$policyConfig = Initialize-EasyPIMPolicies -Config $config -PolicyOperations $PolicyOperations
+			$policyConfig = Initialize-EasyPIMPolicies -Config $config -PolicyOperations $PolicyOperations -AllowProtectedRoles:$AllowProtectedRoles
 
 			# Filter policy config based on selected policy operations
 			if ($PolicyOperations -notcontains "All") {
@@ -513,9 +526,51 @@ function Invoke-EasyPIMOrchestrator {
 		)) {
 			# Policy functions no longer support a separate 'validate' mode. Always use 'delta'; rely on -WhatIf for preview.
 			$effectivePolicyMode = "delta"
+			
+			# Protected roles safety check: identify and confirm if protected roles are being modified
+			if ($AllowProtectedRoles -and -not $WhatIfPreference) {
+				$protectedEntraRoles = @("Global Administrator","Privileged Role Administrator","Security Administrator","User Access Administrator")
+				$protectedAzureRoles = @("Owner","User Access Administrator")
+				$protectedRolesFound = @()
+				
+				# Check for protected Entra roles
+				if ($policyConfig.ContainsKey('EntraRolePolicies') -and $policyConfig.EntraRolePolicies) {
+					$protectedEntraFound = $policyConfig.EntraRolePolicies | Where-Object { $protectedEntraRoles -contains $_.RoleName } | ForEach-Object { "Entra: $($_.RoleName)" }
+					if ($protectedEntraFound) { $protectedRolesFound += $protectedEntraFound }
+				}
+				
+				# Check for protected Azure roles
+				if ($policyConfig.ContainsKey('AzureRolePolicies') -and $policyConfig.AzureRolePolicies) {
+					$protectedAzureFound = $policyConfig.AzureRolePolicies | Where-Object { $protectedAzureRoles -contains $_.RoleName } | ForEach-Object { "Azure: $($_.RoleName)" }
+					if ($protectedAzureFound) { $protectedRolesFound += $protectedAzureFound }
+				}
+				
+				if ($protectedRolesFound.Count -gt 0) {
+					Write-Host ""
+					Write-Host "⚠️  SECURITY WARNING: Protected Role Policy Changes Detected" -ForegroundColor Red
+					Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Red
+					Write-Host "The following CRITICAL roles will have their policies modified:" -ForegroundColor Yellow
+					$protectedRolesFound | ForEach-Object { Write-Host "  • $_" -ForegroundColor White }
+					Write-Host ""
+					Write-Host "These changes could affect:" -ForegroundColor Yellow
+					Write-Host "  • Break-glass access procedures" -ForegroundColor White
+					Write-Host "  • Emergency administrative capabilities" -ForegroundColor White
+					Write-Host "  • Critical security role configurations" -ForegroundColor White
+					Write-Host ""
+					Write-Host "This action will be logged for audit purposes." -ForegroundColor Cyan
+					Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Red
+					
+					$confirmation = Read-Host "Type 'CONFIRM-PROTECTED-OVERRIDE' to proceed"
+					if ($confirmation -ne 'CONFIRM-PROTECTED-OVERRIDE') {
+						throw "Protected role policy modification cancelled by user. Run without -AllowProtectedRoles to skip protected roles."
+					}
+					Write-Host "[SECURITY] User confirmed protected role policy override - proceeding with changes" -ForegroundColor Green
+				}
+			}
+			
 			# Convert hashtable to PSCustomObject for the policy function
 			$policyConfigObject = [PSCustomObject]$policyConfig
-			$policyResults = New-EPOEasyPIMPolicy -Config $policyConfigObject -TenantId $TenantId -SubscriptionId $SubscriptionId -PolicyMode $effectivePolicyMode -WhatIf:$WhatIfPreference
+			$policyResults = New-EPOEasyPIMPolicy -Config $policyConfigObject -TenantId $TenantId -SubscriptionId $SubscriptionId -PolicyMode $effectivePolicyMode -AllowProtectedRoles:$AllowProtectedRoles -WhatIf:$WhatIfPreference
 
 			if ($WhatIfPreference) {
 				Write-Host -Object "[OK] Policy dry-run completed (-WhatIf) - role policies appear correctly configured for assignment compliance" -ForegroundColor Green

@@ -9,7 +9,10 @@ function Initialize-EasyPIMPolicies {
 
         [Parameter(Mandatory = $false)]
         [ValidateSet("All", "AzureRoles", "EntraRoles", "GroupRoles")]
-        [string[]]$PolicyOperations = @("All")
+        [string[]]$PolicyOperations = @("All"),
+
+        [Parameter(Mandatory = $false)]
+        [switch]$AllowProtectedRoles
     )
 
     Write-Verbose "Starting Initialize-EasyPIMPolicies (Orchestrator)"
