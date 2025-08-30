@@ -36,6 +36,11 @@ examples/
 # Session memory file (do not commit persistent AI session state)
 session_starter.md
 
+# PR description files (use .github/pull_request_templates/ for templates)
+PR-DESCRIPTION.md
+pr-description.md
+PULL_REQUEST_TEMPLATE.md
+
 # Local Pester cache / transient files
 tests/*.cache
 *.Coverage.xml
