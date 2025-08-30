@@ -151,8 +151,10 @@ function Invoke-EasyPIMOrchestrator {
 			Get-EasyPIMConfiguration -ConfigFilePath $ConfigFilePath
 		}
 		
-		# Check telemetry consent on first run
-		Test-TelemetryConfiguration -Config $config
+		# Check telemetry consent on first run (only for file-based configs)
+		if ($PSCmdlet.ParameterSetName -ne 'KeyVault') {
+			Test-TelemetryConfiguration -ConfigPath $ConfigFilePath
+		}
 		
 		# Send startup telemetry (non-blocking)
 		$startupProperties = @{
@@ -164,7 +166,10 @@ function Invoke-EasyPIMOrchestrator {
 			"skip_policies" = $SkipPolicies.IsPresent
 			"session_id" = $sessionId
 		}
-		Send-TelemetryEvent -EventName "orchestrator_startup" -Properties $startupProperties -Config $config
+		# Send startup telemetry (non-blocking, only for file-based configs)
+		if ($PSCmdlet.ParameterSetName -ne 'KeyVault') {
+			Send-TelemetryEvent -EventName "orchestrator_startup" -Properties $startupProperties -ConfigPath $ConfigFilePath
+		}
 		# Session rule: prefer environment variables for TenantId / SubscriptionId when not explicitly supplied
 		if (-not $TenantId -or [string]::IsNullOrWhiteSpace($TenantId)) {
 			$TenantId = $env:tenantid
@@ -648,11 +653,14 @@ function Invoke-EasyPIMOrchestrator {
 			$completionProperties["policies_failed"] = $policyResults.Summary.Failed
 		}
 		
-		Send-TelemetryEvent -EventName "orchestrator_completion" -Properties $completionProperties -Config $config
+		# Send completion telemetry (non-blocking, only for file-based configs)
+		if ($PSCmdlet.ParameterSetName -ne 'KeyVault') {
+			Send-TelemetryEvent -EventName "orchestrator_completion" -Properties $completionProperties -ConfigPath $ConfigFilePath
+		}
 	}
 	catch {
-		# Send error telemetry (non-blocking)
-		if ($config -and $sessionId) {
+		# Send error telemetry (non-blocking, only for file-based configs)
+		if ($PSCmdlet.ParameterSetName -ne 'KeyVault' -and $sessionId) {
 			$errorProperties = @{
 				"execution_mode" = if ($WhatIfPreference) { "WhatIf" } else { $Mode }
 				"protected_roles_override" = $AllowProtectedRoles.IsPresent
@@ -666,7 +674,7 @@ function Invoke-EasyPIMOrchestrator {
 				$errorProperties["execution_duration_seconds"] = [math]::Round($errorDuration, 2)
 			}
 			
-			Send-TelemetryEvent -EventName "orchestrator_error" -Properties $errorProperties -Config $config
+			Send-TelemetryEvent -EventName "orchestrator_error" -Properties $errorProperties -ConfigPath $ConfigFilePath
 		}
 		
 	Write-Error -Message "[ERROR] An error occurred: $($_.Exception.Message)"

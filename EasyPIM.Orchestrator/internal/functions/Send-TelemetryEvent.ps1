@@ -100,6 +100,8 @@ function Send-TelemetryEvent {
         $EnhancedProperties.os_version = Get-TelemetryOSVersion
         $EnhancedProperties.timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
         $EnhancedProperties.session_id = Get-TelemetrySessionId
+        # Add tenant identifier as property for easier dashboard filtering
+        $EnhancedProperties.tenant_id = $TenantIdentifier
 
         # Send to PostHog (non-blocking)
         Send-PostHogEvent -DistinctId $TenantIdentifier -EventName $EventName -Properties $EnhancedProperties
@@ -143,8 +145,8 @@ function Send-PostHogEvent {
     )
 
     # PostHog configuration (hardcoded for security and simplicity)
-    $PostHogProjectKey = "phc_Ww09QOvSbhitnkiXJFUoskwGxF9Q2Q0Xt9cfrXq8o5X"  # TODO: Replace with actual PostHog project key
-    $PostHogApiUrl = "https://app.posthog.com/capture/"
+    $PostHogProjectKey = "phc_witsM6gj8k6GOor3RUBiN7vUPId11R2LMShF8lTUcBD"
+    $PostHogApiUrl = "https://eu.posthog.com/capture/"
 
     # Prepare event payload
     $EventData = @{

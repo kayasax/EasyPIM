@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Updates the configuration file to disable telemetry collection.
-    This is a convenience function for users who want to opt-out of 
+    This is a convenience function for users who want to opt-out of
     anonymous usage statistics.
 
 .PARAMETER ConfigurationFile
@@ -24,23 +24,23 @@ function Disable-EasyPIMTelemetry {
         [Parameter(Mandatory = $true)]
         [string]$ConfigurationFile
     )
-    
+
     try {
         if (-not (Test-Path $ConfigurationFile)) {
             Write-Error "Configuration file not found: $ConfigurationFile"
             return
         }
-        
+
         $Config = Get-Content $ConfigurationFile -Raw | ConvertFrom-Json
-        
+
         # Ensure TelemetrySettings exists
         if (-not $Config.TelemetrySettings) {
             $Config | Add-Member -NotePropertyName "TelemetrySettings" -NotePropertyValue @{} -Force
         }
-        
+
         # Disable telemetry
         $Config.TelemetrySettings.ALLOW_TELEMETRY = $false
-        
+
         if ($PSCmdlet.ShouldProcess($ConfigurationFile, "Disable telemetry")) {
             $Config | ConvertTo-Json -Depth 10 | Set-Content $ConfigurationFile -Encoding UTF8
             Write-Host "✅ Telemetry disabled in $ConfigurationFile" -ForegroundColor Green

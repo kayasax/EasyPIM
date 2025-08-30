@@ -28,36 +28,36 @@ function Test-TelemetryConfiguration {
     param(
         [Parameter(Mandatory = $true)]
         [string]$ConfigPath,
-        
+
         [Parameter()]
         [switch]$Silent
     )
-    
+
     try {
         if (-not (Test-Path $ConfigPath)) {
             Write-Verbose "Configuration file not found: $ConfigPath"
             return $false
         }
-        
+
         $ConfigContent = Get-Content $ConfigPath -Raw -ErrorAction SilentlyContinue
         if (-not $ConfigContent) {
             Write-Verbose "Could not read configuration file"
             return $false
         }
-        
+
         $Config = $ConfigContent | ConvertFrom-Json -ErrorAction SilentlyContinue
         if (-not $Config) {
             Write-Verbose "Invalid JSON in configuration file"
             return $false
         }
-        
+
         # Check if telemetry settings exist
         if (-not $Config.TelemetrySettings) {
             if ($Silent) {
                 Write-Verbose "No telemetry settings found, silent mode - defaulting to disabled"
                 return $false
             }
-            
+
             # First run - prompt for telemetry consent
             Write-Host ""
             Write-Host "📊 Help Improve EasyPIM" -ForegroundColor Cyan
@@ -76,20 +76,22 @@ function Test-TelemetryConfiguration {
             Write-Host "Learn more: " -NoNewline -ForegroundColor White
             Write-Host "https://github.com/kayasax/EasyPIM/blob/main/TELEMETRY.md" -ForegroundColor Blue
             Write-Host ""
-            
+
             $TelemetryChoice = Read-Host "Enable anonymous telemetry? (y/N)"
-            
+
             # Add telemetry settings to configuration
             $TelemetryEnabled = ($TelemetryChoice -eq 'y' -or $TelemetryChoice -eq 'Y')
-            
+
             $Config | Add-Member -NotePropertyName "TelemetrySettings" -NotePropertyValue @{
                 ALLOW_TELEMETRY = $TelemetryEnabled
             } -Force
-            
+
             # Save updated configuration
             try {
-                $Config | ConvertTo-Json -Depth 10 | Set-Content -Path $ConfigPath -Encoding UTF8
-                
+                # Always save telemetry preferences, even in WhatIf mode
+                # This is a one-time user consent that should persist across runs
+                $Config | ConvertTo-Json -Depth 10 | Set-Content -Path $ConfigPath -Encoding UTF8 -WhatIf:$false
+
                 if ($TelemetryEnabled) {
                     Write-Host ""
                     Write-Host "✅ Anonymous telemetry enabled. Thank you for helping improve EasyPIM!" -ForegroundColor Green
@@ -104,10 +106,10 @@ function Test-TelemetryConfiguration {
             catch {
                 Write-Warning "Could not save telemetry preference to configuration file: $($_.Exception.Message)"
             }
-            
+
             return $TelemetryEnabled
         }
-        
+
         # Return current telemetry setting
         return [bool]$Config.TelemetrySettings.ALLOW_TELEMETRY
     }
