@@ -4,7 +4,6 @@
 
 ## 🚀 Major Release: EasyPIM v2.0 & Orchestrator v1.0
 
-**📢 NEW: v2.0.0-beta1 Available for Testing!**
 - 🎯 **Major architectural milestone**: Complete module separation
 - 🔧 **ARM API compatibility fixes**: Resolves InvalidResourceType errors  
 - 🛡️ **Enhanced policy validation**: Proactive error detection with clear guidance
@@ -14,8 +13,8 @@
 **Beta Installation:**
 ```pwsh
 # Install both modules for complete functionality
-Install-Module -Name EasyPIM -AllowPrerelease          # v2.0.0-beta1
-Install-Module -Name EasyPIM.Orchestrator -AllowPrerelease  # v1.0.0-beta1
+Install-Module -Name EasyPIM 
+Install-Module -Name EasyPIM.Orchestrator 
 ```
 
 ⚠️ **Breaking Changes in v2.0**: Parameter `assignee` renamed to `principalId` (alias provided for compatibility)
