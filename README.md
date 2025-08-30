@@ -12,7 +12,7 @@ Packed with more than 50 cmdlets, EasyPIM leverages the ARM and Graph APIs compl
 - 🔧 **ARM API compatibility fixes**: Resolves InvalidResourceType errors  
 - 🛡️ **Enhanced policy validation**: Proactive error detection with clear guidance
 - 📏 **Parameter standardization**: Consistent naming with backward compatibility
-- 🏗️ **Production-ready orchestrator**: Feature-complete v1.0.0-beta1
+- 🏗️ **Production-ready orchestrator**
 
 ⚠️ **Breaking Changes in v2.0**: Parameter `assignee` renamed to `principalId` (alias provided for compatibility)
 
@@ -99,11 +99,11 @@ New-PIMEntraRoleActiveAssignment -tenantID $tenantID -rolename "testrole" -princ
 More samples available in the [documentation](https://github.com/kayasax/EasyPIM/wiki/Documentation)
 
 ## Module split and migration
-- The following commands moved into the EasyPIM.Orchestrator module:
-    - Invoke-EasyPIMOrchestrator
-    - Test-PIMPolicyDrift
-    - Test-PIMEndpointDiscovery
-- After installing EasyPIM.Orchestrator, import it to access these commands. Any legacy shims in the core module will emit guidance and forward where applicable.
+- The following commands moved into the EasyPIM.Orchestrator module:  
+    - Invoke-EasyPIMOrchestrator  
+    - Test-PIMPolicyDrift  
+    - Test-PIMEndpointDiscovery  
+- After installing EasyPIM.Orchestrator, import it to access these commands. Any legacy shims in the core module will emit guidance and forward where applicable.  
 
 
 ## Documentation
@@ -113,8 +113,8 @@ More samples available in the [documentation](https://github.com/kayasax/EasyPIM
 Discover how EasyPIM answers to common challenges [Use cases](https://github.com/kayasax/EasyPIM/wiki/Use-Cases)
 
 ## Contributors
-- **Loïc MICHEL** - Original author and maintainer
-- **Chase Dafnis** - Multi-cloud / Azure environment support
+- **Loïc MICHEL** - Original author and maintainer  
+- **Chase Dafnis** - Multi-cloud / Azure environment support  
 
 ## Requirement
 * Az.Accounts module
