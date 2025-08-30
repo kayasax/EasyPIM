@@ -2,6 +2,16 @@
 
 A safe, step-by-step plan to exercise the orchestrator and policies in a real tenant. Each step includes a minimal JSON and a preview (-WhatIf) run before applying.
 
+## Module Architecture Overview
+
+EasyPIM is now split into two complementary modules:
+
+- **EasyPIM** (Core Module): Provides individual PIM management functions for backup, restore, policy configuration, and assignment management. Use this for targeted operations and building custom scripts.
+
+- **EasyPIM.Orchestrator**: Provides comprehensive configuration management through `Invoke-EasyPIMOrchestrator`, policy drift detection, and end-to-end workflows. This module depends on the core EasyPIM module.
+
+This guide focuses on the orchestrator workflows, but individual core functions can be used independently for specific tasks.
+
 ## Table of Contents
 
 1. [Step 0 — Backup current policies (once)](#step-0)
@@ -28,8 +38,38 @@ A safe, step-by-step plan to exercise the orchestrator and policies in a real te
 
 - TenantId and SubscriptionId for the target environment
 - Principal Object IDs (Users/Groups/Service Principals) to test with
-- EasyPIM module installed and authenticated context
+- **EasyPIM modules installed and authenticated context:**
+  - `EasyPIM` (core module) - provides backup, individual role management, and policy functions
+  - `EasyPIM.Orchestrator` - provides orchestration capabilities (`Invoke-EasyPIMOrchestrator`)
 - Path for your config file, e.g., `C:\Config\pim-config.json`
+
+### Module Installation
+
+```powershell
+# Install both modules from PowerShell Gallery
+Install-Module -Name EasyPIM -Scope CurrentUser
+Install-Module -Name EasyPIM.Orchestrator -Scope CurrentUser
+
+# Import modules (orchestrator automatically imports core as dependency)
+Import-Module EasyPIM.Orchestrator
+```
+
+**Note:** The `EasyPIM.Orchestrator` module depends on the core `EasyPIM` module and will automatically import it. You can work with individual PIM functions using the core module alone, or use the orchestrator for comprehensive configuration management.
+
+### Authentication Setup
+
+Before running any commands, establish authenticated sessions:
+
+```powershell
+# Connect to Microsoft Graph (required for Entra ID PIM operations)
+Connect-MgGraph -Scopes "RoleManagement.ReadWrite.Directory"
+
+# Connect to Azure (required for Azure resource PIM operations)
+Connect-AzAccount
+Set-AzContext -SubscriptionId "<your-subscription-id>"
+```
+
+**Note:** The orchestrator includes automatic connection checks and will prompt if authentication is missing.
 
 Tip: Keep one file and replace/append sections as you move through steps.
 
@@ -38,6 +78,8 @@ Tip: Keep one file and replace/append sections as you move through steps.
 ## Step 0 — Backup current policies (once)
 
 > **Note:** This step may take up to an hour depending on the number of roles and policies in your tenant.
+
+> **Note:** Backup functions (`Backup-PIMEntraRolePolicy`, `Backup-PIMAzureResourcePolicy`) are provided by the core `EasyPIM` module.
 
 > By default, `Backup-PIMAzureResourcePolicy` works at the subscription level. If you want to back up policies at a different scope, you can use the `-scope` parameter instead of `-subscriptionID`.
 
@@ -229,7 +271,7 @@ Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId
 > **Deprecated:** The `EntraRolePolicies` array with `PolicySource`/`PolicyFile` is a legacy import pattern and will be removed in a future release. Prefer the nested `EntraRoles.Policies` block with `Template` or inline properties for new configurations.
 
 
-You can export an Entra role policy to CSV using `Export-PIMEntraRolePolicy`. This is useful for backup, migration, or editing policies outside the orchestrator. You can also use custom roles (e.g., `testrole`) for this process.
+You can export an Entra role policy to CSV using `Export-PIMEntraRolePolicy` (from the core `EasyPIM` module). This is useful for backup, migration, or editing policies outside the orchestrator. You can also use custom roles (e.g., `testrole`) for this process.
 
 Example export command:
 
@@ -1392,6 +1434,8 @@ Instead of repeating full blocks, reference the template and (if needed) overrid
 
 Goal: Verify that live policies match your declared configuration and catch out-of-band changes. Run this after Step 14 and after any apply to ensure compliance.
 
+**Note:** `Test-PIMPolicyDrift` is provided by the `EasyPIM.Orchestrator` module.
+
 What this does:
 - Compares effective Entra/Azure role policies to your JSON-defined expectations
 - Highlights differences per rule (enablement, durations, notifications, approvals, authentication context)
@@ -1559,10 +1603,13 @@ jobs:
       - name: (Optional) Azure CLI version
         run: az version
 
-      - name: Import EasyPIM module and run orchestrator
+      - name: Import EasyPIM modules and run orchestrator
         shell: pwsh
         run: |
-          Import-Module ./EasyPIM/EasyPIM.psd1 -Force -Verbose
+          # Install required modules from PowerShell Gallery
+          Install-Module -Name EasyPIM -Force -Scope CurrentUser
+          Install-Module -Name EasyPIM.Orchestrator -Force -Scope CurrentUser
+          Import-Module EasyPIM.Orchestrator -Force -Verbose
           $apply = ('${{ github.event.inputs.apply }}' -eq 'true')
           $common = @('-KeyVaultName', $env:KEYVAULT_NAME, '-SecretName', $env:SECRET_NAME, '-TenantId', $env:TENANT_ID, '-SubscriptionId', $env:SUBSCRIPTION_ID, '-Mode', 'delta')
           if (-not $apply) { $common += '-WhatIf' }

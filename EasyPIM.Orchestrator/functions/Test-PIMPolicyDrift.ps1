@@ -111,6 +111,19 @@ function Test-PIMPolicyDrift {
 
 	function Get-ResolvedPolicyObject { param([Parameter(Mandatory)][object]$Policy); if ($Policy.PSObject.Properties['ResolvedPolicy'] -and $Policy.ResolvedPolicy) { return $Policy.ResolvedPolicy }; return $Policy }
 
+	# Protected role definitions (consistent with orchestrator logic)
+	$protectedEntraRoles = @("Global Administrator","Privileged Role Administrator","Security Administrator","User Access Administrator")
+	$protectedAzureRoles = @("Owner","User Access Administrator")
+
+	function Test-IsProtectedRole {
+		param([string]$RoleName, [string]$Type)
+		switch ($Type) {
+			'EntraRole' { return $protectedEntraRoles -contains $RoleName }
+			'AzureRole' { return $protectedAzureRoles -contains $RoleName }
+			default { return $false }
+		}
+	}
+
 	$expectedAzure=@(); $expectedEntra=@(); $expectedGroup=@(); $templates=@{}
 	if ($json.PSObject.Properties['PolicyTemplates']) {
 	foreach ($t in ($json.PolicyTemplates | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name)) { $templates[$t] = $json.PolicyTemplates.$t }
@@ -206,7 +219,7 @@ function Test-PIMPolicyDrift {
 				if ($hasBusinessRuleAdjustment) {
 					$adjustedExp = $businessRuleResult.AdjustedSettings.$f
 					$adjustedExpNorm = Convert-RequirementValue -Value $adjustedExp
-						
+
 						if ($adjustedExpNorm -eq $liveNorm) {
 							# This is expected behavior due to business rules, not drift
 							if ($businessRuleResult.Conflicts -and $businessRuleResult.Conflicts.Count -gt 0) {
@@ -251,7 +264,14 @@ function Test-PIMPolicyDrift {
 			if ($null -ne $liveApproverCount -and $liveApproverCount -ne $ApproverCountExpected) { $differences += "ApproversCount: expected=$ApproverCountExpected actual=$liveApproverCount" }
 		}
 		if ($differences.Count -gt 0) { $script:driftCount++; $status='Drift' } else { $status='Match' }
-	$script:results += [pscustomobject]@{ Type=$Type; Name=$Name; Target=$ExtraId; Status=$status; Differences=($differences -join '; ') }
+		
+		# Add protected role indicator to the name display
+		$displayName = $Name
+		if (Test-IsProtectedRole -RoleName $Name -Type $Type) {
+			$displayName = "$Name [⚠️ PROTECTED]"
+		}
+		
+		$script:results += [pscustomobject]@{ Type=$Type; Name=$displayName; Target=$ExtraId; Status=$status; Differences=($differences -join '; ') }
 	}
 
 	if ($expectedAzure.Count -gt 0 -and -not $SubscriptionId) {

@@ -32,7 +32,9 @@ function New-EPOEasyPIMPolicies {
         [string]$SubscriptionId,
         [Parameter(Mandatory=$false)]
         [ValidateSet('delta','initial')]
-        [string]$PolicyMode = 'delta'
+        [string]$PolicyMode = 'delta',
+        [Parameter(Mandatory=$false)]
+        [switch]$AllowProtectedRoles
     )
     Write-Verbose "Starting New-EPOEasyPIMPolicies in $PolicyMode mode"
     $results = @{
@@ -59,8 +61,17 @@ function New-EPOEasyPIMPolicies {
             $whatIfDetails = @()
             foreach ($policyDef in $Config.AzureRolePolicies) {
                 $resolvedPolicy = if ($policyDef.ResolvedPolicy) { $policyDef.ResolvedPolicy } else { $policyDef }
+
+                # Check if this is a protected Azure role and add warning to WhatIf display
+                $protectedAzureRoles = @("Owner","User Access Administrator")
+                $isProtected = $protectedAzureRoles -contains $policyDef.RoleName
+                $protectedWarning = if ($isProtected) {
+                    if (-not $AllowProtectedRoles) { " [⚠️ PROTECTED - BLOCKED]" }
+                    else { " [⚠️ PROTECTED - OVERRIDE ENABLED]" }
+                } else { "" }
+
                 $policyDetails = @(
-                    "Role: '$($policyDef.RoleName)'",
+                    "Role: '$($policyDef.RoleName)'$protectedWarning",
                     "Scope: '$($policyDef.Scope)'",
                     "Activation Duration: $($resolvedPolicy.ActivationDuration)",
                     "MFA Required: $(if ($resolvedPolicy.ActivationRequirement -match 'MFA') { 'Yes' } else { 'No' })",
@@ -93,7 +104,7 @@ function New-EPOEasyPIMPolicies {
                     foreach ($policyDef in $Config.AzureRolePolicies) {
                         $results.Summary.TotalProcessed++
                         try {
-                            $policyResult = Set-EPOAzureRolePolicy -PolicyDefinition $policyDef -TenantId $TenantId -SubscriptionId $SubscriptionId -Mode $PolicyMode
+                            $policyResult = Set-EPOAzureRolePolicy -PolicyDefinition $policyDef -TenantId $TenantId -SubscriptionId $SubscriptionId -Mode $PolicyMode -AllowProtectedRoles:$AllowProtectedRoles
                             $results.AzureRolePolicies += $policyResult
                             if ($policyResult.Status -like "*Protected*") {
                                 $results.Summary.Skipped++
@@ -153,7 +164,16 @@ function New-EPOEasyPIMPolicies {
             $whatIfDetails = @()
             foreach ($policyDef in $Config.EntraRolePolicies) {
                 $policy = $policyDef.ResolvedPolicy; if (-not $policy) { $policy = $policyDef }
-                $roleLabel = if ($policyDef.PSObject.Properties['_RoleNotFound'] -and $policyDef._RoleNotFound) { "Role: '$($policyDef.RoleName)' [NOT FOUND - SKIPPED]" } else { "Role: '$($policyDef.RoleName)'" }
+
+                # Check if this is a protected role and add warning to WhatIf display
+                $protectedRoles = @("Global Administrator","Privileged Role Administrator","Security Administrator","User Access Administrator")
+                $isProtected = $protectedRoles -contains $policyDef.RoleName
+                $protectedWarning = if ($isProtected) {
+                    if (-not $AllowProtectedRoles) { " [⚠️ PROTECTED - BLOCKED]" }
+                    else { " [⚠️ PROTECTED - OVERRIDE ENABLED]" }
+                } else { "" }
+
+                $roleLabel = if ($policyDef.PSObject.Properties['_RoleNotFound'] -and $policyDef._RoleNotFound) { "Role: '$($policyDef.RoleName)' [NOT FOUND - SKIPPED]" } else { "Role: '$($policyDef.RoleName)'$protectedWarning" }
                 $policyDetails = @( $roleLabel )
                 if ($policy.PSObject.Properties['ActivationDuration'] -and $policy.ActivationDuration) { $policyDetails += "Activation Duration: $($policy.ActivationDuration)" } else { $policyDetails += "Activation Duration: Not specified" }
                 $requirements = @(); if ($policy.PSObject.Properties['ActivationRequirement'] -and $policy.ActivationRequirement) { if ($policy.ActivationRequirement -match 'MultiFactorAuthentication' -or $policy.ActivationRequirement -match 'MFA') { $requirements += 'MultiFactorAuthentication' }; if ($policy.ActivationRequirement -match 'Justification') { $requirements += 'Justification' } }
@@ -187,7 +207,7 @@ function New-EPOEasyPIMPolicies {
                     if ($policyDef.PSObject.Properties['_RoleNotFound'] -and $policyDef._RoleNotFound) { $results.EntraRolePolicies += [PSCustomObject]@{ RoleName = $policyDef.RoleName; Status = 'SkippedRoleNotFound'; Mode = $PolicyMode; Details = 'Role displayName not found during pre-validation' }; $results.Summary.Skipped++; continue }
                     $results.Summary.TotalProcessed++
                     try {
-                        $policyResult = Set-EPOEntraRolePolicy -PolicyDefinition $policyDef -TenantId $TenantId -Mode $PolicyMode
+                        $policyResult = Set-EPOEntraRolePolicy -PolicyDefinition $policyDef -TenantId $TenantId -Mode $PolicyMode -AllowProtectedRoles:$AllowProtectedRoles
                         $results.EntraRolePolicies += $policyResult
                         if ($policyResult.Status -like "*Protected*") {
                             $results.Summary.Skipped++

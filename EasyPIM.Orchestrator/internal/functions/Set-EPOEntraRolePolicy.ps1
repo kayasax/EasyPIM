@@ -12,16 +12,42 @@ function Set-EPOEntraRolePolicy {
         [Parameter(Mandatory = $true)]
         [string]$TenantId,
         [Parameter(Mandatory = $true)]
-        [string]$Mode
+        [string]$Mode,
+        [Parameter(Mandatory = $false)]
+        [switch]$AllowProtectedRoles
     )
 
     Write-Verbose "[Orchestrator] Applying Entra role policy for $($PolicyDefinition.RoleName)"
 
     $protectedRoles = @("Global Administrator","Privileged Role Administrator","Security Administrator","User Access Administrator")
     if ($protectedRoles -contains $PolicyDefinition.RoleName) {
-        Write-Warning "[WARNING] PROTECTED ROLE: '$($PolicyDefinition.RoleName)' is a critical role. Policy changes are blocked for security."
-        Write-Host "[PROTECTED] Protected role '$($PolicyDefinition.RoleName)' - policy change blocked" -ForegroundColor Yellow
-        return @{ RoleName = $PolicyDefinition.RoleName; Status = "Protected (No Changes)"; Mode = $Mode; Details = "Role is protected from policy changes for security reasons" }
+        if (-not $AllowProtectedRoles) {
+            Write-Warning "[WARNING] PROTECTED ROLE: '$($PolicyDefinition.RoleName)' is a critical role. Policy changes are blocked for security."
+            Write-Host "[PROTECTED] Protected role '$($PolicyDefinition.RoleName)' - policy change blocked (use -AllowProtectedRoles to override)" -ForegroundColor Yellow
+            return @{ RoleName = $PolicyDefinition.RoleName; Status = "Protected (No Changes)"; Mode = $Mode; Details = "Role is protected from policy changes for security reasons. Use -AllowProtectedRoles to override." }
+        } else {
+            Write-Warning "[SECURITY] OVERRIDE: Allowing policy changes to protected Entra role '$($PolicyDefinition.RoleName)'. This action will be logged for audit purposes."
+            Write-Host "[SECURITY] PROTECTED ROLE OVERRIDE: Proceeding with policy changes to '$($PolicyDefinition.RoleName)' as requested" -ForegroundColor Red
+            
+            # Enhanced audit logging for protected role modifications
+            $auditInfo = @{
+                Timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffK"
+                Action = "ProtectedRoleOverride"
+                RoleType = "Entra"
+                RoleName = $PolicyDefinition.RoleName
+                TenantId = $TenantId
+                User = $env:USERNAME
+                Context = $env:USERDOMAIN
+                Mode = $Mode
+                PolicyChanges = $PolicyDefinition | ConvertTo-Json -Depth 5 -Compress
+            }
+            Write-Verbose "[AUDIT] Protected role override: $($auditInfo | ConvertTo-Json -Depth 3 -Compress)"
+            try {
+                Write-EventLog -LogName "Application" -Source "EasyPIM" -EventId 4002 -EntryType Warning -Message "Protected Entra role policy override: $($PolicyDefinition.RoleName) by $($env:USERNAME)" -ErrorAction SilentlyContinue
+            } catch {
+                Write-Verbose "[AUDIT] Could not write to Windows Event Log: $($_.Exception.Message)"
+            }
+        }
     }
 
     # Validate approvers before calling public API to avoid InvalidPolicy
