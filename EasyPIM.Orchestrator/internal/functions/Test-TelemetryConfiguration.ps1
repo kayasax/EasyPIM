@@ -20,7 +20,7 @@
     Checks telemetry settings and prompts if needed
 
 .NOTES
-    Author: Loic MICHEL
+    Author: Loïc MICHEL
     Privacy: Defaults to disabled, requires explicit user consent
 #>
 function Test-TelemetryConfiguration {
@@ -60,8 +60,8 @@ function Test-TelemetryConfiguration {
 
             # First run - prompt for telemetry consent
             Write-Host ""
-            Write-Host "[i] Help Improve EasyPIM" -ForegroundColor Cyan
-            Write-Host "=================================================================" -ForegroundColor DarkGray
+            Write-Host "📊 Help Improve EasyPIM" -ForegroundColor Cyan
+            Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor DarkGray
             Write-Host ""
             Write-Host "EasyPIM can collect anonymous usage statistics to help improve the tool:" -ForegroundColor White
             Write-Host "  • Execution metrics (success rates, performance)" -ForegroundColor Gray
@@ -69,9 +69,9 @@ function Test-TelemetryConfiguration {
             Write-Host "  • Error rates and categories (to identify issues)" -ForegroundColor Gray
             Write-Host ""
             Write-Host "Privacy Protection:" -ForegroundColor Green
-            Write-Host "  [x] Tenant ID is encrypted (SHA256) - never sent in clear text" -ForegroundColor Green
-            Write-Host "  [x] No personal information (names, emails, roles) is collected" -ForegroundColor Green
-            Write-Host "  [x] No sensitive PIM data or configuration details are transmitted" -ForegroundColor Green
+            Write-Host "  ✓ Tenant ID is encrypted (SHA256) - never sent in clear text" -ForegroundColor Green
+            Write-Host "  ✓ No personal information (names, emails, roles) is collected" -ForegroundColor Green
+            Write-Host "  ✓ No sensitive PIM data or configuration details are transmitted" -ForegroundColor Green
             Write-Host ""
             Write-Host "Learn more: " -NoNewline -ForegroundColor White
             Write-Host "https://github.com/kayasax/EasyPIM/blob/main/TELEMETRY.md" -ForegroundColor Blue
