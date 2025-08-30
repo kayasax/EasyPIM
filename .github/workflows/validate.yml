@@ -77,11 +77,27 @@ jobs:
         shell: pwsh
       - name: Validate Orchestrator Module (General Tests Only)
         run: |
-          # Run only Orchestrator general tests  
+          # Run orchestrator-specific tests (check multiple possible locations)
           pwsh -NoProfile -ExecutionPolicy Bypass -Command "
             Import-Module Pester -Force
             `$config = New-PesterConfiguration
-            `$config.Run.Path = @('.\tests\orchestrator\*.Tests.ps1')
+            # Check for orchestrator tests in different locations
+            `$testPaths = @()
+            if (Test-Path '.\tests\orchestrator\*.Tests.ps1') { `$testPaths += '.\tests\orchestrator\*.Tests.ps1' }
+            if (Test-Path '.\tests\functions\*orchestrator*.tests.ps1') { `$testPaths += '.\tests\functions\*orchestrator*.tests.ps1' }
+            if (`$testPaths.Count -eq 0) {
+              Write-Host 'No orchestrator-specific tests found, running basic module validation'
+              # Basic module import test
+              Import-Module '.\EasyPIM.Orchestrator\EasyPIM.Orchestrator.psd1' -Force
+              `$commands = Get-Command -Module EasyPIM.Orchestrator
+              if (`$commands.Count -eq 0) { 
+                Write-Error 'No commands exported from EasyPIM.Orchestrator module'
+                exit 1 
+              }
+              Write-Host 'EasyPIM.Orchestrator module loaded successfully with `$(`$commands.Count) commands'
+              exit 0
+            }
+            `$config.Run.Path = `$testPaths
             `$config.Output.Verbosity = 'Detailed'
             `$config.Run.PassThru = `$true
             `$config.TestResult.Enabled = `$true
