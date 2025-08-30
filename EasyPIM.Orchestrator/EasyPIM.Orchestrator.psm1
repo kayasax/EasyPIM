@@ -81,7 +81,8 @@ if (-not $isLocalDevelopment -and -not $env:EASYPIM_NO_VERSION_CHECK) {
 $localFunctionFiles = @(
 	(Join-Path $PSScriptRoot 'functions/Invoke-EasyPIMOrchestrator.ps1'),
 	(Join-Path $PSScriptRoot 'functions/Test-PIMPolicyDrift.ps1'),
-	(Join-Path $PSScriptRoot 'functions/Test-PIMEndpointDiscovery.ps1')
+	(Join-Path $PSScriptRoot 'functions/Test-PIMEndpointDiscovery.ps1'),
+	(Join-Path $PSScriptRoot 'functions/Disable-EasyPIMTelemetry.ps1')
 )
 foreach ($f in $localFunctionFiles) { if (Test-Path $f) { . $f } }
 
@@ -92,7 +93,8 @@ foreach ($f in $localFunctionFiles) { if (Test-Path $f) { . $f } }
 Export-ModuleMember -Function @(
 	'Invoke-EasyPIMOrchestrator',
 	'Test-PIMPolicyDrift',
-	'Test-PIMEndpointDiscovery'
+	'Test-PIMEndpointDiscovery',
+	'Disable-EasyPIMTelemetry'
 )
 
 } finally {

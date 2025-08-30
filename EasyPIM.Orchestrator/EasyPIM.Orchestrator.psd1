@@ -20,7 +20,8 @@
     FunctionsToExport = @(
         'Invoke-EasyPIMOrchestrator',
         'Test-PIMPolicyDrift',
-        'Test-PIMEndpointDiscovery'
+        'Test-PIMEndpointDiscovery',
+        'Disable-EasyPIMTelemetry'
     )
     AliasesToExport   = @()
     CmdletsToExport   = @()

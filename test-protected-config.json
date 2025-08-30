@@ -1,0 +1,24 @@
+﻿{
+  "ProtectedUsers": [
+    "00000000-0000-0000-0000-000000000001"
+  ],
+  "EntraRoles": {
+    "Policies": {
+      "Global Administrator": {
+        "ActivationDuration": "PT2H",
+        "ActivationRequirement": "MultiFactorAuthentication,Justification",
+        "ApprovalRequired": false
+      }
+    }
+  },
+  "AzureRoles": {
+    "Policies": {
+      "Owner": {
+        "Scope": "/subscriptions/test-subscription-id",
+        "ActivationDuration": "PT1H",
+        "ActivationRequirement": "MultiFactorAuthentication",
+        "ApprovalRequired": false
+      }
+    }
+  }
+}

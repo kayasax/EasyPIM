@@ -140,12 +140,31 @@ function Invoke-EasyPIMOrchestrator {
 		return
 	}
 	try {
+		# Initialize telemetry for this execution
+		$telemetryStartTime = Get-Date
+		$sessionId = [System.Guid]::NewGuid().ToString()
+		
 		# 1. Load configuration
 		$config = if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
 			Get-EasyPIMConfiguration -KeyVaultName $KeyVaultName -SecretName $SecretName
 		} else {
 			Get-EasyPIMConfiguration -ConfigFilePath $ConfigFilePath
 		}
+		
+		# Check telemetry consent on first run
+		Test-TelemetryConfiguration -Config $config
+		
+		# Send startup telemetry (non-blocking)
+		$startupProperties = @{
+			"execution_mode" = if ($WhatIfPreference) { "WhatIf" } else { $Mode }
+			"protected_roles_override" = $AllowProtectedRoles.IsPresent
+			"config_source" = if ($PSCmdlet.ParameterSetName -eq 'KeyVault') { "KeyVault" } else { "File" }
+			"skip_assignments" = $SkipAssignments.IsPresent
+			"skip_cleanup" = $SkipCleanup.IsPresent
+			"skip_policies" = $SkipPolicies.IsPresent
+			"session_id" = $sessionId
+		}
+		Send-TelemetryEvent -EventName "orchestrator_startup" -Properties $startupProperties -Config $config
 		# Session rule: prefer environment variables for TenantId / SubscriptionId when not explicitly supplied
 		if (-not $TenantId -or [string]::IsNullOrWhiteSpace($TenantId)) {
 			$TenantId = $env:tenantid
@@ -599,8 +618,57 @@ function Invoke-EasyPIMOrchestrator {
 	Write-EasyPIMSummary -CleanupResults $cleanupResults -AssignmentResults $assignmentResults -PolicyResults $policyResults -PolicyMode $effectivePolicyMode
 	Write-Host -Object "Mode semantics: delta = add/update only (no removals), initial = full reconcile (destructive)." -ForegroundColor Gray
 		Write-Host -Object "=== EasyPIM orchestration completed successfully ===" -ForegroundColor Green
+		
+		# Send completion telemetry (non-blocking)
+		$telemetryEndTime = Get-Date
+		$executionDuration = ($telemetryEndTime - $telemetryStartTime).TotalSeconds
+		
+		$completionProperties = @{
+			"execution_mode" = if ($WhatIfPreference) { "WhatIf" } else { $Mode }
+			"protected_roles_override" = $AllowProtectedRoles.IsPresent
+			"execution_duration_seconds" = [math]::Round($executionDuration, 2)
+			"success" = $true
+			"errors_encountered" = 0
+			"session_id" = $sessionId
+		}
+		
+		# Add result counts if available
+		if ($assignmentResults) {
+			$completionProperties["assignments_created"] = $assignmentResults.Created
+			$completionProperties["assignments_failed"] = $assignmentResults.Failed
+			$completionProperties["assignments_skipped"] = $assignmentResults.Skipped
+		}
+		if ($cleanupResults) {
+			$removed = if ($cleanupResults.PSObject.Properties.Name -contains 'RemovedCount') { $cleanupResults.RemovedCount } else { $cleanupResults.Removed }
+			$completionProperties["assignments_removed"] = $removed
+		}
+		if ($policyResults -and $policyResults.Summary) {
+			$completionProperties["policies_processed"] = $policyResults.Summary.TotalProcessed
+			$completionProperties["policies_successful"] = $policyResults.Summary.Successful
+			$completionProperties["policies_failed"] = $policyResults.Summary.Failed
+		}
+		
+		Send-TelemetryEvent -EventName "orchestrator_completion" -Properties $completionProperties -Config $config
 	}
 	catch {
+		# Send error telemetry (non-blocking)
+		if ($config -and $sessionId) {
+			$errorProperties = @{
+				"execution_mode" = if ($WhatIfPreference) { "WhatIf" } else { $Mode }
+				"protected_roles_override" = $AllowProtectedRoles.IsPresent
+				"success" = $false
+				"error_type" = $_.Exception.GetType().Name
+				"session_id" = $sessionId
+			}
+			
+			if ($telemetryStartTime) {
+				$errorDuration = ((Get-Date) - $telemetryStartTime).TotalSeconds
+				$errorProperties["execution_duration_seconds"] = [math]::Round($errorDuration, 2)
+			}
+			
+			Send-TelemetryEvent -EventName "orchestrator_error" -Properties $errorProperties -Config $config
+		}
+		
 	Write-Error -Message "[ERROR] An error occurred: $($_.Exception.Message)"
 		Write-Verbose -Message "Stack trace: $($_.ScriptStackTrace)"
 		throw
