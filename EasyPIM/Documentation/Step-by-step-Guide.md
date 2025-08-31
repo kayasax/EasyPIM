@@ -17,11 +17,11 @@ This guide focuses on the orchestrator workflows, but individual core functions 
 1. [Step 0 — Backup current policies (once)](#step-0)
 2. [Step 1 — Minimal config: ProtectedUsers only](#step-1)
 3. [Step 2 — Entra role policy (inline)](#step-2)
-4. [Step 3 — Entra role policy (template)](#step-3)
+4. [Step 3 — Entra role policy (template + 🆕 template + inline override)](#step-3)
 5. [Step 4 — Entra role policy (file/CSV, legacy import) (DEPRECATED)](#step-4)
 6. [Step 5 — Entra role assignments (multiple assignments per role supported)](#step-5)
 7. [Step 6 — Azure role policy (inline; Scope is required)](#step-6)
-8. [Step 7 — Azure role policy (template)](#step-7)
+8. [Step 7 — Azure role policy (template + 🆕 template + inline override)](#step-7)
 9. [Step 8 — (Optional / Deprecated) Azure role policy via CSV file import](#step-8)
 10. [Step 9 — Azure assignments (1 Eligible + 1 Active)](#step-9)
 11. [Step 10 — Optional: Groups (Policies + Assignments)](#step-10)
@@ -31,7 +31,7 @@ This guide focuses on the orchestrator workflows, but individual core functions 
 15. [Step 14 — Comprehensive policy validation (all options)](#step-14)
 16. [Step 15 — Detect policy drift with Test-PIMPolicyDrift](#step-15)
 17. [Step 16 — (Optional) CI/CD automation (GitHub Actions + Key Vault)](#step-16)
-17. [Appendix — Tips & Safety Gates](#appendix)
+18. [Appendix — Tips & Safety Gates](#appendix)
 
 
 ## Prerequisites
@@ -201,6 +201,41 @@ Example override (template → inline):
 ```
 
 Tip: Keep the number of distinct templates small; too many templates = implicit inline sprawl.
+
+### 🆕 NEW in v1.1.0: Template + Inline Override Support
+
+The orchestrator now supports combining templates with inline property overrides! This provides the best of both worlds: template consistency with targeted customization.
+
+**Template + Override Example:**
+```jsonc
+{
+  "EntraRoles": {
+    "Policies": {
+      "Global Administrator": {
+        "Template": "HighSecurity",           // Base template provides most settings
+        "ActivationDuration": "PT1H",        // Override: shorter than template's PT2H
+        "MaximumEligibilityDuration": "P60D" // Override: shorter than template's P90D
+        // All other HighSecurity properties (ApprovalRequired, Approvers, etc.) remain unchanged
+      },
+      "Exchange Administrator": {
+        "Template": "Standard",               // Base template
+        "ApprovalRequired": true,             // Override: add approval requirement
+        "Approvers": [
+          { "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "description": "Exchange Admins" }
+        ]
+      }
+    }
+  }
+}
+```
+
+**Benefits:**
+- **Consistency**: Most properties inherit from the template
+- **Flexibility**: Override only the properties that need customization
+- **Maintainability**: Template changes still propagate to non-overridden properties
+- **Backward Compatibility**: Existing template-only and inline-only configurations continue to work
+
+**Available for all policy types:** EntraRoles, AzureRoles, and GroupRoles all support template + override patterns.
 
 Write pim-config.json
 
@@ -679,6 +714,25 @@ Option B (append Tag Contributor):
 }
 ```
 
+### 🆕 Option C: Template + Inline Override (NEW in v1.1.0)
+```jsonc
+{
+  "AzureRoles": {
+    "Policies": {
+      "Contributor": {
+        "Scope": "/subscriptions/<sub-guid>",
+        "Template": "HighSecurity",           // Base template
+        "ActivationDuration": "PT30M",       // Override: shorter than template
+        "MaximumActiveAssignmentDuration": "PT8H"  // Override: limit active time
+        // All other HighSecurity properties (ApprovalRequired, etc.) remain from template
+      }
+    }
+  }
+}
+```
+
+This approach gives you the security baseline of HighSecurity template while customizing activation and assignment durations for the high-privilege Contributor role.
+
 Preview (policies only)
 
 ```powershell
@@ -1028,6 +1082,33 @@ Appendable fragment (paste just above the final closing brace of your existing J
 ```
 
 Result: cleaner reuse; future tweaks centralized.
+
+### 🆕 10.4 Template + Inline Override (NEW in v1.1.0)
+
+For groups that need most template properties but with specific customizations:
+
+```jsonc
+{
+  "GroupRoles": {
+    "Policies": {
+      "HighSecurityGroup": {
+        "Member": {
+          "Template": "GroupStandard",        // Base template
+          "ActivationDuration": "PT2H",      // Override: shorter than template's PT4H
+          "ApprovalRequired": true           // Override: add approval requirement
+        },
+        "Owner": {
+          "Template": "GroupStandard",       // Base template
+          "ActivationDuration": "PT1H",     // Override: even shorter for owners
+          "MaximumEligibilityDuration": "P30D"  // Override: shorter eligibility period
+        }
+      }
+    }
+  }
+}
+```
+
+This approach lets you maintain consistency with the template while customizing security requirements for sensitive groups.
 
 NOTE: Deprecated formats (`GroupPolicies` array or nested `Policies.Groups`) still load with a warning; migrate to `GroupRoles.Policies` for forward compatibility.
 

@@ -8,6 +8,9 @@ function Initialize-EasyPIMPolicies {
         [PSCustomObject]$Config,
 
         [Parameter(Mandatory = $false)]
+        [hashtable]$PolicyTemplates = @{},
+
+        [Parameter(Mandatory = $false)]
         [ValidateSet("All", "AzureRoles", "EntraRoles", "GroupRoles")]
         [string[]]$PolicyOperations = @("All"),
 
@@ -20,14 +23,14 @@ function Initialize-EasyPIMPolicies {
     try {
         $processedConfig = @{}
 
-        # Initialize policy templates if they exist
-        $policyTemplates = @{}
+        # Initialize policy templates - merge parameter and config templates
+        $policyTemplates = $PolicyTemplates.Clone()
         if ($Config.PSObject.Properties['PolicyTemplates'] -and $Config.PolicyTemplates) {
             foreach ($templateName in $Config.PolicyTemplates.PSObject.Properties.Name) {
                 $policyTemplates[$templateName] = $Config.PolicyTemplates.$templateName
             }
-            Write-Verbose "Found $($policyTemplates.Keys.Count) policy templates"
         }
+        Write-Verbose "Found $($policyTemplates.Keys.Count) policy templates"
 
         $processAzure  = ($PolicyOperations -contains 'All' -or $PolicyOperations -contains 'AzureRoles')
         $processEntra  = ($PolicyOperations -contains 'All' -or $PolicyOperations -contains 'EntraRoles')
@@ -41,6 +44,13 @@ function Initialize-EasyPIMPolicies {
                 $policyContent = $Config.EntraRoles.Policies.$roleName
                 if ($policyContent.PSObject.Properties['Template'] -and $policyContent.Template) {
                     $policyDefinition = [PSCustomObject]@{ RoleName = $roleName; PolicySource = 'template'; Template = $policyContent.Template }
+                    
+                    # 🆕 Copy any override properties from policyContent (excluding Template)
+                    foreach ($prop in $policyContent.PSObject.Properties) {
+                        if ($prop.Name -ne 'Template') {
+                            $policyDefinition | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value -Force
+                        }
+                    }
                 } else {
                     $policyDefinition = [PSCustomObject]@{ RoleName = $roleName; PolicySource = 'inline'; Policy = $policyContent }
                 }
@@ -60,6 +70,13 @@ function Initialize-EasyPIMPolicies {
                 if ($policyContent.PSObject.Properties['Scope'] -and $policyContent.Scope) { $scope = $policyContent.Scope }
                 if ($policyContent.PSObject.Properties['Template'] -and $policyContent.Template) {
                     $policyDefinition = [PSCustomObject]@{ RoleName = $roleName; Scope = $scope; PolicySource = 'template'; Template = $policyContent.Template }
+                    
+                    # 🆕 Copy any override properties from policyContent (excluding Template and Scope)
+                    foreach ($prop in $policyContent.PSObject.Properties) {
+                        if ($prop.Name -ne 'Template' -and $prop.Name -ne 'Scope') {
+                            $policyDefinition | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value -Force
+                        }
+                    }
                 } else {
                     $policyOnly = $policyContent | Select-Object -Property * -ExcludeProperty Scope
                     $policyDefinition = [PSCustomObject]@{ RoleName = $roleName; Scope = $scope; PolicySource = 'inline'; Policy = $policyOnly }
@@ -87,6 +104,13 @@ function Initialize-EasyPIMPolicies {
                                 $policyDefinition = [PSCustomObject]@{ PolicySource = 'template'; Template = $roleContent.Template; RoleName = $roleName; GroupId = $groupKey }
                             } else {
                                 $policyDefinition = [PSCustomObject]@{ PolicySource = 'template'; Template = $roleContent.Template; RoleName = $roleName; GroupName = $groupKey }
+                            }
+                            
+                            # 🆕 Copy any override properties from roleContent (excluding Template)
+                            foreach ($prop in $roleContent.PSObject.Properties) {
+                                if ($prop.Name -ne 'Template') {
+                                    $policyDefinition | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value -Force
+                                }
                             }
                         } else {
                             if ($isGuid) {
@@ -193,15 +217,15 @@ function Resolve-PolicyConfiguration {
                      if (-not $Templates.ContainsKey($templateName)) { throw "Template '$templateName' not found in PolicyTemplates" }
                      $templatePolicy = $Templates[$templateName]
 
-                     # Merge template policy with PolicyDefinition, allowing template to provide defaults for empty values
+                     # Merge template policy with PolicyDefinition, allowing template to provide defaults
                      $mergedPolicy = @{}
                      # Start with template values as defaults
                      foreach ($templateProp in $templatePolicy.PSObject.Properties) {
                          $mergedPolicy[$templateProp.Name] = $templateProp.Value
                      }
-                     # Override with non-empty PolicyDefinition values
+                     # Override with ANY explicitly provided PolicyDefinition values (including false, empty string, etc.)
                      foreach ($property in $PolicyDefinition.PSObject.Properties) {
-                         if ($null -ne $property.Value -and $property.Value -ne '' -and $property.Name -notin @('policySource', 'template', 'policyTemplate', 'policy')) {
+                         if ($property.Name -notin @('policySource', 'template', 'policyTemplate', 'policy')) {
                              $mergedPolicy[$property.Name] = $property.Value
                          }
                      }

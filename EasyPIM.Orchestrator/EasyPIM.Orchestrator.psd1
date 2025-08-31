@@ -35,14 +35,14 @@ RECENT IMPROVEMENTS: Dependency optimization and reliability enhancements.
 
 ✅ UPDATES IN v1.1.0:
 - Dependency optimization: Removed unnecessary Microsoft.Graph.Identity.Governance requirement
-- Enhanced module architecture with cleaner dependencies 
+- Enhanced module architecture with cleaner dependencies
 - Improved reliability with CI/CD gallery version checking
 - Support for protected roles override functionality (Issue #137)
 - Compatible with latest EasyPIM core v2.0.5
 
 ✅ CORE FEATURES:
 - Complete PIM orchestration via Invoke-EasyPIMOrchestrator
-- Policy drift detection with Test-PIMPolicyDrift  
+- Policy drift detection with Test-PIMPolicyDrift
 - Endpoint discovery with Test-PIMEndpointDiscovery
 - ARM API compatibility fixes for Azure resource roles
 - Parameter standardization: 'principalId' (with 'assignee' alias for compatibility)
