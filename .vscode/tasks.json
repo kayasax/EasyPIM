@@ -28,7 +28,7 @@
 		},
 		{
 			"label": "🔍 General Tests Only",
-			"type": "shell", 
+			"type": "shell",
 			"command": "pwsh",
 			"args": [
 				"-NoProfile",
@@ -38,7 +38,7 @@
 				"d:\\WIP\\EASYPIM\\tests\\pester.ps1",
 				"-TestGeneral",
 				"$true",
-				"-TestFunctions", 
+				"-TestFunctions",
 				"$false",
 				"-Output",
 				"Normal"
@@ -49,7 +49,7 @@
 		{
 			"label": "🎯 Function Tests (Requires Auth)",
 			"type": "shell",
-			"command": "pwsh", 
+			"command": "pwsh",
 			"args": [
 				"-NoProfile",
 				"-ExecutionPolicy",
@@ -72,7 +72,7 @@
 			"command": "pwsh",
 			"args": [
 				"-NoProfile",
-				"-ExecutionPolicy", 
+				"-ExecutionPolicy",
 				"Bypass",
 				"-Command",
 				"& { Write-Host '🏁 Running complete test suite...'; Import-Module Pester -Force; $ver = (Get-Module Pester).Version; if ($ver.Major -ge 5) { .\\tests\\pester.ps1 -TestGeneral $true -TestFunctions $true -Output Normal -Parallel -Workers ([Environment]::ProcessorCount) } else { .\\tests\\pester.ps1 -TestGeneral $true -TestFunctions $true -Output Normal } }"
@@ -87,7 +87,7 @@
 			"args": [
 				"-NoProfile",
 				"-ExecutionPolicy",
-				"Bypass", 
+				"Bypass",
 				"-File",
 				"d:\\WIP\\EASYPIM\\build\\vsts-validate.ps1"
 			],

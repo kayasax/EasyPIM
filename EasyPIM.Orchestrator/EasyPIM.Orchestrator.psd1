@@ -10,10 +10,9 @@
 
     # Required modules including stable EasyPIM core dependency
     RequiredModules   = @(
-    @{ModuleName='EasyPIM'; ModuleVersion='2.0.4'},
+        'EasyPIM',
         'Az.Accounts',
-        'Microsoft.Graph.Authentication',
-        'Microsoft.Graph.Identity.Governance'
+        'Microsoft.Graph.Authentication'
     )
 
     # No nested modules - using simple internal function duplication approach
@@ -30,26 +29,29 @@
         ProjectUri = 'https://github.com/kayasax/EasyPIM'
         LicenseUri = 'https://github.com/kayasax/EasyPIM/blob/main/LICENSE'
 ReleaseNotes = @'
-🚀 EasyPIM.Orchestrator v1.0.6 - Stable Release
+🚀 EasyPIM.Orchestrator v1.1.0 - Enhanced Stability Release
 
-MAJOR MILESTONE: Module separation and architectural improvements complete and validated end-to-end.
+RECENT IMPROVEMENTS: Dependency optimization and reliability enhancements.
 
-✅ NEW FEATURES:
-- ARM API compatibility fixes (resolves InvalidResourceType/NoRegisteredProviderFound errors)
-- Enhanced policy validation with proactive error detection and clear guidance
+✅ UPDATES IN v1.1.0:
+- Dependency optimization: Removed unnecessary Microsoft.Graph.Identity.Governance requirement
+- Enhanced module architecture with cleaner dependencies 
+- Improved reliability with CI/CD gallery version checking
+- Support for protected roles override functionality (Issue #137)
+- Compatible with latest EasyPIM core v2.0.5
+
+✅ CORE FEATURES:
+- Complete PIM orchestration via Invoke-EasyPIMOrchestrator
+- Policy drift detection with Test-PIMPolicyDrift  
+- Endpoint discovery with Test-PIMEndpointDiscovery
+- ARM API compatibility fixes for Azure resource roles
 - Parameter standardization: 'principalId' (with 'assignee' alias for compatibility)
-- Standalone orchestrator module with proper dependency management
 - Auto-configuration of permanent assignment flags based on duration specifications
-- Dependency resolution improvements: now depends on stable EasyPIM v2.0.0
-
-Stabilization notes:
-- Comprehensive tests passed locally (6k+), plus end-to-end remediation and drift checks.
-- Compatible with EasyPIM >= 2.0.2.
 
 📋 REQUIREMENTS:
-- EasyPIM v2.0.2 (automatically installed)
+- EasyPIM (latest stable version, automatically installed)
 - PowerShell 5.1+
-- Az.Accounts, Microsoft.Graph modules
+- Az.Accounts, Microsoft.Graph.Authentication modules
 '@
     } }
 }

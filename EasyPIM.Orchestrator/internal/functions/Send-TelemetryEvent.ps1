@@ -225,7 +225,7 @@ function Get-TelemetrySessionId {
     # Note: Global variable is intentionally used for session persistence across function calls
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Session ID needs to persist across telemetry calls')]
     param()
-    
+
     if (-not $Global:EasyPIMTelemetrySessionId) {
         $Global:EasyPIMTelemetrySessionId = [System.Guid]::NewGuid().ToString()
         Write-Verbose "Generated new telemetry session ID: $Global:EasyPIMTelemetrySessionId"

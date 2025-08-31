@@ -41,6 +41,7 @@
 
 | Date | Update |
 |------|--------|
+| 2025-08-31 | **Dependency Optimization**: Removed unnecessary `Microsoft.Graph.Identity.Governance` requirement from orchestrator module after code analysis showed it only uses `Microsoft.Graph.Authentication` cmdlets. Updated release notes to v1.1.0 with current status and core dependency alignment. |
 | 2025-08-30 | **Issue #137**: Created branch `feature/issue-137-protected-roles-override` to implement -Force flag for overriding protected roles in orchestrator. Issue #138 confirmed resolved in v2.0.5. |
 | 2025-08-29 | **CI/CD Reliability**: Added proactive Gallery version checking to prevent repeated pipeline failures. Core bumped to v2.0.5. |
 | 2025-08-29 | **Documentation**: Updated Step-by-step Guide for module split architecture with installation and authentication guidance. |

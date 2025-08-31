@@ -34,8 +34,7 @@ Description = 'Manage PIM Azure Resource, PIM Entra role and PIM for Group setti
 # Keep versions flexible; rely on gallery to resolve suitable versions.
 RequiredModules = @(
     'Az.Accounts',
-    'Microsoft.Graph.Authentication',
-    'Microsoft.Graph.Identity.Governance'
+    'Microsoft.Graph.Authentication'
 )
 
 # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess

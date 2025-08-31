@@ -20,7 +20,7 @@ foreach ($dependency in $data.RequiredModules) {
 
 foreach ($module in $modules) {
     Write-Host "Installing $module" -ForegroundColor Cyan
-    
+
     # Special handling for Pester to ensure we get v5+ for parallel support
     if ($module -eq "Pester") {
         Write-Host "Installing latest Pester for parallel execution support..." -ForegroundColor Yellow
