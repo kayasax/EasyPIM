@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Invokes the EasyPIM end-to-end orchestration (policies, cleanup, assignments) with safety validation.
 .DESCRIPTION
@@ -179,7 +179,9 @@ function Invoke-EasyPIMOrchestrator {
 		try {
 			$script:tenantID = $TenantId
 			Set-Variable -Scope Global -Name tenantID -Value $TenantId -Force
-		} catch {}
+		} catch {
+			Write-Warning "Failed to set tenant ID variables: $($_.Exception.Message)"
+		}
 		# Initialize subscription context EARLY for downstream helpers (Invoke-ARM, get-config)
 		if (-not $SubscriptionId -or [string]::IsNullOrWhiteSpace($SubscriptionId)) {
 			$SubscriptionId = $env:subscriptionid
@@ -187,7 +189,9 @@ function Invoke-EasyPIMOrchestrator {
 				try {
 					$azCtx = Get-AzContext -ErrorAction SilentlyContinue
 					if ($azCtx -and $azCtx.Subscription -and $azCtx.Subscription.Id) { $SubscriptionId = $azCtx.Subscription.Id }
-				} catch {}
+				} catch {
+					Write-Debug "Could not retrieve Azure context for subscription ID"
+				}
 			}
 			if ($SubscriptionId) { Write-Verbose ("[Orchestrator] Resolved SubscriptionId early: {0}" -f $SubscriptionId) }
 			else { Write-Verbose "[Orchestrator] No SubscriptionId resolved yet (will continue; callers also pass explicit IDs)" }
@@ -197,7 +201,9 @@ function Invoke-EasyPIMOrchestrator {
 				$script:subscriptionID = $SubscriptionId
 				Set-Variable -Scope Global -Name subscriptionID -Value $SubscriptionId -Force
 			}
-		} catch {}
+		} catch {
+			Write-Warning "Failed to set subscription ID variables: $($_.Exception.Message)"
+		}
 		# 2. Process and normalize config based on selected operations
 		$processedConfig = Initialize-EasyPIMAssignments -Config $config
 		# 2.1. Process policy configurations if present
@@ -333,7 +339,16 @@ function Invoke-EasyPIMOrchestrator {
 		Write-Host -Object "🔍 [TEST] Validating principal and group IDs..." -ForegroundColor Cyan
 		$principalIds = New-Object -TypeName "System.Collections.Generic.HashSet[string]"
 		Write-Verbose ("[Orchestrator] TenantId in context before validation: {0}" -f ($TenantId))
-		try { $tpeCmd = Get-Command Test-PrincipalExists -ErrorAction SilentlyContinue; if($tpeCmd){ Write-Host ("[Debug] Using Test-PrincipalExists from: {0} ({1})" -f $tpeCmd.Source,$tpeCmd.Path) -ForegroundColor DarkGray } else { Write-Host "[Debug] Test-PrincipalExists not found in scope" -ForegroundColor Yellow } } catch {}
+		try { 
+			$tpeCmd = Get-Command Test-PrincipalExists -ErrorAction SilentlyContinue
+			if($tpeCmd){ 
+				Write-Host ("[Debug] Using Test-PrincipalExists from: {0} ({1})" -f $tpeCmd.Source,$tpeCmd.Path) -ForegroundColor DarkGray 
+			} else { 
+				Write-Host "[Debug] Test-PrincipalExists not found in scope" -ForegroundColor Yellow 
+			} 
+		} catch {
+			Write-Debug "Failed to check Test-PrincipalExists command availability"
+		}
 	$policyApproverRefs = @()
 		if ($processedConfig.PSObject.Properties.Name -contains 'Assignments' -and $processedConfig.Assignments) {
 			$assign = $processedConfig.Assignments
@@ -488,7 +503,9 @@ function Invoke-EasyPIMOrchestrator {
 				$script:subscriptionID = $SubscriptionId
 				Set-Variable -Scope Global -Name subscriptionID -Value $SubscriptionId -Force
 			}
-		} catch {}
+		} catch {
+			Write-Warning "Failed to set subscription ID variables (second attempt): $($_.Exception.Message)"
+		}
 		# 3. Process policies FIRST (skip if requested) - CRITICAL: Policies must be applied before assignments to ensure compliance
 		$policyResults = $null
 		if (-not $SkipPolicies -and $policyConfig -and (

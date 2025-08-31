@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Tests PIM role assignment policy configuration for drift against live settings.
 

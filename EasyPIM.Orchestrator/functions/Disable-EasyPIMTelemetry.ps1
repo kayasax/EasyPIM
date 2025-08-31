@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Disables telemetry collection for EasyPIM.Orchestrator
 

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Sends anonymous telemetry events to PostHog for EasyPIM usage analytics
 
@@ -162,7 +162,7 @@ function Send-PostHogEvent {
     try {
         # Send with short timeout to avoid blocking main operations
         $Response = Invoke-RestMethod -Uri $PostHogApiUrl -Method Post -Body $Body -ContentType "application/json" -TimeoutSec 5 -ErrorAction Stop
-        Write-Verbose "PostHog API responded successfully"
+        Write-Verbose "PostHog API responded successfully. Status: $(if($Response.status) { $Response.status } else { 'OK' })"
     }
     catch {
         Write-Verbose "PostHog API call failed: $($_.Exception.Message)"
@@ -222,6 +222,10 @@ function Get-TelemetryOSVersion {
 #>
 function Get-TelemetrySessionId {
     # Generate or retrieve session-specific GUID
+    # Note: Global variable is intentionally used for session persistence across function calls
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Justification = 'Session ID needs to persist across telemetry calls')]
+    param()
+    
     if (-not $Global:EasyPIMTelemetrySessionId) {
         $Global:EasyPIMTelemetrySessionId = [System.Guid]::NewGuid().ToString()
         Write-Verbose "Generated new telemetry session ID: $Global:EasyPIMTelemetrySessionId"

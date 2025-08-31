@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Creates a privacy-protected identifier for telemetry from tenant ID
 

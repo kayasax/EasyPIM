@@ -99,19 +99,7 @@ jobs:
             
             if (`$orchestratorPaths.Count -gt 0) {
               Write-Host 'Running PSScriptAnalyzer for orchestrator paths: `$(`$orchestratorPaths -join `", `")'
-              # Run PSScriptAnalyzer with additional exclusions for orchestrator module
-              foreach (`$path in `$orchestratorPaths) {
-                `$files = Get-ChildItem -Path `$path -Recurse -Filter '*.ps1'
-                foreach (`$file in `$files) {
-                  Write-Host \"  Analyzing `$(`$file.BaseName)\"
-                  `$analysis = Invoke-ScriptAnalyzer -Path `$file.FullName -ExcludeRule PSAvoidTrailingWhitespace, PSShouldProcess, PSUseShouldProcessForStateChangingFunctions, PSAvoidUsingWriteHost, PSUseSingularNouns, PSUseOutputTypeCorrectly, PSReviewUnusedParameter, PSUseBOMForUnicodeEncodedFile, PSAvoidUsingEmptyCatchBlock, PSUseDeclaredVarsMoreThanAssignments, PSAvoidGlobalVars
-                  if (`$analysis.Count -gt 0) {
-                    Write-Warning \"PSScriptAnalyzer issues found in `$(`$file.Name):\"
-                    `$analysis | ForEach-Object { Write-Warning \"  - `$(`$_.RuleName): `$(`$_.Message)\" }
-                    # Don't fail for now, just warn
-                  }
-                }
-              }
+              . '.\tests\general\PSScriptAnalyzer.Tests.ps1' -CommandPath `$orchestratorPaths
             }"
             
             # Run orchestrator-specific tests

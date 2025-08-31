@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Validates telemetry configuration and prompts for consent if needed
 
