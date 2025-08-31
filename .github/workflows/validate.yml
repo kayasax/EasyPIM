@@ -1,3 +1,5 @@
+name: EasyPIM Validation (Optimized)
+
 on:
   push:
     paths:

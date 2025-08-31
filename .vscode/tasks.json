@@ -10,7 +10,7 @@
 				"-ExecutionPolicy",
 				"Bypass",
 				"-Command",
-				"& { Import-Module Pester -Force; $ver = (Get-Module Pester).Version; if ($ver.Major -ge 5) { Write-Host '🚀 Running with parallel execution'; .\\tests\\pester.ps1 -TestGeneral $true -TestFunctions $false -Output Normal -Fast -Parallel -Workers ([Math]::Max(2,[Environment]::ProcessorCount-1)) } else { Write-Host '⚠️ Sequential mode (upgrade Pester for parallel)'; .\\tests\\pester.ps1 -TestGeneral $true -TestFunctions $false -Output Normal -Fast } }"
+				"& { Import-Module Pester -Force; $ver = (Get-Module Pester).Version; if ($ver.Major -ge 5) { Write-Host 'Running with parallel execution'; .\\tests\\pester.ps1 -TestGeneral $true -TestFunctions $false -Output Normal -Fast -Parallel -Workers ([Math]::Max(2,[Environment]::ProcessorCount-1)) } else { Write-Host 'Sequential mode (upgrade Pester for parallel)'; .\\tests\\pester.ps1 -TestGeneral $true -TestFunctions $false -Output Normal -Fast } }"
 			],
 			"group": {
 				"kind": "build",

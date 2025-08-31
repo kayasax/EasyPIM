@@ -77,7 +77,7 @@ if ($Fast) {
     if (-not $Parallel) { $Parallel = $true }
     if (-not $PSBoundParameters.ContainsKey('Workers')) { $Workers = [Math]::Max(2,[Environment]::ProcessorCount - 1) }
     $SkipHelp = $true
-    $SkipAnalyzer = $true
+    # Note: PSScriptAnalyzer is NOT skipped in Fast mode - it's essential for code quality
 }
 
 # Version-specific Pester handling
