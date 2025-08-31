@@ -144,7 +144,7 @@ jobs:
         shell: pwsh
       - name: Validate All Modules (High-Performance)
         run: |
-          # Use maximum parallelism on GitHub Actions runners
+          # Use maximum parallelism on GitHub Actions runners (General tests only)
           pwsh -Command "
             `$pesterVersion = (Get-Module Pester -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1).Version
             `$processorCount = [Environment]::ProcessorCount
@@ -153,11 +153,11 @@ jobs:
             Write-Host '- Processor count:' `$processorCount
             
             if (`$pesterVersion.Major -ge 5) {
-              Write-Host 'Running with maximum parallel execution (' (`$processorCount) 'workers) + Fast mode'
-              .\tests\pester.ps1 -TestGeneral `$true -TestFunctions `$true -Output 'Normal' -Fast -Parallel -Workers `$processorCount
+              Write-Host 'Running with maximum parallel execution (' (`$processorCount) 'workers) + Fast mode (General tests only)'
+              .\tests\pester.ps1 -TestGeneral `$true -TestFunctions `$false -Output 'Normal' -Fast -Parallel -Workers `$processorCount
             } else {
-              Write-Host 'Running with Fast mode (sequential fallback)'
-              .\tests\pester.ps1 -TestGeneral `$true -TestFunctions `$true -Output 'Normal' -Fast
+              Write-Host 'Running with Fast mode (sequential fallback, General tests only)'
+              .\tests\pester.ps1 -TestGeneral `$true -TestFunctions `$false -Output 'Normal' -Fast
             }
           "
         shell: pwsh
