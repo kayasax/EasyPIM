@@ -40,36 +40,6 @@ jobs:
               - 'tests/**'
               - 'build/**'
 
-  # Fast parallel smoke test for immediate feedback
-  smoke-test:
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        module: ['EasyPIM', 'EasyPIM.Orchestrator']
-      fail-fast: false
-    steps:
-      - uses: actions/checkout@v4
-      - name: Quick Smoke Test - ${{ matrix.module }}
-        run: |
-          # Ultra-fast syntax and basic validation
-          pwsh -NoProfile -Command "
-            try {
-              Write-Host '🔍 Testing ${{ matrix.module }} module...'
-              if ('${{ matrix.module }}' -eq 'EasyPIM') {
-                Test-ModuleManifest '.\EasyPIM\EasyPIM.psd1' -ErrorAction Stop
-                Write-Host '✅ EasyPIM manifest valid'
-              } else {
-                Test-ModuleManifest '.\EasyPIM.Orchestrator\EasyPIM.Orchestrator.psd1' -ErrorAction Stop
-                Write-Host '✅ Orchestrator manifest valid'
-              }
-              Write-Host '🚀 ${{ matrix.module }} smoke test passed'
-            } catch {
-              Write-Error '❌ ${{ matrix.module }} smoke test failed: ' + `$_.Exception.Message
-              exit 1
-            }
-          "
-        shell: pwsh
-
   validate-easypim:
     needs: detect-changes
     if: needs.detect-changes.outputs.easypim == 'true'
