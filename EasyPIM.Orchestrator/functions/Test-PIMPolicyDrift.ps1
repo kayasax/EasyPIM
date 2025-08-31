@@ -128,7 +128,6 @@ function Test-PIMPolicyDrift {
 	if ($json.PSObject.Properties['PolicyTemplates']) {
 	foreach ($t in ($json.PolicyTemplates | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name)) { $templates[$t] = $json.PolicyTemplates.$t }
 	}
-	
 	# 🆕 Use the same policy processing logic as the orchestrator for consistency
 	try {
 		$processedConfig = Initialize-EasyPIMPolicies -Config $json -PolicyTemplates $templates
