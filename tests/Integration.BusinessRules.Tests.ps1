@@ -1,5 +1,5 @@
 Describe "EasyPIM End-to-End Business Rules Validation" -Tag "Integration", "LiveTenant" {
-    
+
     BeforeAll {
         # Ensure required environment variables are set
         if (-not $env:TenantID) {
@@ -38,7 +38,7 @@ Describe "EasyPIM End-to-End Business Rules Validation" -Tag "Integration", "Liv
             Approvers = @("2ab3f204-9c6f-409d-a9bd-6e302a0132db")  # Use approver from HighSecurity template
             MaximumEligibleAssignmentDuration = "P180D"           # Reduced max duration
         }
-        
+
         Write-Host "🔬 Starting End-to-End Business Rules Validation Test" -ForegroundColor Cyan
         Write-Host "   Tenant: $script:TenantId" -ForegroundColor Gray
         Write-Host "   Role: $script:TestRoleName" -ForegroundColor Gray
@@ -46,7 +46,7 @@ Describe "EasyPIM End-to-End Business Rules Validation" -Tag "Integration", "Liv
     }
 
     Context "Pre-Test Baseline Verification" {
-        
+
         It "Should have validation.json config file" {
             $script:ConfigPath | Should -Exist
         }
@@ -61,14 +61,14 @@ Describe "EasyPIM End-to-End Business Rules Validation" -Tag "Integration", "Liv
         It "Should initially have no drift when role matches config" {
             # First ensure role matches expected configuration
             Set-PIMEntraRolePolicy -TenantID $script:TenantId -RoleName $script:TestRoleName -ActivationDuration $script:OriginalActivationDuration
-            
+
             # Wait a moment for the change to propagate
             Start-Sleep -Seconds 2
-            
+
             # Test for drift
             $driftResults = Test-PIMPolicyDrift -TenantId $script:TenantId -ConfigPath $script:ConfigPath -PassThru
             $guestInviterResult = $driftResults | Where-Object { $_.Type -eq 'EntraRole' -and $_.Name -eq $script:TestRoleName }
-            
+
             $guestInviterResult | Should -Not -BeNullOrEmpty
             $guestInviterResult.Status | Should -Be 'Match'
             Write-Host "   ✅ Baseline: No drift detected" -ForegroundColor Green
@@ -76,39 +76,39 @@ Describe "EasyPIM End-to-End Business Rules Validation" -Tag "Integration", "Liv
     }
 
     Context "Drift Detection Validation" {
-        
+
         It "Should detect drift when role policy is manually changed" {
             # Manually change the policy to create drift
             Write-Host "   🔧 Manually changing ActivationDuration to $script:ModifiedActivationDuration" -ForegroundColor Yellow
             Set-PIMEntraRolePolicy -TenantID $script:TenantId -RoleName $script:TestRoleName -ActivationDuration $script:ModifiedActivationDuration
-            
+
             # Wait for propagation
             Start-Sleep -Seconds 2
-            
+
             # Verify the change was applied
             $policy = Get-PIMEntraRolePolicy -TenantID $script:TenantId -RoleName $script:TestRoleName
             $policy.ActivationDuration | Should -Be $script:ModifiedActivationDuration
-            
+
             # Test for drift
             $driftResults = Test-PIMPolicyDrift -TenantId $script:TenantId -ConfigPath $script:ConfigPath -PassThru
             $guestInviterResult = $driftResults | Where-Object { $_.Type -eq 'EntraRole' -and $_.Name -eq $script:TestRoleName }
-            
+
             # Should detect drift
             $guestInviterResult | Should -Not -BeNullOrEmpty
             $guestInviterResult.Status | Should -Be 'Drift'
             $guestInviterResult.Differences | Should -Match "ActivationDuration.*expected.*'$script:OriginalActivationDuration'.*actual.*'$script:ModifiedActivationDuration'"
-            
+
             Write-Host "   ✅ Drift Detection: Successfully detected policy drift" -ForegroundColor Green
         }
 
         It "Should handle business rules correctly during drift detection" {
             # Test with a role that has Authentication Context enabled to verify business rules
             $driftResults = Test-PIMPolicyDrift -TenantId $script:TenantId -ConfigPath $script:ConfigPath -PassThru -Verbose
-            
+
             # Check for business rule verbose messages (indicates business rules are being applied)
             # This validates that Test-PIMPolicyBusinessRules is being called properly
             $businessRuleResults = $driftResults | Where-Object { $_.Type -eq 'EntraRole' -and $_.Status -eq 'Match' }
-            
+
             # Should have at least some roles that match (indicating business rules worked)
             $businessRuleResults | Should -Not -BeNullOrEmpty
             Write-Host "   ✅ Business Rules: Working correctly in drift detection" -ForegroundColor Green
@@ -116,23 +116,23 @@ Describe "EasyPIM End-to-End Business Rules Validation" -Tag "Integration", "Liv
     }
 
     Context "Orchestrator Remediation" {
-        
+
         It "Should remediate drift using Invoke-EasyPIMOrchestrator" {
             # Run the orchestrator to fix the drift
             Write-Host "   🔄 Running Invoke-EasyPIMOrchestrator to remediate drift" -ForegroundColor Yellow
-            
+
             $orchestratorResult = Invoke-EasyPIMOrchestrator -TenantId $script:TenantId -SubscriptionId $script:SubscriptionId -ConfigFilePath $script:ConfigPath -ValidateOnly:$false
-            
+
             # Orchestrator should complete successfully
             $orchestratorResult | Should -Not -BeNullOrEmpty
-            
+
             # Wait for changes to propagate
             Start-Sleep -Seconds 5
-            
+
             # Verify the policy was corrected
             $policy = Get-PIMEntraRolePolicy -TenantID $script:TenantId -RoleName $script:TestRoleName
             $policy.ActivationDuration | Should -Be $script:OriginalActivationDuration
-            
+
             Write-Host "   ✅ Remediation: Policy corrected to $($policy.ActivationDuration)" -ForegroundColor Green
         }
 
@@ -140,45 +140,45 @@ Describe "EasyPIM End-to-End Business Rules Validation" -Tag "Integration", "Liv
             # Final drift check - should be clean
             $driftResults = Test-PIMPolicyDrift -TenantId $script:TenantId -ConfigPath $script:ConfigPath -PassThru
             $guestInviterResult = $driftResults | Where-Object { $_.Type -eq 'EntraRole' -and $_.Name -eq $script:TestRoleName }
-            
+
             $guestInviterResult | Should -Not -BeNullOrEmpty
             $guestInviterResult.Status | Should -Be 'Match'
             $guestInviterResult.Differences | Should -BeNullOrEmpty
-            
+
             Write-Host "   ✅ Final Verification: No drift detected after remediation" -ForegroundColor Green
         }
     }
 
     Context "Business Rules Integration Test" {
-        
+
         It "Should properly handle Authentication Context vs MFA conflicts" {
             # Test the business rules function directly
             $testPolicy = [PSCustomObject]@{
                 ActivationRequirement = "MultiFactorAuthentication,Justification"
                 AuthenticationContext_Enabled = $true
             }
-            
+
             $businessRuleResult = Test-PIMPolicyBusinessRules -PolicySettings $testPolicy -ApplyAdjustments
-            
+
             $businessRuleResult.AuthenticationContextEnabled | Should -Be $true
             $businessRuleResult.HasChanges | Should -Be $true
             $businessRuleResult.Conflicts.Count | Should -BeGreaterThan 0
             $businessRuleResult.Conflicts[0].Type | Should -Be 'AuthenticationContextMfaConflict'
-            
+
             # Should have removed MFA from ActivationRequirement
             $businessRuleResult.AdjustedSettings.ActivationRequirement | Should -Not -Contain 'MultiFactorAuthentication'
             $businessRuleResult.AdjustedSettings.ActivationRequirement | Should -Contain 'Justification'
-            
+
             Write-Host "   ✅ Business Rules: Authentication Context vs MFA conflict handled correctly" -ForegroundColor Green
         }
 
         It "Should work with comma-separated requirement strings" {
             # Test parameter validation fix
             $result = Set-PIMEntraRolePolicy -TenantID $script:TenantId -RoleName $script:TestRoleName -ActivationRequirement "MultiFactorAuthentication,Justification" -WhatIf
-            
+
             # Should not throw an error (validates parameter parsing fix)
             $result | Should -Not -BeNullOrEmpty
-            
+
             Write-Host "   ✅ Parameter Validation: Comma-separated strings handled correctly" -ForegroundColor Green
         }
     }

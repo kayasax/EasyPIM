@@ -1,4 +1,4 @@
-function New-EasyPIMAssignments {
+﻿function New-EasyPIMAssignments {
 	[CmdletBinding()]
 	param(
 		[Parameter(Mandatory)] [object]$Config,

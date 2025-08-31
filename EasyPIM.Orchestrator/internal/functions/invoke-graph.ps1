@@ -23,7 +23,9 @@ function invoke-graph {
                 Default             { $graphBase = 'https://graph.microsoft.com' }
             }
         }
-    } catch { }
+    } catch {
+        Write-Debug "Failed to determine Azure environment, using default Microsoft Graph endpoint"
+    }
 
     $graph = "$graphBase/$version/"
     $uri = $graph + $Endpoint

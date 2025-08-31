@@ -1,37 +1,80 @@
-﻿on:
+on:
   push:
     paths:
       - 'EasyPIM/**'
       - 'EasyPIM.Orchestrator/**'
       - 'shared/**'
+      - 'tests/**'
+      - 'build/**'
   pull_request:
     paths:
       - 'EasyPIM/**'
       - 'EasyPIM.Orchestrator/**'
       - 'shared/**'
+      - 'tests/**'
+      - 'build/**'
   workflow_dispatch:
 
 jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      easypim: ${{ steps.changes.outputs.easypim }}
+      orchestrator: ${{ steps.changes.outputs.orchestrator }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            easypim:
+              - 'EasyPIM/**'
+              - 'shared/**'
+              - 'tests/**'
+              - 'build/**'
+            orchestrator:
+              - 'EasyPIM.Orchestrator/**'
+              - 'shared/**'
+              - 'tests/**'
+              - 'build/**'
+
   validate-easypim:
-    if: github.event_name == 'push' || github.event.pull_request.head.ref == 'EasyPIM' || contains(github.event.head_commit.modified, 'EasyPIM/') || contains(github.event.head_commit.modified, 'shared/')
+    needs: detect-changes
+    if: needs.detect-changes.outputs.easypim == 'true'
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v1
-      - name: Install Prerequisites
+      - uses: actions/checkout@v4
+      - name: Install Prerequisites (Optimized)
         run: .\build\vsts-prerequisites.ps1
-        shell: powershell
-      - name: Validate EasyPIM Only
+        shell: pwsh
+      - name: Validate EasyPIM Module (Build Script)
         run: .\build\vsts-validate.ps1
-        shell: powershell
+        shell: pwsh
 
   validate-orchestrator:
-    if: github.event_name == 'push' || github.event.pull_request.head.ref == 'EasyPIM.Orchestrator' || contains(github.event.head_commit.modified, 'EasyPIM.Orchestrator/') || contains(github.event.head_commit.modified, 'shared/')
+    needs: detect-changes
+    if: needs.detect-changes.outputs.orchestrator == 'true'
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v1
-      - name: Install Prerequisites
+      - uses: actions/checkout@v4
+      - name: Install Prerequisites (Optimized)
         run: .\build\vsts-prerequisites.ps1
-        shell: powershell
-      - name: Validate Orchestrator Only
+        shell: pwsh
+      - name: Validate Orchestrator Module (Build Script)
         run: .\build\vsts-validate.ps1
-        shell: powershell
+        shell: pwsh
+
+  validate-all:
+    needs: detect-changes
+    if: github.event_name == 'workflow_dispatch' || (needs.detect-changes.outputs.easypim == 'true' && needs.detect-changes.outputs.orchestrator == 'true')
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Prerequisites (Optimized)
+        run: .\build\vsts-prerequisites.ps1
+        shell: pwsh
+      - name: Validate All Modules (Build Script with Parallel)
+        run: .\build\vsts-validate.ps1
+        shell: pwsh

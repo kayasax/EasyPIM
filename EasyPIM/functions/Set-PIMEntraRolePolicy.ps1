@@ -234,20 +234,20 @@ function Set-PIMEntraRolePolicy {
                     }
                 }
                 $ar = $normalizedAr
-                
+
                 # Apply business rules using shared validation function (local to EasyPIM module)
                 $testSettings = [PSCustomObject]@{ ActivationRequirement = $ar }
                 if ($PSBoundParameters.Keys.Contains('AuthenticationContext_Enabled')) {
                     $testSettings | Add-Member -NotePropertyName 'AuthenticationContext_Enabled' -NotePropertyValue $AuthenticationContext_Enabled
                 }
                 $businessRuleResult = Test-PIMPolicyBusinessRules -PolicySettings $testSettings -CurrentPolicy $script:config -ApplyAdjustments
-                
+
                 if ($businessRuleResult.Conflicts.Count -gt 0) {
                     foreach ($conflict in $businessRuleResult.Conflicts) {
                         Write-Warning $conflict.Message
                     }
                 }
-                
+
                 $ar = $businessRuleResult.AdjustedSettings.ActivationRequirement
                 $rules += Set-ActivationRequirement $ar -EntraRole
             }

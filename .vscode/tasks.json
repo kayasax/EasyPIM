@@ -2,23 +2,33 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Run Pester tests",
+			"label": "🚀 Fast Tests (Parallel)",
 			"type": "shell",
 			"command": "pwsh",
 			"args": [
 				"-NoProfile",
 				"-ExecutionPolicy",
 				"Bypass",
-				"-File",
-				"d:\\WIP\\EASYPIM\\tests\\pester.ps1"
+				"-Command",
+				"& { Import-Module Pester -Force; $ver = (Get-Module Pester).Version; if ($ver.Major -ge 5) { Write-Host '🚀 Running with parallel execution'; .\\tests\\pester.ps1 -TestGeneral $true -TestFunctions $false -Output Normal -Fast -Parallel -Workers ([Math]::Max(2,[Environment]::ProcessorCount-1)) } else { Write-Host '⚠️ Sequential mode (upgrade Pester for parallel)'; .\\tests\\pester.ps1 -TestGeneral $true -TestFunctions $false -Output Normal -Fast } }"
 			],
-			"problemMatcher": [
-				"$powershell"
-			]
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"problemMatcher": ["$pester"]
 		},
 		{
-			"label": "Run Pester tests",
-			"type": "shell",
+			"label": "🔍 General Tests Only",
+			"type": "shell", 
 			"command": "pwsh",
 			"args": [
 				"-NoProfile",
@@ -26,54 +36,63 @@
 				"Bypass",
 				"-File",
 				"d:\\WIP\\EASYPIM\\tests\\pester.ps1",
+				"-TestGeneral",
+				"$true",
+				"-TestFunctions", 
+				"$false",
+				"-Output",
+				"Normal"
+			],
+			"group": "test",
+			"problemMatcher": ["$pester"]
+		},
+		{
+			"label": "🎯 Function Tests (Requires Auth)",
+			"type": "shell",
+			"command": "pwsh", 
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"d:\\WIP\\EASYPIM\\tests\\pester.ps1",
+				"-TestGeneral",
+				"$false",
 				"-TestFunctions",
 				"$true",
-				"-Include",
-				"Import-*.Tests.ps1",
 				"-Output",
 				"Detailed"
 			],
-			"isBackground": false,
-			"problemMatcher": [
-				"$powershell"
+			"group": "test",
+			"problemMatcher": ["$pester"]
+		},
+		{
+			"label": "🏁 Complete Test Suite",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy", 
+				"Bypass",
+				"-Command",
+				"& { Write-Host '🏁 Running complete test suite...'; Import-Module Pester -Force; $ver = (Get-Module Pester).Version; if ($ver.Major -ge 5) { .\\tests\\pester.ps1 -TestGeneral $true -TestFunctions $true -Output Normal -Parallel -Workers ([Environment]::ProcessorCount) } else { .\\tests\\pester.ps1 -TestGeneral $true -TestFunctions $true -Output Normal } }"
 			],
-			"group": "build"
+			"group": "test",
+			"problemMatcher": ["$pester"]
 		},
 		{
-			"label": "Run Pester tests",
+			"label": "🔧 Build Validation",
 			"type": "shell",
 			"command": "pwsh",
 			"args": [
 				"-NoProfile",
 				"-ExecutionPolicy",
-				"Bypass",
+				"Bypass", 
 				"-File",
-				"d:\\WIP\\EASYPIM\\tests\\pester.ps1"
-			]
-		},
-		{
-			"label": "Run Pester tests",
-			"type": "shell",
-			"command": "pwsh",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				"d:\\WIP\\EASYPIM\\tests\\pester.ps1"
-			]
-		},
-		{
-			"label": "Run Pester tests",
-			"type": "shell",
-			"command": "pwsh",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				"d:\\WIP\\EASYPIM\\tests\\pester.ps1"
-			]
+				"d:\\WIP\\EASYPIM\\build\\vsts-validate.ps1"
+			],
+			"group": "build",
+			"problemMatcher": ["$pester"]
 		},
 		{
 			"label": "Git add + commit module-split + validate cleanup",

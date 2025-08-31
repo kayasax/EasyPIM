@@ -27,7 +27,7 @@ function Set-EPOAzureRolePolicy {
         } else {
             Write-Warning "[SECURITY] OVERRIDE: Allowing policy changes to protected Azure role '$($PolicyDefinition.RoleName)'. This action will be logged for audit purposes."
             Write-Host "[SECURITY] PROTECTED ROLE OVERRIDE: Proceeding with policy changes to '$($PolicyDefinition.RoleName)' as requested" -ForegroundColor Red
-            
+
             # Enhanced audit logging for protected role modifications
             $auditInfo = @{
                 Timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ss.fffK"
