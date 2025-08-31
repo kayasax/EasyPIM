@@ -1,0 +1,80 @@
+on:
+  push:
+    paths:
+      - 'EasyPIM/**'
+      - 'EasyPIM.Orchestrator/**'
+      - 'shared/**'
+      - 'tests/**'
+      - 'build/**'
+  pull_request:
+    paths:
+      - 'EasyPIM/**'
+      - 'EasyPIM.Orchestrator/**'
+      - 'shared/**'
+      - 'tests/**'
+      - 'build/**'
+  workflow_dispatch:
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      easypim: ${{ steps.changes.outputs.easypim }}
+      orchestrator: ${{ steps.changes.outputs.orchestrator }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            easypim:
+              - 'EasyPIM/**'
+              - 'shared/**'
+              - 'tests/**'
+              - 'build/**'
+            orchestrator:
+              - 'EasyPIM.Orchestrator/**'
+              - 'shared/**'
+              - 'tests/**'
+              - 'build/**'
+
+  validate-easypim:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.easypim == 'true'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Prerequisites
+        run: .\build\vsts-prerequisites.ps1
+        shell: pwsh
+      - name: Validate EasyPIM Module
+        run: .\tests\pester.ps1 -TestGeneral $true -TestFunctions $false -Output "Normal"
+        shell: pwsh
+
+  validate-orchestrator:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.orchestrator == 'true'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Prerequisites
+        run: .\build\vsts-prerequisites.ps1
+        shell: pwsh
+      - name: Validate Orchestrator Module
+        run: .\tests\pester.ps1 -TestGeneral $true -TestFunctions $false -Output "Normal"
+        shell: pwsh
+
+  validate-all:
+    needs: detect-changes
+    if: github.event_name == 'workflow_dispatch' || (needs.detect-changes.outputs.easypim == 'true' && needs.detect-changes.outputs.orchestrator == 'true')
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Prerequisites
+        run: .\build\vsts-prerequisites.ps1
+        shell: pwsh
+      - name: Validate All Modules
+        run: .\tests\pester.ps1 -TestGeneral $true -TestFunctions $false -Output "Normal" -Fast
+        shell: pwsh
