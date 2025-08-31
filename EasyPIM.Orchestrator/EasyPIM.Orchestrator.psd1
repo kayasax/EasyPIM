@@ -1,6 +1,6 @@
 @{
     RootModule        = 'EasyPIM.Orchestrator.psm1'
-    ModuleVersion     = '1.1.0'
+    ModuleVersion     = '1.1.1'
     GUID              = 'b6f9b3c9-bc6a-4d4b-8c51-7c45d42157cd'
     Author            = 'Loïc MICHEL'
     CompanyName       = 'EasyPIM'
@@ -32,6 +32,14 @@ ReleaseNotes = @'
 🚀 EasyPIM.Orchestrator v1.1.0 - Enhanced Stability Release
 
 RECENT IMPROVEMENTS: Dependency optimization and reliability enhancements.
+
+✅ UPDATES IN v1.1.1:
+- 🆕 Template + Inline Override Merging: Full implementation of Issue #136 for all policy types
+- 🏗️ Code Architecture Refactoring: Extracted helper functions to internal modules for better maintainability
+- 🔍 Enhanced Drift Detection: Test-PIMPolicyDrift now uses orchestrator logic for consistency
+- 📚 Comprehensive Documentation: Updated step-by-step guide with template + override examples
+- ✅ Quality Standards: PSScriptAnalyzer compliant across all functions
+- 🔧 New Internal Functions: Remove-JsonComments, Get-ResolvedPolicyObject, Test-IsProtectedRole, Convert-RequirementValue, Compare-PIMPolicy, Resolve-PolicyTemplate
 
 ✅ UPDATES IN v1.1.0:
 - Dependency optimization: Removed unnecessary Microsoft.Graph.Identity.Governance requirement
