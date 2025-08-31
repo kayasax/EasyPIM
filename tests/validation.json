@@ -1,0 +1,266 @@
+{
+  "ProtectedUsers": [
+    "7a55ec4d-028e-4ff1-8ee9-93da07b6d5d5",
+    "9f2aacfc-8c80-41a7-ba07-121e0cb29757"
+  ],
+  "PolicyTemplates": {
+    "Standard": {
+      "ActivationDuration": "PT2H",
+      "ActivationRequirement": "MultiFactorAuthentication,Justification",
+      "ApprovalRequired": false
+    },
+    "HighSecurity": {
+      "ActivationDuration": "PT2H",
+      "ActivationRequirement": "MultiFactorAuthentication,Justification",
+      "ApprovalRequired": true,
+      "Approvers": [
+        {
+          "id": "2ab3f204-9c6f-409d-a9bd-6e302a0132db",
+          "description": "IAM_approvers"
+        }
+      ],
+      "AuthenticationContext_Enabled": true,
+      "AuthenticationContext_Value": "c1:HighRiskOperations",
+      "MaximumEligibilityDuration": "P90D",
+      "MaximumActiveAssignmentDuration": "P30D",
+      "Notifications": {
+        "Eligibility": {
+          "Alert": {
+            "isDefaultRecipientEnabled": true,
+            "NotificationLevel": "All",
+            "Recipients": [
+              "pim-alerts@contoso.com"
+            ]
+          },
+          "Assignee": {
+            "isDefaultRecipientEnabled": true,
+            "NotificationLevel": "All",
+            "Recipients": [
+              "pim-assignees@contoso.com"
+            ]
+          },
+          "Approvers": {
+            "isDefaultRecipientEnabled": true,
+            "NotificationLevel": "All",
+            "Recipients": [
+              "pim-approvers@contoso.com"
+            ]
+          }
+        },
+        "Active": {
+          "Alert": {
+            "isDefaultRecipientEnabled": true,
+            "NotificationLevel": "All",
+            "Recipients": [
+              "pim-alerts@contoso.com"
+            ]
+          },
+          "Assignee": {
+            "isDefaultRecipientEnabled": true,
+            "NotificationLevel": "All",
+            "Recipients": [
+              "pim-assignees@contoso.com"
+            ]
+          },
+          "Approvers": {
+            "isDefaultRecipientEnabled": true,
+            "NotificationLevel": "All",
+            "Recipients": [
+              "pim-approvers@contoso.com"
+            ]
+          }
+        },
+        "Activation": {
+          "Alert": {
+            "isDefaultRecipientEnabled": true,
+            "NotificationLevel": "All",
+            "Recipients": [
+              "pim-alerts@contoso.com"
+            ]
+          },
+          "Assignee": {
+            "isDefaultRecipientEnabled": true,
+            "NotificationLevel": "All",
+            "Recipients": [
+              "pim-assignees@contoso.com"
+            ]
+          },
+          "Approvers": {
+            "isDefaultRecipientEnabled": true,
+            "NotificationLevel": "All",
+            "Recipients": [
+              "pim-approvers@contoso.com"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "EntraRoles": {
+    "Policies": {
+      "Guest Inviter": {
+        "Template": "Standard"
+      },
+      "testrole": {
+        "Template": "Standard"
+      },
+      "User Administrator": {
+        "Template": "HighSecurity"
+      },
+      "Security Administrator": {
+        "Template": "Standard"
+      },
+      "Global Administrator": {
+        "Template": "HighSecurity",
+        "ActivationDuration": "PT1H",
+        "MaximumEligibilityDuration": "P60D"
+      },
+      "Exchange Administrator": {
+        "Template": "Standard",
+        "ApprovalRequired": true,
+        "ActivationRequirement": "MultiFactorAuthentication,Justification,AuthenticationContext"
+      }
+    }
+  },
+  "AzureRoles": {
+    "Policies": {
+      "Reader": {
+        "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a",
+        "ActivationDuration": "PT12H",
+        "ActivationRequirement": "MultiFactorAuthentication",
+        "ApprovalRequired": false
+      },
+      "Tag Contributor": {
+        "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a",
+        "Template": "Standard"
+      },
+      "Storage Table Data Contributor": {
+        "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a/resourceGroups/cloud-shell-storage-westeurope/providers/Microsoft.Storage/storageAccounts/devjnsppstorlb2a2z",
+        "ActivationDuration": "PT8H",
+        "ActivationRequirement": "None",
+        "AllowPermanentEligibility": true
+      },
+      "Contributor": {
+        "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a",
+        "Template": "HighSecurity",
+        "ActivationDuration": "PT30M",
+        "MaximumActiveAssignmentDuration": "PT8H"
+      }
+    }
+  },
+  "GroupRoles": {
+    "Policies": {
+      "b08e4e66-2d4c-4804-be04-f37d2b038342": {
+        "Member": {
+          "Template": "HighSecurity"
+        },
+        "Owner": {
+          "Template": "HighSecurity",
+          "ActivationDuration": "PT1H",
+          "MaximumEligibilityDuration": "P30D"
+        }
+      }
+    }
+  },
+  "Assignments": {
+    "EntraRoles": [
+      {
+        "roleName": "User Administrator",
+        "assignments": [
+          {
+            "principalId": "f8b74308-47bf-4764-a31e-634e54c36212",
+            "assignmentType": "Eligible",
+            "justification": "My user Admins"
+          },
+          {
+            "principalId": "8b0995d0-4c07-4814-98c8-550dc0af62cf",
+            "assignmentType": "Active",
+            "duration": "P8H",
+            "justification": "L2 group"
+          }
+        ]
+      },
+      {
+        "roleName": "Guest Inviter",
+        "assignments": [
+          {
+            "principalId": "fea62dfc-656b-47f1-814c-34c1cb3597ec",
+            "assignmentType": "Eligible",
+            "permanent": true,
+            "justification": "Guest management"
+          }
+        ]
+      }
+    ],
+    "AzureRoles": [
+      {
+        "roleName": "Tag Contributor",
+        "scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a",
+        "assignments": [
+          {
+            "principalId": "a83b74b8-fb37-4ad4-99ec-1132ea8b56d6",
+            "principalType": "Group",
+            "assignmentType": "Eligible",
+            "justification": "Team access"
+          },
+          {
+            "principalId": "d170ce5d-1c4e-40f0-96ab-acab2457e05b",
+            "principalType": "User",
+            "assignmentType": "Active",
+            "duration": "PT8H",
+            "justification": "Maintenance window"
+          }
+        ]
+      },
+      {
+        "RoleName": "Storage Table Data Contributor",
+        "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a/resourceGroups/cloud-shell-storage-westeurope/providers/Microsoft.Storage/storageAccounts/devjnsppstorlb2a2z",
+        "assignments": [
+          {
+            "principalId": "e54e29a4-5c6f-47a6-a5d7-7d555f77fb41",
+            "assignmentType": "Active",
+            "justification": "JNSPP storage"
+          }
+        ]
+      },
+      {
+        "RoleName": "Storage Queue Data Contributor",
+        "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a/resourceGroups/cloud-shell-storage-westeurope/providers/Microsoft.Storage/storageAccounts/devjnsppstorlb2a2z",
+        "assignments": [
+          {
+            "principalId": "e54e29a4-5c6f-47a6-a5d7-7d555f77fb41",
+            "assignmentType": "Active",
+            "justification": "JNSPP storage"
+          }
+        ]
+      },
+      {
+        "RoleName": "Storage Blob Data Owner",
+        "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a/resourceGroups/cloud-shell-storage-westeurope/providers/Microsoft.Storage/storageAccounts/devjnsppstorlb2a2z",
+        "assignments": [
+          {
+            "principalId": "e54e29a4-5c6f-47a6-a5d7-7d555f77fb41",
+            "assignmentType": "Active",
+            "justification": "JNSPP storage"
+          }
+        ]
+      }
+    ],
+    "Groups": [
+      {
+        "groupId": "b08e4e66-2d4c-4804-be04-f37d2b038342",
+        "roleName": "Member",
+        "assignments": [
+          {
+            "principalId": "dcd31c16-eba2-4a6e-bf69-3c3d402b242b",
+            "assignmentType": "Eligible",
+            "justification": "Project team"
+          }
+        ]
+      }
+    ]
+  },
+  "TelemetrySettings": {
+    "ALLOW_TELEMETRY": true
+  }
+}

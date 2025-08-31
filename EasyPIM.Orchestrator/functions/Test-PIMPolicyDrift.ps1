@@ -128,43 +128,64 @@ function Test-PIMPolicyDrift {
 	if ($json.PSObject.Properties['PolicyTemplates']) {
 	foreach ($t in ($json.PolicyTemplates | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name)) { $templates[$t] = $json.PolicyTemplates.$t }
 	}
-	function Resolve-Template { param([Parameter(Mandatory)]$Object) if (-not $Object) { return $Object }; if ($Object.Template -and $templates.ContainsKey($Object.Template)) { $base = $templates[$Object.Template] | ConvertTo-Json -Depth 20 | ConvertFrom-Json; foreach ($p in $Object.PSObject.Properties) { $base | Add-Member -NotePropertyName $p.Name -NotePropertyValue $p.Value -Force }; return $base }; return $Object }
-
-	if ($json.PSObject.Properties['AzureRolePolicies']) { $expectedAzure += $json.AzureRolePolicies }
-	if ($json.PSObject.Properties['EntraRolePolicies']) { $expectedEntra += $json.EntraRolePolicies }
-	if ($json.PSObject.Properties['GroupPolicies']) { $expectedGroup += $json.GroupPolicies }
-
-	if ($json.PSObject.Properties['AzureRoles'] -and $json.AzureRoles.PSObject.Properties['Policies']) {
-		foreach ($prop in $json.AzureRoles.Policies.PSObject.Properties) {
-			$roleName=$prop.Name; $p=$prop.Value; if (-not $p) { continue }
-			$obj=[pscustomobject]@{ RoleName=$roleName; Scope=$p.Scope }
-			foreach ($pp in $p.PSObject.Properties) { if ($pp.Name -notin @('Scope')) { $obj | Add-Member -NotePropertyName $pp.Name -NotePropertyValue $pp.Value -Force } }
-			$expectedAzure += $obj
+	
+	# 🆕 Use the same policy processing logic as the orchestrator for consistency
+	try {
+		$processedConfig = Initialize-EasyPIMPolicies -Config $json -PolicyTemplates $templates
+		$expectedEntra = $processedConfig.EntraRolePolicies | ForEach-Object { 
+			$obj = [pscustomobject]@{ RoleName = $_.RoleName; ResolvedPolicy = $_.Policy }
+			$obj 
 		}
-	}
-	if ($json.PSObject.Properties['EntraRoles'] -and $json.EntraRoles.PSObject.Properties['Policies']) {
-		foreach ($prop in $json.EntraRoles.Policies.PSObject.Properties) {
-			$roleName=$prop.Name; $p=$prop.Value; if (-not $p) { continue }
-			$obj=[pscustomobject]@{ RoleName=$roleName }
-			foreach ($pp in $p.PSObject.Properties) { $obj | Add-Member -NotePropertyName $pp.Name -NotePropertyValue $pp.Value -Force }
-			$expectedEntra += $obj
+		$expectedAzure = $processedConfig.AzureRolePolicies | ForEach-Object { 
+			$obj = [pscustomobject]@{ RoleName = $_.RoleName; Scope = $_.Scope; ResolvedPolicy = $_.Policy }
+			$obj 
 		}
-	}
-	if ($json.PSObject.Properties['GroupRoles'] -and $json.GroupRoles.PSObject.Properties['Policies']) {
-		foreach ($gprop in $json.GroupRoles.Policies.PSObject.Properties) {
-			$groupId=$gprop.Name; $roleBlock=$gprop.Value; if (-not $roleBlock) { continue }
-			foreach ($rprop in $roleBlock.PSObject.Properties) {
-				$roleName=$rprop.Name; $p=$rprop.Value; if (-not $p) { continue }
-				$obj=[pscustomobject]@{ GroupId=$groupId; RoleName=$roleName }
-				foreach ($pp in $p.PSObject.Properties) { $obj | Add-Member -NotePropertyName $pp.Name -NotePropertyValue $pp.Value -Force }
-				$expectedGroup += $obj
+		$expectedGroup = $processedConfig.GroupPolicies | ForEach-Object { 
+			$obj = [pscustomobject]@{ GroupId = $_.GroupId; GroupName = $_.GroupName; RoleName = $_.RoleName; ResolvedPolicy = $_.Policy }
+			$obj 
+		}
+	} catch {
+		Write-Warning "Failed to use orchestrator policy processing, falling back to local logic: $_"
+		# Fallback to original logic
+		function Resolve-Template { param([Parameter(Mandatory)]$Object) if (-not $Object) { return $Object }; if ($Object.Template -and $templates.ContainsKey($Object.Template)) { $base = $templates[$Object.Template] | ConvertTo-Json -Depth 20 | ConvertFrom-Json; foreach ($p in $Object.PSObject.Properties) { $base | Add-Member -NotePropertyName $p.Name -NotePropertyValue $p.Value -Force }; return $base }; return $Object }
+
+		# Legacy format support - process old-style configurations
+		if ($json.PSObject.Properties['AzureRolePolicies']) { $expectedAzure += $json.AzureRolePolicies }
+		if ($json.PSObject.Properties['EntraRolePolicies']) { $expectedEntra += $json.EntraRolePolicies }
+		if ($json.PSObject.Properties['GroupPolicies']) { $expectedGroup += $json.GroupPolicies }
+
+		if ($json.PSObject.Properties['AzureRoles'] -and $json.AzureRoles.PSObject.Properties['Policies']) {
+			foreach ($prop in $json.AzureRoles.Policies.PSObject.Properties) {
+				$roleName=$prop.Name; $p=$prop.Value; if (-not $p) { continue }
+				$obj=[pscustomobject]@{ RoleName=$roleName; Scope=$p.Scope }
+				foreach ($pp in $p.PSObject.Properties) { if ($pp.Name -notin @('Scope')) { $obj | Add-Member -NotePropertyName $pp.Name -NotePropertyValue $pp.Value -Force } }
+				$expectedAzure += $obj
 			}
 		}
-	}
+		if ($json.PSObject.Properties['EntraRoles'] -and $json.EntraRoles.PSObject.Properties['Policies']) {
+			foreach ($prop in $json.EntraRoles.Policies.PSObject.Properties) {
+				$roleName=$prop.Name; $p=$prop.Value; if (-not $p) { continue }
+				$obj=[pscustomobject]@{ RoleName=$roleName }
+				foreach ($pp in $p.PSObject.Properties) { $obj | Add-Member -NotePropertyName $pp.Name -NotePropertyValue $pp.Value -Force }
+				$expectedEntra += $obj
+			}
+		}
+		if ($json.PSObject.Properties['GroupRoles'] -and $json.GroupRoles.PSObject.Properties['Policies']) {
+			foreach ($gprop in $json.GroupRoles.Policies.PSObject.Properties) {
+				$groupId=$gprop.Name; $roleBlock=$gprop.Value; if (-not $roleBlock) { continue }
+				foreach ($rprop in $roleBlock.PSObject.Properties) {
+					$roleName=$rprop.Name; $p=$rprop.Value; if (-not $p) { continue }
+					$obj=[pscustomobject]@{ GroupId=$groupId; RoleName=$roleName }
+					foreach ($pp in $p.PSObject.Properties) { $obj | Add-Member -NotePropertyName $pp.Name -NotePropertyValue $pp.Value -Force }
+					$expectedGroup += $obj
+				}
+			}
+		}
 
-	$expectedAzure = $expectedAzure | ForEach-Object -Process { $_ | Add-Member -NotePropertyName ResolvedPolicy -NotePropertyValue (Resolve-Template -Object $_) -Force; $_ }
-	$expectedEntra = $expectedEntra | ForEach-Object -Process { $_ | Add-Member -NotePropertyName ResolvedPolicy -NotePropertyValue (Resolve-Template -Object $_) -Force; $_ }
-	$expectedGroup = $expectedGroup | ForEach-Object -Process { $_ | Add-Member -NotePropertyName ResolvedPolicy -NotePropertyValue (Resolve-Template -Object $_) -Force; $_ }
+		$expectedAzure = $expectedAzure | ForEach-Object -Process { $_ | Add-Member -NotePropertyName ResolvedPolicy -NotePropertyValue (Resolve-Template -Object $_) -Force; $_ }
+		$expectedEntra = $expectedEntra | ForEach-Object -Process { $_ | Add-Member -NotePropertyName ResolvedPolicy -NotePropertyValue (Resolve-Template -Object $_) -Force; $_ }
+		$expectedGroup = $expectedGroup | ForEach-Object -Process { $_ | Add-Member -NotePropertyName ResolvedPolicy -NotePropertyValue (Resolve-Template -Object $_) -Force; $_ }
+	}
 
 	$fields = @('ActivationDuration','ActivationRequirement','ApprovalRequired','MaximumEligibilityDuration','AllowPermanentEligibility','MaximumActiveAssignmentDuration','AllowPermanentActiveAssignment')
 	$liveNameMap = @{ 'ActivationRequirement'='EnablementRules'; 'MaximumEligibilityDuration'='MaximumEligibleAssignmentDuration'; 'AllowPermanentEligibility'='AllowPermanentEligibleAssignment' }

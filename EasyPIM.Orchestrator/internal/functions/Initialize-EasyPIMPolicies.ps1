@@ -8,6 +8,9 @@ function Initialize-EasyPIMPolicies {
         [PSCustomObject]$Config,
 
         [Parameter(Mandatory = $false)]
+        [hashtable]$PolicyTemplates = @{},
+
+        [Parameter(Mandatory = $false)]
         [ValidateSet("All", "AzureRoles", "EntraRoles", "GroupRoles")]
         [string[]]$PolicyOperations = @("All"),
 
@@ -20,14 +23,14 @@ function Initialize-EasyPIMPolicies {
     try {
         $processedConfig = @{}
 
-        # Initialize policy templates if they exist
-        $policyTemplates = @{}
+        # Initialize policy templates - merge parameter and config templates
+        $policyTemplates = $PolicyTemplates.Clone()
         if ($Config.PSObject.Properties['PolicyTemplates'] -and $Config.PolicyTemplates) {
             foreach ($templateName in $Config.PolicyTemplates.PSObject.Properties.Name) {
                 $policyTemplates[$templateName] = $Config.PolicyTemplates.$templateName
             }
-            Write-Verbose "Found $($policyTemplates.Keys.Count) policy templates"
         }
+        Write-Verbose "Found $($policyTemplates.Keys.Count) policy templates"
 
         $processAzure  = ($PolicyOperations -contains 'All' -or $PolicyOperations -contains 'AzureRoles')
         $processEntra  = ($PolicyOperations -contains 'All' -or $PolicyOperations -contains 'EntraRoles')
