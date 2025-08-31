@@ -2,7 +2,21 @@
   push:
     paths:
       - 'EasyPIM/**'
-      - 'EasyPIM.Orchestrator/**'
+          - name: Validate EasyPIM Module (General Tests for EasyPIM)
+        run: |
+          # Run general tests targeting EasyPIM module files
+          pwsh -NoProfile -ExecutionPolicy Bypass -Command "
+            Import-Module Pester -Force
+            `$config = New-PesterConfiguration
+            `$config.Run.Path = @('.\tests\general\*.Tests.ps1')
+            `$config.Output.Verbosity = 'Normal'
+            `$config.Run.PassThru = `$true
+            `$config.TestResult.Enabled = `$true
+            `$config.TestResult.OutputPath = '.\TestResults\TEST-EasyPIM-General.xml'
+            `$results = Invoke-Pester -Configuration `$config
+            if (`$results.FailedCount -gt 0) { exit 1 }
+          "
+        shell: pwshchestrator/**'
       - 'shared/**'
       - 'tests/**'
       - 'build/**'
@@ -108,7 +122,7 @@ jobs:
               Import-Module Pester -Force
               `$config = New-PesterConfiguration
               `$config.Run.Path = @('.\tests\orchestrator\*.Tests.ps1')
-              `$config.Output.Verbosity = 'Detailed'
+              `$config.Output.Verbosity = 'Normal'
               `$config.Run.PassThru = `$true
               `$results = Invoke-Pester -Configuration `$config
               if (`$results.FailedCount -gt 0) { 
@@ -130,5 +144,5 @@ jobs:
         run: .\build\vsts-prerequisites.ps1
         shell: pwsh
       - name: Validate All Modules (General Tests Only)
-        run: .\tests\pester.ps1 -TestGeneral $true -TestFunctions $false -Output "Detailed" -Fast
+        run: .\tests\pester.ps1 -TestGeneral $true -TestFunctions $false -Output "Normal" -Fast
         shell: pwsh
