@@ -46,51 +46,11 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Prerequisites
+      - name: Install Prerequisites (Optimized)
         run: .\build\vsts-prerequisites.ps1
         shell: pwsh
-      - name: Upgrade Pester for Parallel Support
-        run: |
-          pwsh -Command "
-            Write-Host 'Upgrading Pester to latest version for parallel execution...'
-            Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser
-            Import-Module Pester -Force
-            `$version = (Get-Module Pester).Version
-            Write-Host 'Pester version installed:' `$version
-            if (`$version.Major -ge 5) {
-              Write-Host '✅ Parallel execution will be available' -ForegroundColor Green
-            } else {
-              Write-Host '⚠️ Parallel execution not available, using sequential' -ForegroundColor Yellow
-            }
-          "
-        shell: pwsh
-      - name: Check Pester Version and Parallel Support
-        run: |
-          pwsh -Command "
-            Import-Module Pester -Force
-            `$pesterVersion = (Get-Module Pester).Version
-            Write-Host 'Pester version:' `$pesterVersion
-            Write-Host 'Processor count:' [Environment]::ProcessorCount
-            if (`$pesterVersion.Major -ge 5) {
-              Write-Host '✅ Pester v5+ detected - Parallel execution available' -ForegroundColor Green
-            } else {
-              Write-Host '⚠️ Pester v4 or lower - Sequential execution only' -ForegroundColor Yellow
-            }
-          "
-        shell: pwsh
-      - name: Validate EasyPIM Module (Optimized)
-        run: |
-          # Try parallel first, fallback to sequential if not supported
-          pwsh -Command "
-            `$pesterVersion = (Get-Module Pester -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1).Version
-            if (`$pesterVersion.Major -ge 5) {
-              Write-Host 'Running with Pester parallel execution (4 workers)'
-              .\tests\pester.ps1 -TestGeneral `$true -TestFunctions `$false -Output 'Normal' -Parallel -Workers 4
-            } else {
-              Write-Host 'Running with sequential execution (Pester v4 fallback)'
-              .\tests\pester.ps1 -TestGeneral `$true -TestFunctions `$false -Output 'Normal'
-            }
-          "
+      - name: Validate EasyPIM Module (Build Script)
+        run: .\build\vsts-validate.ps1
         shell: pwsh
 
   validate-orchestrator:
@@ -99,30 +59,11 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Prerequisites
+      - name: Install Prerequisites (Optimized)
         run: .\build\vsts-prerequisites.ps1
         shell: pwsh
-      - name: Upgrade Pester for Parallel Support
-        run: |
-          pwsh -Command "
-            Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser
-            Import-Module Pester -Force
-            Write-Host 'Pester version:' (Get-Module Pester).Version
-          "
-        shell: pwsh
-      - name: Validate Orchestrator Module (Optimized)
-        run: |
-          # Try parallel first, fallback to sequential if not supported
-          pwsh -Command "
-            `$pesterVersion = (Get-Module Pester -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1).Version
-            if (`$pesterVersion.Major -ge 5) {
-              Write-Host 'Running with Pester parallel execution (4 workers)'
-              .\tests\pester.ps1 -TestGeneral `$true -TestFunctions `$false -Output 'Normal' -Parallel -Workers 4
-            } else {
-              Write-Host 'Running with sequential execution (Pester v4 fallback)'
-              .\tests\pester.ps1 -TestGeneral `$true -TestFunctions `$false -Output 'Normal'
-            }
-          "
+      - name: Validate Orchestrator Module (Build Script)
+        run: .\build\vsts-validate.ps1
         shell: pwsh
 
   validate-all:
@@ -131,33 +72,9 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Prerequisites
+      - name: Install Prerequisites (Optimized)
         run: .\build\vsts-prerequisites.ps1
         shell: pwsh
-      - name: Upgrade Pester for Parallel Support
-        run: |
-          pwsh -Command "
-            Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser
-            Import-Module Pester -Force
-            Write-Host 'Pester version:' (Get-Module Pester).Version
-          "
-        shell: pwsh
-      - name: Validate All Modules (High-Performance)
-        run: |
-          # Use maximum parallelism on GitHub Actions runners (General tests only)
-          pwsh -Command "
-            `$pesterVersion = (Get-Module Pester -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1).Version
-            `$processorCount = [Environment]::ProcessorCount
-            Write-Host 'GitHub Actions runner specs:'
-            Write-Host '- Pester version:' `$pesterVersion
-            Write-Host '- Processor count:' `$processorCount
-            
-            if (`$pesterVersion.Major -ge 5) {
-              Write-Host 'Running with maximum parallel execution (' (`$processorCount) 'workers) + Fast mode (General tests only)'
-              .\tests\pester.ps1 -TestGeneral `$true -TestFunctions `$false -Output 'Normal' -Fast -Parallel -Workers `$processorCount
-            } else {
-              Write-Host 'Running with Fast mode (sequential fallback, General tests only)'
-              .\tests\pester.ps1 -TestGeneral `$true -TestFunctions `$false -Output 'Normal' -Fast
-            }
-          "
+      - name: Validate All Modules (Build Script with Parallel)
+        run: .\build\vsts-validate.ps1
         shell: pwsh
