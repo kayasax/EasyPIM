@@ -4,7 +4,7 @@ function Test-IsProtectedRole {
 	Tests if a role is considered protected based on security best practices.
 
 	.DESCRIPTION
-	Checks if a role name matches predefined lists of protected roles for 
+	Checks if a role name matches predefined lists of protected roles for
 	Entra ID or Azure resource management. Protected roles require special
 	handling and monitoring.
 
@@ -22,7 +22,7 @@ function Test-IsProtectedRole {
 	# Returns: True
 
 	.EXAMPLE
-	$isProtected = Test-IsProtectedRole -RoleName "Owner" -Type "AzureRole"  
+	$isProtected = Test-IsProtectedRole -RoleName "Owner" -Type "AzureRole"
 	# Returns: True
 	#>
 	[CmdletBinding()]
@@ -34,11 +34,11 @@ function Test-IsProtectedRole {
 	# Protected role definitions (consistent with orchestrator logic)
 	$protectedEntraRoles = @(
 		"Global Administrator",
-		"Privileged Role Administrator", 
+		"Privileged Role Administrator",
 		"Security Administrator",
 		"User Access Administrator"
 	)
-	
+
 	$protectedAzureRoles = @(
 		"Owner",
 		"User Access Administrator"

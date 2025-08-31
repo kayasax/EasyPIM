@@ -53,14 +53,14 @@ function Compare-PIMPolicy {
 	# Fields to compare
 	$fields = @(
 		'ActivationDuration',
-		'ActivationRequirement', 
+		'ActivationRequirement',
 		'ApprovalRequired',
 		'MaximumEligibilityDuration',
 		'AllowPermanentEligibility',
 		'MaximumActiveAssignmentDuration',
 		'AllowPermanentActiveAssignment'
 	)
-	
+
 	# Mapping from config names to live policy property names
 	$liveNameMap = @{
 		'ActivationRequirement' = 'EnablementRules'
@@ -74,12 +74,12 @@ function Compare-PIMPolicy {
 		if ($Expected.PSObject.Properties[$field]) {
 			$expectedValue = $Expected.$field
 			$liveProperty = $field
-			
+
 			# Map to live property name if needed
 			if ($liveNameMap.ContainsKey($field)) {
 				$liveProperty = $liveNameMap[$field]
 			}
-			
+
 			$liveValue = $null
 			if ($Live -and $Live.PSObject -and $Live.PSObject.Properties[$liveProperty]) {
 				$liveValue = $Live.$liveProperty
@@ -103,10 +103,10 @@ function Compare-PIMPolicy {
 				$Expected.PSObject.Properties | ForEach-Object {
 					$policyForBusinessRules | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value
 				}
-				
+
 				$businessRuleResult = Test-PIMPolicyBusinessRules -PolicySettings $policyForBusinessRules -CurrentPolicy $Live -ApplyAdjustments
 				$hasBusinessRuleAdjustment = $businessRuleResult.HasChanges
-				
+
 				if ($hasBusinessRuleAdjustment) {
 					$adjustedExpected = $businessRuleResult.AdjustedSettings.$field
 					$adjustedExpectedNormalized = Convert-RequirementValue -Value $adjustedExpected
@@ -149,7 +149,7 @@ function Compare-PIMPolicy {
 	# Check approver count if approval is required
 	if ($null -ne $ApproverCountExpected -and $Expected.PSObject.Properties['ApprovalRequired'] -and $Expected.ApprovalRequired) {
 		$liveApproverCount = $null
-		
+
 		# Try different property names for approver count
 		foreach ($approverProperty in @('Approvers', 'Approver', 'Approval', 'approval', 'ApproverCount')) {
 			if ($Live.PSObject -and $Live.PSObject.Properties[$approverProperty]) {
@@ -163,7 +163,7 @@ function Compare-PIMPolicy {
 				if ($null -ne $liveApproverCount) { break }
 			}
 		}
-		
+
 		if ($null -ne $liveApproverCount -and $liveApproverCount -ne $ApproverCountExpected) {
 			$differences += "ApproversCount: expected=$ApproverCountExpected actual=$liveApproverCount"
 		}
