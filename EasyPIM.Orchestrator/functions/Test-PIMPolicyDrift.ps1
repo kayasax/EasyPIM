@@ -132,17 +132,17 @@ function Test-PIMPolicyDrift {
 	# 🆕 Use the same policy processing logic as the orchestrator for consistency
 	try {
 		$processedConfig = Initialize-EasyPIMPolicies -Config $json -PolicyTemplates $templates
-		$expectedEntra = $processedConfig.EntraRolePolicies | ForEach-Object { 
+		$expectedEntra = $processedConfig.EntraRolePolicies | ForEach-Object {
 			$obj = [pscustomobject]@{ RoleName = $_.RoleName; ResolvedPolicy = $_.Policy }
-			$obj 
+			$obj
 		}
-		$expectedAzure = $processedConfig.AzureRolePolicies | ForEach-Object { 
+		$expectedAzure = $processedConfig.AzureRolePolicies | ForEach-Object {
 			$obj = [pscustomobject]@{ RoleName = $_.RoleName; Scope = $_.Scope; ResolvedPolicy = $_.Policy }
-			$obj 
+			$obj
 		}
-		$expectedGroup = $processedConfig.GroupPolicies | ForEach-Object { 
+		$expectedGroup = $processedConfig.GroupPolicies | ForEach-Object {
 			$obj = [pscustomobject]@{ GroupId = $_.GroupId; GroupName = $_.GroupName; RoleName = $_.RoleName; ResolvedPolicy = $_.Policy }
-			$obj 
+			$obj
 		}
 	} catch {
 		Write-Warning "Failed to use orchestrator policy processing, falling back to local logic: $_"
