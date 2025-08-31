@@ -339,13 +339,13 @@ function Invoke-EasyPIMOrchestrator {
 		Write-Host -Object "🔍 [TEST] Validating principal and group IDs..." -ForegroundColor Cyan
 		$principalIds = New-Object -TypeName "System.Collections.Generic.HashSet[string]"
 		Write-Verbose ("[Orchestrator] TenantId in context before validation: {0}" -f ($TenantId))
-		try { 
+		try {
 			$tpeCmd = Get-Command Test-PrincipalExists -ErrorAction SilentlyContinue
-			if($tpeCmd){ 
-				Write-Host ("[Debug] Using Test-PrincipalExists from: {0} ({1})" -f $tpeCmd.Source,$tpeCmd.Path) -ForegroundColor DarkGray 
-			} else { 
-				Write-Host "[Debug] Test-PrincipalExists not found in scope" -ForegroundColor Yellow 
-			} 
+			if($tpeCmd){
+				Write-Host ("[Debug] Using Test-PrincipalExists from: {0} ({1})" -f $tpeCmd.Source,$tpeCmd.Path) -ForegroundColor DarkGray
+			} else {
+				Write-Host "[Debug] Test-PrincipalExists not found in scope" -ForegroundColor Yellow
+			}
 		} catch {
 			Write-Debug "Failed to check Test-PrincipalExists command availability"
 		}
