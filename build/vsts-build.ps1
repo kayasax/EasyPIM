@@ -126,7 +126,7 @@ try {
     $manifestPath = "$($publishDir.FullName)\EasyPIM\EasyPIM.psd1"
     $localManifest = Import-PowerShellDataFile -Path $manifestPath -ErrorAction Stop
     $localVersion = [version]$localManifest.ModuleVersion
-    
+
     $existingModule = Find-Module -Name EasyPIM -Repository PSGallery -ErrorAction SilentlyContinue
     if ($existingModule -and [version]$existingModule.Version -eq $localVersion) {
         throw "ERROR: Version $localVersion already exists on PowerShell Gallery. Please bump the version in EasyPIM.psd1 before building."

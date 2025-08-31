@@ -24,19 +24,19 @@ function Get-TelemetryIdentifier {
         [Parameter(Mandatory = $true)]
         [string]$TenantId
     )
-    
+
     try {
         # Hardcoded salt for consistent hashing (non-configurable security practice)
         $Salt = "EasyPIM-Privacy-Salt-2025-PostHog"
         $StringToHash = "$TenantId-$Salt"
-        
+
         # Create SHA256 hash for privacy protection
         $HashedBytes = [System.Security.Cryptography.SHA256]::Create().ComputeHash(
             [System.Text.Encoding]::UTF8.GetBytes($StringToHash)
         )
-        
+
         $HashedIdentifier = [System.BitConverter]::ToString($HashedBytes).Replace("-", "").ToLower()
-        
+
         Write-Verbose "Generated privacy-protected telemetry identifier (SHA256)"
         return $HashedIdentifier
     }

@@ -264,13 +264,13 @@ function Test-PIMPolicyDrift {
 			if ($null -ne $liveApproverCount -and $liveApproverCount -ne $ApproverCountExpected) { $differences += "ApproversCount: expected=$ApproverCountExpected actual=$liveApproverCount" }
 		}
 		if ($differences.Count -gt 0) { $script:driftCount++; $status='Drift' } else { $status='Match' }
-		
+
 		# Add protected role indicator to the name display
 		$displayName = $Name
 		if (Test-IsProtectedRole -RoleName $Name -Type $Type) {
 			$displayName = "$Name [⚠️ PROTECTED]"
 		}
-		
+
 		$script:results += [pscustomobject]@{ Type=$Type; Name=$displayName; Target=$ExtraId; Status=$status; Differences=($differences -join '; ') }
 	}
 

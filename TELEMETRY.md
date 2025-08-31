@@ -27,11 +27,11 @@ When telemetry is enabled, we collect:
 
 ## What We DON'T Collect
 
-❌ **Personal Information**: No user names, email addresses, or personal identifiers  
-❌ **Sensitive PIM Data**: No role assignments, policies, or configuration details  
-❌ **Clear-text Tenant IDs**: Tenant identification is always encrypted  
-❌ **IP Addresses**: PostHog may log IP addresses but we don't store or analyze them  
-❌ **Configuration Contents**: No JSON configuration data or secrets  
+❌ **Personal Information**: No user names, email addresses, or personal identifiers
+❌ **Sensitive PIM Data**: No role assignments, policies, or configuration details
+❌ **Clear-text Tenant IDs**: Tenant identification is always encrypted
+❌ **IP Addresses**: PostHog may log IP addresses but we don't store or analyze them
+❌ **Configuration Contents**: No JSON configuration data or secrets
 
 ## How It Works
 
@@ -106,7 +106,7 @@ Disable-EasyPIMTelemetry -ConfigurationFile "path/to/config.json"
 ```powershell
 # Tenant ID hashing implementation
 $Salt = "EasyPIM-Privacy-Salt-2025-PostHog"
-$StringToHash = "$TenantId-$Salt" 
+$StringToHash = "$TenantId-$Salt"
 $HashedIdentifier = [System.Security.Cryptography.SHA256]::Create().ComputeHash(
     [System.Text.Encoding]::UTF8.GetBytes($StringToHash)
 )

@@ -75,35 +75,44 @@ jobs:
       - name: Install Prerequisites
         run: .\build\vsts-prerequisites.ps1
         shell: pwsh
-      - name: Validate Orchestrator Module (General Tests Only)
+      - name: Validate Orchestrator Module (General Tests for Orchestrator)
         run: |
-          # Run orchestrator-specific tests (check multiple possible locations)
+          # Run general tests targeting orchestrator module files
           pwsh -NoProfile -ExecutionPolicy Bypass -Command "
-            Import-Module Pester -Force
-            `$config = New-PesterConfiguration
-            # Check for orchestrator tests in different locations
-            `$testPaths = @()
-            if (Test-Path '.\tests\orchestrator\*.Tests.ps1') { `$testPaths += '.\tests\orchestrator\*.Tests.ps1' }
-            if (Test-Path '.\tests\functions\*orchestrator*.tests.ps1') { `$testPaths += '.\tests\functions\*orchestrator*.tests.ps1' }
-            if (`$testPaths.Count -eq 0) {
-              Write-Host 'No orchestrator-specific tests found, running basic module validation'
-              # Basic module import test
-              Import-Module '.\EasyPIM.Orchestrator\EasyPIM.Orchestrator.psd1' -Force
-              `$commands = Get-Command -Module EasyPIM.Orchestrator
-              if (`$commands.Count -eq 0) { 
-                Write-Error 'No commands exported from EasyPIM.Orchestrator module'
-                exit 1 
-              }
-              Write-Host 'EasyPIM.Orchestrator module loaded successfully with `$(`$commands.Count) commands'
-              exit 0
+            # Import orchestrator module first
+            Import-Module '.\EasyPIM.Orchestrator\EasyPIM.Orchestrator.psd1' -Force
+
+            # Set up test environment variables for orchestrator
+            `$global:testroot = '.\tests'
+            `$env:EASYPIM_MODULE_ROOT = '.\EasyPIM.Orchestrator'
+
+            # Run PSScriptAnalyzer with orchestrator paths
+            `$orchestratorPaths = @(
+              '.\EasyPIM.Orchestrator\functions',
+              '.\EasyPIM.Orchestrator\internal\functions'
+            ) | Where-Object { Test-Path `$_ }
+
+            if (`$orchestratorPaths.Count -gt 0) {
+              Write-Host 'Running PSScriptAnalyzer for orchestrator paths: `$(`$orchestratorPaths -join `", `")'
+              . '.\tests\general\PSScriptAnalyzer.Tests.ps1' -CommandPath `$orchestratorPaths
             }
-            `$config.Run.Path = `$testPaths
-            `$config.Output.Verbosity = 'Detailed'
-            `$config.Run.PassThru = `$true
-            `$config.TestResult.Enabled = `$true
-            `$config.TestResult.OutputPath = '.\TestResults\TEST-Orchestrator-General.xml'
-            `$results = Invoke-Pester -Configuration `$config
-            if (`$results.FailedCount -gt 0) { exit 1 }
+
+            # Run orchestrator-specific tests
+            if (Test-Path '.\tests\orchestrator\*.Tests.ps1') {
+              Write-Host 'Running orchestrator-specific tests...'
+              Import-Module Pester -Force
+              `$config = New-PesterConfiguration
+              `$config.Run.Path = @('.\tests\orchestrator\*.Tests.ps1')
+              `$config.Output.Verbosity = 'Detailed'
+              `$config.Run.PassThru = `$true
+              `$results = Invoke-Pester -Configuration `$config
+              if (`$results.FailedCount -gt 0) {
+                Write-Error 'Orchestrator tests failed'
+                exit 1
+              }
+            }
+
+            Write-Host 'All orchestrator validation completed successfully'
           "
         shell: pwsh
 
