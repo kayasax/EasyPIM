@@ -27,13 +27,20 @@ function Set-ActiveAssignmentFromCSV($MaximumActiveAssignmentDuration, $AllowPer
         $duration = [string]$MaximumActiveAssignmentDuration
         # Check for zero duration values that would result in PT0S
         if ($duration -eq "PT0S" -or $duration -eq "PT0M" -or $duration -eq "PT0H" -or $duration -eq "P0D" -or [string]::IsNullOrWhiteSpace($duration)) {
-            Write-Warning "[PT0S Prevention] MaximumActiveAssignmentDuration '$duration' would result in PT0S - using minimum fallback PT5M"
-            $MaximumActiveAssignmentDuration = "PT5M"
+            # Always warn for explicit PT0S values - these are genuinely problematic
+            Write-Warning "[PT0S Prevention] MaximumActiveAssignmentDuration '$duration' would result in PT0S - using business fallback P180D"
+            $MaximumActiveAssignmentDuration = "P180D"
         }
-    } elseif ([string]::IsNullOrWhiteSpace($MaximumActiveAssignmentDuration) -and $AllowPermanentActiveAssignment -ne "true") {
-        # If duration is empty/null but permanent is not allowed, provide fallback
-        Write-Warning "[PT0S Prevention] Empty MaximumActiveAssignmentDuration with permanent not allowed - using minimum fallback PT5M"
-        $MaximumActiveAssignmentDuration = "PT5M"
+    } elseif ([string]::IsNullOrWhiteSpace($MaximumActiveAssignmentDuration)) {
+        # Handle missing duration based on permanent assignment policy
+        if ($AllowPermanentActiveAssignment -eq "true") {
+            # Silent: User intended permanent, no duration limit needed
+            Write-Verbose "[PT0S Prevention] No duration limit needed (permanent active assignment allowed)"
+        } else {
+            # Verbose warning: We're applying a business rule fallback when permanent not allowed
+            Write-Verbose "[PT0S Prevention] Applied P180D fallback for empty MaximumActiveAssignmentDuration (permanent not allowed)"
+            $MaximumActiveAssignmentDuration = "P180D"
+        }
     }
 
     if ( "true" -eq $AllowPermanentActiveAssignment) {

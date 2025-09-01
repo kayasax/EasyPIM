@@ -25,13 +25,20 @@ function Set-EligibilityAssignment($MaximumEligibilityDuration, $AllowPermanentE
         $duration = [string]$MaximumEligibilityDuration
         # Check for zero duration values that would result in PT0S
         if ($duration -eq "PT0S" -or $duration -eq "PT0M" -or $duration -eq "PT0H" -or $duration -eq "P0D" -or [string]::IsNullOrWhiteSpace($duration)) {
-            Write-Warning "[PT0S Prevention] MaximumEligibilityDuration '$duration' would result in PT0S - using minimum fallback P1D"
-            $MaximumEligibilityDuration = "P1D"
+            # Always warn for explicit PT0S values - these are genuinely problematic
+            Write-Warning "[PT0S Prevention] MaximumEligibilityDuration '$duration' would result in PT0S - using business fallback P365D"
+            $MaximumEligibilityDuration = "P365D"
         }
-    } elseif ([string]::IsNullOrWhiteSpace($MaximumEligibilityDuration) -and $AllowPermanentEligibility -ne $true -and $AllowPermanentEligibility -ne "true") {
-        # If duration is empty/null but permanent is not allowed, provide fallback
-        Write-Warning "[PT0S Prevention] Empty MaximumEligibilityDuration with permanent not allowed - using minimum fallback P1D"
-        $MaximumEligibilityDuration = "P1D"
+    } elseif ([string]::IsNullOrWhiteSpace($MaximumEligibilityDuration)) {
+        # Handle missing duration based on permanent assignment policy
+        if ($AllowPermanentEligibility -eq $true -or $AllowPermanentEligibility -eq "true") {
+            # Silent: User intended permanent, no duration limit needed
+            Write-Verbose "[PT0S Prevention] No duration limit needed (permanent eligibility allowed)"
+        } else {
+            # Verbose warning: We're applying a business rule fallback when permanent not allowed
+            Write-Verbose "[PT0S Prevention] Applied P365D fallback for empty MaximumEligibilityDuration (permanent not allowed)"
+            $MaximumEligibilityDuration = "P365D"
+        }
     }
 
     $max = $MaximumEligibilityDuration
