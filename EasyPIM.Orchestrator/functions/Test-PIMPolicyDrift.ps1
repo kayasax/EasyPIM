@@ -84,7 +84,20 @@ behavior and will not be flagged as drift by this function.
 .LINK
 https://github.com/kayasax/EasyPIM
 #>
-		Write-Verbose -Message "Starting PIM policy drift test. ConfigPath: $ConfigPath, KeyVaultName: $KeyVaultName, SecretName: $SecretName"
+function Test-PIMPolicyDrift {
+	[CmdletBinding()]
+	[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingPositionalParameters", "", Justification="Parameters are named at call sites; internal helper calls may trigger false positives.")]
+	param(
+		[Parameter(Mandatory)][string]$TenantId,
+		[Parameter()][string]$ConfigPath,
+		[string]$KeyVaultName,
+		[string]$SecretName,
+		[string]$SubscriptionId,
+		[switch]$FailOnDrift,
+		[switch]$PassThru
+	)
+
+	Write-Verbose -Message "Starting PIM policy drift test. ConfigPath: $ConfigPath, KeyVaultName: $KeyVaultName, SecretName: $SecretName"
 
 		# Load config from Key Vault if specified, else from file
 		if ($KeyVaultName -and $SecretName) {
