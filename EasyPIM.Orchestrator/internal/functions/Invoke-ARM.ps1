@@ -65,27 +65,53 @@ function Invoke-ARM {
             }
         }
 
-        # Method 4: REST API Token Acquisition (OIDC Fallback)
+        # Method 4: GitHub Actions OIDC Token Acquisition (Enhanced)
         if (-not $token -and $env:AZURE_CLIENT_ID -and $env:AZURE_TENANT_ID) {
             try {
                 $tokenEndpoint = "https://login.microsoftonline.com/$($env:AZURE_TENANT_ID)/oauth2/v2.0/token"
-                $body = @{
-                    client_id = $env:AZURE_CLIENT_ID
-                    scope = "https://management.azure.com/.default"
-                    grant_type = "client_credentials"
-                }
+                
+                # GitHub Actions OIDC with federated credentials
+                if ($env:ACTIONS_ID_TOKEN_REQUEST_TOKEN -and $env:ACTIONS_ID_TOKEN_REQUEST_URL) {
+                    Write-Verbose "Detected GitHub Actions OIDC environment, using federated credentials"
+                    
+                    # Get the GitHub OIDC token
+                    $idTokenResponse = Invoke-RestMethod -Uri "$($env:ACTIONS_ID_TOKEN_REQUEST_URL)&audience=api://AzureADTokenExchange" -Headers @{
+                        "Authorization" = "Bearer $($env:ACTIONS_ID_TOKEN_REQUEST_TOKEN)"
+                    }
+                    
+                    $body = @{
+                        client_id = $env:AZURE_CLIENT_ID
+                        scope = "https://management.azure.com/.default"
+                        grant_type = "client_credentials"
+                        client_assertion_type = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+                        client_assertion = $idTokenResponse.value
+                    }
+                    
+                    Write-Verbose "Using GitHub Actions federated credentials for ARM token"
+                } else {
+                    # Traditional service principal
+                    $body = @{
+                        client_id = $env:AZURE_CLIENT_ID
+                        scope = "https://management.azure.com/.default"
+                        grant_type = "client_credentials"
+                    }
 
-                if ($env:AZURE_CLIENT_SECRET) {
-                    $body.client_secret = $env:AZURE_CLIENT_SECRET
-                } elseif ($env:AZURE_CLIENT_ASSERTION) {
-                    $body.client_assertion_type = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
-                    $body.client_assertion = $env:AZURE_CLIENT_ASSERTION
+                    if ($env:AZURE_CLIENT_SECRET) {
+                        $body.client_secret = $env:AZURE_CLIENT_SECRET
+                        Write-Verbose "Using client secret for ARM token"
+                    } elseif ($env:AZURE_CLIENT_ASSERTION) {
+                        $body.client_assertion_type = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+                        $body.client_assertion = $env:AZURE_CLIENT_ASSERTION
+                        Write-Verbose "Using client assertion for ARM token"
+                    } else {
+                        throw "No authentication method available (need AZURE_CLIENT_SECRET or federated credentials)"
+                    }
                 }
 
                 $response = Invoke-RestMethod -Uri $tokenEndpoint -Method POST -Body $body -ContentType "application/x-www-form-urlencoded"
                 $token = $response.access_token
-                $authMethod = "Direct OAuth2 (OIDC/Federated)"
-                Write-Verbose "ARM token acquired via direct OAuth2 token endpoint"
+                $authMethod = if ($env:ACTIONS_ID_TOKEN_REQUEST_TOKEN) { "GitHub Actions OIDC (Federated)" } else { "Direct OAuth2 (Service Principal)" }
+                Write-Verbose "ARM token acquired via: $authMethod"
             } catch {
                 $tokenAcquisitionErrors += "Direct OAuth2: $($_.Exception.Message)"
             }
@@ -105,11 +131,15 @@ Troubleshooting for OIDC/CI-CD environments:
 4. Check that the token has the required ARM API permissions
 
 Current Environment Variables:
-  AZURE_CLIENT_ID: $($env:AZURE_CLIENT_ID -ne $null)
-  AZURE_TENANT_ID: $($env:AZURE_TENANT_ID -ne $null)
-  AZURE_ACCESS_TOKEN: $($env:AZURE_ACCESS_TOKEN -ne $null)
-  AZURE_CLIENT_SECRET: $($env:AZURE_CLIENT_SECRET -ne $null)
-  AZURE_CLIENT_ASSERTION: $($env:AZURE_CLIENT_ASSERTION -ne $null)
+  AZURE_CLIENT_ID: $($null -ne $env:AZURE_CLIENT_ID)
+  AZURE_TENANT_ID: $($null -ne $env:AZURE_TENANT_ID)
+  AZURE_ACCESS_TOKEN: $($null -ne $env:AZURE_ACCESS_TOKEN)
+  AZURE_CLIENT_SECRET: $($null -ne $env:AZURE_CLIENT_SECRET)
+  AZURE_CLIENT_ASSERTION: $($null -ne $env:AZURE_CLIENT_ASSERTION)
+  
+GitHub Actions OIDC Variables:
+  ACTIONS_ID_TOKEN_REQUEST_TOKEN: $($null -ne $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN)
+  ACTIONS_ID_TOKEN_REQUEST_URL: $($null -ne $env:ACTIONS_ID_TOKEN_REQUEST_URL)
 "@
             throw $errorMessage
         }
