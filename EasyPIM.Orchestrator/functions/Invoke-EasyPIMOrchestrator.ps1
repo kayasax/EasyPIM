@@ -124,21 +124,51 @@ function Invoke-EasyPIMOrchestrator {
 			throw "Microsoft Graph requires RoleManagement.ReadWrite.Directory scope."
 		}
 		Write-Host "✅ [AUTH] Microsoft Graph connection verified (Identity: $authIdentifier)" -ForegroundColor Green
-		# Check Azure PowerShell authentication
+		
+		# Check Azure PowerShell authentication with OIDC support
 		$azContext = Get-AzContext -ErrorAction SilentlyContinue
-		if (-not $azContext) {
+		$hasAzureAuth = $false
+		$azureAuthMethod = "Unknown"
+		
+		# Check for Azure PowerShell context
+		if ($azContext) {
+			$hasAzureAuth = $true
+			$azureAuthMethod = "Azure PowerShell Context"
+			$accountInfo = $azContext.Account ?? $azContext.Account.Id ?? "Service Principal"
+			Write-Host "✅ [AUTH] Azure PowerShell connection verified (Account: $accountInfo, Subscription: $($azContext.Subscription.Name))" -ForegroundColor Green
+		}
+		# Check for OIDC environment variables as fallback
+		elseif ($env:AZURE_ACCESS_TOKEN -or ($env:AZURE_CLIENT_ID -and $env:AZURE_TENANT_ID)) {
+			$hasAzureAuth = $true
+			$azureAuthMethod = "OIDC Environment Variables"
+			Write-Host "✅ [AUTH] OIDC authentication detected via environment variables" -ForegroundColor Green
+			if ($env:AZURE_CLIENT_ID) {
+				Write-Host "  Client ID: $($env:AZURE_CLIENT_ID)" -ForegroundColor Gray
+			}
+			if ($env:AZURE_TENANT_ID) {
+				Write-Host "  Tenant ID: $($env:AZURE_TENANT_ID)" -ForegroundColor Gray
+			}
+		}
+		
+		if (-not $hasAzureAuth) {
 			Write-Host ""
-			Write-Host "❌ [ERROR] No Azure PowerShell authentication found!" -ForegroundColor Red
-			Write-Host "🔐 [AUTH] Please connect to Azure with appropriate permissions:" -ForegroundColor Yellow
+			Write-Host "❌ [ERROR] No Azure authentication found!" -ForegroundColor Red
+			Write-Host "🔐 [AUTH] Please provide Azure authentication via one of these methods:" -ForegroundColor Yellow
+			Write-Host ""
+			Write-Host "Option 1 - Azure PowerShell (Interactive):" -ForegroundColor Cyan
 			if ($TenantId) {
 				Write-Host "  Connect-AzAccount -TenantId '$TenantId'" -ForegroundColor Green
 			} else {
 				Write-Host "  Connect-AzAccount" -ForegroundColor Green
 				Write-Host "  # Or specify tenant: Connect-AzAccount -TenantId 'your-tenant-id'" -ForegroundColor Gray
 			}
-			throw "Azure PowerShell authentication required. Please run Connect-AzAccount first."
+			Write-Host ""
+			Write-Host "Option 2 - OIDC/CI-CD Environment Variables:" -ForegroundColor Cyan
+			Write-Host "  Set AZURE_ACCESS_TOKEN=<arm-api-token>" -ForegroundColor Green
+			Write-Host "  Or set AZURE_CLIENT_ID and AZURE_TENANT_ID for service principal" -ForegroundColor Green
+			Write-Host ""
+			throw "Azure authentication required. Please authenticate using one of the methods above."
 		}
-		Write-Host "✅ [AUTH] Azure PowerShell connection verified (Account: $($azContext.Account), Subscription: $($azContext.Subscription.Name))" -ForegroundColor Green
 	} catch {
 		Write-Error "Authentication check failed: $($_.Exception.Message)"
 		return
