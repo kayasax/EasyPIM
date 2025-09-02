@@ -160,7 +160,9 @@ Current Environment Variables:
         $headers = @{
             'Authorization' = "Bearer $token"
             'Content-Type'  = 'application/json'
-        }        $params = @{
+        }
+
+        $params = @{
             Uri     = $restURI
             Method  = $method
             Headers = $headers
