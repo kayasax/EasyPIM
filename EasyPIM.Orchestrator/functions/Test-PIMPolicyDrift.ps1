@@ -10,10 +10,28 @@ Optionally throws when drift is detected.
 
 .PARAMETER TenantId
 The Entra tenant ID to query for PIM policy settings.
+<#
+.SYNOPSIS
+Tests PIM role assignment policy configuration for drift against live settings.
+
+.DESCRIPTION
+Reads a policy configuration JSON file (with optional templates), or loads the config from Azure Key Vault, resolves the expected
+settings for Entra roles, Azure resource roles, and group roles, and compares them with
+
+Optionally throws when drift is detected.
+
+.PARAMETER TenantId
+The Entra tenant ID to query for PIM policy settings.
 
 .PARAMETER ConfigPath
 Path to the JSON configuration file describing expected PIM policies. Supports line
-comments (//) and block comments (/* */) which will be removed before parsing.
+comments (//) and block comments (/* */) which will be removed before parsing. Optional if using KeyVaultName/SecretName.
+
+.PARAMETER KeyVaultName
+Name of the Azure Key Vault to load the configuration from. Optional. If specified, must also provide SecretName.
+
+.PARAMETER SecretName
+Name of the secret in Azure Key Vault containing the base64-encoded JSON configuration. Optional. If specified, must also provide KeyVaultName.
 
 .PARAMETER SubscriptionId
 Optional Azure subscription ID. Required if the config includes Azure resource role
@@ -48,6 +66,11 @@ Test-PIMPolicyDrift -TenantId $env:TenantId -ConfigPath .\config\pim.json -PassT
 
 Returns only the items where drift or error is present.
 
+.EXAMPLE
+Test-PIMPolicyDrift -TenantId 00000000-0000-0000-0000-000000000000 -KeyVaultName 'MyVault' -SecretName 'PIMConfigSecret'
+
+Loads the configuration from Azure Key Vault secret 'PIMConfigSecret' in vault 'MyVault' (must be base64-encoded JSON), and compares policies to live settings.
+
 .NOTES
 Module: EasyPIM.Orchestrator (requires EasyPIM core module)
 Author: Kayasax and contributors
@@ -61,31 +84,34 @@ behavior and will not be flagged as drift by this function.
 .LINK
 https://github.com/kayasax/EasyPIM
 #>
-function Test-PIMPolicyDrift {
-	[CmdletBinding()]
-	[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingPositionalParameters", "", Justification="Parameters are named at call sites; internal helper calls may trigger false positives.")]
-	param(
-		[Parameter(Mandatory)][string]$TenantId,
-		[Parameter(Mandatory)][string]$ConfigPath,
-		[string]$SubscriptionId,
-		[switch]$FailOnDrift,
-		[switch]$PassThru
-	)
+		Write-Verbose -Message "Starting PIM policy drift test. ConfigPath: $ConfigPath, KeyVaultName: $KeyVaultName, SecretName: $SecretName"
 
-	Write-Verbose -Message "Starting PIM policy drift test for config: $ConfigPath"
+		# Load config from Key Vault if specified, else from file
+		if ($KeyVaultName -and $SecretName) {
+			Write-Verbose "Loading config from Azure Key Vault: $KeyVaultName, secret: $SecretName"
+			try {
+				if (-not (Get-Module -ListAvailable -Name Az.KeyVault)) { Import-Module Az.KeyVault -ErrorAction Stop }
+				$secretObj = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SecretName -ErrorAction Stop
+				$configRaw = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secretObj.SecretValueText))
+			} catch {
+				Write-Error "Failed to load config from Key Vault: $($_.Exception.Message)"
+				throw
+			}
+		} elseif ($ConfigPath) {
+			try { $ConfigPath = (Resolve-Path -Path $ConfigPath -ErrorAction Stop).Path } catch { throw "Config file not found: $ConfigPath" }
+			$configRaw = Get-Content -Raw -Path $ConfigPath
+		} else {
+			throw "You must specify either -ConfigPath or both -KeyVaultName and -SecretName."
+		}
 
-	try { $ConfigPath = (Resolve-Path -Path $ConfigPath -ErrorAction Stop).Path } catch { throw "Config file not found: $ConfigPath" }
-
-	# Read and parse configuration file
-	$configRaw = Get-Content -Raw -Path $ConfigPath
-	try {
-		$clean = Remove-JsonComments -Content $configRaw
-		$json = $clean | ConvertFrom-Json -ErrorAction Stop
-	} catch {
-		Write-Verbose -Message "Raw first 200: $($configRaw.Substring(0,[Math]::Min(200,$configRaw.Length)))"
-		throw "Failed to parse config: $($_.Exception.Message)"
-	}
-	if (-not $json) { throw "Parsed JSON object is null - invalid configuration." }
+		try {
+			$clean = Remove-JsonComments -Content $configRaw
+			$json = $clean | ConvertFrom-Json -ErrorAction Stop
+		} catch {
+			Write-Verbose -Message "Raw first 200: $($configRaw.Substring(0,[Math]::Min(200,$configRaw.Length)))"
+			throw "Failed to parse config: $($_.Exception.Message)"
+		}
+		if (-not $json) { throw "Parsed JSON object is null - invalid configuration." }
 
 	# Initialize collections for expected policies
 	$expectedAzure = @()

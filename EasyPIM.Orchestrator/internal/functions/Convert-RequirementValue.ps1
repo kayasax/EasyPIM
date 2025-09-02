@@ -28,16 +28,16 @@ function Convert-RequirementValue {
 	param([Parameter()][string]$Value)
 
 	if (-not $Value) { return '' }
-	
+
 	$v = $Value.Trim()
 	if ($v -eq '') { return '' }
-	
+
 	# Handle explicit "none" values
 	if ($v -match '^(none|null|no(ne)?requirements?)$') { return '' }
-	
+
 	# Split on comma / semicolon and process each token
 	$tokens = $v -split '[,;]+' | ForEach-Object { $_.Trim() } | Where-Object { $_ }
-	
+
 	$normalized = foreach ($token in $tokens) {
 		switch -Regex ($token) {
 			'^(mfa|multifactorauthentication)$' { 'MFA'; break }
@@ -45,7 +45,7 @@ function Convert-RequirementValue {
 			default { $token }
 		}
 	}
-	
+
 	# Sort and deduplicate, then join
 	($normalized | Sort-Object -Unique) -join ','
 }

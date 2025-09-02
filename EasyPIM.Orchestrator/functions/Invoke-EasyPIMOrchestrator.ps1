@@ -110,10 +110,10 @@ function Invoke-EasyPIMOrchestrator {
 			Write-Host "  Connect-MgGraph -Scopes 'RoleManagement.ReadWrite.Directory'" -ForegroundColor Green
 			throw "Microsoft Graph authentication required. Please run Connect-MgGraph first."
 		}
-		
+
 		# For federated credentials, Account may be null but ClientId should be present
 		$authIdentifier = $mgContext.Account ?? $mgContext.ClientId ?? "Service Principal"
-		
+
 		# Check if we have required Graph scopes
 		$requiredScopes = @('RoleManagement.ReadWrite.Directory')
 		$currentScopes = $mgContext.Scopes

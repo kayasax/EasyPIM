@@ -1,4 +1,4 @@
-# EasyPIM Progressive Validation Runbook
+# EasyPIM Progressive Validation Runbook (August, 31 2025)
 
 A safe, step-by-step plan to exercise the orchestrator and policies in a real tenant. Each step includes a minimal JSON and a preview (-WhatIf) run before applying.
 
@@ -18,20 +18,18 @@ This guide focuses on the orchestrator workflows, but individual core functions 
 2. [Step 1 — Minimal config: ProtectedUsers only](#step-1)
 3. [Step 2 — Entra role policy (inline)](#step-2)
 4. [Step 3 — Entra role policy (template + 🆕 template + inline override)](#step-3)
-5. [Step 4 — Entra role policy (file/CSV, legacy import) (DEPRECATED)](#step-4)
-6. [Step 5 — Entra role assignments (multiple assignments per role supported)](#step-5)
-7. [Step 6 — Azure role policy (inline; Scope is required)](#step-6)
-8. [Step 7 — Azure role policy (template + 🆕 template + inline override)](#step-7)
-9. [Step 8 — (Optional / Deprecated) Azure role policy via CSV file import](#step-8)
-10. [Step 9 — Azure assignments (1 Eligible + 1 Active)](#step-9)
-11. [Step 10 — Optional: Groups (Policies + Assignments)](#step-10)
-12. [Step 11 — Apply changes (remove -WhatIf)](#step-11)
-13. [Step 12 — Use the Same Config from Azure Key Vault (Optional)](#step-12)
-14. [Step 13 — (Optional, Destructive) Reconcile with initial mode](#step-13)
-15. [Step 14 — Comprehensive policy validation (all options)](#step-14)
-16. [Step 15 — Detect policy drift with Test-PIMPolicyDrift](#step-15)
-17. [Step 16 — (Optional) CI/CD automation (GitHub Actions + Key Vault)](#step-16)
-18. [Appendix — Tips & Safety Gates](#appendix)
+5. [Step 4 — Entra role assignments (multiple assignments per role supported)](#step-4)
+6. [Step 5 — Azure role policy (inline; Scope is required)](#step-5)
+7. [Step 6 — Azure role policy (template + 🆕 template + inline override)](#step-6)
+8. [Step 7 — Azure assignments (1 Eligible + 1 Active)](#step-7)
+9. [Step 8 — Optional: Groups (Policies + Assignments)](#step-8)
+10. [Step 9 — Apply changes (remove -WhatIf)](#step-9)
+11. [Step 10 — Use the Same Config from Azure Key Vault (Optional)](#step-10)
+12. [Step 11 — (Optional, Destructive) Reconcile with initial mode](#step-11)
+13. [Step 12 — Comprehensive policy validation (all options)](#step-12)
+14. [Step 13 — Detect policy drift with Test-PIMPolicyDrift](#step-13)
+15. [Step 14 — (Optional) CI/CD automation (GitHub Actions + Key Vault)](#step-14)
+16. [Appendix — Tips & Safety Gates](#appendix)
 
 
 ## Prerequisites
@@ -94,7 +92,7 @@ Backup-PIMAzureResourcePolicy -tenantID $env:TenantID -subscriptionID $env:Subsc
 <a id="step-1"></a>
 ## Step 1 — Minimal config: ProtectedUsers only
 
-Goal: Establish a safety baseline that guarantees your break‑glass / critical principals can never be removed by later reconciliation steps (especially Step 13 initial mode). `ProtectedUsers` is a hard exclusion list used by cleanup logic: any assignment held by these object IDs is always preserved (reported as Protected, never Removed / WouldRemove). Start with ONLY this section so you can preview the orchestration pipeline and principal validation without risking unintended deletions.
+Goal: Establish a safety baseline that guarantees your break‑glass / critical principals can never be removed by later reconciliation steps (especially Step 11 initial mode). `ProtectedUsers` is a hard exclusion list used by cleanup logic: any assignment held by these object IDs is always preserved (reported as Protected, never Removed / WouldRemove). Start with ONLY this section so you can preview the orchestration pipeline and principal validation without risking unintended deletions.
 
 What to include:
 * Break‑glass emergency access accounts (cloud‑only preferred, strong MFA)
@@ -158,7 +156,7 @@ Write pim-config.json (always keep `ProtectedUsers` first; you can add comments 
   }
 }
 ```
-This example above uses only a subset of available options. Refer to [Step 14](#step-14--comprehensive-policy-validation-all-options) for the complete list of supported options.
+This example above uses only a subset of available options. Refer to [Step 12](#step-12--comprehensive-policy-validation-all-options) for the complete list of supported options.
 
 Preview (policies only)
 
@@ -300,46 +298,8 @@ Preview (policies only)
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
 ```
 
-<a id="step-4"></a>
-## Step 4 — Entra role policy (file/CSV, legacy import) [DEPRECATED]
-
-> **Deprecated:** The `EntraRolePolicies` array with `PolicySource`/`PolicyFile` is a legacy import pattern and will be removed in a future release. Prefer the nested `EntraRoles.Policies` block with `Template` or inline properties for new configurations.
-
-
-You can export an Entra role policy to CSV using `Export-PIMEntraRolePolicy` (from the core `EasyPIM` module). This is useful for backup, migration, or editing policies outside the orchestrator. You can also use custom roles (e.g., `testrole`) for this process.
-
-Example export command:
-
-```powershell
-# Export a policy for a custom role (e.g., 'testrole')
-Export-PIMEntraRolePolicy -tenantID $env:TenantID -roleName "testrole" -path C:\Policies\testrole-policy.csv
-```
-
-Assumes you exported a CSV (e.g., `C:\Policies\entra-user-admin.csv` or `C:\Policies\testrole-policy.csv`).
-
-Write pim-config.json
-
-```json
-{
-  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"],
-  "EntraRolePolicies": [
-    {
-      "RoleName": "testrole", // Custom role example
-      "PolicySource": "file",
-      "PolicyFile": "C:\\Policies\\testrole-policy.csv"
-    }
-  ]
-}
-```
-
-Preview (policies only)
-
-```powershell
-Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
-```
-
 <a id="step-5"></a>
-## Step 5 — Entra role assignments (multiple assignments per role supported)
+## Step 4 — Entra role assignments (multiple assignments per role supported)
 
 Note: The orchestrator supports multiple assignments per role in the Assignments block. Provide an array of assignment objects; each will be processed individually.
 
@@ -739,55 +699,10 @@ Preview (policies only)
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
 ```
 
-<a id="step-8"></a>
-## Step 8 — (Optional / Deprecated) Azure role policy via CSV file import
+<a id="step-7"></a>
+## Step 7 — Azure assignments (1 Eligible + 1 Active)
 
-Status: Deprecated. Skip this step unless you specifically need to bulk‑reapply a previously exported CSV.
-
-Why it is deprecated:
-- External CSV hides effective settings (harder to review in PRs).
-- Inline / template JSON (Steps 6–7) is clearer and source‑controlled.
-- Protected roles (e.g. Owner, User Access Administrator) should not be managed this way.
-
-When to still use:
-- One‑time migration of historical exports while converting to JSON templates.
-- Audit comparison (export current -> diff -> discard).
-
-Strong recommendation: Move directly from Step 7 to Step 9 unless you have a migration CSV in hand.
-
-Example (safe, non‑privileged role). Replace only if you truly have a legacy CSV:
-
-```jsonc
-{
-  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"],
-  "AzureRolePolicies": [
-    {
-      "RoleName": "Tag Contributor", // previously exported role policy
-      "Scope": "/subscriptions/<sub-guid>",
-      "PolicySource": "file",
-      "PolicyFile": "C:\\Policies\\tag-contributor-policy.csv"
-    }
-  ]
-}
-```
-
-Preview (policies only) — validation only; consider converting the resulting settings into a template afterwards:
-
-```powershell
-Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
-```
-
-Convert after preview (suggested workflow):
-1. Export current policy (if not already) for traceability.
-2. Run -WhatIf with CSV to confirm it matches expectations.
-3. Translate CSV columns to a PolicyTemplate JSON entry.
-4. Replace AzureRolePolicies block with AzureRoles.Policies using Template.
-5. Delete / archive the CSV.
-
-<a id="step-9"></a>
-## Step 9 — Azure assignments (1 Eligible + 1 Active)
-
-Goal: Add first Azure role assignments without altering existing policies. Everything from Step 7 (or Step 8 if you did the deprecated path) remains; we only append an `Assignments.AzureRoles` block.
+Goal: Add first Azure role assignments without altering existing policies. Everything from Step 6 (Azure role policy with template + inline override) remains; we only append an `Assignments.AzureRoles` block.
 
 ### Diff from previous step (conceptual)
 ```diff
@@ -907,8 +822,8 @@ Multiple principals
 }
 ```
 
-<a id="step-10"></a>
-## Step 10 — Optional: Groups (Policies + Assignments)
+<a id="step-8"></a>
+## Step 8 — Optional: Groups (Policies + Assignments)
 
 Group policies ARE supported (Get-PIMGroupPolicy / Set-PIMGroupPolicy). The orchestrator resolves group policies via `GroupRoles.Policies` (preferred) or the deprecated `GroupPolicies` / `Policies.Groups` formats. We'll DEFINE a minimal policy first, then add assignments referencing it. This mirrors the security-first approach: establish guardrails (policy) before granting access (assignments).
 
@@ -1095,7 +1010,7 @@ For groups that need most template properties but with specific customizations:
         "Member": {
           "Template": "GroupStandard",        // Base template
           "ActivationDuration": "PT2H",      // Override: shorter than template's PT4H
-          "ApprovalRequired": true           // Override: add approval requirement
+          "ApprovalRequired": true           // Override: add approval requirement (you'll need to set approvers too)
         },
         "Owner": {
           "Template": "GroupStandard",       // Base template
@@ -1112,8 +1027,8 @@ This approach lets you maintain consistency with the template while customizing 
 
 NOTE: Deprecated formats (`GroupPolicies` array or nested `Policies.Groups`) still load with a warning; migrate to `GroupRoles.Policies` for forward compatibility.
 
-<a id="step-11"></a>
-## Step 11 — Apply changes (remove -WhatIf)
+<a id="step-9"></a>
+## Step 9 — Apply changes (remove -WhatIf)
 
 > **Safety Note:** By default the orchestrator operates in **delta** mode. That means it will create or update the assignments/policies you declare but it will **not delete** existing assignments that are absent from the config. Only new (or changed) items are acted on, so there is no risk of breaking existing access at this step. Destructive cleanup requires explicitly running Step 13 with `-Mode initial` (and ideally a prior `-WhatIf`).
 
@@ -1129,8 +1044,8 @@ Apply assignments
 Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -SkipPolicies
 ```
 
-<a id="step-12"></a>
-## Step 12 — Use the Same Config from Azure Key Vault (Optional)
+<a id="step-10"></a>
+## Step 10 — Use the Same Config from Azure Key Vault (Optional)
 
 Centralize the orchestrator configuration by storing the exact JSON in an Azure Key Vault secret.
 
@@ -1162,8 +1077,8 @@ Troubleshooting:
 - Access denied: verify RBAC/Access Policy includes get secret.
 - Parse error: `az keyvault secret show --vault-name <kv-name> --name EasyPIM-Config --query value -o tsv | ConvertFrom-Json`.
 
-<a id="step-13"></a>
-## Step 13 — (Optional, Destructive) Reconcile with initial mode
+<a id="step-11"></a>
+## Step 11 — (Optional, Destructive) Reconcile with initial mode
 > **Pre-Execution Backup Recommended:** Step 0 only backed up policies. Before running a destructive initial reconcile you should also snapshot CURRENT assignments so you can restore or justify removals. Export (or at least list to CSV) each assignment category:
 > - Entra role eligible: `Get-PIMEntraRoleEligibleAssignment -tenantID <tenant>`
 > - Entra role active: `Get-PIMEntraRoleActiveAssignment -tenantID <tenant>`
@@ -1313,30 +1228,63 @@ Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId
 
 
 
-<a id="step-14"></a>
-## Step 14 — Comprehensive policy validation (all options)
+<a id="step-12"></a>
+## Step 12 — Comprehensive policy validation (all options)
 
 This step validates that every major policy lever is understood and renders correctly: activation & eligibility durations, *active* vs *eligible* enablement rules, authentication context, approvers, permanent eligibility flags, and the full three‑phase notification matrix (Eligibility, Active, Activation). It also introduces a reusable template that captures all options.
 
-### Common Fields Reference
-Key fields you can set (some may not be relevant to all resource types):
-- ActivationDuration, MaximumActiveAssignmentDuration
-- MaximumEligibilityDuration
-- ActivationRequirement (enablement rules for an eligible activation)
-- ActiveAssignmentRequirement (enablement rules to directly hold an Active assignment)
-- ApprovalRequired + Approvers (array of objects with id + optional description)
-- AllowPermanentEligibility, AllowPermanentActiveAssignment
-- AuthenticationContext_Enabled + AuthenticationContext_Value (conditional access auth context)
-- Notifications (Eligibility / Active / Activation each with Alert / Assignee / Approvers blocks)
+### 14.0 Template + Override Pattern (Recommended Approach)
 
-> Tip: Put rarely changed full option sets into a template and reference them; only break out into inline when you truly need a one‑off deviation.
+**Templates provide consistency and reduce repetition.** Define common security patterns once, then inherit and override specific properties as needed. This pattern works across all policy types (EntraRoles, AzureRoles, GroupRoles).
 
-### 14.0 AllOptions template (drop-in example)
+**How It Works:**
+1. **Template Properties**: All properties from the referenced template are inherited
+2. **Override Properties**: Any property specified alongside `"Template"` overrides the template value
+3. **Scope Preservation**: For Azure roles, `Scope` must always be specified (not inherited from templates)
+4. **Logical Consistency**: When `ApprovalRequired: true`, you MUST provide `Approvers` array
+
+**Benefits:**
+- **Consistency**: Ensure common security patterns across roles
+- **Flexibility**: Customize individual roles without duplicating configurations
+- **Maintainability**: Update templates to change multiple role policies at once
+- **Clarity**: Explicit overrides make policy differences obvious
+
+### Common Policy Fields Reference
+Key fields you can configure (availability varies by resource type):
+- **Duration Control**: `ActivationDuration`, `MaximumActiveAssignmentDuration`, `MaximumEligibilityDuration`
+- **Security Requirements**: `ActivationRequirement`, `ActiveAssignmentRequirement` (enablement rules)
+- **Approval Control**: `ApprovalRequired` + `Approvers` (array of objects with id + optional description)
+- **Permanency Control**: `AllowPermanentEligibility`, `AllowPermanentActiveAssignment`
+- **Conditional Access**: `AuthenticationContext_Enabled` + `AuthenticationContext_Value`
+- **Communication**: `Notifications` (Eligibility / Active / Activation phases with Alert / Assignee / Approvers blocks)
+
+### 14.1 Template + Override Examples
 ```jsonc
 {
+  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"],
   "PolicyTemplates": {
-    "AllOptions": {
+    "StandardSecurity": {
+      "ActivationDuration": "PT8H",
+      "ActivationRequirement": "MultiFactorAuthentication,Justification",
+      "ApprovalRequired": false,
+      "MaximumEligibilityDuration": "P365D",
+      "AllowPermanentEligibility": false
+    },
+    "HighSecurity": {
       "ActivationDuration": "PT4H",
+      "ActivationRequirement": "MultiFactorAuthentication,Justification,Ticketing",
+      "ApprovalRequired": true,
+      "Approvers": [
+        { "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "description": "Security Admin 1" },
+        { "id": "ffffffff-1111-2222-3333-444444444444", "description": "Security Team Group" }
+      ],
+      "MaximumEligibilityDuration": "P90D",
+      "AllowPermanentEligibility": false,
+      "AuthenticationContext_Enabled": true,
+      "AuthenticationContext_Value": "c1:HighRiskOperations"
+    },
+    "AllOptions": {
+      "ActivationDuration": "PT2H",
       "ActivationRequirement": "MultiFactorAuthentication,Justification,Ticketing",
       "ActiveAssignmentRequirement": "MultiFactorAuthentication,Justification",
       "ApprovalRequired": true,
@@ -1368,12 +1316,92 @@ Key fields you can set (some may not be relevant to all resource types):
         }
       }
     }
+  },
+
+  // Template inheritance examples across all policy types
+  "EntraRoles": {
+    "Policies": {
+      // Template only - uses all StandardSecurity settings
+      "User Administrator": {
+        "Template": "StandardSecurity"
+      },
+      // Template + override - inherits StandardSecurity but with custom duration
+      "Exchange Administrator": {
+        "Template": "StandardSecurity",
+        "MaximumEligibilityDuration": "P180D"
+      },
+      // Template + approval override - adds approval to StandardSecurity template
+      "Security Administrator": {
+        "Template": "StandardSecurity",
+        "ApprovalRequired": true,
+        "Approvers": [
+          { "id": "security-team@contoso.com", "description": "Security Team" }
+        ]
+      },
+      // High security template for critical roles
+      "Global Administrator": {
+        "Template": "HighSecurity",
+        "MaximumEligibilityDuration": "P30D"  // Even shorter for Global Admin
+      }
+    }
+  },
+
+  "AzureRoles": {
+    "Policies": {
+      // Template + scope override (Scope is ALWAYS required for Azure roles)
+      "Contributor": {
+        "Template": "StandardSecurity",
+        "Scope": "/subscriptions/<sub-guid>",
+        "ActivationDuration": "PT12H"  // Override for longer Azure access
+      },
+      // High security for critical Azure roles
+      "Owner": {
+        "Template": "HighSecurity",
+        "Scope": "/subscriptions/<sub-guid>",
+        "MaximumEligibilityDuration": "P60D"  // Even shorter for Owner role
+      },
+      // Resource group specific override
+      "Storage Account Contributor": {
+        "Template": "StandardSecurity",
+        "Scope": "/subscriptions/<sub-guid>/resourceGroups/rg-production",
+        "ApprovalRequired": true,
+        "Approvers": [
+          { "id": "storage-admins@contoso.com", "description": "Storage Team" }
+        ]
+      }
+    }
+  },
+
+  "GroupRoles": {
+    "Policies": {
+      // Template inheritance works for group roles too
+      "f47ac10b-58cc-4372-a567-0e02b2c3d479": {
+        "Owner": {
+          "Template": "StandardSecurity",
+          "ActivationRequirement": "Justification"  // Remove MFA for group ownership
+        },
+        "Member": {
+          "Template": "StandardSecurity",
+          "ApprovalRequired": true,
+          "Approvers": [
+            { "id": "group-managers@contoso.com", "description": "Group Managers" }
+          ]
+        }
+      }
+    }
   }
 }
 ```
 
-### 14.1 Entra role full-feature policy (inline)
-Use -WhatIf first; this example is inline (not using the template) to show every property together.
+**Preview template + override policies:**
+```powershell
+Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
+```
+
+### 14.2 Inline Policy Examples (Alternative Approach)
+For cases where templates don't fit your needs, you can define policies inline. Use this approach sparingly to avoid configuration drift.
+
+**Entra Role Example (inline):**
 ```jsonc
 {
   "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"],
@@ -1381,95 +1409,39 @@ Use -WhatIf first; this example is inline (not using the template) to show every
     "Policies": {
       "User Administrator": {
         "ActivationDuration": "PT2H",
-        "ActivationRequirement": "MultiFactorAuthentication,Justification,Ticketing",
-        "ActiveAssignmentRequirement": "MultiFactorAuthentication,Justification",
+        "ActivationRequirement": "MultiFactorAuthentication,Justification",
         "ApprovalRequired": true,
         "Approvers": [
-          { "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "description": "PIM Approver 1" },
-          { "id": "ffffffff-1111-2222-3333-444444444444", "description": "Approver Group" }
+          { "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "description": "Security Team Lead" }
         ],
-        "AllowPermanentEligibility": false,
-        "AllowPermanentActiveAssignment": false,
-        "MaximumEligibilityDuration": "P180D",
-        "MaximumActiveAssignmentDuration": "P30D",
-        "AuthenticationContext_Enabled": true,
-        "AuthenticationContext_Value": "c1:HighRiskOperations",
-        "Notifications": {
-          "Eligibility": {
-            "Alert":     { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
-            "Assignee":  { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
-            "Approvers": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-approvers@contoso.com"] }
-          },
-          "Active": {
-            "Alert":     { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
-            "Assignee":  { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
-            "Approvers": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-approvers@contoso.com"] }
-          },
-          "Activation": {
-            "Alert":     { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
-            "Assignee":  { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
-            "Approvers": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-approvers@contoso.com"] }
-          }
-        }
+        "MaximumEligibilityDuration": "P180D"
       }
     }
   }
 }
 ```
-Preview (policies only):
-```powershell
-Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
-```
 
-### 14.2 Azure role full-feature policy (inline)
-Scope is mandatory. ActiveAssignmentRequirement maps to Enablement rules for permanent/active assignment.
+**Azure Role Example (inline):**
 ```jsonc
 {
-  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"],
   "AzureRoles": {
     "Policies": {
       "Contributor": {
         "Scope": "/subscriptions/<sub-guid>",
         "ActivationDuration": "PT4H",
         "ActivationRequirement": "MultiFactorAuthentication,Justification",
-        "ActiveAssignmentRequirement": "MultiFactorAuthentication",
         "ApprovalRequired": true,
-        "Approvers": [ { "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "description": "PIM Approver 1" } ],
-        "AllowPermanentEligibility": false,
-        "AllowPermanentActiveAssignment": false,
-        "MaximumEligibilityDuration": "P180D",
-        "MaximumActiveAssignmentDuration": "P14D",
-        "AuthenticationContext_Enabled": true,
-        "AuthenticationContext_Value": "c1:HighRiskOperations",
-        "Notifications": {
-          "Eligibility": {
-            "Alert":     { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
-            "Assignee":  { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
-            "Approvers": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-approvers@contoso.com"] }
-          },
-          "Active": {
-            "Alert":     { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
-            "Assignee":  { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
-            "Approvers": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-approvers@contoso.com"] }
-          },
-          "Activation": {
-            "Alert":     { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
-            "Assignee":  { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
-            "Approvers": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-approvers@contoso.com"] }
-          }
-        }
+        "Approvers": [
+          { "id": "azure-admins@contoso.com", "description": "Azure Administrators" }
+        ],
+        "MaximumEligibilityDuration": "P180D"
       }
     }
   }
 }
 ```
-Preview (policies only):
-```powershell
-Invoke-EasyPIMOrchestrator -ConfigFilePath "C:\Config\pim-config.json" -TenantId "<tenant-guid>" -SubscriptionId "<sub-guid>" -WhatIf -SkipAssignments
-```
 
-### 14.3 Group role full-feature policy (inline)
-For group member/owner PIM policies (example for Member role):
+**Group Role Example (inline):**
 ```jsonc
 {
   "GroupRoles": {
@@ -1479,9 +1451,10 @@ For group member/owner PIM policies (example for Member role):
           "ActivationDuration": "PT4H",
           "ActivationRequirement": ["Justification"],
           "ApprovalRequired": true,
-          "Approvers": [ { "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "description": "Group PIM Approver" } ],
-          "MaximumEligibilityDuration": "P180D",
-          "MaximumActiveAssignmentDuration": "P30D"
+          "Approvers": [
+            { "id": "group-owners@contoso.com", "description": "Group Owners" }
+          ],
+          "MaximumEligibilityDuration": "P180D"
         }
       }
     }
@@ -1489,18 +1462,43 @@ For group member/owner PIM policies (example for Member role):
 }
 ```
 
-### 14.4 Using the AllOptions template
-Instead of repeating full blocks, reference the template and (if needed) override by replacing Template with an inline object.
+> **⚠️ Important:** When `ApprovalRequired: true`, you MUST include the `Approvers` array. The system will reject policies that require approval without specifying who can approve.
+
+### 14.3 Full Options Reference (AllOptions Template)
+
+For comprehensive policy configurations that use every available feature, reference the `AllOptions` template shown in section 12.1. This template demonstrates all available policy fields including:
+
+- **Duration Controls**: Activation, eligibility, and active assignment time limits
+- **Security Requirements**: MFA, justification, ticketing for both activation and permanent assignment
+- **Approval Workflows**: Approval requirements with proper approver configurations
+- **Conditional Access**: Authentication context integration for high-risk operations
+- **Communication**: Full notification matrix for all assignment lifecycle phases
+- **Permanency Controls**: Flags to control permanent eligibility and active assignments
+
+**Critical Validation Rules:**
+- `ApprovalRequired: true` MUST include `Approvers` array with at least one approver
+- Azure role policies MUST include `Scope` (cannot be inherited from templates)
+- `AuthenticationContext_*` settings are ignored for Group policies (use shared templates safely)
+- `ActivationRequirement` and `ActiveAssignmentRequirement` values are case-sensitive, comma-separated
+
+**Example AllOptions Template Usage:**
 ```jsonc
 {
-  "ProtectedUsers": ["00000000-0000-0000-0000-000000000001"],
   "PolicyTemplates": {
-    "AllOptions": { /* (paste from 14.0) */ }
+    "AllOptions": { /* see section 12.1 for full definition */ }
   },
-  "EntraRoles": { "Policies": { "User Administrator": { "Template": "AllOptions" }, "Privileged Role Administrator": { "Template": "AllOptions" } } },
-  "AzureRoles": { "Policies": { "Contributor": { "Scope": "/subscriptions/<sub-guid>", "Template": "AllOptions" } } }
+  "EntraRoles": {
+    "Policies": {
+      "Global Administrator": {
+        "Template": "AllOptions",
+        "MaximumEligibilityDuration": "P30D"  // Override for even stricter Global Admin
+      }
+    }
+  }
 }
 ```
+
+### 14.3 Full Options Reference (AllOptions Template)
 
 ### Notes
 * ActivationRequirement & ActiveAssignmentRequirement values are case‑sensitive and comma separated (avoid spaces unless inside list items array form).
@@ -1510,10 +1508,10 @@ Instead of repeating full blocks, reference the template and (if needed) overrid
 * Use Verify-PIMPolicies.ps1 or Test-PIMPolicyDrift to audit drift after applying.
 * Keep templates minimal; AllOptions is illustrative — real production templates often exclude rarely used features.
 
-<a id="step-15"></a>
-## Step 15 — Detect policy drift with Test-PIMPolicyDrift
+<a id="step-13"></a>
+## Step 13 — Detect policy drift with Test-PIMPolicyDrift
 
-Goal: Verify that live policies match your declared configuration and catch out-of-band changes. Run this after Step 14 and after any apply to ensure compliance.
+Goal: Verify that live policies match your declared configuration and catch out-of-band changes. Run this after Step 12 and after any apply to ensure compliance.
 
 **Note:** `Test-PIMPolicyDrift` is provided by the `EasyPIM.Orchestrator` module.
 
@@ -1542,8 +1540,8 @@ Next: If drift is found, re-run Step 2/3/6/7 policy previews with -WhatIf to con
 
 ---
 
-<a id="step-16"></a>
-## Step 16 — (Optional) CI/CD automation (GitHub Actions + Key Vault) [WORK IN PROGRESS]
+<a id="step-14"></a>
+## Step 14 — (Optional) CI/CD automation (GitHub Actions + Key Vault) [WORK IN PROGRESS]
 
 Goal: Run the orchestrator automatically (or on demand) using the JSON config stored in Azure Key Vault.
 
@@ -1551,7 +1549,7 @@ Goal: Run the orchestrator automatically (or on demand) using the JSON config st
 
 Reality check (Key Vault change triggers): GitHub Actions cannot natively subscribe to Key Vault secret change events. To be truly event‑driven you need an Azure component (Event Grid -> Logic App / Azure Function) that calls the GitHub REST API (repository_dispatch) or invokes an Azure DevOps pipeline. Below we give (1) a pragmatic scheduled/on‑demand workflow and (2) an advanced event pattern outline.
 
-### 15.1 Basic GitHub Actions workflow (manual + scheduled)
+### 14.1 Basic GitHub Actions workflow (manual + scheduled)
 
 Add a workflow file (e.g. `.github/workflows/easypim.yml`). Uses OIDC (preferred) so you DO NOT store client secrets in GitHub. Create an Entra App Registration with federated credentials (subject = repo / workflow) granting it appropriate RBAC (Key Vault get secret + PIM policy/role assignment rights).
 
@@ -1560,10 +1558,10 @@ Minimal permissions required for the service principal / managed identity used b
 * Graph / Azure RBAC: whatever your interactive runs required (e.g., RoleManagement.ReadWrite.Directory, Directory.AccessAsUser.All if using app + user context, or RBAC role assignments at subscription for Azure role policy/assignment operations)
 * (Optional) Logging / Monitor permissions if you rely on diagnostics
 
-#### 15.1.0 Why OIDC instead of a client secret?
+#### 14.1.0 Why OIDC instead of a client secret?
 Federated (OIDC) credentials eliminate static secrets and rotate automatically per job. GitHub exchanges its ephemeral OIDC token directly for an Azure AD access token. No secret storage, no rotation toil, scoped per branch / workflow subject.
 
-#### 15.1.1 App Registration & Federated Credential Setup (CLI)
+#### 14.1.1 App Registration & Federated Credential Setup (CLI)
 ```bash
 # Create (or reuse) the app registration
 APP_ID=$(az ad app create --display-name "easyPIM-GitHub-OIDC" --query appId -o tsv)
@@ -1577,12 +1575,12 @@ REPO=<repo-name>
 BRANCH=main
 az ad app federated-credential create \
   --id $APP_ID \
-  --parameters '{
-    "name": "gh-branch-main",
-    "issuer": "https://token.actions.githubusercontent.com",
-    "subject": "repo:'"$ORG"'/'"$REPO"':ref:refs/heads/'"$BRANCH"'",
-    "audiences": ["api://AzureADTokenExchange"]
-  }'
+  --parameters "{
+    \"name\": \"gh-branch-main\",
+    \"issuer\": \"https://token.actions.githubusercontent.com\",
+    \"subject\": \"repo:${ORG}/${REPO}:ref:refs/heads/${BRANCH}\",
+    \"audiences\": [\"api://AzureADTokenExchange\"]
+  }"
 
 # (Optional) PR wide subject: repo:$ORG/$REPO:pull_request
 
@@ -1590,14 +1588,21 @@ az ad app federated-credential create \
 KV_NAME=<kv-name>
 RG=<kv-rg>
 SUB=<subscription-guid>
-KV_ID=$(az resource show -g $RG -n $KV_NAME --resource-type Microsoft.KeyVault/vaults --query id -o tsv)
+KV_ID=$(az keyvault show --name $KV_NAME --resource-group $RG --query id -o tsv)
 az role assignment create --assignee $APP_ID --role "Key Vault Secrets User" --scope $KV_ID
 
 # Assign Azure RBAC for resource role policy/assignment operations
 az role assignment create --assignee $APP_ID --role "User Access Administrator" --scope /subscriptions/$SUB
 
-# (Directory) Add Graph application permissions (portal or manifest), then consent:
-# RoleManagement.ReadWrite.Directory, Directory.Read.All, Group.Read.All (if group policies)
+# Add Graph application permissions via CLI (requires Global Admin or Application Admin)
+# Permission IDs: RoleManagement.ReadWrite.Directory, Directory.Read.All, Group.Read.All
+# Note: You can also add these permissions via Azure Portal > App registrations > API permissions
+az ad app permission add --id $APP_ID --api 00000003-0000-0000-c000-000000000000 --api-permissions \
+  19dbc75e-c2e2-444c-a770-ec69d8559fc7=Role \
+  df021288-bdef-4463-88db-98f22de89214=Role \
+  62a82d76-70ea-41e2-9197-370581804d09=Role
+
+# Grant admin consent for the permissions
 az ad app permission admin-consent --id $APP_ID
 ```
 
@@ -1607,7 +1612,7 @@ Subject formats:
 * Pull Request: `repo:ORG/REPO:pull_request`
 * Environment: `repo:ORG/REPO:environment:<environment-name>`
 
-#### 15.1.2 Permission Matrix (minimal)
+#### 14.1.2 Permission Matrix (minimal)
 | Layer | Permission / Role | Purpose | Notes |
 |-------|-------------------|---------|-------|
 | Key Vault | Key Vault Secrets User | Read config secret | List optional if name known |
@@ -1620,24 +1625,24 @@ Subject formats:
 
 If you cannot grant PRA: operate assignment-only by omitting policy-changing permissions and skip policy drift or treat it informational.
 
-#### 15.1.3 Promotion pattern for config changes
+#### 14.1.3 Promotion pattern for config changes
 1. Author change -> store in Key Vault as `EasyPIM-Config-Next`.
 2. PR workflow references that secret in WhatIf mode.
 3. After approval, copy value into `EasyPIM-Config` and manually dispatch apply run.
 
-#### 15.1.4 Optional drift gate job
+#### 14.1.4 Optional drift gate job
 Add a preceding job running `Test-PIMPolicyDrift -PassThru` (and optionally `-FailOnDrift` once available) to block apply if unexpected drift present. Use GitHub Environments for manual approval.
 
-#### 15.1.5 Safety quick list
+#### 14.1.5 Safety quick list
 * Scheduled runs: always delta + WhatIf.
 * Manual apply: protected branch / environment, reviewers required.
 * Maintain `ProtectedUsers` list.
 * Keep automation identity scoped (branch subjects) to prevent unreviewed forks from applying.
 
-#### 15.1.6 Observability
+#### 14.1.6 Observability
 Archive LOGS/*.log (artifact) or forward to Log Analytics (data collector API) for retention & queries.
 
-#### 15.1.7 Failure handling
+#### 14.1.7 Failure handling
 Let non‑zero exit fail the job. Add a final notification step with `if: failure()` to post drift summary to Teams/Slack.
 
 ---
@@ -1720,7 +1725,7 @@ Optional enhancements:
 * Post results to Teams / Slack via a webhook step.
 * Cache Az PowerShell modules if you add them (currently pure REST/Graph calls inside module so not required).
 
-### 15.2 Advanced event-driven trigger (Key Vault change)
+### 14.2 Advanced event-driven trigger (Key Vault change)
 
 Key ingredients:
 1. Enable Key Vault events to Event Grid (secret near-expiration & new version events supported).
