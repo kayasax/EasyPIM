@@ -11,13 +11,48 @@ function Invoke-ARM {
     )
 
     try {
-        # Enhanced OIDC-compatible ARM token acquisition
+        # Enhanced OIDC-compatible ARM token acquisition with GitHub Actions prioritization
         $token = $null
         $tokenAcquisitionErrors = @()
         $authMethod = "Unknown"
 
-        # Method 1: Azure PowerShell Context (PREFERRED - Official Microsoft Pattern)
-        # Supports GitHub Actions with azure/login@v2 action using OIDC
+        # Method 1: Environment Variables (PRIORITIZED - Works best in GitHub Actions OIDC)
+        # This method is prioritized because it's the most reliable in CI/CD environments
+        if (-not $token -and ($env:AZURE_ACCESS_TOKEN -or $env:ARM_ACCESS_TOKEN)) {
+            try {
+                $token = $env:AZURE_ACCESS_TOKEN -or $env:ARM_ACCESS_TOKEN
+                $authMethod = "Environment Variable (AZURE_ACCESS_TOKEN)"
+                Write-Verbose "ARM token acquired from environment variable - GitHub Actions OIDC compatible"
+            } catch {
+                $tokenAcquisitionErrors += "Environment variable: $($_.Exception.Message)"
+            }
+        }
+
+        # Method 2: Azure CLI (HIGHLY RELIABLE - Works with azure/login@v2 OIDC)
+        # Azure CLI tokens work consistently with GitHub Actions OIDC setup
+        if (-not $token) {
+            try {
+                # Check if Azure CLI is available and authenticated
+                $cliCheck = az account show --query id --output tsv 2>$null
+                if ($cliCheck) {
+                    $cliToken = az account get-access-token --resource https://management.azure.com/ --query accessToken --output tsv 2>$null
+                    if ($cliToken -and $cliToken.Trim() -ne "") {
+                        $token = $cliToken.Trim()
+                        $authMethod = "Azure CLI (GitHub Actions OIDC Compatible)"
+                        Write-Verbose "ARM token acquired from Azure CLI - works reliably with azure/login@v2"
+                    } else {
+                        throw "Azure CLI returned empty token"
+                    }
+                } else {
+                    throw "Azure CLI not authenticated"
+                }
+            } catch {
+                $tokenAcquisitionErrors += "Azure CLI: $($_.Exception.Message)"
+            }
+        }
+
+        # Method 3: Azure PowerShell Context (May fail in some GitHub Actions environments)
+        # Keep this as fallback since it can be unreliable with OIDC in some configurations
         if (-not $token) {
             try {
                 $azContext = Get-AzContext -ErrorAction Stop
@@ -29,15 +64,15 @@ function Invoke-ARM {
                     } else {
                         $tokenObj.Token
                     }
-                    $authMethod = "Azure PowerShell Context (Official Pattern)"
-                    Write-Verbose "ARM token acquired from Azure PowerShell context - this works with azure/login@v2 OIDC in GitHub Actions"
+                    $authMethod = "Azure PowerShell Context (Fallback)"
+                    Write-Verbose "ARM token acquired from Azure PowerShell context"
                 }
             } catch {
                 $tokenAcquisitionErrors += "Azure PowerShell Context: $($_.Exception.Message)"
             }
         }
 
-        # Method 2: Direct Environment Variable (CI/CD Fallback)
+        # Method 4: Direct Environment Variable (Extended check)
         if (-not $token -and $env:AZURE_ACCESS_TOKEN) {
             try {
                 $token = $env:AZURE_ACCESS_TOKEN
