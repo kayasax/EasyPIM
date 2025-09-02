@@ -15,7 +15,7 @@ function Invoke-ARM {
         $token = $null
         $tokenAcquisitionErrors = @()
         $authMethod = "Unknown"
-        
+
         # Method 1: Environment Variable (CI/CD Direct Token)
         if ($env:AZURE_ACCESS_TOKEN) {
             try {
@@ -26,7 +26,7 @@ function Invoke-ARM {
                 $tokenAcquisitionErrors += "Environment variable: $($_.Exception.Message)"
             }
         }
-        
+
         # Method 2: Azure PowerShell Context with Standard ARM Resource
         if (-not $token) {
             try {
@@ -45,7 +45,7 @@ function Invoke-ARM {
                 $tokenAcquisitionErrors += "Azure PowerShell ARM resource: $($_.Exception.Message)"
             }
         }
-        
+
         # Method 3: Azure PowerShell Context with Default Token (OIDC Compatible)
         if (-not $token) {
             try {
@@ -64,7 +64,7 @@ function Invoke-ARM {
                 $tokenAcquisitionErrors += "Azure PowerShell default: $($_.Exception.Message)"
             }
         }
-        
+
         # Method 4: REST API Token Acquisition (OIDC Fallback)
         if (-not $token -and $env:AZURE_CLIENT_ID -and $env:AZURE_TENANT_ID) {
             try {
@@ -74,14 +74,14 @@ function Invoke-ARM {
                     scope = "https://management.azure.com/.default"
                     grant_type = "client_credentials"
                 }
-                
+
                 if ($env:AZURE_CLIENT_SECRET) {
                     $body.client_secret = $env:AZURE_CLIENT_SECRET
                 } elseif ($env:AZURE_CLIENT_ASSERTION) {
                     $body.client_assertion_type = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
                     $body.client_assertion = $env:AZURE_CLIENT_ASSERTION
                 }
-                
+
                 $response = Invoke-RestMethod -Uri $tokenEndpoint -Method POST -Body $body -ContentType "application/x-www-form-urlencoded"
                 $token = $response.access_token
                 $authMethod = "Direct OAuth2 (OIDC/Federated)"
@@ -90,7 +90,7 @@ function Invoke-ARM {
                 $tokenAcquisitionErrors += "Direct OAuth2: $($_.Exception.Message)"
             }
         }
-        
+
         if (-not $token) {
             $errorMessage = @"
 Failed to acquire ARM access token for Azure Resource Manager API calls.
@@ -113,7 +113,7 @@ Current Environment Variables:
 "@
             throw $errorMessage
         }
-        
+
         Write-Verbose "ARM authentication successful using: $authMethod"
 
         $headers = @{

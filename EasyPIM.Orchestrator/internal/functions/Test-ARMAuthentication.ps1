@@ -28,10 +28,10 @@ function Test-ARMAuthentication {
         [Parameter(Mandatory = $false)]
         [string]$SubscriptionId
     )
-    
+
     try {
         Write-Verbose "Starting ARM authentication test..."
-        
+
         # Use subscription from environment if not provided
         if (-not $SubscriptionId) {
             $SubscriptionId = $env:AZURE_SUBSCRIPTION_ID
@@ -42,7 +42,7 @@ function Test-ARMAuthentication {
                 }
             }
         }
-        
+
         if (-not $SubscriptionId) {
             Write-Warning "No subscription ID provided and none found in context/environment"
             $testUri = "https://management.azure.com/tenants?api-version=2020-01-01"
@@ -51,12 +51,12 @@ function Test-ARMAuthentication {
             $testUri = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups?api-version=2021-04-01"
             Write-Verbose "Testing ARM access for subscription: $SubscriptionId"
         }
-        
+
         # Test ARM connectivity using our enhanced Invoke-ARM function
         Write-Host "🔍 Testing ARM API authentication..." -ForegroundColor Cyan
-        
+
         $response = Invoke-ARM -restURI $testUri -method "GET" -Verbose:$VerbosePreference
-        
+
         if ($response) {
             Write-Host "✅ ARM API authentication successful!" -ForegroundColor Green
             if ($SubscriptionId) {
@@ -71,11 +71,11 @@ function Test-ARMAuthentication {
             Write-Host "⚠️ ARM API call succeeded but returned no data" -ForegroundColor Yellow
             return $true
         }
-        
+
     } catch {
         Write-Host "❌ ARM API authentication failed!" -ForegroundColor Red
         Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
-        
+
         # Provide OIDC-specific troubleshooting guidance
         Write-Host ""
         Write-Host "🔧 OIDC Troubleshooting Guide:" -ForegroundColor Yellow
@@ -83,14 +83,14 @@ function Test-ARMAuthentication {
         Write-Host "2. For federated credentials, ensure Connect-AzAccount was successful" -ForegroundColor Gray
         Write-Host "3. Check that the token has Azure Resource Manager permissions" -ForegroundColor Gray
         Write-Host "4. Verify the subscription ID is correct: $SubscriptionId" -ForegroundColor Gray
-        
+
         Write-Host ""
         Write-Host "Environment Variables:" -ForegroundColor Yellow
         Write-Host "  AZURE_CLIENT_ID: $($null -ne $env:AZURE_CLIENT_ID)" -ForegroundColor Gray
         Write-Host "  AZURE_TENANT_ID: $($null -ne $env:AZURE_TENANT_ID)" -ForegroundColor Gray
         Write-Host "  AZURE_ACCESS_TOKEN: $($null -ne $env:AZURE_ACCESS_TOKEN)" -ForegroundColor Gray
         Write-Host "  AZURE_SUBSCRIPTION_ID: $($null -ne $env:AZURE_SUBSCRIPTION_ID)" -ForegroundColor Gray
-        
+
         return $false
     }
 }

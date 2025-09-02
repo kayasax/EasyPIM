@@ -124,12 +124,12 @@ function Invoke-EasyPIMOrchestrator {
 			throw "Microsoft Graph requires RoleManagement.ReadWrite.Directory scope."
 		}
 		Write-Host "✅ [AUTH] Microsoft Graph connection verified (Identity: $authIdentifier)" -ForegroundColor Green
-		
+
 		# Check Azure PowerShell authentication with OIDC support
 		$azContext = Get-AzContext -ErrorAction SilentlyContinue
 		$hasAzureAuth = $false
 		$azureAuthMethod = "Unknown"
-		
+
 		# Check for Azure PowerShell context
 		if ($azContext) {
 			$hasAzureAuth = $true
@@ -149,7 +149,7 @@ function Invoke-EasyPIMOrchestrator {
 				Write-Host "  Tenant ID: $($env:AZURE_TENANT_ID)" -ForegroundColor Gray
 			}
 		}
-		
+
 		if (-not $hasAzureAuth) {
 			Write-Host ""
 			Write-Host "❌ [ERROR] No Azure authentication found!" -ForegroundColor Red
