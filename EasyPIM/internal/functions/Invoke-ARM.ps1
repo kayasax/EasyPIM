@@ -140,11 +140,11 @@ Troubleshooting for OIDC/CI-CD environments:
 4. Check that the token has the required ARM API permissions
 
 Current Environment Variables:
-  AZURE_CLIENT_ID: $($env:AZURE_CLIENT_ID -ne $null)
-  AZURE_TENANT_ID: $($env:AZURE_TENANT_ID -ne $null)
-  AZURE_ACCESS_TOKEN: $($env:AZURE_ACCESS_TOKEN -ne $null)
-  AZURE_CLIENT_SECRET: $($env:AZURE_CLIENT_SECRET -ne $null)
-  AZURE_CLIENT_ASSERTION: $($env:AZURE_CLIENT_ASSERTION -ne $null)
+  AZURE_CLIENT_ID: $($null -ne $env:AZURE_CLIENT_ID)
+  AZURE_TENANT_ID: $($null -ne $env:AZURE_TENANT_ID)
+  AZURE_ACCESS_TOKEN: $($null -ne $env:AZURE_ACCESS_TOKEN)
+  AZURE_CLIENT_SECRET: $($null -ne $env:AZURE_CLIENT_SECRET)
+  AZURE_CLIENT_ASSERTION: $($null -ne $env:AZURE_CLIENT_ASSERTION)
 "@
             throw $errorMessage
         }

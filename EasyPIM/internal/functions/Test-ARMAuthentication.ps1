@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Test Azure Resource Manager API authentication and connectivity
 
