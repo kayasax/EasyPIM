@@ -76,13 +76,21 @@ function Test-ARMAuthentication {
         Write-Host "❌ ARM API authentication failed!" -ForegroundColor Red
         Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
 
-        # Provide OIDC-specific troubleshooting guidance
+        # Provide GitHub Actions OIDC troubleshooting guidance
         Write-Host ""
-        Write-Host "🔧 OIDC Troubleshooting Guide:" -ForegroundColor Yellow
-        Write-Host "1. Verify AZURE_ACCESS_TOKEN environment variable is set with a valid ARM token" -ForegroundColor Gray
-        Write-Host "2. For federated credentials, ensure Connect-AzAccount was successful" -ForegroundColor Gray
-        Write-Host "3. Check that the token has Azure Resource Manager permissions" -ForegroundColor Gray
-        Write-Host "4. Verify the subscription ID is correct: $SubscriptionId" -ForegroundColor Gray
+        Write-Host "🔧 GitHub Actions OIDC Troubleshooting Guide:" -ForegroundColor Yellow
+        Write-Host "1. Recommended: Use azure/login@v2 action with OIDC in your workflow:" -ForegroundColor Gray
+        Write-Host "   - permissions: id-token: write" -ForegroundColor Gray
+        Write-Host "   - uses: azure/login@v2 with client-id, tenant-id, subscription-id secrets" -ForegroundColor Gray
+        Write-Host "   - enable-AzPSSession: true" -ForegroundColor Gray
+        Write-Host ""
+        Write-Host "2. Alternative: Set AZURE_ACCESS_TOKEN environment variable with valid ARM token" -ForegroundColor Gray
+        Write-Host "3. Verify federated identity credentials are configured in Azure:" -ForegroundColor Gray
+        Write-Host "   - Issuer: https://token.actions.githubusercontent.com" -ForegroundColor Gray
+        Write-Host "   - Subject: repo:owner/repo:environment:production" -ForegroundColor Gray
+        Write-Host "   - Audience: api://AzureADTokenExchange" -ForegroundColor Gray
+        Write-Host ""
+        Write-Host "4. Check Azure PowerShell context is available after azure/login@v2" -ForegroundColor Gray
 
         Write-Host ""
         Write-Host "Environment Variables:" -ForegroundColor Yellow
@@ -90,6 +98,10 @@ function Test-ARMAuthentication {
         Write-Host "  AZURE_TENANT_ID: $($null -ne $env:AZURE_TENANT_ID)" -ForegroundColor Gray
         Write-Host "  AZURE_ACCESS_TOKEN: $($null -ne $env:AZURE_ACCESS_TOKEN)" -ForegroundColor Gray
         Write-Host "  AZURE_SUBSCRIPTION_ID: $($null -ne $env:AZURE_SUBSCRIPTION_ID)" -ForegroundColor Gray
+        Write-Host "  Azure PowerShell Context: $(if (Get-AzContext -ErrorAction SilentlyContinue) { "Available" } else { "Not Available" })" -ForegroundColor Gray
+        
+        Write-Host ""
+        Write-Host "📖 Official Documentation: https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure-openid-connect" -ForegroundColor Cyan
 
         return $false
     }
