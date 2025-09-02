@@ -27,20 +27,20 @@ function Resolve-PolicyTemplate {
 	)
 
 	if (-not $Object) { return $Object }
-	
+
 	if ($Object.Template -and $Templates.ContainsKey($Object.Template)) {
 		# Create a deep copy of the template
 		$baseTemplate = $Templates[$Object.Template] | ConvertTo-Json -Depth 20 | ConvertFrom-Json
-		
+
 		# Apply object properties as overrides
 		foreach ($property in $Object.PSObject.Properties) {
 			if ($property.Name -ne 'Template') {
 				$baseTemplate | Add-Member -NotePropertyName $property.Name -NotePropertyValue $property.Value -Force
 			}
 		}
-		
+
 		return $baseTemplate
 	}
-	
+
 	return $Object
 }

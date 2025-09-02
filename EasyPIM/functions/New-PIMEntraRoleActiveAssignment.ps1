@@ -242,11 +242,13 @@ function New-PIMEntraRoleActiveAssignment {
         # Add ticketInfo only if required by policy
         if ($config.ActiveAssignmentRequirement -and $config.ActiveAssignmentRequirement -match "Ticketing") {
             Write-Verbose "TicketingRule detected - adding ticketInfo to request"
+            $mgContext = Get-MgContext
+            $authIdentifier = $mgContext.Account ?? $mgContext.ClientId ?? "Service Principal"
             $requestBody.ticketInfo = @{
                 ticketNumber = "EasyPIM-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
                 ticketSystem = "EasyPIM"
-                ticketSubmitterIdentityId = (Get-MgContext).Account
-                ticketApproverIdentityId = (Get-MgContext).Account
+                ticketSubmitterIdentityId = $authIdentifier
+                ticketApproverIdentityId = $authIdentifier
             }
         } else {
             Write-Verbose "No TicketingRule requirement detected - omitting ticketInfo"

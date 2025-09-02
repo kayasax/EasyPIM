@@ -104,12 +104,16 @@ function Invoke-EasyPIMOrchestrator {
 	# Check Microsoft Graph authentication before proceeding
 	try {
 		$mgContext = Get-MgContext -ErrorAction SilentlyContinue
-		if (-not $mgContext -or -not $mgContext.Account) {
+		if (-not $mgContext) {
 			Write-Host "🔐 [AUTH] Microsoft Graph authentication required for EasyPIM operations." -ForegroundColor Yellow
 			Write-Host "🔐 [AUTH] Please connect to Microsoft Graph with appropriate scopes:" -ForegroundColor Yellow
 			Write-Host "  Connect-MgGraph -Scopes 'RoleManagement.ReadWrite.Directory'" -ForegroundColor Green
 			throw "Microsoft Graph authentication required. Please run Connect-MgGraph first."
 		}
+
+		# For federated credentials, Account may be null but ClientId should be present
+		$authIdentifier = $mgContext.Account ?? $mgContext.ClientId ?? "Service Principal"
+
 		# Check if we have required Graph scopes
 		$requiredScopes = @('RoleManagement.ReadWrite.Directory')
 		$currentScopes = $mgContext.Scopes
@@ -119,7 +123,7 @@ function Invoke-EasyPIMOrchestrator {
 			Write-Host "  Connect-MgGraph -Scopes 'RoleManagement.ReadWrite.Directory'" -ForegroundColor Green
 			throw "Microsoft Graph requires RoleManagement.ReadWrite.Directory scope."
 		}
-		Write-Host "✅ [AUTH] Microsoft Graph connection verified (Account: $($mgContext.Account))" -ForegroundColor Green
+		Write-Host "✅ [AUTH] Microsoft Graph connection verified (Identity: $authIdentifier)" -ForegroundColor Green
 		# Check Azure PowerShell authentication
 		$azContext = Get-AzContext -ErrorAction SilentlyContinue
 		if (-not $azContext) {
