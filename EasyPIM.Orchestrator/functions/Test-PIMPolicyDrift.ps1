@@ -252,7 +252,16 @@ function Test-PIMPolicyDrift {
 			}
 
 			try {
-				$live = Get-PIMAzureResourcePolicy -tenantID $TenantId -subscriptionID $SubscriptionId -rolename $policy.RoleName -ErrorAction Stop
+				# 🔧 SCOPE FIX: Use the policy's specific scope instead of subscription-level only
+				if ($policy.Scope -and $policy.Scope -ne "/subscriptions/$SubscriptionId") {
+					# Use scope-based query for resource-level policies
+					Write-Verbose "Drift detection: Using resource scope '$($policy.Scope)' for role '$($policy.RoleName)'"
+					$live = Get-PIMAzureResourcePolicy -tenantID $TenantId -scope $policy.Scope -rolename $policy.RoleName -ErrorAction Stop
+				} else {
+					# Use subscription-based query for subscription-level policies
+					Write-Verbose "Drift detection: Using subscription scope for role '$($policy.RoleName)'"
+					$live = Get-PIMAzureResourcePolicy -tenantID $TenantId -subscriptionID $SubscriptionId -rolename $policy.RoleName -ErrorAction Stop
+				}
 				if ($live -is [System.Collections.IEnumerable] -and -not ($live -is [string])) {
 					$live = @($live)[0]
 				}
