@@ -1,0 +1,141 @@
+# EasyPIM Changelog
+
+All notable changes to the EasyPIM project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [EasyPIM.Orchestrator 1.2.0] - 2025-09-03
+
+### 🚨 Critical
+- **FIXED**: Critical scope mismatch bug in `Test-PIMPolicyDrift` causing false "Match" results
+- **SECURITY**: Scope validation now matches policy application behavior preventing false positives
+
+### Fixed
+- Fixed drift detection always using subscription scope instead of policy-specific scopes
+- Enhanced `Test-PIMPolicyDrift` to use scope-aware policy validation
+- Added verbose logging to show which scope is being used for drift detection
+- Resolved cases where Azure resource policies failed to apply but drift showed "Match"
+
+### Enhanced
+- Improved debug output in telemetry functions
+- Enhanced KeyVault configuration support in telemetry
+
+### Technical Details
+- **Root Cause**: Drift detection queried subscription-level policies while orchestrator applied resource-specific policies
+- **Impact**: Azure resource policies (e.g., Contributor at storage account scope) would fail but appear correctly configured
+- **Solution**: Enhanced drift detection to validate at the same scope as policy application
+- **Evidence**: 400 Bad Request on policy apply vs "Match" in drift detection for same role
+
+## [EasyPIM.Orchestrator 1.1.9] - 2025-09-03
+
+### Fixed
+- Fixed telemetry variable name bugs preventing KeyVault configuration telemetry
+- Corrected `$loadedConfig` to `$config` variable references in orchestrator
+- Enhanced telemetry functions with SHA256 fallback identifier creation
+- Improved debug output for telemetry troubleshooting
+
+### Enhanced
+- Added `Send-TelemetryEventFromConfig` function for config object-based telemetry
+- Enhanced error handling in telemetry functions with non-blocking fallbacks
+- Added color-coded debug messages for better troubleshooting
+
+## [EasyPIM Core 2.0.12] - 2025-08-18
+
+### Fixed
+- Fixed corrupted `Invoke-ARM.ps1` file with duplicate code blocks
+- Removed duplicate try-catch sections and extra closing braces
+- Resolved PowerShell parser errors in CI/CD environments
+
+### Validation
+- All 6,973+ tests now pass successfully
+- Complete build validation restored
+
+## [EasyPIM.Orchestrator 1.1.8] - 2025-08-31
+
+### Added
+- Policy template merge feature with inline property overrides
+- Support for base templates with custom property modifications
+- Enhanced EntraRoles.Policies, AzureRoles.Policies, and GroupRoles.Policies sections
+
+### Changed
+- Removed unnecessary `Microsoft.Graph.Identity.Governance` dependency
+- Optimized module dependencies after code analysis
+- Updated to use only `Microsoft.Graph.Authentication` cmdlets
+
+### Enhanced
+- Template resolution with non-Template property copying as overrides
+- Improved dependency management and module loading
+
+## [EasyPIM Core 2.0.11] - 2025-08-29
+
+### Added
+- Proactive PowerShell Gallery version checking
+- Build script fail-fast for existing versions
+- Systematic CI/CD reliability improvements
+
+### Changed
+- Enhanced build process to prevent version conflicts
+- Improved error handling in publishing workflow
+
+### Fixed
+- Prevented repeated pipeline failures from version conflicts
+- Reduced wasted CI cycles through early validation
+
+## [EasyPIM 2.0.x Series] - 2025-08-27 to 2025-08-29
+
+### Major Changes
+- **Architecture**: Complete module separation into Core + Orchestrator
+- **Dependencies**: Clean internal function duplication, no shared dependencies
+- **Publishing**: Independent versioning and release cycles
+- **Documentation**: Updated guides for two-module architecture
+
+### Added
+- EasyPIM.Orchestrator as standalone module
+- Tag-based publishing (core-v*, orchestrator-v*)
+- Comprehensive policy orchestration system
+- Enterprise-grade reliability features
+
+### Enhanced
+- Flattened module structure with UTF-8 BOM support
+- Gallery version validation in build process
+- Improved CI/CD workflows with GitHub Actions
+
+---
+
+## Version History Summary
+
+### EasyPIM Core Releases
+- **v2.0.12** (2025-08-18): Syntax fixes, build validation restored
+- **v2.0.11** (2025-08-29): Gallery version checking, CI reliability
+- **v2.0.10** (2025-08-28): Stable release, module separation complete
+- **v2.0.x** (2025-08-27): Module split architecture implementation
+
+### EasyPIM.Orchestrator Releases
+- **v1.2.0** (2025-09-03): 🚨 Critical scope validation fix
+- **v1.1.9** (2025-09-03): Telemetry KeyVault fixes, variable corrections
+- **v1.1.8** (2025-08-31): Template merge feature, dependency optimization
+- **v1.1.7** (2025-08-30): ARM authentication improvements
+- **v1.0.x** (2025-08-27): Initial standalone orchestrator release
+
+---
+
+## Critical Issues Resolved
+
+### Security & Reliability
+- **Scope Validation**: Fixed false "Match" in drift detection (v1.2.0)
+- **Telemetry Privacy**: Enhanced KeyVault support with proper consent validation (v1.1.9)
+- **Build Reliability**: Eliminated CI failures from version conflicts (v2.0.11)
+- **Syntax Errors**: Resolved PowerShell parser issues in CI environments (v2.0.12)
+
+### Architecture & Performance
+- **Module Separation**: Clean dependency structure prevents conflicts
+- **Internal Functions**: Embedded approach eliminates shared dependencies
+- **Publishing**: Tag-based workflows enable independent release cycles
+- **Validation**: Comprehensive test suite (6,900+ tests) ensures reliability
+
+---
+
+*For detailed technical information and migration guides, see individual release notes in the `/publish/` directory.*

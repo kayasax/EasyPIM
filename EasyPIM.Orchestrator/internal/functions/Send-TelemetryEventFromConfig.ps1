@@ -96,7 +96,7 @@ function Send-TelemetryEventFromConfig {
             Write-Host "🔧 [DEBUG] Creating fallback tenant identifier" -ForegroundColor Yellow
             $TenantIdentifier = [System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Context.TenantId)) | ForEach-Object { $_.ToString("x2") } | Join-String
         }
-        
+
         if (-not $TenantIdentifier) {
             Write-Verbose "Failed to create telemetry identifier - skipping event"
             Write-Host "❌ [DEBUG] Telemetry identifier is null" -ForegroundColor Red
