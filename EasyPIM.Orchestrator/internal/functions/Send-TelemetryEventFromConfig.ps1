@@ -42,11 +42,19 @@ function Send-TelemetryEventFromConfig {
     )
 
     try {
-        Write-Verbose "Checking telemetry configuration from config object..."
+        Write-Verbose "🔍 [TELEMETRY] Checking telemetry configuration from config object..."
+        Write-Host "🔍 [DEBUG] Send-TelemetryEventFromConfig called for event: $EventName" -ForegroundColor Yellow
 
         if (-not $Config) {
-            Write-Verbose "No configuration object provided - skipping telemetry"
+            Write-Verbose "❌ [TELEMETRY] No configuration object provided - skipping telemetry"
+            Write-Host "❌ [DEBUG] No config object provided to telemetry function" -ForegroundColor Red
             return
+        }
+
+        Write-Host "🔍 [DEBUG] Config object received, checking TelemetrySettings..." -ForegroundColor Yellow
+        Write-Host "🔍 [DEBUG] Config.TelemetrySettings exists: $($null -ne $Config.TelemetrySettings)" -ForegroundColor Yellow
+        if ($Config.TelemetrySettings) {
+            Write-Host "🔍 [DEBUG] Config.TelemetrySettings.ALLOW_TELEMETRY value: $($Config.TelemetrySettings.ALLOW_TELEMETRY)" -ForegroundColor Yellow
         }
 
         # Check if telemetry is enabled (default to false - opt-in only)
@@ -56,11 +64,13 @@ function Send-TelemetryEventFromConfig {
         }
 
         if (-not $TelemetryEnabled) {
-            Write-Verbose "Telemetry disabled in configuration - skipping event: $EventName"
+            Write-Verbose "❌ [TELEMETRY] Telemetry disabled in configuration - skipping event: $EventName"
+            Write-Host "❌ [DEBUG] Telemetry disabled or not configured - skipping event: $EventName" -ForegroundColor Red
             return
         }
 
-        Write-Verbose "Telemetry enabled - preparing event: $EventName"
+        Write-Verbose "✅ [TELEMETRY] Telemetry enabled - preparing event: $EventName"
+        Write-Host "✅ [DEBUG] Telemetry enabled - proceeding with event: $EventName" -ForegroundColor Green
 
         # Get Microsoft Graph context for tenant information
         $Context = $null
