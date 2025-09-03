@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced error handling in telemetry functions with non-blocking fallbacks
 - Added color-coded debug messages for better troubleshooting
 
-## [EasyPIM Core 2.0.12] - 2025-08-18
+## [EasyPIM Core 2.0.12] - 2025-09-03
 
 ### Fixed
 - Fixed corrupted `Invoke-ARM.ps1` file with duplicate code blocks
@@ -69,7 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Template resolution with non-Template property copying as overrides
 - Improved dependency management and module loading
 
-## [EasyPIM Core 2.0.11] - 2025-08-29
+## [EasyPIM Core 2.0.11] - 2025-09-02
 
 ### Added
 - Proactive PowerShell Gallery version checking
@@ -108,9 +108,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Version History Summary
 
 ### EasyPIM Core Releases
-- **v2.0.12** (2025-08-18): Syntax fixes, build validation restored
-- **v2.0.11** (2025-08-29): Gallery version checking, CI reliability
-- **v2.0.10** (2025-08-28): Stable release, module separation complete
+- **v2.0.12** (2025-09-03): Syntax fixes, build validation restored
+- **v2.0.11** (2025-09-02): Gallery version checking, CI reliability
+- **v2.0.10** (2025-09-02): Stable release, module separation complete
 - **v2.0.x** (2025-08-27): Module split architecture implementation
 
 ### EasyPIM.Orchestrator Releases
