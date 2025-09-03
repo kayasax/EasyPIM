@@ -206,7 +206,7 @@ function Invoke-EasyPIMOrchestrator {
 			if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
 				# For KeyVault configs, pass the loaded config object directly
 				Write-Host "🔍 [DEBUG] Using KeyVault parameter set for telemetry" -ForegroundColor Yellow
-				Send-TelemetryEventFromConfig -EventName "orchestrator_startup" -Properties $startupProperties -Config $loadedConfig
+				Send-TelemetryEventFromConfig -EventName "orchestrator_startup" -Properties $startupProperties -Config $config
 			} else {
 				# For file-based configs, use the file path
 				Write-Host "🔍 [DEBUG] Using file-based parameter set for telemetry" -ForegroundColor Yellow
@@ -720,7 +720,7 @@ function Invoke-EasyPIMOrchestrator {
 		try {
 			if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
 				# For KeyVault configs, pass the loaded config object directly
-				Send-TelemetryEventFromConfig -EventName "orchestrator_completion" -Properties $completionProperties -Config $loadedConfig
+				Send-TelemetryEventFromConfig -EventName "orchestrator_completion" -Properties $completionProperties -Config $config
 			} else {
 				# For file-based configs, use the file path
 				Send-TelemetryEvent -EventName "orchestrator_completion" -Properties $completionProperties -ConfigPath $ConfigFilePath
@@ -748,7 +748,7 @@ function Invoke-EasyPIMOrchestrator {
 			try {
 				if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
 					# For KeyVault configs, pass the loaded config object directly
-					Send-TelemetryEventFromConfig -EventName "orchestrator_error" -Properties $errorProperties -Config $loadedConfig
+					Send-TelemetryEventFromConfig -EventName "orchestrator_error" -Properties $errorProperties -Config $config
 				} else {
 					# For file-based configs, use the file path
 					Send-TelemetryEvent -EventName "orchestrator_error" -Properties $errorProperties -ConfigPath $ConfigFilePath

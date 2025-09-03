@@ -87,15 +87,27 @@ function Send-TelemetryEventFromConfig {
         }
 
         # Create privacy-protected identifier (always encrypted)
-        $TenantIdentifier = Get-TelemetryIdentifier -TenantId $Context.TenantId
+        $TenantIdentifier = $null
+        try {
+            $TenantIdentifier = Get-TelemetryIdentifier -TenantId $Context.TenantId
+        }
+        catch {
+            # Create a fallback identifier if the function doesn't exist
+            Write-Host "🔧 [DEBUG] Creating fallback tenant identifier" -ForegroundColor Yellow
+            $TenantIdentifier = [System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Context.TenantId)) | ForEach-Object { $_.ToString("x2") } | Join-String
+        }
+        
         if (-not $TenantIdentifier) {
             Write-Verbose "Failed to create telemetry identifier - skipping event"
+            Write-Host "❌ [DEBUG] Telemetry identifier is null" -ForegroundColor Red
             return
         }
 
+        Write-Host "✅ [DEBUG] Telemetry identifier created successfully" -ForegroundColor Green
+
         # Enhance properties with system information
         $EnhancedProperties = $Properties.Clone()
-        $EnhancedProperties.module_version = "1.0.7"
+        $EnhancedProperties.module_version = "1.1.9-telemetry-fixed"
         $EnhancedProperties.powershell_version = $PSVersionTable.PSVersion.ToString()
         $EnhancedProperties.os_version = Get-TelemetryOSVersion
         $EnhancedProperties.timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
@@ -107,6 +119,7 @@ function Send-TelemetryEventFromConfig {
         Send-PostHogEvent -DistinctId $TenantIdentifier -EventName $EventName -Properties $EnhancedProperties
 
         Write-Verbose "Telemetry event sent successfully: $EventName"
+        Write-Host "✅ [DEBUG] Telemetry event sent successfully: $EventName" -ForegroundColor Green
 
     }
     catch {
@@ -164,9 +177,11 @@ function Send-PostHogEvent {
         # Send with short timeout to avoid blocking main operations
         $Response = Invoke-RestMethod -Uri $PostHogApiUrl -Method Post -Body $Body -ContentType "application/json" -TimeoutSec 5 -ErrorAction Stop
         Write-Verbose "PostHog API responded successfully. Status: $(if($Response.status) { $Response.status } else { 'OK' })"
+        Write-Host "✅ [DEBUG] PostHog API call succeeded" -ForegroundColor Green
     }
     catch {
         Write-Verbose "PostHog API call failed: $($_.Exception.Message)"
+        Write-Host "❌ [DEBUG] PostHog API call failed: $($_.Exception.Message)" -ForegroundColor Red
         # Don't throw - telemetry failures should not affect main operations
     }
 }

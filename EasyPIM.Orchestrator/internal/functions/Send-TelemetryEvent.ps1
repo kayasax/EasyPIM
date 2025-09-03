@@ -40,10 +40,12 @@ function Send-TelemetryEvent {
 
     try {
         Write-Verbose "Checking telemetry configuration..."
+        Write-Host "🔍 [DEBUG] Send-TelemetryEvent called for event: $EventName" -ForegroundColor Yellow
 
         # Load configuration to check telemetry settings
         if (-not (Test-Path $ConfigPath)) {
             Write-Verbose "Configuration file not found - skipping telemetry"
+            Write-Host "❌ [DEBUG] Configuration file not found: $ConfigPath" -ForegroundColor Red
             return
         }
 
@@ -65,12 +67,19 @@ function Send-TelemetryEvent {
             $TelemetryEnabled = $Config.TelemetrySettings.ALLOW_TELEMETRY
         }
 
+        Write-Host "🔍 [DEBUG] Config.TelemetrySettings exists: $($null -ne $Config.TelemetrySettings)" -ForegroundColor Yellow
+        if ($Config.TelemetrySettings) {
+            Write-Host "🔍 [DEBUG] Config.TelemetrySettings.ALLOW_TELEMETRY value: $($Config.TelemetrySettings.ALLOW_TELEMETRY)" -ForegroundColor Yellow
+        }
+
         if (-not $TelemetryEnabled) {
             Write-Verbose "Telemetry disabled in configuration - skipping event: $EventName"
+            Write-Host "❌ [DEBUG] Telemetry disabled or not configured - skipping event: $EventName" -ForegroundColor Red
             return
         }
 
         Write-Verbose "Telemetry enabled - preparing event: $EventName"
+        Write-Host "✅ [DEBUG] Telemetry enabled - proceeding with event: $EventName" -ForegroundColor Green
 
         # Get Microsoft Graph context for tenant information
         $Context = $null
@@ -87,15 +96,27 @@ function Send-TelemetryEvent {
         }
 
         # Create privacy-protected identifier (always encrypted)
-        $TenantIdentifier = Get-TelemetryIdentifier -TenantId $Context.TenantId
+        $TenantIdentifier = $null
+        try {
+            $TenantIdentifier = Get-TelemetryIdentifier -TenantId $Context.TenantId
+        }
+        catch {
+            # Create a fallback identifier if the function doesn't exist
+            Write-Host "🔧 [DEBUG] Creating fallback tenant identifier" -ForegroundColor Yellow
+            $TenantIdentifier = [System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Context.TenantId)) | ForEach-Object { $_.ToString("x2") } | Join-String
+        }
+        
         if (-not $TenantIdentifier) {
             Write-Verbose "Failed to create telemetry identifier - skipping event"
+            Write-Host "❌ [DEBUG] Telemetry identifier is null" -ForegroundColor Red
             return
         }
 
+        Write-Host "✅ [DEBUG] Telemetry identifier created successfully" -ForegroundColor Green
+
         # Enhance properties with system information
         $EnhancedProperties = $Properties.Clone()
-        $EnhancedProperties.module_version = "1.0.7"
+        $EnhancedProperties.module_version = "1.1.9-telemetry-fixed"
         $EnhancedProperties.powershell_version = $PSVersionTable.PSVersion.ToString()
         $EnhancedProperties.os_version = Get-TelemetryOSVersion
         $EnhancedProperties.timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
@@ -107,6 +128,7 @@ function Send-TelemetryEvent {
         Send-PostHogEvent -DistinctId $TenantIdentifier -EventName $EventName -Properties $EnhancedProperties
 
         Write-Verbose "Telemetry event sent successfully: $EventName"
+        Write-Host "✅ [DEBUG] Telemetry event sent successfully: $EventName" -ForegroundColor Green
     }
     catch {
         # Telemetry must never fail the main operation
