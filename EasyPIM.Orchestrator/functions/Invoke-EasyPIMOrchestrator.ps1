@@ -200,9 +200,17 @@ function Invoke-EasyPIMOrchestrator {
 			"skip_policies" = $SkipPolicies.IsPresent
 			"session_id" = $sessionId
 		}
-		# Send startup telemetry (non-blocking, only for file-based configs)
-		if ($PSCmdlet.ParameterSetName -ne 'KeyVault') {
-			Send-TelemetryEvent -EventName "orchestrator_startup" -Properties $startupProperties -ConfigPath $ConfigFilePath
+		# Send startup telemetry (non-blocking)
+		try {
+			if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
+				# For KeyVault configs, pass the loaded config object directly
+				Send-TelemetryEventFromConfig -EventName "orchestrator_startup" -Properties $startupProperties -Config $loadedConfig
+			} else {
+				# For file-based configs, use the file path
+				Send-TelemetryEvent -EventName "orchestrator_startup" -Properties $startupProperties -ConfigPath $ConfigFilePath
+			}
+		} catch {
+			Write-Verbose "Telemetry startup failed (non-blocking): $($_.Exception.Message)"
 		}
 		# Session rule: prefer environment variables for TenantId / SubscriptionId when not explicitly supplied
 		if (-not $TenantId -or [string]::IsNullOrWhiteSpace($TenantId)) {
@@ -704,14 +712,22 @@ function Invoke-EasyPIMOrchestrator {
 			$completionProperties["policies_failed"] = $policyResults.Summary.Failed
 		}
 
-		# Send completion telemetry (non-blocking, only for file-based configs)
-		if ($PSCmdlet.ParameterSetName -ne 'KeyVault') {
-			Send-TelemetryEvent -EventName "orchestrator_completion" -Properties $completionProperties -ConfigPath $ConfigFilePath
+		# Send completion telemetry (non-blocking)
+		try {
+			if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
+				# For KeyVault configs, pass the loaded config object directly
+				Send-TelemetryEventFromConfig -EventName "orchestrator_completion" -Properties $completionProperties -Config $loadedConfig
+			} else {
+				# For file-based configs, use the file path
+				Send-TelemetryEvent -EventName "orchestrator_completion" -Properties $completionProperties -ConfigPath $ConfigFilePath
+			}
+		} catch {
+			Write-Verbose "Telemetry completion failed (non-blocking): $($_.Exception.Message)"
 		}
 	}
 	catch {
-		# Send error telemetry (non-blocking, only for file-based configs)
-		if ($PSCmdlet.ParameterSetName -ne 'KeyVault' -and $sessionId) {
+		# Send error telemetry (non-blocking)
+		if ($sessionId) {
 			$errorProperties = @{
 				"execution_mode" = if ($WhatIfPreference) { "WhatIf" } else { $Mode }
 				"protected_roles_override" = $AllowProtectedRoles.IsPresent
@@ -725,7 +741,17 @@ function Invoke-EasyPIMOrchestrator {
 				$errorProperties["execution_duration_seconds"] = [math]::Round($errorDuration, 2)
 			}
 
-			Send-TelemetryEvent -EventName "orchestrator_error" -Properties $errorProperties -ConfigPath $ConfigFilePath
+			try {
+				if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
+					# For KeyVault configs, pass the loaded config object directly
+					Send-TelemetryEventFromConfig -EventName "orchestrator_error" -Properties $errorProperties -Config $loadedConfig
+				} else {
+					# For file-based configs, use the file path
+					Send-TelemetryEvent -EventName "orchestrator_error" -Properties $errorProperties -ConfigPath $ConfigFilePath
+				}
+			} catch {
+				Write-Verbose "Telemetry error failed (non-blocking): $($_.Exception.Message)"
+			}
 		}
 
 	Write-Error -Message "[ERROR] An error occurred: $($_.Exception.Message)"

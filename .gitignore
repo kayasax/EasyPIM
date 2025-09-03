@@ -14,6 +14,7 @@ EXPORTS/
 # Test run outputs
 TestResults/
 coverage/
+debug/
 
 # Build / publish artifacts
 publish/

@@ -97,7 +97,7 @@ $InvokeARMFunction = {
             if (-not $token -and $env:AZURE_CLIENT_ID -and $env:AZURE_TENANT_ID) {
                 try {
                     $tokenEndpoint = "https://login.microsoftonline.com/$($env:AZURE_TENANT_ID)/oauth2/v2.0/token"
-                    
+
                     $tokenBody = @{
                         client_id = $env:AZURE_CLIENT_ID
                         scope = "https://management.azure.com/.default"
@@ -164,7 +164,7 @@ Current Environment Context:
 
             $response = Invoke-RestMethod @requestParams
             Write-Verbose "HOTFIX: ARM API call completed successfully using $authMethod"
-            
+
             return $response
 
         } catch {
@@ -182,7 +182,7 @@ Current Environment Context:
 try {
     # Execute the function definition
     & $InvokeARMFunction
-    
+
     # Verify the function was created
     if (Get-Command Invoke-ARM -ErrorAction SilentlyContinue) {
         Write-Host "✅ [HOTFIX] Invoke-ARM function successfully replaced with OIDC-compatible version" -ForegroundColor Green

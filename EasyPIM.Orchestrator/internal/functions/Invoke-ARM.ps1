@@ -87,7 +87,7 @@ function Invoke-ARM {
         if (-not $token -and $env:AZURE_CLIENT_ID -and $env:AZURE_TENANT_ID) {
             try {
                 $tokenEndpoint = "https://login.microsoftonline.com/$($env:AZURE_TENANT_ID)/oauth2/v2.0/token"
-                
+
                 $body = @{
                     client_id = $env:AZURE_CLIENT_ID
                     scope = "https://management.azure.com/.default"
@@ -123,7 +123,7 @@ $($tokenAcquisitionErrors | ForEach-Object { "  - $_" } | Out-String)
 
 Recommended GitHub Actions Setup (Official Microsoft Pattern):
 1. Use the azure/login@v2 action with OIDC in your workflow:
-   
+
    jobs:
      deploy:
        permissions:

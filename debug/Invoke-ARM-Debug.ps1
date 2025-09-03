@@ -41,17 +41,17 @@ function Invoke-ARM-Debug {
             try {
                 $azContext = Get-AzContext -ErrorAction Stop
                 Write-Host "   Context found: $($azContext.Account.Id)" -ForegroundColor Gray
-                
+
                 if ($azContext -and $azContext.Account) {
                     Write-Host "   Requesting ARM token..." -ForegroundColor Gray
                     $tokenObj = Get-AzAccessToken -ResourceUrl "https://management.azure.com/" -ErrorAction Stop
-                    
+
                     $token = if ($tokenObj.Token -is [System.Security.SecureString]) {
                         [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenObj.Token))
                     } else {
                         $tokenObj.Token
                     }
-                    
+
                     $authMethod = "Azure PowerShell Context (Official Pattern)"
                     Write-Host "✅ [DEBUG] Method 1 succeeded - Token length: $($token.Length)" -ForegroundColor Green
                 }
@@ -86,7 +86,7 @@ function Invoke-ARM-Debug {
             try {
                 Write-Host "   Requesting CLI token..." -ForegroundColor Gray
                 $cliToken = az account get-access-token --resource https://management.azure.com/ --query accessToken --output tsv 2>$null
-                
+
                 if ($cliToken -and $cliToken.Trim() -ne "") {
                     $token = $cliToken.Trim()
                     $authMethod = "Azure CLI"
@@ -105,7 +105,7 @@ function Invoke-ARM-Debug {
         if (-not $token -and $env:AZURE_CLIENT_ID -and $env:AZURE_TENANT_ID) {
             try {
                 $tokenEndpoint = "https://login.microsoftonline.com/$($env:AZURE_TENANT_ID)/oauth2/v2.0/token"
-                
+
                 $body = @{
                     client_id = $env:AZURE_CLIENT_ID
                     scope = "https://management.azure.com/.default"

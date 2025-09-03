@@ -14,7 +14,7 @@ This script tests all ARM authentication methods to identify what works in GitHu
 param(
     [Parameter(Mandatory = $true)]
     [string]$SubscriptionId,
-    
+
     [Parameter(Mandatory = $false)]
     [string]$TestUri = "https://management.azure.com/subscriptions/$SubscriptionId/providers/Microsoft.Authorization/roleManagementPolicies?api-version=2020-10-01&`$filter=scopeId eq '/subscriptions/$SubscriptionId'"
 )
@@ -59,12 +59,12 @@ try {
         } else {
             $tokenObj.Token
         }
-        
+
         Write-Host "✅ Get-AzAccessToken succeeded" -ForegroundColor Green
         Write-Host "   Token type: $($tokenObj.Token.GetType().Name)" -ForegroundColor Gray
         Write-Host "   Token length: $($token.Length) characters" -ForegroundColor Gray
         Write-Host "   Expires: $($tokenObj.ExpiresOn)" -ForegroundColor Gray
-        
+
         $results.GetAzAccessToken = $true
         $results.WorkingMethod = "Get-AzAccessToken"
         $results.WorkingToken = $token
@@ -81,7 +81,7 @@ try {
     if ($cliToken -and $cliToken.Trim() -ne "") {
         Write-Host "✅ Azure CLI ARM token acquired" -ForegroundColor Green
         Write-Host "   Token length: $($cliToken.Length) characters" -ForegroundColor Gray
-        
+
         $results.AzureCLI = $true
         if (-not $results.WorkingToken) {
             $results.WorkingMethod = "Azure CLI"
@@ -121,20 +121,20 @@ if ($results.WorkingToken) {
             'Authorization' = "Bearer $($results.WorkingToken)"
             'Content-Type' = 'application/json'
         }
-        
+
         Write-Host "🌐 Testing ARM API call with $($results.WorkingMethod)..." -ForegroundColor Cyan
         Write-Host "   URI: $TestUri" -ForegroundColor Gray
-        
+
         $response = Invoke-RestMethod -Uri $TestUri -Headers $headers -Method GET -ErrorAction Stop
-        
+
         Write-Host "✅ ARM API call successful!" -ForegroundColor Green
         Write-Host "   Response type: $($response.GetType().Name)" -ForegroundColor Gray
         if ($response.value) {
             Write-Host "   Retrieved: $($response.value.Count) role management policies" -ForegroundColor Gray
         }
-        
+
         $results.DirectARMCall = $true
-        
+
     } catch {
         Write-Host "❌ ARM API call failed: $($_.Exception.Message)" -ForegroundColor Red
         if ($_.Exception.Response) {

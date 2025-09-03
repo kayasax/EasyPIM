@@ -45,12 +45,12 @@ function Invoke-ARM {
     try {
         # Use environment variable token first (set by workflow)
         $token = $env:AZURE_ACCESS_TOKEN -or $env:ARM_ACCESS_TOKEN
-        
+
         if (-not $token) {
             # Fallback to Azure CLI
             $token = az account get-access-token --resource https://management.azure.com/ --query accessToken --output tsv 2>$null
         }
-        
+
         if (-not $token) {
             # Last resort: Azure PowerShell
             $azContext = Get-AzContext -ErrorAction SilentlyContinue

@@ -50,12 +50,12 @@ function Invoke-ARM {
     try {
         # Use the token from environment (set by our workflow)
         `$token = `$env:AZURE_ACCESS_TOKEN
-        
+
         if (-not `$token) {
             # Fallback: try to get fresh token from Azure CLI
             `$token = az account get-access-token --resource https://management.azure.com/ --query accessToken --output tsv 2>`$null
         }
-        
+
         if (-not `$token) {
             throw "CRITICAL: No ARM access token available via environment or Azure CLI"
         }
@@ -97,14 +97,14 @@ Export-ModuleMember -Function Invoke-ARM
 try {
     # Execute the replacement script in the module's scope
     $easyPimModule.Invoke([scriptblock]::Create($moduleFixScript))
-    
+
     Write-Host "✅ CRITICAL: Successfully replaced Invoke-ARM function inside EasyPIM module" -ForegroundColor Green
     Write-Host "   The module will now use Azure CLI token for all ARM API calls" -ForegroundColor Gray
-    
+
 } catch {
     Write-Error "❌ CRITICAL: Failed to replace module function: $($_.Exception.Message)"
     Write-Host "🔄 Attempting alternative approach..." -ForegroundColor Yellow
-    
+
     # Alternative approach: Use reflection to replace the function
     try {
         $moduleScope = $easyPimModule.SessionState
@@ -120,10 +120,10 @@ try {
 try {
     Write-Host "🧪 Testing module-level ARM fix..." -ForegroundColor Yellow
     $testUri = "https://management.azure.com/subscriptions/$env:SUBSCRIPTION_ID/providers/Microsoft.Authorization/roleManagementPolicies?api-version=2020-10-01&`$filter=scopeId eq '/subscriptions/$env:SUBSCRIPTION_ID'"
-    
+
     # Call Invoke-ARM as the module would
     $testResult = & $easyPimModule { Invoke-ARM -restURI $using:testUri -method "GET" }
-    
+
     if ($testResult -and $testResult.value) {
         Write-Host "✅ Module-level ARM fix test SUCCESSFUL - Retrieved $($testResult.value.Count) policies" -ForegroundColor Green
     } else {

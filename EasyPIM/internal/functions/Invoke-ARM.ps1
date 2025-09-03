@@ -106,16 +106,12 @@ function Invoke-ARM {
                 $tokenAcquisitionErrors += "Azure PowerShell Context: $($_.Exception.Message)"
             }
         }
-            } catch {
-                $tokenAcquisitionErrors += "Environment variable: $($_.Exception.Message)"
-            }
-        }
 
-        # Method 3: Service Principal Authentication (Fallback)
+        # Method 4: Service Principal Authentication (Fallback)
         if (-not $token -and $env:AZURE_CLIENT_ID -and $env:AZURE_TENANT_ID) {
             try {
                 $tokenEndpoint = "https://login.microsoftonline.com/$($env:AZURE_TENANT_ID)/oauth2/v2.0/token"
-                
+
                 $body = @{
                     client_id = $env:AZURE_CLIENT_ID
                     scope = "https://management.azure.com/.default"
@@ -151,7 +147,7 @@ $($tokenAcquisitionErrors | ForEach-Object { "  - $_" } | Out-String)
 
 Recommended GitHub Actions Setup (Official Microsoft Pattern):
 1. Use the azure/login@v2 action with OIDC in your workflow:
-   
+
    jobs:
      deploy:
        permissions:
@@ -186,9 +182,6 @@ For more information: https://learn.microsoft.com/en-us/azure/developer/github/c
 "@
             throw $errorMessage
         }
-
-        Write-Verbose "ARM authentication successful using: $authMethod"
-
 
         Write-Verbose "ARM authentication successful using: $authMethod"
 
