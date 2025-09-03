@@ -202,15 +202,19 @@ function Invoke-EasyPIMOrchestrator {
 		}
 		# Send startup telemetry (non-blocking)
 		try {
+			Write-Host "🔍 [DEBUG] Attempting to send startup telemetry..." -ForegroundColor Yellow
 			if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
 				# For KeyVault configs, pass the loaded config object directly
-				Send-TelemetryEventFromConfig -EventName "orchestrator_startup" -Properties $startupProperties -Config $loadedConfig
+				Write-Host "🔍 [DEBUG] Using KeyVault parameter set for telemetry" -ForegroundColor Yellow
+				Send-TelemetryEventFromConfig -EventName "orchestrator_startup" -Properties $startupProperties -Config $config
 			} else {
 				# For file-based configs, use the file path
+				Write-Host "🔍 [DEBUG] Using file-based parameter set for telemetry" -ForegroundColor Yellow
 				Send-TelemetryEvent -EventName "orchestrator_startup" -Properties $startupProperties -ConfigPath $ConfigFilePath
 			}
 		} catch {
 			Write-Verbose "Telemetry startup failed (non-blocking): $($_.Exception.Message)"
+			Write-Host "❌ [DEBUG] Telemetry startup failed: $($_.Exception.Message)" -ForegroundColor Red
 		}
 		# Session rule: prefer environment variables for TenantId / SubscriptionId when not explicitly supplied
 		if (-not $TenantId -or [string]::IsNullOrWhiteSpace($TenantId)) {
@@ -716,7 +720,7 @@ function Invoke-EasyPIMOrchestrator {
 		try {
 			if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
 				# For KeyVault configs, pass the loaded config object directly
-				Send-TelemetryEventFromConfig -EventName "orchestrator_completion" -Properties $completionProperties -Config $loadedConfig
+				Send-TelemetryEventFromConfig -EventName "orchestrator_completion" -Properties $completionProperties -Config $config
 			} else {
 				# For file-based configs, use the file path
 				Send-TelemetryEvent -EventName "orchestrator_completion" -Properties $completionProperties -ConfigPath $ConfigFilePath
@@ -744,7 +748,7 @@ function Invoke-EasyPIMOrchestrator {
 			try {
 				if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
 					# For KeyVault configs, pass the loaded config object directly
-					Send-TelemetryEventFromConfig -EventName "orchestrator_error" -Properties $errorProperties -Config $loadedConfig
+					Send-TelemetryEventFromConfig -EventName "orchestrator_error" -Properties $errorProperties -Config $config
 				} else {
 					# For file-based configs, use the file path
 					Send-TelemetryEvent -EventName "orchestrator_error" -Properties $errorProperties -ConfigPath $ConfigFilePath
