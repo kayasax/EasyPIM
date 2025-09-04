@@ -86,15 +86,29 @@ function Send-TelemetryEventFromConfig {
             return
         }
 
-        # Create privacy-protected identifier (always encrypted)
+        # Create privacy-protected identifier (always encrypted & CONSISTENT)
+        # Unify hashing so local + CI environments never diverge (previously raw hash fallback caused different distinct_id)
         $TenantIdentifier = $null
-        try {
-            $TenantIdentifier = Get-TelemetryIdentifier -TenantId $Context.TenantId
+        if (Get-Command -Name Get-TelemetryIdentifier -ErrorAction SilentlyContinue) {
+            try {
+                $TenantIdentifier = Get-TelemetryIdentifier -TenantId $Context.TenantId
+            }
+            catch {
+                Write-Verbose "Get-TelemetryIdentifier threw - falling back to inline salted hashing"
+            }
         }
-        catch {
-            # Create a fallback identifier if the function doesn't exist
-            Write-Host "🔧 [DEBUG] Creating fallback tenant identifier" -ForegroundColor Yellow
-            $TenantIdentifier = [System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Context.TenantId)) | ForEach-Object { $_.ToString("x2") } | Join-String
+        if (-not $TenantIdentifier) {
+            Write-Host "🔧 [DEBUG] Using inline salted hashing for tenant identifier" -ForegroundColor Yellow
+            $Salt = "EasyPIM-Privacy-Salt-2025-PostHog"
+            $StringToHash = "$($Context.TenantId)-$Salt"
+            try {
+                $HashedBytes = [System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($StringToHash))
+                $TenantIdentifier = [System.BitConverter]::ToString($HashedBytes).Replace("-", "").ToLower()
+            }
+            catch {
+                Write-Verbose "Failed inline salted hashing: $($_.Exception.Message)"
+                $TenantIdentifier = $null
+            }
         }
 
         if (-not $TenantIdentifier) {
