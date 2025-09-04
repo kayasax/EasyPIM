@@ -119,7 +119,7 @@ function Send-TelemetryEvent {
                 $TenantIdentifier = $null
             }
         }
-        
+
         if (-not $TenantIdentifier) {
             Write-Verbose "Failed to create telemetry identifier - skipping event"
             Write-Host "❌ [DEBUG] Telemetry identifier is null" -ForegroundColor Red
