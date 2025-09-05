@@ -174,7 +174,7 @@ Why templates? A PolicyTemplate lets you define a reusable policy profile once (
 * Easier promotion – copy a vetted template set from test → prod without hunting per‑role tweaks.
 * Guardrails – high‑risk roles point to a hardened template (HighSecurity) while low‑risk roles stay on Standard.
 
-Override strategy (important): The current engine resolves either a Template OR an inline policy for a role; it does NOT merge a template plus per‑role overrides field‑by‑field. To “override” for a specific role you simply stop using the Template reference and replace it with a full inline block for that role. (Future enhancement could add partial overlay, but today it is a switch, not a merge.)
+Override strategy (important): The current engine resolves either a Template OR an inline policy for a role; it does NOT merge a template plus per‑role overrides field‑by‑field. To “override” for a specific role you simply stop using the Template reference and replace it with a full inline policy object for that role. (Future enhancement could add partial overlay, but today it is a switch, not a merge.)
 
 Practical pattern:
 1. Start with templates for 90% of roles (Standard / HighSecurity, etc.).
@@ -1300,17 +1300,17 @@ Key fields you can configure (availability varies by resource type):
       "AuthenticationContext_Value": "c1:HighRiskOperations",
       "Notifications": {
         "Eligibility": {
-          "Alert":     { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
+          "Alert": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
           "Assignee":  { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
           "Approvers": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-approvers@contoso.com"] }
         },
         "Active": {
-          "Alert":     { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
+          "Alert": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
           "Assignee":  { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
           "Approvers": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-approvers@contoso.com"] }
         },
         "Activation": {
-          "Alert":     { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
+          "Alert": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-alerts@contoso.com"] },
           "Assignee":  { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-assignees@contoso.com"] },
           "Approvers": { "isDefaultRecipientEnabled": true, "NotificationLevel": "All", "Recipients": ["pim-approvers@contoso.com"] }
         }
@@ -1498,8 +1498,6 @@ For comprehensive policy configurations that use every available feature, refere
 }
 ```
 
-### 14.3 Full Options Reference (AllOptions Template)
-
 ### Notes
 * ActivationRequirement & ActiveAssignmentRequirement values are case‑sensitive and comma separated (avoid spaces unless inside list items array form).
 * Approvers only used when ApprovalRequired = true.
@@ -1541,215 +1539,31 @@ Next: If drift is found, re-run Step 2/3/6/7 policy previews with -WhatIf to con
 ---
 
 <a id="step-14"></a>
-## Step 14 — (Optional) CI/CD automation (GitHub Actions + Key Vault) [WORK IN PROGRESS]
-
-Goal: Run the orchestrator automatically (or on demand) using the JSON config stored in Azure Key Vault.
-
-> This step is under developement and not tested!
+## Step 14 — (Optional) CI/CD automation (GitHub Actions + Key Vault)
 
 Reality check (Key Vault change triggers): GitHub Actions cannot natively subscribe to Key Vault secret change events. To be truly event‑driven you need an Azure component (Event Grid -> Logic App / Azure Function) that calls the GitHub REST API (repository_dispatch) or invokes an Azure DevOps pipeline. Below we give (1) a pragmatic scheduled/on‑demand workflow and (2) an advanced event pattern outline.
 
-### 14.1 Basic GitHub Actions workflow (manual + scheduled)
+- **Event-driven orchestration pattern:**
+    - Use Azure Event Grid to subscribe to Key Vault secret change events.
+    - Trigger a Logic App or Azure Function when a config secret changes.
+    - The Logic App/Azure Function can call the GitHub REST API (`repository_dispatch`) to trigger a workflow, or invoke an Azure DevOps pipeline.
+    - This enables automatic orchestration runs whenever your config changes, without manual intervention.
+    - For advanced patterns, see the dedicated repo and Azure docs for Event Grid integration.
 
-Add a workflow file (e.g. `.github/workflows/easypim.yml`). Uses OIDC (preferred) so you DO NOT store client secrets in GitHub. Create an Entra App Registration with federated credentials (subject = repo / workflow) granting it appropriate RBAC (Key Vault get secret + PIM policy/role assignment rights).
+**EasyPIM CI/CD and pipeline setup is now maintained in a dedicated repository:**
 
-Minimal permissions required for the service principal / managed identity used by the workflow:
-* Key Vault: get (secret)
-* Graph / Azure RBAC: whatever your interactive runs required (e.g., RoleManagement.ReadWrite.Directory, Directory.AccessAsUser.All if using app + user context, or RBAC role assignments at subscription for Azure role policy/assignment operations)
-* (Optional) Logging / Monitor permissions if you rely on diagnostics
+👉 **Please use [EasyPIM-CICD-test](https://github.com/kayasax/EasyPIM-CICD-test) for all GitHub Actions, Key Vault integration, and automated orchestration setup.**
 
-#### 14.1.0 Why OIDC instead of a client secret?
-Federated (OIDC) credentials eliminate static secrets and rotate automatically per job. GitHub exchanges its ephemeral OIDC token directly for an Azure AD access token. No secret storage, no rotation toil, scoped per branch / workflow subject.
+This repo contains:
+- End-to-end pipeline examples
+- OIDC setup and federated credential instructions
+- Permission matrix and safety patterns
+- Promotion and drift gate workflows
+- Observability and failure handling best practices
 
-#### 14.1.1 App Registration & Federated Credential Setup (CLI)
-```bash
-# Create (or reuse) the app registration
-APP_ID=$(az ad app create --display-name "easyPIM-GitHub-OIDC" --query appId -o tsv)
+All future updates, bugfixes, and advanced patterns will be published there. This guide will only reference the external repo for CI/CD automation.
 
-# Create service principal to allow RBAC assignments
-az ad sp create --id $APP_ID
-
-# Add federated credential bound to a specific branch (main)
-ORG=<github-org-or-user>
-REPO=<repo-name>
-BRANCH=main
-az ad app federated-credential create \
-  --id $APP_ID \
-  --parameters "{
-    \"name\": \"gh-branch-main\",
-    \"issuer\": \"https://token.actions.githubusercontent.com\",
-    \"subject\": \"repo:${ORG}/${REPO}:ref:refs/heads/${BRANCH}\",
-    \"audiences\": [\"api://AzureADTokenExchange\"]
-  }"
-
-# (Optional) PR wide subject: repo:$ORG/$REPO:pull_request
-
-# Assign Key Vault secret read
-KV_NAME=<kv-name>
-RG=<kv-rg>
-SUB=<subscription-guid>
-KV_ID=$(az keyvault show --name $KV_NAME --resource-group $RG --query id -o tsv)
-az role assignment create --assignee $APP_ID --role "Key Vault Secrets User" --scope $KV_ID
-
-# Assign Azure RBAC for resource role policy/assignment operations
-az role assignment create --assignee $APP_ID --role "User Access Administrator" --scope /subscriptions/$SUB
-
-# Add Graph application permissions via CLI (requires Global Admin or Application Admin)
-# Permission IDs: RoleManagement.ReadWrite.Directory, Directory.Read.All, Group.Read.All
-# Note: You can also add these permissions via Azure Portal > App registrations > API permissions
-az ad app permission add --id $APP_ID --api 00000003-0000-0000-c000-000000000000 --api-permissions \
-  19dbc75e-c2e2-444c-a770-ec69d8559fc7=Role \
-  df021288-bdef-4463-88db-98f22de89214=Role \
-  62a82d76-70ea-41e2-9197-370581804d09=Role
-
-# Grant admin consent for the permissions
-az ad app permission admin-consent --id $APP_ID
-```
-
-Subject formats:
-* Branch: `repo:ORG/REPO:ref:refs/heads/<branch>`
-* Tag: `repo:ORG/REPO:ref:refs/tags/<tag>`
-* Pull Request: `repo:ORG/REPO:pull_request`
-* Environment: `repo:ORG/REPO:environment:<environment-name>`
-
-#### 14.1.2 Permission Matrix (minimal)
-| Layer | Permission / Role | Purpose | Notes |
-|-------|-------------------|---------|-------|
-| Key Vault | Key Vault Secrets User | Read config secret | List optional if name known |
-| Subscription | User Access Administrator | Manage Azure role assignments / PIM settings | Prefer narrower scope (MG/ResourceGroup) if possible |
-| Directory | Privileged Role Administrator | Manage Entra (AAD) role PIM policies/assignments | Avoid Global Administrator |
-| Graph App Perm | RoleManagement.ReadWrite.Directory | Modify PIM role settings | Requires admin consent |
-| Graph App Perm | Directory.Read.All | Lookup principals | Mandatory for validation |
-| Graph App Perm | Group.Read.All | Group PIM policies | Only if group policies used |
-| Optional | AuditLog.Read.All | Enhanced diagnostics | Optional |
-
-If you cannot grant PRA: operate assignment-only by omitting policy-changing permissions and skip policy drift or treat it informational.
-
-#### 14.1.3 Promotion pattern for config changes
-1. Author change -> store in Key Vault as `EasyPIM-Config-Next`.
-2. PR workflow references that secret in WhatIf mode.
-3. After approval, copy value into `EasyPIM-Config` and manually dispatch apply run.
-
-#### 14.1.4 Optional drift gate job
-Add a preceding job running `Test-PIMPolicyDrift -PassThru` (and optionally `-FailOnDrift` once available) to block apply if unexpected drift present. Use GitHub Environments for manual approval.
-
-#### 14.1.5 Safety quick list
-* Scheduled runs: always delta + WhatIf.
-* Manual apply: protected branch / environment, reviewers required.
-* Maintain `ProtectedUsers` list.
-* Keep automation identity scoped (branch subjects) to prevent unreviewed forks from applying.
-
-#### 14.1.6 Observability
-Archive LOGS/*.log (artifact) or forward to Log Analytics (data collector API) for retention & queries.
-
-#### 14.1.7 Failure handling
-Let non‑zero exit fail the job. Add a final notification step with `if: failure()` to post drift summary to Teams/Slack.
-
----
-
-Example workflow (WhatIf by default; set input apply=true to execute):
-
-```yaml
-name: EasyPIM Orchestrator
-
-on:
-  workflow_dispatch:
-    inputs:
-      apply:
-        description: "Set to true to apply (omit -WhatIf)"
-        required: false
-        default: "false"
-  schedule:
-    - cron: '15 2 * * *'  # Daily 02:15 UTC drift check (delta mode)
-
-env:
-  KEYVAULT_NAME: kv-name-here
-  SECRET_NAME: EasyPIM-Config
-  TENANT_ID: 00000000-0000-0000-0000-000000000000
-  SUBSCRIPTION_ID: 00000000-0000-0000-0000-000000000000
-
-permissions:
-  id-token: write   # for OIDC
-  contents: read
-
-jobs:
-  orchestrate:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Azure login (OIDC)
-        uses: azure/login@v2
-        with:
-          tenant-id: ${{ env.TENANT_ID }}
-          subscription-id: ${{ env.SUBSCRIPTION_ID }}
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}  # Federated credential configured in Entra ID
-
-      - name: (Optional) Azure CLI version
-        run: az version
-
-      - name: Import EasyPIM modules and run orchestrator
-        shell: pwsh
-        run: |
-          # Install required modules from PowerShell Gallery
-          Install-Module -Name EasyPIM -Force -Scope CurrentUser
-          Install-Module -Name EasyPIM.Orchestrator -Force -Scope CurrentUser
-          Import-Module EasyPIM.Orchestrator -Force -Verbose
-          $apply = ('${{ github.event.inputs.apply }}' -eq 'true')
-          $common = @('-KeyVaultName', $env:KEYVAULT_NAME, '-SecretName', $env:SECRET_NAME, '-TenantId', $env:TENANT_ID, '-SubscriptionId', $env:SUBSCRIPTION_ID, '-Mode', 'delta')
-          if (-not $apply) { $common += '-WhatIf' }
-          # Policy changes usually stable by this stage; skipping policies accelerates drift check
-          $common += '-SkipPolicies'
-          Write-Host "Running: Invoke-EasyPIMOrchestrator $($common -join ' ')"
-          Invoke-EasyPIMOrchestrator @common
-
-      - name: Upload log (always)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: EasyPIM-Log
-          path: LOGS/*.log
-```
-
-Usage:
-1. Configure repository secret `AZURE_CLIENT_ID` with the App Registration's client ID (no secret needed with OIDC).
-2. Set env values (TENANT_ID, SUBSCRIPTION_ID, KEYVAULT_NAME) in workflow or replace with repository/environment secrets.
-3. Manually dispatch (Actions tab) — default is WhatIf.
-4. Re‑run with apply=true once validated.
-
-Why `-SkipPolicies`? After policies are stabilized (Steps 1‑14), routine runs often only check assignments drift. Remove the switch if you also want policy drift detection.
-
-Optional enhancements:
-* Add a second job that parses the summary output and fails if unexpected WouldRemove counts exceed a threshold.
-* Post results to Teams / Slack via a webhook step.
-* Cache Az PowerShell modules if you add them (currently pure REST/Graph calls inside module so not required).
-
-### 14.2 Advanced event-driven trigger (Key Vault change)
-
-Key ingredients:
-1. Enable Key Vault events to Event Grid (secret near-expiration & new version events supported).
-2. Create a Logic App (HTTP triggered by Event Grid subscription) or Azure Function.
-3. Within Logic App/Function call GitHub REST API `POST /repos/:owner/:repo/dispatches` with a token/scoped PAT to fire `repository_dispatch` event (define a workflow that listens to `repository_dispatch` and uses the same job as 16.1).
-4. Optionally include payload (e.g., `{ "event_type": "easypim-config-updated", "client_payload": { "secretVersion": "..." } }`).
-
-Pros: Near real-time orchestration after config change. Cons: More moving parts (PAT management unless using GitHub App), extra Azure resources.
-
-Security & governance tips:
-* Principle of least privilege: the federated identity only needs Key Vault get + role / directory rights necessary for operations.
-* Use delta mode in automation; reserve initial mode for controlled / manual change windows.
-* Consider a pre‑flight job that just does `-WhatIf` and requires manual approval (environment protection rules) before an apply job executes.
-* Log retention: ship LOGS/*.log to Log Analytics or Storage for historical audit.
-
-Rollback strategy:
-* Because delta mode never deletes undeclared assignments, an accidental config regression will not remove existing assignments (they appear as WouldRemove). Investigate before switching to initial mode.
-* Maintain a known-good backup secret (e.g., EasyPIM-Config-Previous) to re-point quickly.
-
-Drift detection pattern:
-* Daily scheduled run with -WhatIf collects WouldRemove / Add / Update counts.
-* If counts exceed thresholds, open an issue automatically (GitHub CLI step) for investigation.
-
-That concludes the optional automation layer; adapt scope as your governance matures.
+For details, see: https://github.com/kayasax/EasyPIM-CICD-test
 
 <a id="appendix"></a>
 ## Appendix: Tips & Safety Gates
