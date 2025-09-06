@@ -1,16 +1,17 @@
 # 🧠 EasyPIM Session Starter
 
 ## 📘 Current Work Status
-- ✅ **READY FOR RELEASE**: EasyPIM Core v2.0.14 with critical Key Vault compatibility fix
-- ✅ **READY FOR RELEASE**: EasyPIM.Orchestrator v1.2.2 with configuration validation system  
-- ✅ **RESOLVED**: Key Vault secret retrieval failures across diverse environments
-- **Status**: Version-bumped and tagged, ready for PowerShell Gallery publishing
+- 🚨 **VERSION MISMATCH**: Local v2.0.16 ahead of PowerShell Gallery v2.0.14
+- ✅ **Key Vault Enhancement**: Enhanced troubleshooting with secret version output (v2.0.15)
+- ✅ **Code Quality**: PSScriptAnalyzer compliance fixes (v2.0.16)
+- ⚠️ **PUBLISHING NEEDED**: Two versions (v2.0.15, v2.0.16) need PowerShell Gallery publication
+- **Current Gallery State**: EasyPIM v2.0.14, EasyPIM.Orchestrator v1.2.2
 
-**Recent Achievements:**
-- 🔧 **Key Vault Fix**: Robust multi-method compatibility (SecretValueText → ConvertFrom-SecureString → Marshal)
-- 🔍 **Configuration Validation**: Comprehensive validation system with auto-correction for field mismatches
-- 🛡️ **Error Prevention**: Proactive ARM API 400 error prevention through configuration validation
-- 📦 **Proper Versioning**: Bumped to v2.0.14/v1.2.2 (previous gallery versions lacked our fixes)
+**Recent Local Enhancements (NOT YET PUBLISHED):**
+- 🔧 **Secret Version Display**: Functions now show Key Vault secret version for troubleshooting
+- � **Troubleshooting Guide**: Comprehensive KeyVault-Troubleshooting.md documentation  
+- 🧹 **Code Quality**: All PSScriptAnalyzer violations resolved, 7034/7034 tests passing
+- 📦 **Version Management**: Proper incremental versioning with detailed release notes
 
 ## 🎯 Project Overview
 **EasyPIM** - PowerShell module for Microsoft Entra PIM management with two-module architecture:
@@ -22,8 +23,51 @@
 ## 🔧 Current Technical State
 
 ### Versions
-- **EasyPIM Core**: v2.0.14 (READY FOR RELEASE) - Critical Key Vault compatibility fix
-- **EasyPIM.Orchestrator**: v1.2.2 (READY FOR RELEASE) - Configuration validation system
+- **EasyPIM Core**: 
+  - **Local**: v2.0.16 (Secret version output + Code quality fixes)
+  - **PowerShell Gallery**: v2.0.14 ⚠️ **NEEDS PUBLISHING**
+- **EasyPIM.Orchestrator**: v1.2.2 (Published ✅)
+
+### 🚨 Publishing Action Required
+- **v2.0.15**: Key Vault troubleshooting enhancements + secret version output ✅ **TAGGED & PUSHED**
+- **v2.0.16**: PSScriptAnalyzer compliance + code quality fixes ✅ **TAGGED & PUSHED**  
+- **Status**: Tags pushed to origin, GitHub Actions should auto-publish to PowerShell Gallery
+- **Monitor**: Check [GitHub Actions](https://github.com/kayasax/EasyPIM/actions) for publishing status
+
+### 📦 Publishing Commands (Automated via GitHub Actions)
+```powershell
+# The GitHub Actions workflow publishes automatically when tags are pushed
+# Tags v2.0.15 and v2.0.16 are already created locally, just need to push them
+
+# Check local tags
+git tag --list --sort=-version:refname | Select-Object -First 5
+
+# Push the tags to trigger publishing workflow
+git push origin v2.0.15  # ✅ Already pushed
+git push origin v2.0.16  # ✅ Already pushed
+
+# Verify workflow triggered on GitHub:
+# https://github.com/kayasax/EasyPIM/actions
+
+# Verify publication after workflow completes
+Find-Module EasyPIM -Repository PSGallery | Select-Object Name, Version
+```
+
+### 🔧 Manual Publishing (Alternative)
+```powershell
+# If GitHub Actions fails, manual publishing:
+git checkout v2.0.15
+Publish-Module -Path ".\EasyPIM" -NuGetApiKey $env:NUGET_API_KEY -Verbose
+
+git checkout main  
+Publish-Module -Path ".\EasyPIM" -NuGetApiKey $env:NUGET_API_KEY -Verbose
+```
+
+### 🔍 Troubleshooting Publishing
+- **GitHub Actions Not Triggered**: Verify tags are pushed with `git ls-remote --tags origin`
+- **Workflow Failed**: Check [Actions tab](https://github.com/kayasax/EasyPIM/actions) for error details
+- **Gallery Delay**: PowerShell Gallery can take 15-30 minutes to index new versions
+- **Version Check**: Use `Find-Module EasyPIM -AllVersions` to see all published versions
 
 ### Recent CI/CD Improvements
 - ✅ **Gallery Version Checking**: Build scripts now fail-fast if version already exists
@@ -39,6 +83,7 @@
 
 | Date | Update |
 |------|--------|
+| 2025-09-06 | **🚨 VERSION SYNC ISSUE**: Local repository is 2 versions ahead of PowerShell Gallery. **Local**: v2.0.16 with Key Vault troubleshooting enhancements (v2.0.15) and PSScriptAnalyzer compliance (v2.0.16). **Gallery**: v2.0.14. **ACTION REQUIRED**: Publish v2.0.15 and v2.0.16 to PowerShell Gallery to sync versions. Created tags and commits but not published. All 7034 tests passing with full code quality compliance. |
 | 2025-01-24 | **🔍 CONFIGURATION VALIDATION SYSTEM**: Implemented comprehensive configuration validation system to prevent ARM API failures. Created `Test-EasyPIMConfigurationValidity.ps1` with auto-correction for field name mismatches (id→Id, description→Name), missing approvers detection, and template reference validation. Integrated into orchestrator pipeline with user-friendly error reporting. This prevents the ARM API 400 Bad Request errors caused by configuration format issues and improves overall user experience. |
 | 2025-09-03 | **🚨 CRITICAL DRIFT DETECTION FIX**: Discovered and fixed critical bug in `Test-PIMPolicyDrift` where drift detection showed false "Match" results for Azure resource policies. Root cause: drift detection was always querying subscription-level policies while orchestrator applied resource-specific policies, causing scope validation mismatches. Fixed by implementing scope-aware policy validation in drift detection. Orchestrator bumped to v1.2.0. This resolves cases where policies like "Contributor" at storage account scopes failed to apply but drift detection incorrectly reported "Match". |
 | 2025-09-03 | **Telemetry KeyVault Enhancement**: Enhanced `Send-TelemetryEventFromConfig` with improved debug output and config object validation for KeyVault-based configurations. Added fallback SHA256 identifier creation and comprehensive error handling. |
