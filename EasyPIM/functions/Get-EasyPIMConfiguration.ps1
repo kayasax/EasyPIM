@@ -23,7 +23,7 @@ function Get-EasyPIMConfiguration {
         Name of the secret in Azure Key Vault containing the configuration.
 
     .PARAMETER Version
-        Optional specific version of the Key Vault secret to retrieve. 
+        Optional specific version of the Key Vault secret to retrieve.
         Use this parameter if you encounter corrupted secrets due to Azure Key Vault API/Portal sync issues.
 
     .EXAMPLE
@@ -146,22 +146,22 @@ function Get-EasyPIMConfiguration {
             if ($jsonString.Length -le 10 -and $jsonString.Trim() -in @('{', '}', '"{', '"}', '{{', '}}')) {
                 Write-Warning "Detected potentially corrupted Key Vault secret (length: $($jsonString.Length), content: '$jsonString')"
                 Write-Warning "This may be due to Azure Key Vault version synchronization issues between Portal and API"
-                
+
                 # Attempt recovery by checking recent versions
                 Write-Verbose "Attempting to recover from Key Vault version history..."
                 try {
                     $allVersions = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SecretName -IncludeVersions
                     $recentVersions = $allVersions | Sort-Object Created -Descending | Select-Object -First 5
-                    
+
                     foreach ($version in $recentVersions) {
                         if ($version.Version -eq $secret.Version) {
                             continue # Skip the current corrupted version
                         }
-                        
+
                         Write-Verbose "Trying version $($version.Version) from $($version.Created)..."
                         $testSecret = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SecretName -Version $version.Version
                         $testContent = $null
-                        
+
                         # Use the same retrieval methods
                         if ($testSecret.SecretValueText) {
                             $testContent = $testSecret.SecretValueText
@@ -178,7 +178,7 @@ function Get-EasyPIMConfiguration {
                                 }
                             }
                         }
-                        
+
                         # Check if this version has valid content
                         if ($testContent -and $testContent.Length -gt 50 -and $testContent.Trim().StartsWith('{') -and $testContent.Trim().EndsWith('}')) {
                             Write-Host "🔧 Recovered from Key Vault version $($version.Version) (created: $($version.Created))" -ForegroundColor Yellow
@@ -190,7 +190,7 @@ function Get-EasyPIMConfiguration {
                 } catch {
                     Write-Verbose "Version recovery failed: $($_.Exception.Message)"
                 }
-                
+
                 # If still corrupted after recovery attempt
                 if ($jsonString.Length -le 10) {
                     $errorMsg = @"
