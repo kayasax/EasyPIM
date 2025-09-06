@@ -57,7 +57,25 @@ function Get-EasyPIMConfiguration {
                 throw "Secret '$SecretName' not found in Key Vault '$KeyVaultName'"
             }
 
-            $jsonString = $secret.SecretValue | ConvertFrom-SecureString -AsPlainText
+            # Handle both old and new Az.KeyVault module versions
+            if ($secret.SecretValueText) {
+                # Older versions of Az.KeyVault
+                $jsonString = $secret.SecretValueText
+            } elseif ($secret.SecretValue) {
+                # Newer versions of Az.KeyVault - try ConvertFrom-SecureString first, fall back to Marshal
+                try {
+                    $jsonString = $secret.SecretValue | ConvertFrom-SecureString -AsPlainText
+                } catch {
+                    # Fallback to Marshal method for compatibility
+                    $jsonString = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secret.SecretValue))
+                }
+            } else {
+                throw "Unable to retrieve secret value from Key Vault response"
+            }
+            
+            if ([string]::IsNullOrWhiteSpace($jsonString)) {
+                throw "Secret value is empty or null"
+            }
         } else {
             Write-Host "Reading from file '$ConfigFilePath'" -ForegroundColor Gray
 
