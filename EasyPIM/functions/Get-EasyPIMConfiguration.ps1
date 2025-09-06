@@ -51,7 +51,7 @@ function Get-EasyPIMConfiguration {
                 Write-Verbose "Importing Az.KeyVault module"
                 Import-Module Az.KeyVault -Force
             }
-            
+
             # Check Az.KeyVault version for debugging
             $azKeyVaultVersion = (Get-Module Az.KeyVault).Version
             Write-Verbose "Using Az.KeyVault version: $azKeyVaultVersion"
@@ -64,7 +64,7 @@ function Get-EasyPIMConfiguration {
 
             # Handle both old and new Az.KeyVault module versions with robust compatibility
             $jsonString = $null
-            
+
             # Method 1: Try SecretValueText (older Az.KeyVault versions)
             if ($secret.SecretValueText) {
                 $jsonString = $secret.SecretValueText
@@ -75,7 +75,7 @@ function Get-EasyPIMConfiguration {
                 try {
                     $jsonString = $secret.SecretValue | ConvertFrom-SecureString -AsPlainText
                     Write-Verbose "Retrieved secret using ConvertFrom-SecureString -AsPlainText"
-                    
+
                     # Validate the result is not empty
                     if ([string]::IsNullOrWhiteSpace($jsonString)) {
                         throw "ConvertFrom-SecureString returned empty result"
@@ -100,7 +100,7 @@ function Get-EasyPIMConfiguration {
             if ([string]::IsNullOrWhiteSpace($jsonString)) {
                 throw "Secret value is empty or null after retrieval"
             }
-            
+
             Write-Verbose "Secret retrieved successfully, length: $($jsonString.Length) characters"
         } else {
             Write-Host "Reading from file '$ConfigFilePath'" -ForegroundColor Gray

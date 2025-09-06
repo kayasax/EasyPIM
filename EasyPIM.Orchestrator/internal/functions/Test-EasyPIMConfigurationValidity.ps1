@@ -28,7 +28,7 @@ function Test-EasyPIMConfigurationValidity {
     param(
         [Parameter(Mandatory = $true)]
         [PSCustomObject]$Config,
-        
+
         [Parameter(Mandatory = $false)]
         [switch]$AutoCorrect
     )
@@ -56,18 +56,18 @@ function Test-EasyPIMConfigurationValidity {
     # Validation Rule 1: Check PolicyTemplates for Approvers field mismatches
     if ($Config.PSObject.Properties['PolicyTemplates']) {
         Write-Verbose "📋 Validating PolicyTemplates..."
-        
+
         foreach ($templateName in $Config.PolicyTemplates.PSObject.Properties.Name) {
             $template = $Config.PolicyTemplates.$templateName
-            
+
             if ($template.PSObject.Properties['Approvers'] -and $template.Approvers) {
                 $approverIssues = Test-ApproversFormat -Approvers $template.Approvers -Context "PolicyTemplates.$templateName"
-                
+
                 if ($approverIssues.HasIssues) {
                     $validationResult.HasIssues = $true
                     $validationResult.Issues += $approverIssues.Issues
                     $validationResult.ValidationSummary.ApproverFieldMismatches += $approverIssues.Issues.Count
-                    
+
                     if ($AutoCorrect -and $approverIssues.CorrectedApprovers) {
                         $validationResult.CorrectedConfig.PolicyTemplates.$templateName.Approvers = $approverIssues.CorrectedApprovers
                         $validationResult.Corrections += "Auto-corrected Approvers format in PolicyTemplates.$templateName"
@@ -81,18 +81,18 @@ function Test-EasyPIMConfigurationValidity {
     # Validation Rule 2: Check EntraRoles policies for Approvers mismatches
     if ($Config.PSObject.Properties['EntraRoles'] -and $Config.EntraRoles.PSObject.Properties['Policies']) {
         Write-Verbose "📋 Validating EntraRoles policies..."
-        
+
         foreach ($roleName in $Config.EntraRoles.Policies.PSObject.Properties.Name) {
             $rolePolicy = $Config.EntraRoles.Policies.$roleName
-            
+
             if ($rolePolicy.PSObject.Properties['Approvers'] -and $rolePolicy.Approvers) {
                 $approverIssues = Test-ApproversFormat -Approvers $rolePolicy.Approvers -Context "EntraRoles.Policies.$roleName"
-                
+
                 if ($approverIssues.HasIssues) {
                     $validationResult.HasIssues = $true
                     $validationResult.Issues += $approverIssues.Issues
                     $validationResult.ValidationSummary.ApproverFieldMismatches += $approverIssues.Issues.Count
-                    
+
                     if ($AutoCorrect -and $approverIssues.CorrectedApprovers) {
                         $validationResult.CorrectedConfig.EntraRoles.Policies.$roleName.Approvers = $approverIssues.CorrectedApprovers
                         $validationResult.Corrections += "Auto-corrected Approvers format in EntraRoles.Policies.$roleName"
@@ -124,18 +124,18 @@ function Test-EasyPIMConfigurationValidity {
     # Validation Rule 3: Check AzureRoles policies for Approvers mismatches
     if ($Config.PSObject.Properties['AzureRoles'] -and $Config.AzureRoles.PSObject.Properties['Policies']) {
         Write-Verbose "📋 Validating AzureRoles policies..."
-        
+
         foreach ($roleName in $Config.AzureRoles.Policies.PSObject.Properties.Name) {
             $rolePolicy = $Config.AzureRoles.Policies.$roleName
-            
+
             if ($rolePolicy.PSObject.Properties['Approvers'] -and $rolePolicy.Approvers) {
                 $approverIssues = Test-ApproversFormat -Approvers $rolePolicy.Approvers -Context "AzureRoles.Policies.$roleName"
-                
+
                 if ($approverIssues.HasIssues) {
                     $validationResult.HasIssues = $true
                     $validationResult.Issues += $approverIssues.Issues
                     $validationResult.ValidationSummary.ApproverFieldMismatches += $approverIssues.Issues.Count
-                    
+
                     if ($AutoCorrect -and $approverIssues.CorrectedApprovers) {
                         $validationResult.CorrectedConfig.AzureRoles.Policies.$roleName.Approvers = $approverIssues.CorrectedApprovers
                         $validationResult.Corrections += "Auto-corrected Approvers format in AzureRoles.Policies.$roleName"
@@ -229,7 +229,7 @@ function Test-ApproversFormat {
     param(
         [Parameter(Mandatory = $true)]
         $Approvers,
-        
+
         [Parameter(Mandatory = $true)]
         [string]$Context
     )
@@ -296,10 +296,10 @@ function Test-ApproversFormat {
                     'displayName' { 'Name' }
                     'name' { 'Name' }
                 }
-                
+
                 $correctedApprover[$correctName] = $propValue
                 $approverNeedsCorrection = $true
-                
+
                 if ($correctName -eq 'Id') { $hasId = $true }
                 if ($correctName -eq 'Name') { $hasName = $true }
 
@@ -317,7 +317,7 @@ function Test-ApproversFormat {
             } else {
                 # Keep the property as-is (it's already correct or unknown)
                 $correctedApprover[$propName] = $propValue
-                
+
                 if ($propName -eq 'Id') { $hasId = $true }
                 if ($propName -eq 'Name') { $hasName = $true }
             }
