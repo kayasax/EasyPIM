@@ -137,14 +137,13 @@
       "Storage Table Data Contributor": {
         "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a/resourceGroups/cloud-shell-storage-westeurope/providers/Microsoft.Storage/storageAccounts/devjnsppstorlb2a2z",
         "ActivationDuration": "PT8H",
-        "ActivationRequirement": "None",
         "AllowPermanentEligibility": true
       },
       "Contributor": {
         "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a",
         "Template": "HighSecurity",
         "ActivationDuration": "PT30M",
-        "MaximumActiveAssignmentDuration": "PT8H"
+        "MaximumActiveAssignmentDuration": "PT2H"
       }
     }
   },
