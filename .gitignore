@@ -54,6 +54,13 @@ Thumbs.db
 # PowerShell build artifact leftovers
 *.psd1.tmp
 
+# Debug and temporary files
+debug-*.ps1
+test-*.ps1
+temp-*.ps1
+temp-*.json
+fix-*.ps1
+
 
 # Ensure newline normalization (see .gitattributes)
 session_starter.md

@@ -48,8 +48,13 @@ function Get-EasyPIMConfiguration {
 
             # Import Az.KeyVault module if not already loaded
             if (-not (Get-Module -Name Az.KeyVault)) {
+                Write-Verbose "Importing Az.KeyVault module"
                 Import-Module Az.KeyVault -Force
             }
+
+            # Check Az.KeyVault version for debugging
+            $azKeyVaultVersion = (Get-Module Az.KeyVault).Version
+            Write-Verbose "Using Az.KeyVault version: $azKeyVaultVersion"
 
             # Get secret from Key Vault
             $secret = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SecretName
@@ -57,25 +62,46 @@ function Get-EasyPIMConfiguration {
                 throw "Secret '$SecretName' not found in Key Vault '$KeyVaultName'"
             }
 
-            # Handle both old and new Az.KeyVault module versions
+            # Handle both old and new Az.KeyVault module versions with robust compatibility
+            $jsonString = $null
+
+            # Method 1: Try SecretValueText (older Az.KeyVault versions)
             if ($secret.SecretValueText) {
-                # Older versions of Az.KeyVault
                 $jsonString = $secret.SecretValueText
-            } elseif ($secret.SecretValue) {
-                # Newer versions of Az.KeyVault - try ConvertFrom-SecureString first, fall back to Marshal
+                Write-Verbose "Retrieved secret using SecretValueText (older Az.KeyVault)"
+            }
+            # Method 2: Try ConvertFrom-SecureString -AsPlainText (newer PowerShell versions)
+            elseif ($secret.SecretValue) {
                 try {
                     $jsonString = $secret.SecretValue | ConvertFrom-SecureString -AsPlainText
+                    Write-Verbose "Retrieved secret using ConvertFrom-SecureString -AsPlainText"
+
+                    # Validate the result is not empty
+                    if ([string]::IsNullOrWhiteSpace($jsonString)) {
+                        throw "ConvertFrom-SecureString returned empty result"
+                    }
                 } catch {
-                    # Fallback to Marshal method for compatibility
-                    $jsonString = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secret.SecretValue))
+                    Write-Verbose "ConvertFrom-SecureString failed: $($_.Exception.Message), trying Marshal method"
+                    # Method 3: Fallback to Marshal method for compatibility
+                    try {
+                        $jsonString = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
+                            [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secret.SecretValue)
+                        )
+                        Write-Verbose "Retrieved secret using Marshal method"
+                    } catch {
+                        throw "Failed to retrieve secret using Marshal method: $($_.Exception.Message)"
+                    }
                 }
             } else {
-                throw "Unable to retrieve secret value from Key Vault response"
+                throw "Unable to retrieve secret value from Key Vault response - no SecretValue or SecretValueText property found"
             }
-            
+
+            # Final validation
             if ([string]::IsNullOrWhiteSpace($jsonString)) {
-                throw "Secret value is empty or null"
+                throw "Secret value is empty or null after retrieval"
             }
+
+            Write-Verbose "Secret retrieved successfully, length: $($jsonString.Length) characters"
         } else {
             Write-Host "Reading from file '$ConfigFilePath'" -ForegroundColor Gray
 
