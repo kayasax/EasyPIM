@@ -107,6 +107,17 @@ More samples available in the [documentation](https://github.com/kayasax/EasyPIM
     - Test-PIMEndpointDiscovery  
 - After installing EasyPIM.Orchestrator, import it to access these commands. Any legacy shims in the core module will emit guidance and forward where applicable.  
 
+## Troubleshooting
+
+### Common Issues
+- **Key Vault Configuration Loading**: If you encounter JSON parsing errors when loading configurations from Azure Key Vault, see the [Key Vault Troubleshooting Guide](./EasyPIM/Documentation/KeyVault-Troubleshooting.md)
+- **ARM API Errors**: For InvalidResourceType or authentication issues, ensure you have the correct permissions and are using the latest module version
+- **Graph API Permissions**: Verify that required Microsoft Graph permissions have been granted to your application
+
+### Getting Help
+- Check the [documentation](https://github.com/kayasax/EasyPIM/wiki/Documentation) for detailed guides
+- Review [common use cases](https://github.com/kayasax/EasyPIM/wiki/Use-Cases) for implementation examples
+- For Key Vault specific issues, use the enhanced diagnostics: `Get-EasyPIMConfiguration -Verbose`
 
 ## Documentation
 [documentation](https://github.com/kayasax/EasyPIM/wiki/Documentation)
