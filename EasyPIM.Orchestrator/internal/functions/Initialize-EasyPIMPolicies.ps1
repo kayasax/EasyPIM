@@ -21,6 +21,45 @@ function Initialize-EasyPIMPolicies {
     Write-Verbose "Starting Initialize-EasyPIMPolicies (Orchestrator)"
 
     try {
+        # Validate configuration before processing
+        Write-Verbose "🔍 Validating configuration for common issues..."
+        . "$PSScriptRoot\Test-EasyPIMConfigurationValidity.ps1"
+        $validationResult = Test-EasyPIMConfigurationValidity -Config $Config -AutoCorrect
+
+        if ($validationResult.HasIssues) {
+            Write-Warning "⚠️ Configuration validation found $($validationResult.Issues.Count) issue(s):"
+            
+            foreach ($issue in $validationResult.Issues) {
+                $severityColor = switch ($issue.Severity) {
+                    'Error' { 'Red' }
+                    'Warning' { 'Yellow' }
+                    default { 'White' }
+                }
+                Write-Host "  [$($issue.Severity)] $($issue.Context): $($issue.Message)" -ForegroundColor $severityColor
+                Write-Host "    💡 Suggestion: $($issue.Suggestion)" -ForegroundColor Cyan
+            }
+
+            if ($validationResult.Corrections.Count -gt 0) {
+                Write-Host "✅ Auto-corrections applied:" -ForegroundColor Green
+                foreach ($correction in $validationResult.Corrections) {
+                    Write-Host "  + $correction" -ForegroundColor Green
+                }
+                # Use the corrected configuration
+                $Config = $validationResult.CorrectedConfig
+                Write-Host "📝 Using auto-corrected configuration for processing" -ForegroundColor Green
+            }
+
+            # Stop processing if there are errors that can't be auto-corrected
+            $criticalErrors = $validationResult.Issues | Where-Object { $_.Severity -eq 'Error' }
+            if ($criticalErrors.Count -gt 0) {
+                $errorMessage = "Configuration validation failed with $($criticalErrors.Count) critical error(s). Please fix the configuration and try again."
+                Write-Error $errorMessage
+                throw $errorMessage
+            }
+        } else {
+            Write-Verbose "✅ Configuration validation passed"
+        }
+
         $processedConfig = @{}
 
         # Initialize policy templates - merge parameter and config templates
