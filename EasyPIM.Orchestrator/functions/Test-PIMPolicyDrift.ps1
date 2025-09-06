@@ -105,7 +105,30 @@ function Test-PIMPolicyDrift {
 			try {
 				if (-not (Get-Module -ListAvailable -Name Az.KeyVault)) { Import-Module Az.KeyVault -ErrorAction Stop }
 				$secretObj = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SecretName -ErrorAction Stop
-				$configRaw = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secretObj.SecretValueText))
+				
+				# Handle both old and new Az.KeyVault module versions
+				if ($secretObj.SecretValueText) {
+					# Older versions of Az.KeyVault
+					$secretValue = $secretObj.SecretValueText
+				} elseif ($secretObj.SecretValue) {
+					# Newer versions of Az.KeyVault - SecretValue is a SecureString
+					$secretValue = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secretObj.SecretValue))
+				} else {
+					throw "Unable to retrieve secret value from Key Vault response"
+				}
+				
+				# Try to decode as base64, fall back to plain text if that fails
+				try {
+					$configRaw = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secretValue))
+					Write-Verbose "Successfully decoded base64-encoded secret"
+				} catch {
+					Write-Verbose "Secret is not base64-encoded, using as plain text"
+					$configRaw = $secretValue
+				}
+				
+				if ([string]::IsNullOrWhiteSpace($configRaw)) {
+					throw "Secret value is empty or null"
+				}
 			} catch {
 				Write-Error "Failed to load config from Key Vault: $($_.Exception.Message)"
 				throw
