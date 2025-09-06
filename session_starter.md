@@ -29,9 +29,9 @@
 - **EasyPIM.Orchestrator**: v1.2.2 (Published ✅)
 
 ### 🚨 Publishing Action Required
-- **v2.0.15**: Key Vault troubleshooting enhancements + secret version output ✅ **TAGGED & PUSHED**
-- **v2.0.16**: PSScriptAnalyzer compliance + code quality fixes ✅ **TAGGED & PUSHED**  
-- **Status**: Tags pushed to origin, GitHub Actions should auto-publish to PowerShell Gallery
+- **core-v2.0.15**: Key Vault troubleshooting enhancements + secret version output ✅ **TAGGED & PUSHED**
+- **core-v2.0.16**: PSScriptAnalyzer compliance + code quality fixes ✅ **TAGGED & PUSHED**  
+- **Status**: Correct tags (core-v*) pushed to origin, GitHub Actions should auto-publish to PowerShell Gallery
 - **Monitor**: Check [GitHub Actions](https://github.com/kayasax/EasyPIM/actions) for publishing status
 
 ### 📦 Publishing Commands (Automated via GitHub Actions)
@@ -43,8 +43,8 @@
 git tag --list --sort=-version:refname | Select-Object -First 5
 
 # Push the tags to trigger publishing workflow
-git push origin v2.0.15  # ✅ Already pushed
-git push origin v2.0.16  # ✅ Already pushed
+git push origin core-v2.0.15  # ✅ Now pushed with correct format
+git push origin core-v2.0.16  # ✅ Now pushed with correct format
 
 # Verify workflow triggered on GitHub:
 # https://github.com/kayasax/EasyPIM/actions
@@ -64,7 +64,9 @@ Publish-Module -Path ".\EasyPIM" -NuGetApiKey $env:NUGET_API_KEY -Verbose
 ```
 
 ### 🔍 Troubleshooting Publishing
-- **GitHub Actions Not Triggered**: Verify tags are pushed with `git ls-remote --tags origin`
+- **Correct Tag Format**: Use `core-v*` for EasyPIM Core, `orchestrator-v*` for Orchestrator
+- **Wrong Tags**: `v*` format will NOT trigger GitHub Actions workflow
+- **GitHub Actions Not Triggered**: Verify correct tags are pushed with `git ls-remote --tags origin`
 - **Workflow Failed**: Check [Actions tab](https://github.com/kayasax/EasyPIM/actions) for error details
 - **Gallery Delay**: PowerShell Gallery can take 15-30 minutes to index new versions
 - **Version Check**: Use `Find-Module EasyPIM -AllVersions` to see all published versions
