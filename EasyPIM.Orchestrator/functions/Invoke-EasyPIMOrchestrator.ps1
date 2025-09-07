@@ -112,7 +112,14 @@ function Invoke-EasyPIMOrchestrator {
 		}
 
 		# For federated credentials, Account may be null but ClientId should be present
-		$authIdentifier = $mgContext.Account ?? $mgContext.ClientId ?? "Service Principal"
+		# PowerShell 5.x compatible null handling
+		$authIdentifier = if ($mgContext.Account) { 
+			$mgContext.Account 
+		} elseif ($mgContext.ClientId) { 
+			$mgContext.ClientId 
+		} else { 
+			"Service Principal" 
+		}
 
 		# Check if we have required Graph scopes
 		$requiredScopes = @('RoleManagement.ReadWrite.Directory')
@@ -134,7 +141,14 @@ function Invoke-EasyPIMOrchestrator {
 		if ($azContext) {
 			$hasAzureAuth = $true
 			$azureAuthMethod = "Azure PowerShell Context"
-			$accountInfo = $azContext.Account ?? $azContext.Account.Id ?? "Service Principal"
+			# PowerShell 5.x compatible null handling
+			$accountInfo = if ($azContext.Account) { 
+				$azContext.Account 
+			} elseif ($azContext.Account.Id) { 
+				$azContext.Account.Id 
+			} else { 
+				"Service Principal" 
+			}
 			Write-Host "✅ [AUTH] Azure PowerShell connection verified (Account: $accountInfo, Subscription: $($azContext.Subscription.Name))" -ForegroundColor Green
 		}
 		# Check for OIDC environment variables as fallback

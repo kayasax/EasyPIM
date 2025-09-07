@@ -87,18 +87,18 @@ function Get-EasyPIMConfiguration {
             $maxRetries = 3
             $retryDelay = 2
             $secret = $null
-            
+
             for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
                 try {
                     Write-Verbose "Key Vault retrieval attempt $attempt of $maxRetries"
-                    
+
                     if ($Version) {
                         $secret = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SecretName -Version $Version
                         Write-Verbose "Using specific version: $Version"
                     } else {
                         $secret = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SecretName
                     }
-                    
+
                     if ($secret) {
                         Write-Verbose "Successfully retrieved secret on attempt $attempt"
                         break
@@ -111,7 +111,7 @@ function Get-EasyPIMConfiguration {
                     Start-Sleep -Seconds $retryDelay
                 }
             }
-            
+
             if (-not $secret) {
                 throw "Secret '$SecretName' not found in Key Vault '$KeyVaultName' after $maxRetries attempts"
             }
@@ -122,11 +122,11 @@ function Get-EasyPIMConfiguration {
             # Handle both old and new Az.KeyVault module versions with robust compatibility
             $jsonString = $null
             $extractionRetries = 2
-            
+
             for ($extractAttempt = 1; $extractAttempt -le $extractionRetries; $extractAttempt++) {
                 try {
                     Write-Verbose "Secret value extraction attempt $extractAttempt of $extractionRetries"
-                    
+
                     # Method 1: Try SecretValueText (older Az.KeyVault versions)
                     if ($secret.SecretValueText) {
                         $jsonString = $secret.SecretValueText
@@ -164,7 +164,7 @@ function Get-EasyPIMConfiguration {
                     } else {
                         throw "Secret value is empty, null, or too short after extraction (length: $($jsonString.Length))"
                     }
-                    
+
                 } catch {
                     Write-Verbose "Secret extraction attempt $extractAttempt failed: $($_.Exception.Message)"
                     if ($extractAttempt -eq $extractionRetries) {
@@ -276,29 +276,29 @@ For more information, see: https://docs.microsoft.com/en-us/azure/key-vault/gene
         try {
             # Pre-validate JSON content before parsing
             $trimmedJson = $jsonString.Trim()
-            
+
             # Debug information for troubleshooting
             Write-Verbose "JSON content length: $($jsonString.Length) characters"
             Write-Verbose "Trimmed JSON length: $($trimmedJson.Length) characters"
             Write-Verbose "JSON starts with: '$($trimmedJson.Substring(0, [Math]::Min(50, $trimmedJson.Length)))...'"
             Write-Verbose "JSON ends with: '...$($trimmedJson.Substring([Math]::Max(0, $trimmedJson.Length - 50)))"
-            
+
             # Basic JSON structure validation
             if (-not $trimmedJson.StartsWith('{') -or -not $trimmedJson.EndsWith('}')) {
                 throw "Invalid JSON structure: content does not start with '{' and end with '}'"
             }
-            
+
             if ($trimmedJson.Length -lt 10) {
                 throw "JSON content appears to be too short ($($trimmedJson.Length) characters): '$trimmedJson'"
             }
-            
+
             # Convert JSON to PSCustomObject and return it directly
             # The newer orchestrator functions work with PSCustomObjects
             $result = $trimmedJson | ConvertFrom-Json
-            
+
             Write-Verbose "Configuration loaded successfully"
             return $result
-            
+
         } catch {
             # Enhanced error reporting for JSON parsing failures
             $errorDetails = @"

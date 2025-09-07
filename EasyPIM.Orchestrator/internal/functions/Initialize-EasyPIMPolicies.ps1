@@ -27,7 +27,7 @@ function Initialize-EasyPIMPolicies {
 
         if ($validationResult.HasIssues) {
             Write-Warning "⚠️ Configuration validation found $($validationResult.Issues.Count) issue(s):"
-            
+
             foreach ($issue in $validationResult.Issues) {
                 $severityColor = switch ($issue.Severity) {
                     'Error' { 'Red' }
@@ -82,7 +82,7 @@ function Initialize-EasyPIMPolicies {
                 $policyContent = $Config.EntraRoles.Policies.$roleName
                 if ($policyContent.PSObject.Properties['Template'] -and $policyContent.Template) {
                     $policyDefinition = [PSCustomObject]@{ RoleName = $roleName; PolicySource = 'template'; Template = $policyContent.Template }
-                    
+
                     # 🆕 Copy any override properties from policyContent (excluding Template)
                     foreach ($prop in $policyContent.PSObject.Properties) {
                         if ($prop.Name -ne 'Template') {
@@ -108,7 +108,7 @@ function Initialize-EasyPIMPolicies {
                 if ($policyContent.PSObject.Properties['Scope'] -and $policyContent.Scope) { $scope = $policyContent.Scope }
                 if ($policyContent.PSObject.Properties['Template'] -and $policyContent.Template) {
                     $policyDefinition = [PSCustomObject]@{ RoleName = $roleName; Scope = $scope; PolicySource = 'template'; Template = $policyContent.Template }
-                    
+
                     # 🆕 Copy any override properties from policyContent (excluding Template and Scope)
                     foreach ($prop in $policyContent.PSObject.Properties) {
                         if ($prop.Name -ne 'Template' -and $prop.Name -ne 'Scope') {
@@ -143,7 +143,7 @@ function Initialize-EasyPIMPolicies {
                             } else {
                                 $policyDefinition = [PSCustomObject]@{ PolicySource = 'template'; Template = $roleContent.Template; RoleName = $roleName; GroupName = $groupKey }
                             }
-                            
+
                             # 🆕 Copy any override properties from roleContent (excluding Template)
                             foreach ($prop in $roleContent.PSObject.Properties) {
                                 if ($prop.Name -ne 'Template') {

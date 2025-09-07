@@ -7,10 +7,12 @@
 
 | Date | Summary |
 |------|---------|
+| 2025-01-07 | Created local test workflow for enhanced Key Vault error handling validation (no Azure deps) |
 | 2025-01-07 | Added enhanced Key Vault error handling with retry logic for CI/CD reliability in v2.0.17 |
 | 2025-01-07 | Fixed JSON parsing error diagnostics for GitHub Actions troubleshooting |
 | 2025-01-07 | Removed duplicate Test-EasyPIMKeyVaultSecret from public functions folder |
-| 2025-01-07 | All tests passing (7061/7061) after function cleanup and error handling improvements |stallation failures
+| 2025-01-07 | All tests passing (7061/7061) after function cleanup and error handling improvements |
+| 2025-01-07 | **NOTE**: OIDC for Azure Key Vault access configured for different repo - using local testing approach |stallation failures
 - ⚠️ **PUBLISHING NEEDED**: Core v2.0.17, Orchestrator v1.2.9 need Gallery publication
 - **Current Gallery State**: EasyPIM v2.0.16, EasyPIM.Orchestrator v1.2.9
 
