@@ -62,48 +62,17 @@ Get-ChildItem -Path "$($publishDir.FullName)\EasyPIM.Orchestrator\functions" -Re
 # Join with consistent line endings
 $combinedContent = $text -join "`r`n`r`n"
 
-# Read the original .psm1 file to preserve module structure
+# Add the Export-ModuleMember section from the original .psm1 (using core module's proven approach)
 $originalPsm1 = Get-Content "$($moduleOutDir.FullName)\EasyPIM.Orchestrator.psm1" -Raw
-
-# Extract the module header (everything before the dot-sourcing section)
-if ($originalPsm1 -match "([\s\S]*?)# Source public orchestrator functions locally from this module") {
-    $moduleHeader = $matches[1].Trim()
-    # Construct the final PSM1 with proper module structure
-    $finalContent = @"
-$moduleHeader
-
-# Flattened internal and public functions
-$combinedContent
-"@
-} else {
-    # Fallback if regex doesn't match - just use combined content
-    Write-Warning "Could not extract module header, using functions only"
-    $finalContent = $combinedContent
+$exportSection = ($originalPsm1 -split "Export-ModuleMember")[1]
+if ($exportSection) {
+    $combinedContent += "`r`n`r`n# Export public functions`r`nExport-ModuleMember" + $exportSection
 }
 
-# Extract the Export-ModuleMember block using multiline regex (handles line breaks in function lists)
-if ($originalPsm1 -match "Export-ModuleMember -Function @\(([\s\S]*?)\)") {
-    $exportFunctions = $matches[1].Trim()
-    $exportSection = @"
-
-# Export only the public entrypoints
-Export-ModuleMember -Function @(
-$exportFunctions
-)
-"@
-    $finalContent += $exportSection
-}
-
-# Extract and add the finally block to close the try statement
-if ($originalPsm1 -match "(} finally \{[\s\S]*?\})") {
-    $finallyBlock = $matches[1]
-    $finalContent += "`r`n`r`n$finallyBlock"
-}
-
-Write-Host ("Flatten build collected characters: length={0}" -f $finalContent.Length)
+Write-Host ("Flatten build collected characters: length={0}" -f $combinedContent.Length)
 $psm1Path = "$($publishDir.FullName)\EasyPIM.Orchestrator\EasyPIM.Orchestrator.psm1"
 $utf8BomEncoding = [System.Text.UTF8Encoding]::new($true)
-[System.IO.File]::WriteAllText($psm1Path, $finalContent, $utf8BomEncoding)
+[System.IO.File]::WriteAllText($psm1Path, $combinedContent, $utf8BomEncoding)
 Write-Host "Wrote EasyPIM.Orchestrator.psm1 as UTF8 with BOM (enforced)" -ForegroundColor Yellow
 
 # Note: Shared module removed - no manifest rewrite needed
