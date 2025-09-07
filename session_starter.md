@@ -1,9 +1,9 @@
 # ## 📘 Current Work Status
 - 🚨 **VERSION MISMATCH**: Local ahead of PowerShell Gallery  
 - ✅ **Core Module**: v2.0.16 with Key Vault troubleshooting + code quality fixes
-- ✅ **Orchestrator Fix**: v1.2.4 fixes configuration validation & GitHub workflow version compatibility
-- ⚠️ **PUBLISHING NEEDED**: Core v2.0.15/v2.0.16, Orchestrator v1.2.3+ need Gallery publication
-- **Current Gallery State**: EasyPIM v2.0.16, EasyPIM.Orchestrator v1.2.2
+- ✅ **Orchestrator Fix**: v1.2.5 fixes PSM1 flattening build process causing Gallery installation failures
+- ⚠️ **PUBLISHING NEEDED**: Core v2.0.15/v2.0.16, Orchestrator v1.2.5 need Gallery publication
+- **Current Gallery State**: EasyPIM v2.0.16, EasyPIM.Orchestrator v1.2.4
 
 **Recent Local Enhancements (NOT YET PUBLISHED):**
 - 🔧 **Secret Version Display**: Functions now show Key Vault secret version for troubleshooting
@@ -40,14 +40,14 @@
   - **Local**: v2.0.16 (Secret version output + Code quality fixes)
   - **PowerShell Gallery**: v2.0.14 ⚠️ **NEEDS PUBLISHING**
 - **EasyPIM.Orchestrator**: 
-  - **Local**: v1.2.4 (GitHub workflow compatibility fix)
-  - **PowerShell Gallery**: v1.2.2 ⚠️ **NEEDS PUBLISHING**
+  - **Local**: v1.2.5 (Critical PSM1 flattening build fix)
+  - **PowerShell Gallery**: v1.2.4 ⚠️ **NEEDS PUBLISHING**
 
 ### 🚨 Publishing Action Required
 - **core-v2.0.15**: Key Vault troubleshooting enhancements + secret version output ✅ **TAGGED & PUSHED**
 - **core-v2.0.16**: PSScriptAnalyzer compliance + code quality fixes ✅ **TAGGED & PUSHED**
 - **orchestrator-v1.2.3**: Configuration validation dot-sourcing fix ✅ **TAGGED & PUSHED**
-- **orchestrator-v1.2.4**: GitHub workflow compatibility fix ✅ **TAGGED & PUSHED**
+- **orchestrator-v1.2.5**: Critical PSM1 flattening build fix ✅ **TAGGED & PUSHED**
 - **Status**: All correct tags pushed to origin, GitHub Actions should auto-publish to PowerShell Gallery
 - **Monitor**: Check [GitHub Actions](https://github.com/kayasax/EasyPIM/actions) for publishing status
 
@@ -294,5 +294,6 @@ When working on development projects:
 |------|---------|
 | 2025-09-03 | Critical scope validation fix completed |
 | 2025-09-06 | ✅ **Orchestrator Fix Complete**: Fixed PowerShell Gallery installation error by removing redundant dot-sourcing (v1.2.3) and GitHub workflow version compatibility (v1.2.4). Updated CI/CD to use latest EasyPIM core instead of obsolete v2.0.2. Both fixes tagged and ready for publication. |
+| 2025-09-07 | 🔧 **Critical Build Fix**: Root cause was PSM1 flattening process - regex failed to extract multiline Export-ModuleMember, creating modules with no function exports. Fixed multiline regex extraction (v1.2.5). Orchestrator should now work correctly from PowerShell Gallery. |
 
-*Last updated: 2025-09-06 - Orchestrator PowerShell Gallery compatibility fixes completed*
+*Last updated: 2025-09-07 - Critical orchestrator PSM1 flattening build fix completed*
