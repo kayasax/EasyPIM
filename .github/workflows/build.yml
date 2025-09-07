@@ -1,5 +1,4 @@
-﻿
-
+﻿name: EasyPIM Build & Release
 
 on:
   push:
