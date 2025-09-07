@@ -1,30 +1,25 @@
-# ## 📘 Current Work Status
-- 🚨 **VERSION MISMATCH**: Local ahead of PowerShell Gallery
-- ✅ **Core Module**: v2.0.16 with Key Vault troubleshooting + code quality fixes
-- ✅ **Orchestrator Fix**: v1.2.5 fixes PSM1 flattening build process causing Gallery installation failures
-- ⚠️ **PUBLISHING NEEDED**: Core v2.0.15/v2.0.16, Orchestrator v1.2.5 need Gallery publication
-- **Current Gallery State**: EasyPIM v2.0.16, EasyPIM.Orchestrator v1.2.4
-
-**Recent Local Enhancements (NOT YET PUBLISHED):**
-- 🔧 **Secret Version Display**: Functions now show Key Vault secret version for troubleshooting
-- 📚 **Troubleshooting Guide**: Comprehensive KeyVault-Troubleshooting.md documentation
-- 🧹 **Code Quality**: All PSScriptAnalyzer violations resolved, 7034/7034 tests passing
-- 🚨 **Orchestrator Fix**: Removed redundant dot-sourcing causing Gallery installation errors
-- 🔧 **Workflow Fix**: Updated GitHub Actions to use latest EasyPIM core instead of obsolete v2.0.2
-- 📦 **Version Management**: Proper incremental versioning with detailed release notesession Starter
+# EasyPIM Session Starter
 
 ## 📘 Current Work Status
-- 🚨 **VERSION MISMATCH**: Local v2.0.16 ahead of PowerShell Gallery v2.0.14
-- ✅ **Key Vault Enhancement**: Enhanced troubleshooting with secret version output (v2.0.15)
-- ✅ **Code Quality**: PSScriptAnalyzer compliance fixes (v2.0.16)
-- ⚠️ **PUBLISHING NEEDED**: Two versions (v2.0.15, v2.0.16) need PowerShell Gallery publication
-- **Current Gallery State**: EasyPIM v2.0.14, EasyPIM.Orchestrator v1.2.2
+- 🚨 **VERSION MISMATCH**: Local ahead of PowerShell Gallery
+- ✅ **Core Module**: v2.0.17 with enhanced Key Vault error handling + retry logic
+- ✅ **Orchestrator Fix**: v1.2.9 fixes all dot-sourcing issues causing Galler## 📅 Session Update Log
+
+| Date | Summary |
+|------|---------|
+| 2025-01-07 | Added enhanced Key Vault error handling with retry logic for CI/CD reliability in v2.0.17 |
+| 2025-01-07 | Fixed JSON parsing error diagnostics for GitHub Actions troubleshooting |
+| 2025-01-07 | Removed duplicate Test-EasyPIMKeyVaultSecret from public functions folder |
+| 2025-01-07 | All tests passing (7061/7061) after function cleanup and error handling improvements |stallation failures
+- ⚠️ **PUBLISHING NEEDED**: Core v2.0.17, Orchestrator v1.2.9 need Gallery publication
+- **Current Gallery State**: EasyPIM v2.0.16, EasyPIM.Orchestrator v1.2.9
 
 **Recent Local Enhancements (NOT YET PUBLISHED):**
-- 🔧 **Secret Version Display**: Functions now show Key Vault secret version for troubleshooting
-- � **Troubleshooting Guide**: Comprehensive KeyVault-Troubleshooting.md documentation
-- 🧹 **Code Quality**: All PSScriptAnalyzer violations resolved, 7034/7034 tests passing
-- 📦 **Version Management**: Proper incremental versioning with detailed release notes
+- 🔧 **Enhanced Key Vault Handling**: Retry logic for CI/CD reliability, improved JSON parsing error diagnostics
+- 🧹 **Function Cleanup**: Removed duplicate Test-EasyPIMKeyVaultSecret from public functions
+- � **Better Error Messages**: Detailed JSON parsing error diagnostics for GitHub Actions troubleshooting
+- 🔄 **Retry Logic**: Key Vault secret retrieval with automatic retry for transient failures
+- 🛡️ **Cross-Platform Compatibility**: Enhanced error handling for PowerShell Core vs Windows PowerShell differences
 
 ## 🎯 Project Overview
 **EasyPIM** - PowerShell module for Microsoft Entra PIM management with two-module architecture:
@@ -37,11 +32,11 @@
 
 ### Versions
 - **EasyPIM Core**:
-  - **Local**: v2.0.16 (Secret version output + Code quality fixes)
-  - **PowerShell Gallery**: v2.0.14 ⚠️ **NEEDS PUBLISHING**
+  - **Local**: v2.0.17 (Enhanced Key Vault error handling + retry logic for CI/CD reliability)
+  - **PowerShell Gallery**: v2.0.16 ⚠️ **NEEDS PUBLISHING**
 - **EasyPIM.Orchestrator**:
-  - **Local**: v1.2.5 (Critical PSM1 flattening build fix)
-  - **PowerShell Gallery**: v1.2.4 ⚠️ **NEEDS PUBLISHING**
+  - **Local**: v1.2.9 (Complete dot-sourcing fix for Gallery installations)
+  - **PowerShell Gallery**: v1.2.9 ✅ **PUBLISHED**
 
 ### 🚨 Publishing Action Required
 - **core-v2.0.15**: Key Vault troubleshooting enhancements + secret version output ✅ **TAGGED & PUSHED**
