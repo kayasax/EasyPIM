@@ -95,7 +95,17 @@ if ($pesterVersion.Major -ge 5) {
 
         # Collect test files with include/exclude and optional skip flags
         $allGeneral = Get-ChildItem "$PSScriptRoot\general" | Where-Object Name -like "*.Tests.ps1"
-        $files = $allGeneral | Where-Object { $_.Name -like $Include -and ($Exclude -eq '' -or $_.Name -notlike $Exclude) }
+        
+        # 🧪 NEW: Include unit tests in general test runs for comprehensive coverage
+        $allUnit = @()
+        if (Test-Path "$PSScriptRoot\unit") {
+            $allUnit = Get-ChildItem "$PSScriptRoot\unit" | Where-Object Name -like "*.Tests.ps1"
+            Write-Host "Found $($allUnit.Count) unit tests to include in validation" -ForegroundColor Cyan
+        }
+        
+        # Combine general and unit tests for comprehensive validation
+        $allTests = @($allGeneral) + @($allUnit)
+        $files = $allTests | Where-Object { $_.Name -like $Include -and ($Exclude -eq '' -or $_.Name -notlike $Exclude) }
 
         # By default, skip Help tests to speed up runs. Opt-in by setting EASYPIM_RUN_HELP=1 or passing -SkipHelp:$false explicitly.
         if (-not $PSBoundParameters.ContainsKey('SkipHelp')) {
@@ -226,7 +236,21 @@ if ($pesterVersion.Major -ge 5) {
     #region Run General Tests
     if ($TestGeneral) {
         Write-Host "Modules imported, proceeding with general tests"
-        foreach ($file in (Get-ChildItem "$PSScriptRoot\general" | Where-Object Name -like "*.Tests.ps1")) {
+        
+        # Collect general tests
+        $allGeneralFiles = Get-ChildItem "$PSScriptRoot\general" | Where-Object Name -like "*.Tests.ps1"
+        
+        # 🧪 NEW: Include unit tests in Pester v3/v4 runs for comprehensive coverage
+        $allUnitFiles = @()
+        if (Test-Path "$PSScriptRoot\unit") {
+            $allUnitFiles = Get-ChildItem "$PSScriptRoot\unit" | Where-Object Name -like "*.Tests.ps1"
+            Write-Host "Found $($allUnitFiles.Count) unit tests to include in validation" -ForegroundColor Cyan
+        }
+        
+        # Combine and process all test files
+        $allTestFiles = @($allGeneralFiles) + @($allUnitFiles)
+        
+        foreach ($file in $allTestFiles) {
             if ($file.Name -notlike $Include) { continue }
             if ($file.Name -like $Exclude) { continue }
 
