@@ -104,9 +104,9 @@ jobs:
           # Test 2: JSON Error Simulation
           Write-Host "`n🧪 Test 2: JSON Error Handling Simulation" -ForegroundColor Green
 
-          # Test valid JSON
+          # Test valid JSON (PowerShell 5.x compatible with escaped quotes)
           try {
-            $validJson = '{"test": "valid", "data": {"nested": true}}'
+            $validJson = "{`"test`": `"valid`", `"data`": {`"nested`": true}}"
             $result = $validJson | ConvertFrom-Json
             Write-Host "✅ Valid JSON handled correctly" -ForegroundColor Green
           } catch {
@@ -116,7 +116,7 @@ jobs:
           # Test truncated JSON (simulates Key Vault corruption)
           Write-Host "`n🎯 Testing the exact error we're fixing..." -ForegroundColor Yellow
           try {
-            $truncatedJson = '{"test": "trunca'
+            $truncatedJson = "{`"test`": `"trunca"
             $result = $truncatedJson | ConvertFrom-Json
             Write-Host "❌ Truncated JSON should have failed" -ForegroundColor Red
           } catch {
@@ -192,9 +192,9 @@ jobs:
           # Test 2: JSON Error Simulation
           Write-Host "`n🧪 Test 2: JSON Error Handling Simulation" -ForegroundColor Green
 
-          # Test valid JSON
+          # Test valid JSON (PowerShell 5.x compatible with escaped quotes)
           try {
-            $validJson = '{"test": "valid", "data": {"nested": true}}'
+            $validJson = "{`"test`": `"valid`", `"data`": {`"nested`": true}}"
             $result = $validJson | ConvertFrom-Json
             Write-Host "✅ Valid JSON handled correctly" -ForegroundColor Green
           } catch {
@@ -204,7 +204,7 @@ jobs:
           # Test truncated JSON (simulates Key Vault corruption)
           Write-Host "`n🎯 Testing the exact error we're fixing..." -ForegroundColor Yellow
           try {
-            $truncatedJson = '{"test": "trunca'
+            $truncatedJson = "{`"test`": `"trunca"
             $result = $truncatedJson | ConvertFrom-Json
             Write-Host "❌ Truncated JSON should have failed" -ForegroundColor Red
           } catch {
