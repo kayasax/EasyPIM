@@ -58,6 +58,33 @@ function Set-EPOAzureRolePolicy {
         rolename = @($PolicyDefinition.RoleName)
     }
     $resolved = $PolicyDefinition.ResolvedPolicy; if (-not $resolved) { $resolved = $PolicyDefinition }
+    
+    # Apply business rules validation to handle MFA/Authentication Context conflicts
+    Write-Verbose "[DEBUG] Azure role '$($PolicyDefinition.RoleName)': Checking for Auth Context conflicts"
+    Write-Verbose "[DEBUG] AuthenticationContext_Enabled: $($resolved.PSObject.Properties['AuthenticationContext_Enabled'] -and $resolved.AuthenticationContext_Enabled)"
+    Write-Verbose "[DEBUG] ActivationRequirement exists: $($resolved.PSObject.Properties['ActivationRequirement'] -and $resolved.ActivationRequirement)"
+    Write-Verbose "[DEBUG] ActivationRequirement value: $($resolved.ActivationRequirement)"
+    
+    if ($resolved.PSObject.Properties['AuthenticationContext_Enabled'] -and $resolved.AuthenticationContext_Enabled -and
+        $resolved.PSObject.Properties['ActivationRequirement'] -and $resolved.ActivationRequirement) {
+        
+        Write-Verbose "[DEBUG] Calling Test-PIMPolicyBusinessRules for Azure role '$($PolicyDefinition.RoleName)'"
+        $businessRuleResult = Test-PIMPolicyBusinessRules -PolicySettings $resolved -ApplyAdjustments
+        
+        if ($businessRuleResult.HasConflicts) {
+            Write-Verbose "[DEBUG] Business rules found $($businessRuleResult.Conflicts.Count) conflicts"
+            foreach ($conflict in $businessRuleResult.Conflicts) {
+                if ($conflict.Type -eq 'AuthenticationContextMfaConflict') {
+                    Write-Warning $conflict.Message
+                    Write-Verbose "[DEBUG] Adjusting ActivationRequirement from '$($resolved.ActivationRequirement)' to '$($conflict.AdjustedValue)'"
+                    $resolved.ActivationRequirement = $conflict.AdjustedValue
+                }
+            }
+        } else {
+            Write-Verbose "[DEBUG] No business rule conflicts found"
+        }
+    }
+    
     # Map fields that the public cmdlet supports
     if ($resolved.PSObject.Properties['ActivationDuration'] -and $resolved.ActivationDuration) { $params.ActivationDuration = $resolved.ActivationDuration }
     if ($resolved.PSObject.Properties['ActivationRequirement']) {

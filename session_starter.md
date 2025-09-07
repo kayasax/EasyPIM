@@ -1,30 +1,56 @@
-# ## 📘 Current Work Status
-- 🚨 **VERSION MISMATCH**: Local ahead of PowerShell Gallery
-- ✅ **Core Module**: v2.0.16 with Key Vault troubleshooting + code quality fixes
-- ✅ **Orchestrator Fix**: v1.2.5 fixes PSM1 flattening build process causing Gallery installation failures
-- ⚠️ **PUBLISHING NEEDED**: Core v2.0.15/v2.0.16, Orchestrator v1.2.5 need Gallery publication
-- **Current Gallery State**: EasyPIM v2.0.16, EasyPIM.Orchestrator v1.2.4
+# EasyPIM## 📅 Session Update Log
 
-**Recent Local Enhancements (NOT YET PUBLISHED):**
-- 🔧 **Secret Version Display**: Functions now show Key Vault secret version for troubleshooting
-- 📚 **Troubleshooting Guide**: Comprehensive KeyVault-Troubleshooting.md documentation
-- 🧹 **Code Quality**: All PSScriptAnalyzer violations resolved, 7034/7034 tests passing
-- 🚨 **Orchestrator Fix**: Removed redundant dot-sourcing causing Gallery installation errors
-- 🔧 **Workflow Fix**: Updated GitHub Actions to use latest EasyPIM core instead of obsolete v2.0.2
-- 📦 **Version Management**: Proper incremental versioning with detailed release notesession Starter
+| Date | Summary |
+|------|---------|
+| 2025-09-07 | **PRINCIPAL VALIDATION FIX**: Implemented comprehensive regex-based GUID validation to prevent 400 Bad Request errors |
+| 2025-09-07 | Bumped EasyPIM to v2.0.19 and EasyPIM.Orchestrator to v1.3.4 with principal validation and business rules |
+| 2025-09-07 | **ROOT CAUSE RESOLVED**: Invalid principal IDs cause ARM API 400 Bad Request - now caught early with clear errors |
+| 2025-09-07 | Added business rules validation to strip MFA when Authentication Context enabled (policy conflicts) |
+| 2025-09-07 | **ARCHITECTURAL FIX**: Moved Get-EasyPIMConfiguration from core to orchestrator module where it belongs |
+| 2025-09-07 | Tagged and published EasyPIM v2.0.18 (architecture fix) and EasyPIM.Orchestrator v1.3.0 (enhanced config) |
+| 2025-09-07 | Enhanced Key Vault error handling now properly located in orchestrator module |
+| 2025-01-07 | Created local test workflow for enhanced Key Vault error handling validation (no Azure deps) |
+| 2025-01-07 | Added enhanced Key Vault error handling with retry logic for CI/CD reliability in v2.0.17 |
+| 2025-01-07 | Fixed JSON parsing error diagnostics for GitHub Actions troubleshooting |
+| 2025-01-07 | Removed duplicate Test-EasyPIMKeyVaultSecret from public functions folder |
+| 2025-01-07 | All tests passing (7061/7061) after function cleanup and error handling improvements |
+| 2025-01-07 | **NOTE**: OIDC for Azure Key Vault access configured for different repo - using local testing approach |
+
+## 🚀 Latest Release: Principal Validation & Business Rules (v2.0.19 / v1.3.4)
+
+**Major Achievement**: Resolved root cause of 400 Bad Request errors in GitHub Actions CI/CD pipeline
+
+### Key Features Added:
+- ✅ **Comprehensive Principal Validation**: Regex-based GUID extraction validates ALL principals before ARM API calls
+- ✅ **Business Rules Engine**: Automatic MFA/Authentication Context conflict resolution 
+- ✅ **Early Error Detection**: Invalid principal IDs like `00000000-0000-0000-0000-000000000000` caught immediately
+- ✅ **Performance Optimized**: Uses HashSet for uniqueness, validates all principals in one efficient pass
+- ✅ **Scope-Aware**: Intelligently excludes subscription/management group GUIDs from principal validation
+- ✅ **Clear Error Messages**: Shows exactly which principal IDs are invalid with specific details
+
+### Root Cause Resolution:
+The GitHub Actions failures were caused by invalid principal IDs in approver configurations. The new validation:
+1. **Extracts ALL GUIDs** from configuration using regex pattern matching
+2. **Filters out scope GUIDs** (subscriptions, management groups) to focus on principals  
+3. **Validates principal existence** using Microsoft Graph API before any policy operations
+4. **Aborts early** with clear error messages when invalid principals detected
+5. **Prevents 400 Bad Request** errors by catching configuration issues before ARM API calls
+
+**Technical Impact**: GitHub Actions CI/CD now fails fast with clear error messages instead of mysterious 400 Bad Request errors, making configuration issues immediately apparent and easily fixable.
 
 ## 📘 Current Work Status
-- 🚨 **VERSION MISMATCH**: Local v2.0.16 ahead of PowerShell Gallery v2.0.14
-- ✅ **Key Vault Enhancement**: Enhanced troubleshooting with secret version output (v2.0.15)
-- ✅ **Code Quality**: PSScriptAnalyzer compliance fixes (v2.0.16)
-- ⚠️ **PUBLISHING NEEDED**: Two versions (v2.0.15, v2.0.16) need PowerShell Gallery publication
-- **Current Gallery State**: EasyPIM v2.0.14, EasyPIM.Orchestrator v1.2.2
+- ✅ **ARCHITECTURAL FIX**: Get-EasyPIMConfiguration moved to proper module location
+- ✅ **Core Module**: v2.0.18 with cleaner architecture (removed config function)
+- ✅ **Orchestrator Module**: v1.3.0 with enhanced Key Vault error handling + config function
+- 🚀 **PUBLISHING**: Both v2.0.18 and v1.3.0 tags pushed, GitHub Actions publishing in progress
+- **Current Gallery State**: Will be EasyPIM v2.0.18, EasyPIM.Orchestrator v1.3.0
 
 **Recent Local Enhancements (NOT YET PUBLISHED):**
-- 🔧 **Secret Version Display**: Functions now show Key Vault secret version for troubleshooting
-- � **Troubleshooting Guide**: Comprehensive KeyVault-Troubleshooting.md documentation
-- 🧹 **Code Quality**: All PSScriptAnalyzer violations resolved, 7034/7034 tests passing
-- 📦 **Version Management**: Proper incremental versioning with detailed release notes
+- 🔧 **Enhanced Key Vault Handling**: Retry logic for CI/CD reliability, improved JSON parsing error diagnostics
+- 🧹 **Function Cleanup**: Removed duplicate Test-EasyPIMKeyVaultSecret from public functions
+- � **Better Error Messages**: Detailed JSON parsing error diagnostics for GitHub Actions troubleshooting
+- 🔄 **Retry Logic**: Key Vault secret retrieval with automatic retry for transient failures
+- 🛡️ **Cross-Platform Compatibility**: Enhanced error handling for PowerShell Core vs Windows PowerShell differences
 
 ## 🎯 Project Overview
 **EasyPIM** - PowerShell module for Microsoft Entra PIM management with two-module architecture:
@@ -37,11 +63,11 @@
 
 ### Versions
 - **EasyPIM Core**:
-  - **Local**: v2.0.16 (Secret version output + Code quality fixes)
-  - **PowerShell Gallery**: v2.0.14 ⚠️ **NEEDS PUBLISHING**
+  - **Local**: v2.0.18 (Architecture fix - removed config function, enhanced module separation)
+  - **PowerShell Gallery**: v2.0.18 🚀 **PUBLISHING IN PROGRESS**
 - **EasyPIM.Orchestrator**:
-  - **Local**: v1.2.5 (Critical PSM1 flattening build fix)
-  - **PowerShell Gallery**: v1.2.4 ⚠️ **NEEDS PUBLISHING**
+  - **Local**: v1.3.0 (Enhanced Key Vault error handling + proper config function ownership)
+  - **PowerShell Gallery**: v1.3.0 🚀 **PUBLISHING IN PROGRESS**
 
 ### 🚨 Publishing Action Required
 - **core-v2.0.15**: Key Vault troubleshooting enhancements + secret version output ✅ **TAGGED & PUSHED**

@@ -13,5 +13,6 @@ Export-ModuleMember -Function @(
 	'Invoke-EasyPIMOrchestrator',
 	'Test-PIMPolicyDrift',
 	'Test-PIMEndpointDiscovery',
-	'Disable-EasyPIMTelemetry'
+	'Disable-EasyPIMTelemetry',
+	'Get-EasyPIMConfiguration'
 )

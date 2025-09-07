@@ -1,0 +1,10 @@
+{
+  "PolicyTemplates": {
+    "Standard": {
+      "activationDuration": "PT8H"
+    }
+  },
+  "InvalidJson": {
+    "missingQuote: "value"
+  }
+}

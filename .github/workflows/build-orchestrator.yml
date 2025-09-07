@@ -1,4 +1,6 @@
 
+name: EasyPIM Orchestrator Build
+
 on:
   push:
     tags:
