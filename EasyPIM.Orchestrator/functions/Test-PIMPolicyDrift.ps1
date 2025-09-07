@@ -99,54 +99,29 @@ function Test-PIMPolicyDrift {
 
 	Write-Verbose -Message "Starting PIM policy drift test. ConfigPath: $ConfigPath, KeyVaultName: $KeyVaultName, SecretName: $SecretName"
 
-		# Load config from Key Vault if specified, else from file
-		if ($KeyVaultName -and $SecretName) {
-			Write-Verbose "Loading config from Azure Key Vault: $KeyVaultName, secret: $SecretName"
-			try {
-				if (-not (Get-Module -ListAvailable -Name Az.KeyVault)) { Import-Module Az.KeyVault -ErrorAction Stop }
-				$secretObj = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SecretName -ErrorAction Stop
-				
-				# Handle both old and new Az.KeyVault module versions
-				if ($secretObj.SecretValueText) {
-					# Older versions of Az.KeyVault
-					$secretValue = $secretObj.SecretValueText
-				} elseif ($secretObj.SecretValue) {
-					# Newer versions of Az.KeyVault - SecretValue is a SecureString
-					$secretValue = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secretObj.SecretValue))
-				} else {
-					throw "Unable to retrieve secret value from Key Vault response"
-				}
-				
-				# Try to decode as base64, fall back to plain text if that fails
-				try {
-					$configRaw = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secretValue))
-					Write-Verbose "Successfully decoded base64-encoded secret"
-				} catch {
-					Write-Verbose "Secret is not base64-encoded, using as plain text"
-					$configRaw = $secretValue
-				}
-				
-				if ([string]::IsNullOrWhiteSpace($configRaw)) {
-					throw "Secret value is empty or null"
-				}
-			} catch {
-				Write-Error "Failed to load config from Key Vault: $($_.Exception.Message)"
-				throw
-			}
-		} elseif ($ConfigPath) {
-			try { $ConfigPath = (Resolve-Path -Path $ConfigPath -ErrorAction Stop).Path } catch { throw "Config file not found: $ConfigPath" }
-			$configRaw = Get-Content -Raw -Path $ConfigPath
-		} else {
-			throw "You must specify either -ConfigPath or both -KeyVaultName and -SecretName."
-		}
-
+	# Load config using enhanced error handling
+	if ($KeyVaultName -and $SecretName) {
+		Write-Verbose "Loading config from Azure Key Vault using enhanced error handling: $KeyVaultName, secret: $SecretName"
 		try {
-			$clean = Remove-JsonComments -Content $configRaw
-			$json = $clean | ConvertFrom-Json -ErrorAction Stop
+			# Use the enhanced Get-EasyPIMConfiguration with retry logic
+			$json = Get-EasyPIMConfiguration -KeyVaultName $KeyVaultName -SecretName $SecretName
+			$configRaw = $json | ConvertTo-Json -Depth 100 # For logging purposes
 		} catch {
-			Write-Verbose -Message "Raw first 200: $($configRaw.Substring(0,[Math]::Min(200,$configRaw.Length)))"
-			throw "Failed to parse config: $($_.Exception.Message)"
+			Write-Error "Failed to load config from Key Vault with enhanced error handling: $($_.Exception.Message)"
+			throw
 		}
+	} elseif ($ConfigPath) {
+		try { 
+			$ConfigPath = (Resolve-Path -Path $ConfigPath -ErrorAction Stop).Path 
+			# Use enhanced file loading too
+			$json = Get-EasyPIMConfiguration -ConfigFilePath $ConfigPath
+			$configRaw = Get-Content -Raw -Path $ConfigPath # For logging purposes
+		} catch { 
+			throw "Failed to load config file: $($_.Exception.Message)" 
+		}
+	} else {
+		throw "You must specify either -ConfigPath or both -KeyVaultName and -SecretName."
+	}
 		if (-not $json) { throw "Parsed JSON object is null - invalid configuration." }
 
 	# Initialize collections for expected policies

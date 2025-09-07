@@ -1,20 +1,23 @@
-# EasyPIM Session Starter
-
-## 📘 Current Work Status
-- 🚨 **VERSION MISMATCH**: Local ahead of PowerShell Gallery
-- ✅ **Core Module**: v2.0.17 with enhanced Key Vault error handling + retry logic
-- ✅ **Orchestrator Fix**: v1.2.9 fixes all dot-sourcing issues causing Galler## 📅 Session Update Log
+# EasyPIM## 📅 Session Update Log
 
 | Date | Summary |
 |------|---------|
+| 2025-09-07 | **ARCHITECTURAL FIX**: Moved Get-EasyPIMConfiguration from core to orchestrator module where it belongs |
+| 2025-09-07 | Tagged and published EasyPIM v2.0.18 (architecture fix) and EasyPIM.Orchestrator v1.3.0 (enhanced config) |
+| 2025-09-07 | Enhanced Key Vault error handling now properly located in orchestrator module |
 | 2025-01-07 | Created local test workflow for enhanced Key Vault error handling validation (no Azure deps) |
 | 2025-01-07 | Added enhanced Key Vault error handling with retry logic for CI/CD reliability in v2.0.17 |
 | 2025-01-07 | Fixed JSON parsing error diagnostics for GitHub Actions troubleshooting |
 | 2025-01-07 | Removed duplicate Test-EasyPIMKeyVaultSecret from public functions folder |
 | 2025-01-07 | All tests passing (7061/7061) after function cleanup and error handling improvements |
-| 2025-01-07 | **NOTE**: OIDC for Azure Key Vault access configured for different repo - using local testing approach |stallation failures
-- ⚠️ **PUBLISHING NEEDED**: Core v2.0.17, Orchestrator v1.2.9 need Gallery publication
-- **Current Gallery State**: EasyPIM v2.0.16, EasyPIM.Orchestrator v1.2.9
+| 2025-01-07 | **NOTE**: OIDC for Azure Key Vault access configured for different repo - using local testing approach |on Starter
+
+## 📘 Current Work Status
+- ✅ **ARCHITECTURAL FIX**: Get-EasyPIMConfiguration moved to proper module location
+- ✅ **Core Module**: v2.0.18 with cleaner architecture (removed config function)
+- ✅ **Orchestrator Module**: v1.3.0 with enhanced Key Vault error handling + config function
+- 🚀 **PUBLISHING**: Both v2.0.18 and v1.3.0 tags pushed, GitHub Actions publishing in progress
+- **Current Gallery State**: Will be EasyPIM v2.0.18, EasyPIM.Orchestrator v1.3.0
 
 **Recent Local Enhancements (NOT YET PUBLISHED):**
 - 🔧 **Enhanced Key Vault Handling**: Retry logic for CI/CD reliability, improved JSON parsing error diagnostics
@@ -34,11 +37,11 @@
 
 ### Versions
 - **EasyPIM Core**:
-  - **Local**: v2.0.17 (Enhanced Key Vault error handling + retry logic for CI/CD reliability)
-  - **PowerShell Gallery**: v2.0.16 ⚠️ **NEEDS PUBLISHING**
+  - **Local**: v2.0.18 (Architecture fix - removed config function, enhanced module separation)
+  - **PowerShell Gallery**: v2.0.18 🚀 **PUBLISHING IN PROGRESS**
 - **EasyPIM.Orchestrator**:
-  - **Local**: v1.2.9 (Complete dot-sourcing fix for Gallery installations)
-  - **PowerShell Gallery**: v1.2.9 ✅ **PUBLISHED**
+  - **Local**: v1.3.0 (Enhanced Key Vault error handling + proper config function ownership)
+  - **PowerShell Gallery**: v1.3.0 🚀 **PUBLISHING IN PROGRESS**
 
 ### 🚨 Publishing Action Required
 - **core-v2.0.15**: Key Vault troubleshooting enhancements + secret version output ✅ **TAGGED & PUSHED**
