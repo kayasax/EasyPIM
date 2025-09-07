@@ -20,6 +20,7 @@
         'Invoke-EasyPIMOrchestrator',
         'Test-PIMPolicyDrift',
         'Test-PIMEndpointDiscovery',
+        'Get-EasyPIMConfiguration',
         'Disable-EasyPIMTelemetry'
     )
     AliasesToExport   = @()
