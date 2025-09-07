@@ -65,13 +65,15 @@ $combinedContent = $text -join "`r`n`r`n"
 # Read the original .psm1 file to extract just the Export-ModuleMember section
 $originalPsm1 = Get-Content "$($moduleOutDir.FullName)\EasyPIM.Orchestrator.psm1" -Raw
 
-# Extract just the Export-ModuleMember block (without try/finally complications)
-if ($originalPsm1 -match "Export-ModuleMember -Function @\((.*?)\)") {
-    $exportFunctions = $matches[1]
+# Extract the Export-ModuleMember block using multiline regex (handles line breaks in function lists)
+if ($originalPsm1 -match "Export-ModuleMember -Function @\(([\s\S]*?)\)") {
+    $exportFunctions = $matches[1].Trim()
     $exportSection = @"
 
 # Export only the public entrypoints
-Export-ModuleMember -Function @($exportFunctions)
+Export-ModuleMember -Function @(
+$exportFunctions
+)
 "@
     $combinedContent += $exportSection
 }
