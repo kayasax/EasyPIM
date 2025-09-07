@@ -187,7 +187,6 @@ function Invoke-EasyPIMOrchestrator {
 
 		# 1.5. Validate configuration for common issues
 		Write-Host "🔍 Validating configuration..." -ForegroundColor Cyan
-		. "$PSScriptRoot\..\internal\functions\Test-EasyPIMConfigurationValidity.ps1"
 		$validationResult = Test-EasyPIMConfigurationValidity -Config $config -AutoCorrect
 		
 		if ($validationResult.HasIssues) {
