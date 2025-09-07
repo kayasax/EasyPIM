@@ -24,10 +24,10 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest]
-        powershell: [pwsh, powershell]
+        shell_type: [pwsh, powershell]
         exclude:
           - os: ubuntu-latest
-            powershell: powershell
+            shell_type: powershell
     runs-on: ${{ matrix.os }}
     
     steps:
@@ -46,12 +46,13 @@ jobs:
           Install-Module -Name Pester -Force -Scope CurrentUser -SkipPublisherCheck
           Write-Host "Installing minimal PowerShell modules for testing..."
 
-      - name: Test Enhanced Error Handling
-        shell: ${{ matrix.powershell }}
+      - name: Test Enhanced Error Handling (PowerShell Core)
+        if: matrix.shell_type == 'pwsh'
+        shell: pwsh
         run: |
           Write-Host "=== Enhanced Error Handling Validation ===" -ForegroundColor Cyan
           Write-Host "OS: ${{ runner.os }}" -ForegroundColor Yellow
-          Write-Host "PowerShell: ${{ matrix.powershell }}" -ForegroundColor Yellow
+          Write-Host "PowerShell: pwsh (Core)" -ForegroundColor Yellow
           Write-Host "PSVersion: $($PSVersionTable.PSVersion)" -ForegroundColor Yellow
           Write-Host "Platform: $($PSVersionTable.Platform)" -ForegroundColor Yellow
           Write-Host "NOTE: Testing locally without Azure Key Vault (OIDC for different repo)" -ForegroundColor Cyan
@@ -126,8 +127,86 @@ jobs:
             Write-Host "⚠️ Some enhanced error handling features may be missing" -ForegroundColor Yellow
           }
           
-          Write-Host "`n✅ All tests completed successfully!" -ForegroundColor Green
-          Write-Host "Environment: ${{ runner.os }} / ${{ matrix.powershell }} / PS$($PSVersionTable.PSVersion)" -ForegroundColor Cyan
+          Write-Host "`n✅ PowerShell Core tests completed successfully!" -ForegroundColor Green
+          Write-Host "Environment: ${{ runner.os }} / pwsh / PS$($PSVersionTable.PSVersion)" -ForegroundColor Cyan
+
+      - name: Test Enhanced Error Handling (Windows PowerShell)
+        if: matrix.shell_type == 'powershell' && runner.os == 'Windows'
+        shell: powershell
+        run: |
+          Write-Host "=== Enhanced Error Handling Validation ===" -ForegroundColor Cyan
+          Write-Host "OS: ${{ runner.os }}" -ForegroundColor Yellow
+          Write-Host "PowerShell: Windows PowerShell 5.x" -ForegroundColor Yellow
+          Write-Host "PSVersion: $($PSVersionTable.PSVersion)" -ForegroundColor Yellow
+          Write-Host "NOTE: Testing locally without Azure Key Vault (OIDC for different repo)" -ForegroundColor Cyan
+          
+          # Import modules
+          try {
+            Import-Module ".\EasyPIM\EasyPIM.psm1" -Force
+            Import-Module ".\EasyPIM.Orchestrator\EasyPIM.Orchestrator.psm1" -Force
+            Write-Host "✅ Modules imported successfully" -ForegroundColor Green
+          } catch {
+            Write-Host "❌ Module import failed: $($_.Exception.Message)" -ForegroundColor Red
+            exit 1
+          }
+          
+          # Test 1: Function availability
+          Write-Host "`n🧪 Test 1: Critical Function Availability" -ForegroundColor Green
+          $criticalFunctions = @('Get-EasyPIMConfiguration', 'Invoke-EasyPIMOrchestrator', 'Test-PIMPolicyDrift')
+          
+          foreach ($func in $criticalFunctions) {
+            $command = Get-Command -Name $func -ErrorAction SilentlyContinue
+            if ($command) {
+              Write-Host "✅ $func available (Module: $($command.Source))" -ForegroundColor Green
+            } else {
+              Write-Host "❌ $func NOT FOUND" -ForegroundColor Red
+              exit 1
+            }
+          }
+          
+          # Test 2: JSON Error Simulation
+          Write-Host "`n🧪 Test 2: JSON Error Handling Simulation" -ForegroundColor Green
+          
+          # Test valid JSON
+          try {
+            $validJson = '{"test": "valid", "data": {"nested": true}}'
+            $result = $validJson | ConvertFrom-Json
+            Write-Host "✅ Valid JSON handled correctly" -ForegroundColor Green
+          } catch {
+            Write-Host "❌ Valid JSON test failed: $($_.Exception.Message)" -ForegroundColor Red
+          }
+          
+          # Test truncated JSON (simulates Key Vault corruption)
+          Write-Host "`n🎯 Testing the exact error we're fixing..." -ForegroundColor Yellow
+          try {
+            $truncatedJson = '{"test": "trunca'
+            $result = $truncatedJson | ConvertFrom-Json
+            Write-Host "❌ Truncated JSON should have failed" -ForegroundColor Red
+          } catch {
+            Write-Host "✅ Truncated JSON properly caught:" -ForegroundColor Green
+            Write-Host "    Error type: $($_.Exception.GetType().Name)" -ForegroundColor Cyan
+            if ($_.Exception.Message -like "*Unexpected end*" -or $_.Exception.Message -like "*JSON*") {
+              Write-Host "    🎯 This is the exact JSON parsing error we're fixing!" -ForegroundColor Yellow
+            }
+          }
+          
+          # Test 3: Enhanced Error Code Presence
+          Write-Host "`n🧪 Test 3: Verify Enhanced Error Handling Code" -ForegroundColor Green
+          $configFunction = Get-Command Get-EasyPIMConfiguration
+          $hasEnhancedHandling = $configFunction.Definition -like "*Enhanced JSON parsing*"
+          $hasRetryLogic = $configFunction.Definition -like "*maxRetries*"
+          
+          Write-Host "✅ Enhanced JSON parsing: $hasEnhancedHandling" -ForegroundColor $(if($hasEnhancedHandling) {'Green'} else {'Red'})
+          Write-Host "✅ Retry logic present: $hasRetryLogic" -ForegroundColor $(if($hasRetryLogic) {'Green'} else {'Red'})
+          
+          if ($hasEnhancedHandling -and $hasRetryLogic) {
+            Write-Host "🎉 All enhanced error handling improvements are present!" -ForegroundColor Green
+          } else {
+            Write-Host "⚠️ Some enhanced error handling features may be missing" -ForegroundColor Yellow
+          }
+          
+          Write-Host "`n✅ Windows PowerShell tests completed successfully!" -ForegroundColor Green
+          Write-Host "Environment: ${{ runner.os }} / powershell / PS$($PSVersionTable.PSVersion)" -ForegroundColor Cyan
 
   test-module-loading:
     if: github.event.inputs.test_type == 'module-loading' || github.event.inputs.test_type == 'all'
