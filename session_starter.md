@@ -1,4 +1,16 @@
-# 🧠 EasyPIM Session Starter
+# ## 📘 Current Work Status
+- 🚨 **VERSION MISMATCH**: Local ahead of PowerShell Gallery  
+- ✅ **Core Module**: v2.0.16 with Key Vault troubleshooting + code quality fixes
+- ✅ **Orchestrator Fix**: v1.2.3 fixes configuration validation dot-sourcing error
+- ⚠️ **PUBLISHING NEEDED**: Core v2.0.15/v2.0.16, Orchestrator v1.2.3 need Gallery publication
+- **Current Gallery State**: EasyPIM v2.0.14, EasyPIM.Orchestrator v1.2.2
+
+**Recent Local Enhancements (NOT YET PUBLISHED):**
+- 🔧 **Secret Version Display**: Functions now show Key Vault secret version for troubleshooting
+- 📚 **Troubleshooting Guide**: Comprehensive KeyVault-Troubleshooting.md documentation  
+- 🧹 **Code Quality**: All PSScriptAnalyzer violations resolved, 7034/7034 tests passing
+- 🚨 **Orchestrator Fix**: Removed redundant dot-sourcing causing Gallery installation errors
+- 📦 **Version Management**: Proper incremental versioning with detailed release notesession Starter
 
 ## 📘 Current Work Status
 - 🚨 **VERSION MISMATCH**: Local v2.0.16 ahead of PowerShell Gallery v2.0.14
@@ -26,12 +38,15 @@
 - **EasyPIM Core**: 
   - **Local**: v2.0.16 (Secret version output + Code quality fixes)
   - **PowerShell Gallery**: v2.0.14 ⚠️ **NEEDS PUBLISHING**
-- **EasyPIM.Orchestrator**: v1.2.2 (Published ✅)
+- **EasyPIM.Orchestrator**: 
+  - **Local**: v1.2.3 (Configuration validation fix)
+  - **PowerShell Gallery**: v1.2.2 ⚠️ **NEEDS PUBLISHING**
 
 ### 🚨 Publishing Action Required
 - **core-v2.0.15**: Key Vault troubleshooting enhancements + secret version output ✅ **TAGGED & PUSHED**
-- **core-v2.0.16**: PSScriptAnalyzer compliance + code quality fixes ✅ **TAGGED & PUSHED**  
-- **Status**: Correct tags (core-v*) pushed to origin, GitHub Actions should auto-publish to PowerShell Gallery
+- **core-v2.0.16**: PSScriptAnalyzer compliance + code quality fixes ✅ **TAGGED & PUSHED**
+- **orchestrator-v1.2.3**: Configuration validation dot-sourcing fix ✅ **TAGGED & PUSHED**
+- **Status**: All correct tags pushed to origin, GitHub Actions should auto-publish to PowerShell Gallery
 - **Monitor**: Check [GitHub Actions](https://github.com/kayasax/EasyPIM/actions) for publishing status
 
 ### 📦 Publishing Commands (Automated via GitHub Actions)
@@ -85,6 +100,7 @@ Publish-Module -Path ".\EasyPIM" -NuGetApiKey $env:NUGET_API_KEY -Verbose
 
 | Date | Update |
 |------|--------|
+| 2025-09-07 | **🚨 ORCHESTRATOR BUG FIX**: Fixed critical error in orchestrator v1.2.3 where configuration validation failed with 'The term C:\Program Files\PowerShell\Modules\...' error when running from PowerShell Gallery installation. **Root Cause**: Manual dot-sourcing of internal functions conflicted with module loading. **Solution**: Removed redundant dot-sourcing as internal functions are automatically loaded by PSM1. **Impact**: Orchestrator now works correctly from Gallery installations. Tagged orchestrator-v1.2.3 and pushed for publishing. |
 | 2025-09-06 | **🚨 VERSION SYNC ISSUE**: Local repository is 2 versions ahead of PowerShell Gallery. **Local**: v2.0.16 with Key Vault troubleshooting enhancements (v2.0.15) and PSScriptAnalyzer compliance (v2.0.16). **Gallery**: v2.0.14. **ACTION REQUIRED**: Publish v2.0.15 and v2.0.16 to PowerShell Gallery to sync versions. Created tags and commits but not published. All 7034 tests passing with full code quality compliance. |
 | 2025-01-24 | **🔍 CONFIGURATION VALIDATION SYSTEM**: Implemented comprehensive configuration validation system to prevent ARM API failures. Created `Test-EasyPIMConfigurationValidity.ps1` with auto-correction for field name mismatches (id→Id, description→Name), missing approvers detection, and template reference validation. Integrated into orchestrator pipeline with user-friendly error reporting. This prevents the ARM API 400 Bad Request errors caused by configuration format issues and improves overall user experience. |
 | 2025-09-03 | **🚨 CRITICAL DRIFT DETECTION FIX**: Discovered and fixed critical bug in `Test-PIMPolicyDrift` where drift detection showed false "Match" results for Azure resource policies. Root cause: drift detection was always querying subscription-level policies while orchestrator applied resource-specific policies, causing scope validation mismatches. Fixed by implementing scope-aware policy validation in drift detection. Orchestrator bumped to v1.2.0. This resolves cases where policies like "Contributor" at storage account scopes failed to apply but drift detection incorrectly reported "Match". |
