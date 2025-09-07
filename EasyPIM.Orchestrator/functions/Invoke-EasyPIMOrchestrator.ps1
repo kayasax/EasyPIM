@@ -555,12 +555,12 @@ function Invoke-EasyPIMOrchestrator {
 		$configJson = $processedConfig | ConvertTo-Json -Depth 10
 		Write-Verbose -Message ("[DEBUG] Extracting GUIDs from configuration using regex...")
 		Write-Verbose -Message ("[DEBUG] Config JSON length: $($configJson.Length) characters")
-		
+
 		# Regex to find all GUIDs, but exclude those in scope paths
 		$guidPattern = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
 		$allGuids = [System.Text.RegularExpressions.Regex]::Matches($configJson, $guidPattern) | ForEach-Object { $_.Value } | Sort-Object -Unique
 		Write-Verbose -Message ("[DEBUG] Found $($allGuids.Count) total GUIDs in configuration")
-		
+
 		# Filter out GUIDs that are in scope paths (subscriptions, management groups, etc.)
 		$principalGuids = @()
 		foreach ($guid in $allGuids) {
@@ -573,12 +573,12 @@ function Invoke-EasyPIMOrchestrator {
 			$principalGuids += $guid
 			Write-Verbose -Message ("[DEBUG] Found potential principal GUID: $guid")
 		}
-		
+
 		# Add all found principal GUIDs to validation set
 		foreach ($guid in $principalGuids) {
 			[void]$principalIds.Add([string]$guid)
 		}
-		
+
 		Write-Verbose -Message ("[Orchestrator] Extracted {0} potential principal GUIDs for validation" -f $principalGuids.Count)
 		Write-Host "🔍 [DEBUG] About to start validation loop with $($principalIds.Count) principals" -ForegroundColor Magenta
 
