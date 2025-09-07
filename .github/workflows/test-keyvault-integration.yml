@@ -1,4 +1,4 @@
-name: Key Vault Integration Testing
+name: 🔐 Key Vault Integration Testing
 
 on:
   workflow_dispatch:
