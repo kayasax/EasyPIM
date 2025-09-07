@@ -2,6 +2,7 @@
 
 | Date | Summary |
 |------|---------|
+| 2025-09-07 | **TAGS CREATED**: Published v2.0.19 (EasyPIM) and orchestrator-v1.3.4 (EasyPIM.Orchestrator) with principal validation |
 | 2025-09-07 | **PRINCIPAL VALIDATION FIX**: Implemented comprehensive regex-based GUID validation to prevent 400 Bad Request errors |
 | 2025-09-07 | Bumped EasyPIM to v2.0.19 and EasyPIM.Orchestrator to v1.3.4 with principal validation and business rules |
 | 2025-09-07 | **ROOT CAUSE RESOLVED**: Invalid principal IDs cause ARM API 400 Bad Request - now caught early with clear errors |
@@ -37,6 +38,11 @@ The GitHub Actions failures were caused by invalid principal IDs in approver con
 5. **Prevents 400 Bad Request** errors by catching configuration issues before ARM API calls
 
 **Technical Impact**: GitHub Actions CI/CD now fails fast with clear error messages instead of mysterious 400 Bad Request errors, making configuration issues immediately apparent and easily fixable.
+
+### 🚀 **PUBLISHED VERSIONS**
+- **EasyPIM v2.0.19**: Tagged and published to PowerShell Gallery
+- **EasyPIM.Orchestrator v1.3.4**: Tagged and published to PowerShell Gallery
+- **GitHub Actions**: Publishing workflows triggered automatically
 
 ## 📘 Current Work Status
 - ✅ **ARCHITECTURAL FIX**: Get-EasyPIMConfiguration moved to proper module location
