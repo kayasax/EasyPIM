@@ -2,6 +2,10 @@
 
 | Date | Summary |
 |------|---------|
+| 2025-09-07 | **PRINCIPAL VALIDATION FIX**: Implemented comprehensive regex-based GUID validation to prevent 400 Bad Request errors |
+| 2025-09-07 | Bumped EasyPIM to v2.0.19 and EasyPIM.Orchestrator to v1.3.4 with principal validation and business rules |
+| 2025-09-07 | **ROOT CAUSE RESOLVED**: Invalid principal IDs cause ARM API 400 Bad Request - now caught early with clear errors |
+| 2025-09-07 | Added business rules validation to strip MFA when Authentication Context enabled (policy conflicts) |
 | 2025-09-07 | **ARCHITECTURAL FIX**: Moved Get-EasyPIMConfiguration from core to orchestrator module where it belongs |
 | 2025-09-07 | Tagged and published EasyPIM v2.0.18 (architecture fix) and EasyPIM.Orchestrator v1.3.0 (enhanced config) |
 | 2025-09-07 | Enhanced Key Vault error handling now properly located in orchestrator module |
@@ -10,7 +14,29 @@
 | 2025-01-07 | Fixed JSON parsing error diagnostics for GitHub Actions troubleshooting |
 | 2025-01-07 | Removed duplicate Test-EasyPIMKeyVaultSecret from public functions folder |
 | 2025-01-07 | All tests passing (7061/7061) after function cleanup and error handling improvements |
-| 2025-01-07 | **NOTE**: OIDC for Azure Key Vault access configured for different repo - using local testing approach |on Starter
+| 2025-01-07 | **NOTE**: OIDC for Azure Key Vault access configured for different repo - using local testing approach |
+
+## 🚀 Latest Release: Principal Validation & Business Rules (v2.0.19 / v1.3.4)
+
+**Major Achievement**: Resolved root cause of 400 Bad Request errors in GitHub Actions CI/CD pipeline
+
+### Key Features Added:
+- ✅ **Comprehensive Principal Validation**: Regex-based GUID extraction validates ALL principals before ARM API calls
+- ✅ **Business Rules Engine**: Automatic MFA/Authentication Context conflict resolution 
+- ✅ **Early Error Detection**: Invalid principal IDs like `00000000-0000-0000-0000-000000000000` caught immediately
+- ✅ **Performance Optimized**: Uses HashSet for uniqueness, validates all principals in one efficient pass
+- ✅ **Scope-Aware**: Intelligently excludes subscription/management group GUIDs from principal validation
+- ✅ **Clear Error Messages**: Shows exactly which principal IDs are invalid with specific details
+
+### Root Cause Resolution:
+The GitHub Actions failures were caused by invalid principal IDs in approver configurations. The new validation:
+1. **Extracts ALL GUIDs** from configuration using regex pattern matching
+2. **Filters out scope GUIDs** (subscriptions, management groups) to focus on principals  
+3. **Validates principal existence** using Microsoft Graph API before any policy operations
+4. **Aborts early** with clear error messages when invalid principals detected
+5. **Prevents 400 Bad Request** errors by catching configuration issues before ARM API calls
+
+**Technical Impact**: GitHub Actions CI/CD now fails fast with clear error messages instead of mysterious 400 Bad Request errors, making configuration issues immediately apparent and easily fixable.
 
 ## 📘 Current Work Status
 - ✅ **ARCHITECTURAL FIX**: Get-EasyPIMConfiguration moved to proper module location

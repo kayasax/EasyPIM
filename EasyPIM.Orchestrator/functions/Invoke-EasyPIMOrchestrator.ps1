@@ -440,6 +440,17 @@ function Invoke-EasyPIMOrchestrator {
 			$processedConfig = $filteredConfig
 		}
 	# Always perform principal & group validation before any policy or assignment operations
+	# CRITICAL: We need to validate every principal ID in our configuration across ALL contexts:
+	# - Entra roles: approvers in policy templates and inline policy definitions
+	# - Azure roles: approvers in policy templates and inline policy definitions
+	# - Groups: approvers in policy templates and inline policy definitions
+	# - Assignments: principalId for role assignments (EntraRoles, AzureRoles, Groups)
+	# - Legacy assignments: PrincipalId and GroupId in legacy assignment formats
+	#
+	# Invalid principal IDs cause 400 Bad Request errors from ARM/Graph APIs when:
+	# - Creating approval rules with non-existent approver IDs
+	# - Creating assignments with non-existent principal/group IDs
+	# - Any policy or assignment operation referencing deleted/invalid principals
 		Write-Host -Object "🔍 [TEST] Validating principal and group IDs..." -ForegroundColor Cyan
 		$principalIds = New-Object -TypeName "System.Collections.Generic.HashSet[string]"
 		Write-Verbose ("[Orchestrator] TenantId in context before validation: {0}" -f ($TenantId))
@@ -537,6 +548,40 @@ function Invoke-EasyPIMOrchestrator {
 				Write-Verbose -Message ("[Orchestrator] Collected {0} approver references ({1} unique) from processedConfig.EntraRolePolicies" -f $approverRefsFound, $policyApproverRefs.Count)
 			}
 		}
+
+		# Add Azure role approver validation (missing from original logic)
+		# Simple regex approach: extract all GUIDs from config (excluding scopes) and validate them
+		Write-Host "🔍 [DEBUG] Starting GUID extraction validation..." -ForegroundColor Magenta
+		$configJson = $processedConfig | ConvertTo-Json -Depth 10
+		Write-Verbose -Message ("[DEBUG] Extracting GUIDs from configuration using regex...")
+		Write-Verbose -Message ("[DEBUG] Config JSON length: $($configJson.Length) characters")
+		
+		# Regex to find all GUIDs, but exclude those in scope paths
+		$guidPattern = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+		$allGuids = [System.Text.RegularExpressions.Regex]::Matches($configJson, $guidPattern) | ForEach-Object { $_.Value } | Sort-Object -Unique
+		Write-Verbose -Message ("[DEBUG] Found $($allGuids.Count) total GUIDs in configuration")
+		
+		# Filter out GUIDs that are in scope paths (subscriptions, management groups, etc.)
+		$principalGuids = @()
+		foreach ($guid in $allGuids) {
+			Write-Verbose -Message ("[DEBUG] Evaluating GUID: $guid")
+			# Skip if GUID appears in a scope context (subscription IDs, etc.)
+			if ($configJson -match "subscriptions.*$guid|managementGroups.*$guid|/providers/.*$guid") {
+				Write-Verbose -Message ("[DEBUG] Skipping scope GUID: $guid")
+				continue
+			}
+			$principalGuids += $guid
+			Write-Verbose -Message ("[DEBUG] Found potential principal GUID: $guid")
+		}
+		
+		# Add all found principal GUIDs to validation set
+		foreach ($guid in $principalGuids) {
+			[void]$principalIds.Add([string]$guid)
+		}
+		
+		Write-Verbose -Message ("[Orchestrator] Extracted {0} potential principal GUIDs for validation" -f $principalGuids.Count)
+		Write-Host "🔍 [DEBUG] About to start validation loop with $($principalIds.Count) principals" -ForegroundColor Magenta
+
 		$validationResults = @()
 		foreach ($principalIdIter in $principalIds) {
 			Write-Verbose ("[Debug] Checking principal: {0}" -f $principalIdIter)
