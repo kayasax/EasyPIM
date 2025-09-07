@@ -12,7 +12,7 @@ core-vX.Y.Z
 
 ### **EasyPIM Orchestrator Module Tags:**
 ```
-orchestrator-vX.Y.Z  
+orchestrator-vX.Y.Z
 ```
 **Examples:** `orchestrator-v1.3.4`, `orchestrator-v1.4.0`
 

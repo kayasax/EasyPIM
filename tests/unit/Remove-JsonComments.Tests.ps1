@@ -37,7 +37,7 @@ Describe "Remove-JsonComments Function Tests" {
             $json = @"
 {
     "test": "value",
-    /* This is a 
+    /* This is a
        multi-line
        block comment */
     "another": "value2"
