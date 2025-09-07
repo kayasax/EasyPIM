@@ -20,7 +20,10 @@ function Remove-JsonComments {
 	#>
 	[CmdletBinding()]
 	[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseSingularNouns", "", Justification="Function removes multiple types of comments")]
-	param([Parameter(Mandatory)][string]$Content)
+	param(
+		[Parameter(Mandatory, ValueFromPipeline)]
+		[string]$Content
+	)
 
 	# Remove block comments first
 	$noBlock = [regex]::Replace($Content, '(?s)/\*.*?\*/', '')
