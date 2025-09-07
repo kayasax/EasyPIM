@@ -58,6 +58,5 @@ Export-ModuleMember -Function @(
     'Approve-PIMGroupPendingApproval',
     'Deny-PIMGroupPendingApproval',
     'Copy-PIMAzureResourceEligibleAssignment',
-    'Copy-PIMEntraRoleEligibleAssignment',
-    'Get-EasyPIMConfiguration'
+    'Copy-PIMEntraRoleEligibleAssignment'
 ) -Alias @() -Variable @()

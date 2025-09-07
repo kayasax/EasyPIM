@@ -6,7 +6,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.0.17'
+ModuleVersion = '2.0.18'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -86,8 +86,7 @@ FunctionsToExport = @(
     'Approve-PIMGroupPendingApproval',
     'Deny-PIMGroupPendingApproval',
     'Copy-PIMAzureResourceEligibleAssignment',
-    'Copy-PIMEntraRoleEligibleAssignment',
-    'Get-EasyPIMConfiguration'
+    'Copy-PIMEntraRoleEligibleAssignment'
     # Note: Orchestration (EPO*) functions are owned by EasyPIM.Orchestrator
 )
 
