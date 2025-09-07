@@ -23,7 +23,6 @@ function Initialize-EasyPIMPolicies {
     try {
         # Validate configuration before processing
         Write-Verbose "🔍 Validating configuration for common issues..."
-        . "$PSScriptRoot\Test-EasyPIMConfigurationValidity.ps1"
         $validationResult = Test-EasyPIMConfigurationValidity -Config $Config -AutoCorrect
 
         if ($validationResult.HasIssues) {

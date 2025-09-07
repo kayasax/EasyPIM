@@ -188,20 +188,20 @@ function Invoke-EasyPIMOrchestrator {
 		# 1.5. Validate configuration for common issues
 		Write-Host "🔍 Validating configuration..." -ForegroundColor Cyan
 		$validationResult = Test-EasyPIMConfigurationValidity -Config $config -AutoCorrect
-		
+
 		if ($validationResult.HasIssues) {
 			Write-Host "⚠️ Configuration validation found issues:" -ForegroundColor Yellow
-			
+
 			$errorCount = ($validationResult.Issues | Where-Object { $_.Severity -eq 'Error' }).Count
 			$warningCount = ($validationResult.Issues | Where-Object { $_.Severity -eq 'Warning' }).Count
-			
+
 			if ($errorCount -gt 0) {
 				Write-Host "  ❌ Errors: $errorCount" -ForegroundColor Red
 			}
 			if ($warningCount -gt 0) {
 				Write-Host "  ⚠️ Warnings: $warningCount" -ForegroundColor Yellow
 			}
-			
+
 			# Show detailed issues
 			foreach ($issue in $validationResult.Issues | Sort-Object Severity -Descending) {
 				$icon = if ($issue.Severity -eq 'Error') { '❌' } else { '⚠️' }
@@ -209,7 +209,7 @@ function Invoke-EasyPIMOrchestrator {
 				Write-Host "    $($issue.Message)" -ForegroundColor Gray
 				Write-Host "    💡 $($issue.Suggestion)" -ForegroundColor Cyan
 			}
-			
+
 			if ($validationResult.Corrections.Count -gt 0) {
 				Write-Host "`n✅ Auto-corrections applied:" -ForegroundColor Green
 				foreach ($correction in $validationResult.Corrections) {
@@ -218,7 +218,7 @@ function Invoke-EasyPIMOrchestrator {
 				$config = $validationResult.CorrectedConfig
 				Write-Host "📝 Using auto-corrected configuration" -ForegroundColor Green
 			}
-			
+
 			# Stop if there are critical errors
 			if ($errorCount -gt 0) {
 				$errorMsg = "Configuration validation failed with $errorCount critical error(s). Please fix the configuration and try again."

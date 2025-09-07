@@ -105,7 +105,7 @@ try {
     $config = Get-EasyPIMConfiguration -KeyVaultName "MyVault" -SecretName "PIMConfig"
 } catch {
     Write-Warning "Key Vault access failed: $($_.Exception.Message)"
-    
+
     # Fallback to local file
     $config = Get-EasyPIMConfiguration -ConfigFilePath "backup-config.json"
 }
@@ -156,8 +156,8 @@ Write-Host "Valid JSON: $($content.Trim().StartsWith('{') -and $content.Trim().E
 ### Step 3: Analyze Version History
 ```powershell
 # Get recent versions
-Get-AzKeyVaultSecret -VaultName "MyVault" -Name "PIMConfig" -IncludeVersions | 
-    Sort-Object Created -Descending | 
+Get-AzKeyVaultSecret -VaultName "MyVault" -Name "PIMConfig" -IncludeVersions |
+    Sort-Object Created -Descending |
     Select-Object Version, Created, Updated -First 5
 ```
 

@@ -3,7 +3,7 @@ foreach ($file in Get-ChildItem -Path "$PSScriptRoot/internal/functions" -Filter
     . $file.FullName
 }
 
-# Load orchestrator's public functions  
+# Load orchestrator's public functions
 foreach ($file in Get-ChildItem -Path "$PSScriptRoot/functions" -Filter *.ps1 -Recurse -ErrorAction SilentlyContinue) {
     . $file.FullName
 }
