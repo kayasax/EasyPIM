@@ -57,18 +57,33 @@ jobs:
           Write-Host "Platform: $($PSVersionTable.Platform)" -ForegroundColor Yellow
           Write-Host "NOTE: Testing locally without Azure Key Vault (OIDC for different repo)" -ForegroundColor Cyan
 
-          # Import modules
+          # Import modules (with debugging)
           try {
+            Write-Host "🔍 Testing module import process..." -ForegroundColor Cyan
+            
+            # First, try to import just the core module
             if ('${{ runner.os }}' -eq 'Windows') {
-              Import-Module ".\EasyPIM\EasyPIM.psm1" -Force
-              Import-Module ".\EasyPIM.Orchestrator\EasyPIM.Orchestrator.psm1" -Force
+              Write-Host "Importing EasyPIM Core module..." -ForegroundColor Yellow
+              Import-Module ".\EasyPIM\EasyPIM.psm1" -Force -Verbose
+              Write-Host "✅ EasyPIM Core module imported successfully" -ForegroundColor Green
+              
+              Write-Host "Importing EasyPIM Orchestrator module..." -ForegroundColor Yellow
+              Import-Module ".\EasyPIM.Orchestrator\EasyPIM.Orchestrator.psm1" -Force -Verbose
+              Write-Host "✅ EasyPIM Orchestrator module imported successfully" -ForegroundColor Green
             } else {
-              Import-Module "./EasyPIM/EasyPIM.psm1" -Force
-              Import-Module "./EasyPIM.Orchestrator/EasyPIM.Orchestrator.psm1" -Force
+              Write-Host "Importing EasyPIM Core module..." -ForegroundColor Yellow
+              Import-Module "./EasyPIM/EasyPIM.psm1" -Force -Verbose
+              Write-Host "✅ EasyPIM Core module imported successfully" -ForegroundColor Green
+              
+              Write-Host "Importing EasyPIM Orchestrator module..." -ForegroundColor Yellow
+              Import-Module "./EasyPIM.Orchestrator/EasyPIM.Orchestrator.psm1" -Force -Verbose
+              Write-Host "✅ EasyPIM Orchestrator module imported successfully" -ForegroundColor Green
             }
-            Write-Host "✅ Modules imported successfully" -ForegroundColor Green
+            Write-Host "✅ All modules imported successfully" -ForegroundColor Green
           } catch {
             Write-Host "❌ Module import failed: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "💡 Full error details:" -ForegroundColor Yellow
+            Write-Host $_.Exception.ToString() -ForegroundColor Red
             exit 1
           }
 
@@ -140,13 +155,23 @@ jobs:
           Write-Host "PSVersion: $($PSVersionTable.PSVersion)" -ForegroundColor Yellow
           Write-Host "NOTE: Testing locally without Azure Key Vault (OIDC for different repo)" -ForegroundColor Cyan
 
-          # Import modules
+          # Import modules (with debugging)
           try {
-            Import-Module ".\EasyPIM\EasyPIM.psm1" -Force
-            Import-Module ".\EasyPIM.Orchestrator\EasyPIM.Orchestrator.psm1" -Force
-            Write-Host "✅ Modules imported successfully" -ForegroundColor Green
+            Write-Host "🔍 Testing module import process in PowerShell 5.x..." -ForegroundColor Cyan
+            
+            Write-Host "Importing EasyPIM Core module..." -ForegroundColor Yellow
+            Import-Module ".\EasyPIM\EasyPIM.psm1" -Force -Verbose
+            Write-Host "✅ EasyPIM Core module imported successfully" -ForegroundColor Green
+            
+            Write-Host "Importing EasyPIM Orchestrator module..." -ForegroundColor Yellow
+            Import-Module ".\EasyPIM.Orchestrator\EasyPIM.Orchestrator.psm1" -Force -Verbose
+            Write-Host "✅ EasyPIM Orchestrator module imported successfully" -ForegroundColor Green
+            
+            Write-Host "✅ All modules imported successfully" -ForegroundColor Green
           } catch {
             Write-Host "❌ Module import failed: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "💡 Full error details:" -ForegroundColor Yellow
+            Write-Host $_.Exception.ToString() -ForegroundColor Red
             exit 1
           }
 
