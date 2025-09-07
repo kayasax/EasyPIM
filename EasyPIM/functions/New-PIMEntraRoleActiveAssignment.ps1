@@ -244,12 +244,12 @@ function New-PIMEntraRoleActiveAssignment {
             Write-Verbose "TicketingRule detected - adding ticketInfo to request"
             $mgContext = Get-MgContext
             # PowerShell 5.x compatible null handling
-            $authIdentifier = if ($mgContext.Account) { 
-                $mgContext.Account 
-            } elseif ($mgContext.ClientId) { 
-                $mgContext.ClientId 
-            } else { 
-                "Service Principal" 
+            $authIdentifier = if ($mgContext.Account) {
+                $mgContext.Account
+            } elseif ($mgContext.ClientId) {
+                $mgContext.ClientId
+            } else {
+                "Service Principal"
             }
             $requestBody.ticketInfo = @{
                 ticketNumber = "EasyPIM-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
