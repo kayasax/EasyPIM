@@ -23,7 +23,7 @@ function Initialize-EasyPIMPolicies {
     try {
         # Simplified validation - skip complex validation for now
         Write-Verbose "� Processing configuration..."
-        
+
         $processedConfig = @{}
 
         # Initialize policy templates - merge parameter and config templates

@@ -111,18 +111,18 @@ function Test-PIMPolicyDrift {
 			throw
 		}
 	} elseif ($ConfigPath) {
-		try { 
-			$ConfigPath = (Resolve-Path -Path $ConfigPath -ErrorAction Stop).Path 
+		try {
+			$ConfigPath = (Resolve-Path -Path $ConfigPath -ErrorAction Stop).Path
 			# Use enhanced file loading too
 			$json = Get-EasyPIMConfiguration -ConfigFilePath $ConfigPath
 			$configRaw = Get-Content -Raw -Path $ConfigPath # For logging purposes
-		} catch { 
-			throw "Failed to load config file: $($_.Exception.Message)" 
+		} catch {
+			throw "Failed to load config file: $($_.Exception.Message)"
 		}
 	} else {
 		throw "You must specify either -ConfigPath or both -KeyVaultName and -SecretName."
 	}
-		if (-not $json) { throw "Parsed JSON object is null - invalid configuration." }
+	if (-not $json) { throw "Parsed JSON object is null - invalid configuration." }
 
 	# Initialize collections for expected policies
 	$expectedAzure = @()
