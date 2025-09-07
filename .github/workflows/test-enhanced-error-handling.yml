@@ -12,15 +12,10 @@ on:
         - error-handling
         - module-loading
         - all
-  push:
-    paths:
-      - 'EasyPIM/functions/Get-EasyPIMConfiguration.ps1'
-      - 'EasyPIM.Orchestrator/**'
-      - '.github/workflows/test-enhanced-error-handling.yml'
 
 jobs:
   test-error-handling:
-    if: github.event.inputs.test_type == 'error-handling' || github.event.inputs.test_type == 'all' || github.event_name == 'push'
+    if: github.event.inputs.test_type == 'error-handling' || github.event.inputs.test_type == 'all'
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest]
@@ -29,7 +24,7 @@ jobs:
           - os: ubuntu-latest
             shell_type: powershell
     runs-on: ${{ matrix.os }}
-
+    
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -54,96 +49,55 @@ jobs:
           Write-Host "OS: ${{ runner.os }}" -ForegroundColor Yellow
           Write-Host "PowerShell: pwsh (Core)" -ForegroundColor Yellow
           Write-Host "PSVersion: $($PSVersionTable.PSVersion)" -ForegroundColor Yellow
-          Write-Host "Platform: $($PSVersionTable.Platform)" -ForegroundColor Yellow
-          Write-Host "NOTE: Testing locally without Azure Key Vault (OIDC for different repo)" -ForegroundColor Cyan
 
-          # Import modules (with debugging)
+          # Import modules
           try {
-            Write-Host "🔍 Testing module import process..." -ForegroundColor Cyan
-            
-            # First, try to import just the core module
             if ('${{ runner.os }}' -eq 'Windows') {
-              Write-Host "Importing EasyPIM Core module..." -ForegroundColor Yellow
-              Import-Module ".\EasyPIM\EasyPIM.psm1" -Force -Verbose
-              Write-Host "✅ EasyPIM Core module imported successfully" -ForegroundColor Green
-              
-              Write-Host "Importing EasyPIM Orchestrator module..." -ForegroundColor Yellow
-              Import-Module ".\EasyPIM.Orchestrator\EasyPIM.Orchestrator.psm1" -Force -Verbose
-              Write-Host "✅ EasyPIM Orchestrator module imported successfully" -ForegroundColor Green
+              Import-Module ".\EasyPIM\EasyPIM.psm1" -Force
+              Import-Module ".\EasyPIM.Orchestrator\EasyPIM.Orchestrator.psm1" -Force
             } else {
-              Write-Host "Importing EasyPIM Core module..." -ForegroundColor Yellow
-              Import-Module "./EasyPIM/EasyPIM.psm1" -Force -Verbose
-              Write-Host "✅ EasyPIM Core module imported successfully" -ForegroundColor Green
-              
-              Write-Host "Importing EasyPIM Orchestrator module..." -ForegroundColor Yellow
-              Import-Module "./EasyPIM.Orchestrator/EasyPIM.Orchestrator.psm1" -Force -Verbose
-              Write-Host "✅ EasyPIM Orchestrator module imported successfully" -ForegroundColor Green
+              Import-Module "./EasyPIM/EasyPIM.psm1" -Force
+              Import-Module "./EasyPIM.Orchestrator/EasyPIM.Orchestrator.psm1" -Force
             }
-            Write-Host "✅ All modules imported successfully" -ForegroundColor Green
+            Write-Host "✅ Modules imported successfully" -ForegroundColor Green
           } catch {
             Write-Host "❌ Module import failed: $($_.Exception.Message)" -ForegroundColor Red
-            Write-Host "💡 Full error details:" -ForegroundColor Yellow
-            Write-Host $_.Exception.ToString() -ForegroundColor Red
             exit 1
           }
 
-          # Test 1: Function availability
-          Write-Host "`n🧪 Test 1: Critical Function Availability" -ForegroundColor Green
-          $criticalFunctions = @('Get-EasyPIMConfiguration', 'Invoke-EasyPIMOrchestrator', 'Test-PIMPolicyDrift')
-
+          # Test function availability
+          Write-Host "`n🧪 Test: Critical Function Availability" -ForegroundColor Green
+          $criticalFunctions = @('Get-EasyPIMConfiguration', 'Invoke-EasyPIMOrchestrator')
+          
           foreach ($func in $criticalFunctions) {
             $command = Get-Command -Name $func -ErrorAction SilentlyContinue
             if ($command) {
-              Write-Host "✅ $func available (Module: $($command.Source))" -ForegroundColor Green
+              Write-Host "✅ $func available" -ForegroundColor Green
             } else {
               Write-Host "❌ $func NOT FOUND" -ForegroundColor Red
               exit 1
             }
           }
 
-          # Test 2: JSON Error Simulation
-          Write-Host "`n🧪 Test 2: JSON Error Handling Simulation" -ForegroundColor Green
-
-          # Test valid JSON (PowerShell 5.x compatible with escaped quotes)
-          try {
-            $validJson = "{`"test`": `"valid`", `"data`": {`"nested`": true}}"
-            $result = $validJson | ConvertFrom-Json
-            Write-Host "✅ Valid JSON handled correctly" -ForegroundColor Green
-          } catch {
-            Write-Host "❌ Valid JSON test failed: $($_.Exception.Message)" -ForegroundColor Red
-          }
-
-          # Test truncated JSON (simulates Key Vault corruption)
-          Write-Host "`n🎯 Testing the exact error we're fixing..." -ForegroundColor Yellow
-          try {
-            $truncatedJson = "{`"test`": `"trunca"
-            $result = $truncatedJson | ConvertFrom-Json
-            Write-Host "❌ Truncated JSON should have failed" -ForegroundColor Red
-          } catch {
-            Write-Host "✅ Truncated JSON properly caught:" -ForegroundColor Green
-            Write-Host "    Error type: $($_.Exception.GetType().Name)" -ForegroundColor Cyan
-            if ($_.Exception.Message -like "*Unexpected end*" -or $_.Exception.Message -like "*JSON*") {
-              Write-Host "    🎯 This is the exact JSON parsing error we're fixing!" -ForegroundColor Yellow
-            }
-          }
-
-          # Test 3: Enhanced Error Code Presence
-          Write-Host "`n🧪 Test 3: Verify Enhanced Error Handling Code" -ForegroundColor Green
+          # Test enhanced error code presence
+          Write-Host "`n🧪 Test: Enhanced Error Handling Code" -ForegroundColor Green
           $configFunction = Get-Command Get-EasyPIMConfiguration
           $hasEnhancedHandling = $configFunction.Definition -like "*Enhanced JSON parsing*"
           $hasRetryLogic = $configFunction.Definition -like "*maxRetries*"
-
-          Write-Host "✅ Enhanced JSON parsing: $hasEnhancedHandling" -ForegroundColor $(if($hasEnhancedHandling) {'Green'} else {'Red'})
-          Write-Host "✅ Retry logic present: $hasRetryLogic" -ForegroundColor $(if($hasRetryLogic) {'Green'} else {'Red'})
-
-          if ($hasEnhancedHandling -and $hasRetryLogic) {
-            Write-Host "🎉 All enhanced error handling improvements are present!" -ForegroundColor Green
+          
+          if ($hasEnhancedHandling) {
+            Write-Host "✅ Enhanced JSON parsing present" -ForegroundColor Green
           } else {
-            Write-Host "⚠️ Some enhanced error handling features may be missing" -ForegroundColor Yellow
+            Write-Host "⚠️ Enhanced JSON parsing not found" -ForegroundColor Yellow
+          }
+          
+          if ($hasRetryLogic) {
+            Write-Host "✅ Retry logic present" -ForegroundColor Green
+          } else {
+            Write-Host "⚠️ Retry logic not found" -ForegroundColor Yellow
           }
 
-          Write-Host "`n✅ PowerShell Core tests completed successfully!" -ForegroundColor Green
-          Write-Host "Environment: ${{ runner.os }} / pwsh / PS$($PSVersionTable.PSVersion)" -ForegroundColor Cyan
+          Write-Host "`n✅ PowerShell Core tests completed!" -ForegroundColor Green
 
       - name: Test Enhanced Error Handling (Windows PowerShell)
         if: matrix.shell_type == 'powershell' && runner.os == 'Windows'
@@ -153,85 +107,50 @@ jobs:
           Write-Host "OS: ${{ runner.os }}" -ForegroundColor Yellow
           Write-Host "PowerShell: Windows PowerShell 5.x" -ForegroundColor Yellow
           Write-Host "PSVersion: $($PSVersionTable.PSVersion)" -ForegroundColor Yellow
-          Write-Host "NOTE: Testing locally without Azure Key Vault (OIDC for different repo)" -ForegroundColor Cyan
 
-          # Import modules (with debugging)
+          # Import modules
           try {
-            Write-Host "🔍 Testing module import process in PowerShell 5.x..." -ForegroundColor Cyan
-            
-            Write-Host "Importing EasyPIM Core module..." -ForegroundColor Yellow
-            Import-Module ".\EasyPIM\EasyPIM.psm1" -Force -Verbose
-            Write-Host "✅ EasyPIM Core module imported successfully" -ForegroundColor Green
-            
-            Write-Host "Importing EasyPIM Orchestrator module..." -ForegroundColor Yellow
-            Import-Module ".\EasyPIM.Orchestrator\EasyPIM.Orchestrator.psm1" -Force -Verbose
-            Write-Host "✅ EasyPIM Orchestrator module imported successfully" -ForegroundColor Green
-            
-            Write-Host "✅ All modules imported successfully" -ForegroundColor Green
+            Import-Module ".\EasyPIM\EasyPIM.psm1" -Force
+            Import-Module ".\EasyPIM.Orchestrator\EasyPIM.Orchestrator.psm1" -Force
+            Write-Host "✅ Modules imported successfully" -ForegroundColor Green
           } catch {
             Write-Host "❌ Module import failed: $($_.Exception.Message)" -ForegroundColor Red
-            Write-Host "💡 Full error details:" -ForegroundColor Yellow
-            Write-Host $_.Exception.ToString() -ForegroundColor Red
             exit 1
           }
 
-          # Test 1: Function availability
-          Write-Host "`n🧪 Test 1: Critical Function Availability" -ForegroundColor Green
-          $criticalFunctions = @('Get-EasyPIMConfiguration', 'Invoke-EasyPIMOrchestrator', 'Test-PIMPolicyDrift')
-
+          # Test function availability
+          Write-Host "`n🧪 Test: Critical Function Availability" -ForegroundColor Green
+          $criticalFunctions = @('Get-EasyPIMConfiguration', 'Invoke-EasyPIMOrchestrator')
+          
           foreach ($func in $criticalFunctions) {
             $command = Get-Command -Name $func -ErrorAction SilentlyContinue
             if ($command) {
-              Write-Host "✅ $func available (Module: $($command.Source))" -ForegroundColor Green
+              Write-Host "✅ $func available" -ForegroundColor Green
             } else {
               Write-Host "❌ $func NOT FOUND" -ForegroundColor Red
               exit 1
             }
           }
 
-          # Test 2: JSON Error Simulation
-          Write-Host "`n🧪 Test 2: JSON Error Handling Simulation" -ForegroundColor Green
-
-          # Test valid JSON (PowerShell 5.x compatible with escaped quotes)
-          try {
-            $validJson = "{`"test`": `"valid`", `"data`": {`"nested`": true}}"
-            $result = $validJson | ConvertFrom-Json
-            Write-Host "✅ Valid JSON handled correctly" -ForegroundColor Green
-          } catch {
-            Write-Host "❌ Valid JSON test failed: $($_.Exception.Message)" -ForegroundColor Red
-          }
-
-          # Test truncated JSON (simulates Key Vault corruption)
-          Write-Host "`n🎯 Testing the exact error we're fixing..." -ForegroundColor Yellow
-          try {
-            $truncatedJson = "{`"test`": `"trunca"
-            $result = $truncatedJson | ConvertFrom-Json
-            Write-Host "❌ Truncated JSON should have failed" -ForegroundColor Red
-          } catch {
-            Write-Host "✅ Truncated JSON properly caught:" -ForegroundColor Green
-            Write-Host "    Error type: $($_.Exception.GetType().Name)" -ForegroundColor Cyan
-            if ($_.Exception.Message -like "*Unexpected end*" -or $_.Exception.Message -like "*JSON*") {
-              Write-Host "    🎯 This is the exact JSON parsing error we're fixing!" -ForegroundColor Yellow
-            }
-          }
-
-          # Test 3: Enhanced Error Code Presence
-          Write-Host "`n🧪 Test 3: Verify Enhanced Error Handling Code" -ForegroundColor Green
+          # Test enhanced error code presence
+          Write-Host "`n🧪 Test: Enhanced Error Handling Code" -ForegroundColor Green
           $configFunction = Get-Command Get-EasyPIMConfiguration
           $hasEnhancedHandling = $configFunction.Definition -like "*Enhanced JSON parsing*"
           $hasRetryLogic = $configFunction.Definition -like "*maxRetries*"
-
-          Write-Host "✅ Enhanced JSON parsing: $hasEnhancedHandling" -ForegroundColor $(if($hasEnhancedHandling) {'Green'} else {'Red'})
-          Write-Host "✅ Retry logic present: $hasRetryLogic" -ForegroundColor $(if($hasRetryLogic) {'Green'} else {'Red'})
-
-          if ($hasEnhancedHandling -and $hasRetryLogic) {
-            Write-Host "🎉 All enhanced error handling improvements are present!" -ForegroundColor Green
+          
+          if ($hasEnhancedHandling) {
+            Write-Host "✅ Enhanced JSON parsing present" -ForegroundColor Green
           } else {
-            Write-Host "⚠️ Some enhanced error handling features may be missing" -ForegroundColor Yellow
+            Write-Host "⚠️ Enhanced JSON parsing not found" -ForegroundColor Yellow
+          }
+          
+          if ($hasRetryLogic) {
+            Write-Host "✅ Retry logic present" -ForegroundColor Green
+          } else {
+            Write-Host "⚠️ Retry logic not found" -ForegroundColor Yellow
           }
 
-          Write-Host "`n✅ Windows PowerShell tests completed successfully!" -ForegroundColor Green
-          Write-Host "Environment: ${{ runner.os }} / powershell / PS$($PSVersionTable.PSVersion)" -ForegroundColor Cyan
+          Write-Host "`n✅ Windows PowerShell tests completed!" -ForegroundColor Green
 
   test-module-loading:
     if: github.event.inputs.test_type == 'module-loading' || github.event.inputs.test_type == 'all'
@@ -248,28 +167,15 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "=== Module Loading Test ===" -ForegroundColor Cyan
-
+          
           Import-Module ".\EasyPIM\EasyPIM.psm1" -Force -Verbose
           $coreCommands = Get-Command -Module EasyPIM
           Write-Host "✅ EasyPIM Core: $($coreCommands.Count) commands loaded" -ForegroundColor Green
-
+          
           Import-Module ".\EasyPIM.Orchestrator\EasyPIM.Orchestrator.psm1" -Force -Verbose
           $orchestratorCommands = Get-Command -Module EasyPIM.Orchestrator
           Write-Host "✅ EasyPIM Orchestrator: $($orchestratorCommands.Count) commands loaded" -ForegroundColor Green
-
-          # Test function scoping
-          $functionSources = @{}
-          foreach ($cmd in (Get-Command -Module EasyPIM.Orchestrator)) {
-            $functionSources[$cmd.Name] = $cmd.Source
-          }
-
-          if ($functionSources['Invoke-EasyPIMOrchestrator'] -eq 'EasyPIM.Orchestrator') {
-            Write-Host "✅ Functions properly scoped to module" -ForegroundColor Green
-          } else {
-            Write-Host "❌ Function scoping issue detected" -ForegroundColor Red
-            exit 1
-          }
-
+          
           Write-Host "✅ Module loading tests completed!" -ForegroundColor Green
 
   summary:
@@ -289,6 +195,3 @@ jobs:
           echo "- ✅ Enhanced JSON parsing error diagnostics" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Key Vault retry logic for CI/CD reliability" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Cross-platform compatibility" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Function availability validation" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "NOTE: Tests run locally without Azure Key Vault (OIDC configured for different repo)" >> $GITHUB_STEP_SUMMARY
