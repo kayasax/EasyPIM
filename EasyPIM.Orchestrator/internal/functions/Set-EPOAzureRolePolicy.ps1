@@ -97,7 +97,31 @@ function Set-EPOAzureRolePolicy {
     if ($resolved.PSObject.Properties['AuthenticationContext_Enabled']) { $params.AuthenticationContext_Enabled = $resolved.AuthenticationContext_Enabled }
     if ($resolved.PSObject.Properties['AuthenticationContext_Value']) { $params.AuthenticationContext_Value = $resolved.AuthenticationContext_Value }
     if ($resolved.PSObject.Properties['ApprovalRequired']) { $params.ApprovalRequired = $resolved.ApprovalRequired }
-    if ($resolved.PSObject.Properties['Approvers']) { $params.Approvers = $resolved.Approvers }
+    if ($resolved.PSObject.Properties['Approvers']) {
+        # Convert approver format from config {id, description} to Set-PIMAzureResourcePolicy {Id, Name}
+        $convertedApprovers = @()
+        foreach ($approver in $resolved.Approvers) {
+            if ($approver -is [string]) {
+                # Simple string ID - convert to hashtable
+                $convertedApprovers += @{ Id = $approver; Name = $approver; Type = "user" }
+            } else {
+                # Object format - map properties correctly
+                $convertedApprover = @{}
+                if ($approver.PSObject.Properties['id']) { $convertedApprover.Id = $approver.id }
+                elseif ($approver.PSObject.Properties['Id']) { $convertedApprover.Id = $approver.Id }
+                
+                if ($approver.PSObject.Properties['description']) { $convertedApprover.Name = $approver.description }
+                elseif ($approver.PSObject.Properties['Name']) { $convertedApprover.Name = $approver.Name }
+                else { $convertedApprover.Name = $convertedApprover.Id }
+                
+                if ($approver.PSObject.Properties['Type']) { $convertedApprover.Type = $approver.Type }
+                else { $convertedApprover.Type = "user" }
+                
+                $convertedApprovers += $convertedApprover
+            }
+        }
+        $params.Approvers = $convertedApprovers
+    }
     if ($resolved.PSObject.Properties['MaximumEligibilityDuration'] -and $resolved.MaximumEligibilityDuration) { $params.MaximumEligibilityDuration = $resolved.MaximumEligibilityDuration }
     if ($resolved.PSObject.Properties['AllowPermanentEligibility']) { $params.AllowPermanentEligibility = $resolved.AllowPermanentEligibility }
     # PT0S prevention: Only set MaximumActiveAssignmentDuration if it has a non-empty value to prevent PT0S conversion
