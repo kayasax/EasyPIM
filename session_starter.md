@@ -2,7 +2,7 @@
 
 | Date | Summary |
 |------|---------|
-| 2025-09-07 | **TAGS CREATED**: Published v2.0.19 (EasyPIM) and orchestrator-v1.3.4 (EasyPIM.Orchestrator) with principal validation |
+| 2025-09-07 | **TAGS CORRECTED**: Fixed to core-v2.0.19 (EasyPIM) and orchestrator-v1.3.4 (EasyPIM.Orchestrator) - CORRECT FORMAT! |
 | 2025-09-07 | **PRINCIPAL VALIDATION FIX**: Implemented comprehensive regex-based GUID validation to prevent 400 Bad Request errors |
 | 2025-09-07 | Bumped EasyPIM to v2.0.19 and EasyPIM.Orchestrator to v1.3.4 with principal validation and business rules |
 | 2025-09-07 | **ROOT CAUSE RESOLVED**: Invalid principal IDs cause ARM API 400 Bad Request - now caught early with clear errors |
@@ -40,9 +40,32 @@ The GitHub Actions failures were caused by invalid principal IDs in approver con
 **Technical Impact**: GitHub Actions CI/CD now fails fast with clear error messages instead of mysterious 400 Bad Request errors, making configuration issues immediately apparent and easily fixable.
 
 ### 🚀 **PUBLISHED VERSIONS**
-- **EasyPIM v2.0.19**: Tagged and published to PowerShell Gallery
-- **EasyPIM.Orchestrator v1.3.4**: Tagged and published to PowerShell Gallery
+- **EasyPIM Core v2.0.19**: Tagged as `core-v2.0.19` and published to PowerShell Gallery
+- **EasyPIM.Orchestrator v1.3.4**: Tagged as `orchestrator-v1.3.4` and published to PowerShell Gallery
 - **GitHub Actions**: Publishing workflows triggered automatically
+
+## 🚨 **CRITICAL TAG FORMAT REQUIREMENTS** 🚨
+
+# ⚠️ **DO NOT FORGET TAG FORMATS!!!** ⚠️
+
+### **EasyPIM Core Module Tags:**
+```
+core-vX.Y.Z
+```
+**Examples:** `core-v2.0.19`, `core-v2.1.0`
+
+### **EasyPIM Orchestrator Module Tags:**
+```
+orchestrator-vX.Y.Z  
+```
+**Examples:** `orchestrator-v1.3.4`, `orchestrator-v1.4.0`
+
+### **GitHub Actions Triggers:**
+- **core-v*** triggers `build-core-tag.yml` workflow
+- **orchestrator-v*** triggers `build-orchestrator.yml` workflow
+- **v*** (without prefix) triggers `build.yml` but is DEPRECATED - use core-v instead!
+
+## ⚠️ **NEVER USE PLAIN v* TAGS FOR CORE MODULE!** ⚠️
 
 ## 📘 Current Work Status
 - ✅ **ARCHITECTURAL FIX**: Get-EasyPIMConfiguration moved to proper module location
