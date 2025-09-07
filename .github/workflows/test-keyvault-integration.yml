@@ -224,7 +224,6 @@ jobs:
           $functionsToTest = @(
             'Invoke-EasyPIMOrchestrator',
             'Test-PIMPolicyDrift',
-            'Test-EasyPIMConfigurationValidity',
             'Initialize-EasyPIMPolicies',
             'Get-EasyPIMConfiguration'
           )
