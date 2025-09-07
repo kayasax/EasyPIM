@@ -29,12 +29,23 @@ orchestrator-vX.Y.Z
 
 ### **Current State (2025-09-07)**
 - **EasyPIM Core**: v2.0.19 (tagged as `core-v2.0.19`)
-- **EasyPIM.Orchestrator**: v1.3.4 (tagged as `orchestrator-v1.3.4`)
-- **Branch**: `main` (feature branch was merged)
-- **Major Feature**: Comprehensive principal validation to prevent 400 Bad Request errors
+- **EasyPIM.Orchestrator**: v1.3.5 (tagged as `orchestrator-v1.3.5`) 🔥 CRITICAL FIX
+- **Branch**: `hotfix/critical-approver-format-fix` (fixing 400 Bad Request)
+- **Major Bug Found**: Approver format conversion issue causing ARM API failures
+
+### **🔥 CRITICAL BUG DISCOVERED & FIXED**
+**Root Cause**: The orchestrator was passing approver objects in config format `{id, description}` but `Set-PIMAzureResourcePolicy` expects ARM API format `{Id, Name, Type}`. This caused 400 Bad Request errors whenever approval was required.
+
+**Solution**: Added proper format conversion in `Set-EPOAzureRolePolicy.ps1` to map:
+- `id` → `Id`
+- `description` → `Name`
+- Added `Type='user'` default
+
+**Impact**: Fixes all GitHub Actions failures for approval policies (Contributor role, etc.)
 
 ### **Key Technical Achievements**
-- ✅ **Root Cause Resolved**: Invalid principal IDs causing ARM API 400 Bad Request errors
+- ✅ **Critical Bug Fixed**: Approver format conversion preventing ARM API 400 errors
+- ✅ **Root Cause Identified**: Config {id, description} vs ARM API {Id, Name, Type} mismatch
 - ✅ **Regex-based GUID Validation**: Extracts and validates ALL principals before API calls
 - ✅ **Business Rules Engine**: Handles MFA/Authentication Context conflicts automatically
 - ✅ **Early Error Detection**: Clear messages instead of mysterious API failures
