@@ -16,7 +16,8 @@
       "Approvers": [
         {
           "id": "2ab3f204-9c6f-409d-a9bd-6e302a0132db",
-          "description": "IAM_approvers"
+          "description": "IAM_approvers",
+          "type": "Group"
         }
       ],
       "AuthenticationContext_Enabled": true,
