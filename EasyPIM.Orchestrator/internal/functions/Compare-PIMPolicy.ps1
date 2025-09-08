@@ -1,3 +1,42 @@
+function ConvertTo-BooleanString {
+	<#
+	.SYNOPSIS
+	Normalizes various boolean representations to consistent string format.
+
+	.DESCRIPTION
+	Converts different boolean representations (true, "true", "True", 1, "false", false, 0, etc.)
+	to a consistent lowercase string format for comparison purposes.
+
+	.PARAMETER Value
+	The value to normalize.
+
+	.OUTPUTS
+	String. Returns "true" or "false" as normalized string.
+	#>
+	param([object]$Value)
+
+	if ($null -eq $Value -or $Value -eq '' -or $Value -eq 'None') {
+		return 'false'
+	}
+
+	# Handle boolean types
+	if ($Value -is [bool]) {
+		return $Value.ToString().ToLower()
+	}
+
+	# Handle string representations
+	$stringValue = "$Value".ToLower().Trim()
+	if ($stringValue -in @('true', '1', 'yes', 'on', 'enabled')) {
+		return 'true'
+	}
+	if ($stringValue -in @('false', '0', 'no', 'off', 'disabled')) {
+		return 'false'
+	}
+
+	# Default fallback
+	return 'false'
+}
+
 function Compare-PIMPolicy {
 	<#
 	.SYNOPSIS
@@ -138,8 +177,17 @@ function Compare-PIMPolicy {
 				}
 			}
 			else {
-				# Standard field comparison
-				if ("$expectedValue" -ne "$liveValue") {
+				# Standard field comparison with boolean normalization
+				$normalizedExpected = $expectedValue
+				$normalizedLive = $liveValue
+
+				# Handle boolean fields that might have different representations
+				if ($field -in @('AllowPermanentEligibility', 'AllowPermanentActiveAssignment', 'ApprovalRequired')) {
+					$normalizedExpected = ConvertTo-BooleanString -Value $expectedValue
+					$normalizedLive = ConvertTo-BooleanString -Value $liveValue
+				}
+
+				if ($normalizedExpected -ne $normalizedLive) {
 					$differences += ("{0}: expected='{1}' actual='{2}'" -f $field, $expectedValue, $liveValue)
 				}
 			}

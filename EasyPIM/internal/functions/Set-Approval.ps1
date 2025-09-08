@@ -2,7 +2,13 @@
     .Synopsis
     Define if approval is required to activate a role, and who are the approvers
     .Description
-    rule 4 in https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview#activation-rules
+    r            $rule += '
+            {
+                "id": "'+ $id + '",
+                "userType": "'+ $type.ToLower() + '",
+                "description": "'+ $name + '",
+                "isBackup": false
+            }'n https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview#activation-rules
     .Parameter ApprovalRequired
     Do we need an approval to activate a role?
     .Parameter Approvers
@@ -70,34 +76,55 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
             $name = $_.Name
             $type = $_.Type
             if (-not $type) { $type = $_.type }
-            if (-not $type) {
-                # Auto-detect object type by querying Azure AD
-                Write-Verbose "No type specified for approver $id, attempting automatic detection"
+
+            # Auto-detect/validate object type by querying Azure AD (only if we have a valid ID)
+            if ($id) {
+                Write-Verbose "Validating/detecting object type for approver $id (configured type: $type)"
+
+                # Check if Microsoft Graph is connected before attempting auto-detection
                 try {
-                    # Try as user first using Invoke-MgGraphRequest
-                    $userResult = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/users/$id" -Method GET -ErrorAction Stop
-                    if ($userResult -and $userResult.id) {
-                        $type = "User"
-                        Write-Verbose "Auto-detected object type: User for approver $id (displayName: $($userResult.displayName))"
+                    $graphContext = Get-MgContext -ErrorAction Stop
+                    if (-not $graphContext) {
+                        Write-Warning "Microsoft Graph not connected. Cannot auto-detect approver type for $id. Defaulting to User."
+                        if (-not $type) { $type = "User" }
                     }
                 }
                 catch {
-                    Write-Verbose "Object $id is not a User, checking if it's a Group"
+                    Write-Warning "Microsoft Graph context unavailable. Cannot auto-detect approver type for $id. Defaulting to User."
+                    if (-not $type) { $type = "User" }
+                }
+
+                # Only attempt auto-detection if Graph is available and no type is specified
+                if ($graphContext -and -not $type) {
                     try {
-                        # Try as group using Invoke-MgGraphRequest
-                        $groupResult = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/groups/$id" -Method GET -ErrorAction Stop
-                        if ($groupResult -and $groupResult.id) {
-                            $type = "Group"
-                            Write-Verbose "Auto-detected object type: Group for approver $id (displayName: $($groupResult.displayName))"
+                        # Try as user first using Invoke-MgGraphRequest
+                        $userResult = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/users/$id" -Method GET -ErrorAction Stop
+                        if ($userResult -and $userResult.id) {
+                            $type = "User"
+                            Write-Verbose "Auto-detected object type: User for approver $id (displayName: $($userResult.displayName))"
                         }
                     }
                     catch {
-                        $type = "User"  # Fallback to User if detection fails
-                        Write-Warning "Could not auto-detect type for approver $id, defaulting to User. Ensure the ID exists and you have appropriate Graph permissions."
+                        Write-Verbose "Object $id is not a User, checking if it's a Group"
+                        try {
+                            # Try as group using Invoke-MgGraphRequest
+                            $groupResult = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/groups/$id" -Method GET -ErrorAction Stop
+                            if ($groupResult -and $groupResult.id) {
+                                $type = "Group"
+                                Write-Verbose "Auto-detected object type: Group for approver $id (displayName: $($groupResult.displayName))"
+                            }
+                        }
+                        catch {
+                            $type = "User"  # Fallback to User if detection fails
+                            Write-Warning "Could not auto-detect type for approver $id, defaulting to User. Ensure the ID exists and you have appropriate Graph permissions."
+                        }
                     }
                 }
+
+                # Ensure we have a type set
+                if (-not $type) { $type = "User" }
             }
-            
+
             if ($cpt -gt 0) {
                 $rule += ","
             }
