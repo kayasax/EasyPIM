@@ -6,7 +6,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.0.23'
+ModuleVersion = '2.0.24'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
