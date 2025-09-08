@@ -68,12 +68,17 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
             #write-host $_
             $id = $_.Id
             $name = $_.Name
+            $type = $_.Type
+            if (-not $type) { $type = $_.type }
+            if (-not $type) { $type = "User" }  # Default to User if no type specified
+            
             if ($cpt -gt 0) {
                 $rule += ","
             }
             $rule += '
             {
                 "id": "'+ $id + '",
+                "userType": "'+ $type + '",
                 "description": "'+ $name + '",
                 "isBackup": false
             }
