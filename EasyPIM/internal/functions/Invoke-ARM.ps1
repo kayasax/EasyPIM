@@ -58,8 +58,7 @@ function Invoke-ARM {
                 $token = $env:AZURE_ACCESS_TOKEN -or $env:ARM_ACCESS_TOKEN
                 $authMethod = "Environment Variable (AZURE_ACCESS_TOKEN)"
                 Write-Verbose "ARM token acquired from environment variable - GitHub Actions OIDC compatible"
-            }
-            catch {
+            } catch {
                 $tokenAcquisitionErrors += "Environment variable: $($_.Exception.Message)"
             }
         }
@@ -76,16 +75,13 @@ function Invoke-ARM {
                         $token = $cliToken.Trim()
                         $authMethod = "Azure CLI (GitHub Actions OIDC Compatible)"
                         Write-Verbose "ARM token acquired from Azure CLI - works reliably with azure/login@v2"
-                    }
-                    else {
+                    } else {
                         throw "Azure CLI returned empty token"
                     }
-                }
-                else {
+                } else {
                     throw "Azure CLI not authenticated"
                 }
-            }
-            catch {
+            } catch {
                 $tokenAcquisitionErrors += "Azure CLI: $($_.Exception.Message)"
             }
         }
@@ -101,15 +97,12 @@ function Invoke-ARM {
                     $token = if ($tokenObj.Token -is [System.Security.SecureString]) { 
                         if (Get-Command ConvertFrom-SecureString -ErrorAction SilentlyContinue | Where-Object { $_.Parameters.ContainsKey('AsPlainText') }) {
                             ConvertFrom-SecureString -SecureString $tokenObj.Token -AsPlainText
-                        }
-                        else { [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenObj.Token)) }
-                    }
-                    else { $tokenObj.Token }
+                        } else { [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenObj.Token)) }
+                    } else { $tokenObj.Token }
                     $authMethod = "Azure PowerShell Context (Fallback)"
                     Write-Verbose "ARM token acquired from Azure PowerShell context"
                 }
-            }
-            catch {
+            } catch {
                 $tokenAcquisitionErrors += "Azure PowerShell Context: $($_.Exception.Message)"
             }
         }
@@ -128,13 +121,11 @@ function Invoke-ARM {
                 if ($env:AZURE_CLIENT_SECRET) {
                     $body.client_secret = $env:AZURE_CLIENT_SECRET
                     Write-Verbose "Using service principal with client secret for ARM token"
-                }
-                elseif ($env:AZURE_CLIENT_ASSERTION) {
+                } elseif ($env:AZURE_CLIENT_ASSERTION) {
                     $body.client_assertion_type = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
                     $body.client_assertion = $env:AZURE_CLIENT_ASSERTION
                     Write-Verbose "Using service principal with client assertion for ARM token"
-                }
-                else {
+                } else {
                     throw "Service principal requires AZURE_CLIENT_SECRET or AZURE_CLIENT_ASSERTION"
                 }
 
@@ -142,8 +133,7 @@ function Invoke-ARM {
                 $token = $response.access_token
                 $authMethod = "Service Principal (Direct OAuth2)"
                 Write-Verbose "ARM token acquired via service principal authentication"
-            }
-            catch {
+            } catch {
                 $tokenAcquisitionErrors += "Service Principal: $($_.Exception.Message)"
             }
         }
@@ -217,8 +207,7 @@ For more information: https://learn.microsoft.com/en-us/azure/developer/github/c
         $response = Invoke-RestMethod @params
         return $response
 
-    }
-    catch {
+    } catch {
         Write-Error "ARM API call failed: $($_.Exception.Message)"
         Write-Verbose "Failed URI: $restURI"
         Write-Verbose "Method: $method"
