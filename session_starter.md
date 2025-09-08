@@ -29,7 +29,7 @@ orchestrator-vX.Y.Z
 
 ### **Current State (2025-09-08)**
 - **EasyPIM Core**: v2.0.21 (tagged as `core-v2.0.21`) ✅ PUBLISHED
-- **EasyPIM.Orchestrator**: v1.3.6 (tagged as `orchestrator-v1.3.6`) ✅ PUBLISHED  
+- **EasyPIM.Orchestrator**: v1.3.6 (tagged as `orchestrator-v1.3.6`) ✅ PUBLISHED
 - **Branch**: `main` (hotfix merged and published)
 - **Major Bug**: ✅ RESOLVED - ARM API userType auto-detection implemented
 
@@ -91,9 +91,11 @@ orchestrator-vX.Y.Z
 
 | Date | Key Achievement |
 |------|-----------------|
+| 2025-09-08 | 🔥 **MAJOR BREAKTHROUGH**: Discovered & fixed orchestrator hardcoding "Type=user" preventing auto-detection |
+| 2025-09-08 | ✅ **PR CREATED**: Drift detection boolean comparison fix (false positives resolved) |
+| 2025-09-08 | ✅ **VALIDATED**: Test-PIMPolicyDrift now shows 12/12 policies match (zero drift) |
+| 2025-09-08 | ✅ **RELEASED**: EasyPIM Core v2.0.24, Orchestrator v1.4.0 with critical ARM API fixes |
+| 2025-09-08 | ✅ **ROOT CAUSE**: Line 115 in Set-EPOAzureRolePolicy.ps1 was bypassing auto-detection logic |
 | 2025-09-08 | ✅ **RELEASE**: ARM API userType auto-detection fix published (core-v2.0.21, orchestrator-v1.3.6) |
 | 2025-09-08 | ✅ PR merged: Hotfix for GitHub Actions ARM API 400 Bad Request errors |
 | 2025-09-07 | ✅ Principal validation prevents 400 Bad Request errors |
-| 2025-09-07 | ✅ Correct tag formats: core-v2.0.19, orchestrator-v1.3.4 |
-| 2025-09-07 | ✅ Business rules engine for policy conflicts |
-| 2025-09-07 | ✅ Comprehensive GUID validation with scope filtering |

@@ -76,11 +76,11 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
             $name = $_.Name
             $type = $_.Type
             if (-not $type) { $type = $_.type }
-            
+
             # Auto-detect/validate object type by querying Azure AD (only if we have a valid ID)
             if ($id) {
                 Write-Verbose "Validating/detecting object type for approver $id (configured type: $type)"
-                
+
                 # Check if Microsoft Graph is connected before attempting auto-detection
                 try {
                     $graphContext = Get-MgContext -ErrorAction Stop
@@ -93,7 +93,7 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
                     Write-Warning "Microsoft Graph context unavailable. Cannot auto-detect approver type for $id. Defaulting to User."
                     if (-not $type) { $type = "User" }
                 }
-                
+
                 # Only attempt auto-detection if Graph is available and no type is specified
                 if ($graphContext -and -not $type) {
                     try {
@@ -120,11 +120,11 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
                         }
                     }
                 }
-                
+
                 # Ensure we have a type set
                 if (-not $type) { $type = "User" }
             }
-            
+
             if ($cpt -gt 0) {
                 $rule += ","
             }
