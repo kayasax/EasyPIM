@@ -27,11 +27,11 @@ orchestrator-vX.Y.Z
 
 ## 🧠 **Assistant Memory & Context**
 
-### **Current State (2025-09-07)**
-- **EasyPIM Core**: v2.0.19 (tagged as `core-v2.0.19`)
-- **EasyPIM.Orchestrator**: v1.3.5 (tagged as `orchestrator-v1.3.5`) 🔥 CRITICAL FIX
-- **Branch**: `hotfix/critical-approver-format-fix` (fixing 400 Bad Request)
-- **Major Bug Found**: Approver format conversion issue causing ARM API failures
+### **Current State (2025-09-08)**
+- **EasyPIM Core**: v2.0.21 (tagged as `core-v2.0.21`) ✅ PUBLISHED
+- **EasyPIM.Orchestrator**: v1.3.6 (tagged as `orchestrator-v1.3.6`) ✅ PUBLISHED  
+- **Branch**: `main` (hotfix merged and published)
+- **Major Bug**: ✅ RESOLVED - ARM API userType auto-detection implemented
 
 ### **🔥 CRITICAL BUG DISCOVERED & FIXED**
 **Root Cause**: The orchestrator was passing approver objects in config format `{id, description}` but `Set-PIMAzureResourcePolicy` expects ARM API format `{Id, Name, Type}`. This caused 400 Bad Request errors whenever approval was required.
@@ -91,6 +91,8 @@ orchestrator-vX.Y.Z
 
 | Date | Key Achievement |
 |------|-----------------|
+| 2025-09-08 | ✅ **RELEASE**: ARM API userType auto-detection fix published (core-v2.0.21, orchestrator-v1.3.6) |
+| 2025-09-08 | ✅ PR merged: Hotfix for GitHub Actions ARM API 400 Bad Request errors |
 | 2025-09-07 | ✅ Principal validation prevents 400 Bad Request errors |
 | 2025-09-07 | ✅ Correct tag formats: core-v2.0.19, orchestrator-v1.3.4 |
 | 2025-09-07 | ✅ Business rules engine for policy conflicts |
