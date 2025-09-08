@@ -67,22 +67,14 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
         $Approvers | ForEach-Object {
             #write-host $_
             $id = $_.Id
-            if (-not $id) { $id = $_.id }
             $name = $_.Name
-            if (-not $name) { $name = $_.name }
-            if (-not $name) { $name = $_.description }
-            $type = $_.Type
-            if (-not $type) { $type = $_.type }
-            if (-not $type) { $type = "user" }  # Default to user if no type specified
-            
             if ($cpt -gt 0) {
                 $rule += ","
             }
             $rule += '
             {
-                "Id": "'+ $id + '",
-                "Name": "'+ $name + '",
-                "Type": "'+ $type + '",
+                "id": "'+ $id + '",
+                "description": "'+ $name + '",
                 "isBackup": false
             }
             '

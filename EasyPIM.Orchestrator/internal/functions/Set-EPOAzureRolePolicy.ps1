@@ -109,14 +109,14 @@ function Set-EPOAzureRolePolicy {
                 $convertedApprover = @{}
                 if ($approver.PSObject.Properties['id']) { $convertedApprover.Id = $approver.id }
                 elseif ($approver.PSObject.Properties['Id']) { $convertedApprover.Id = $approver.Id }
-
+                
                 if ($approver.PSObject.Properties['description']) { $convertedApprover.Name = $approver.description }
                 elseif ($approver.PSObject.Properties['Name']) { $convertedApprover.Name = $approver.Name }
                 else { $convertedApprover.Name = $convertedApprover.Id }
-
+                
                 if ($approver.PSObject.Properties['Type']) { $convertedApprover.Type = $approver.Type }
                 else { $convertedApprover.Type = "user" }
-
+                
                 $convertedApprovers += $convertedApprover
             }
         }
