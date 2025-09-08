@@ -68,12 +68,43 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
             #write-host $_
             $id = $_.Id
             $name = $_.Name
+            $type = $_.Type
+            if (-not $type) { $type = $_.type }
+            if (-not $type) {
+                # Auto-detect object type by querying Azure AD
+                Write-Verbose "No type specified for approver $id, attempting automatic detection"
+                try {
+                    # Try as user first using Invoke-MgGraphRequest
+                    $userResult = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/users/$id" -Method GET -ErrorAction Stop
+                    if ($userResult -and $userResult.id) {
+                        $type = "User"
+                        Write-Verbose "Auto-detected object type: User for approver $id (displayName: $($userResult.displayName))"
+                    }
+                }
+                catch {
+                    Write-Verbose "Object $id is not a User, checking if it's a Group"
+                    try {
+                        # Try as group using Invoke-MgGraphRequest
+                        $groupResult = Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/v1.0/groups/$id" -Method GET -ErrorAction Stop
+                        if ($groupResult -and $groupResult.id) {
+                            $type = "Group"
+                            Write-Verbose "Auto-detected object type: Group for approver $id (displayName: $($groupResult.displayName))"
+                        }
+                    }
+                    catch {
+                        $type = "User"  # Fallback to User if detection fails
+                        Write-Warning "Could not auto-detect type for approver $id, defaulting to User. Ensure the ID exists and you have appropriate Graph permissions."
+                    }
+                }
+            }
+            
             if ($cpt -gt 0) {
                 $rule += ","
             }
             $rule += '
             {
                 "id": "'+ $id + '",
+                "userType": "'+ $type + '",
                 "description": "'+ $name + '",
                 "isBackup": false
             }
