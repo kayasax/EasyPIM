@@ -94,7 +94,7 @@ function Invoke-ARM {
                 if ($azContext -and $azContext.Account) {
                     # Use Get-AzAccessToken for ARM resource (recommended approach)
                     $tokenObj = Get-AzAccessToken -ResourceUrl "https://management.azure.com/" -ErrorAction Stop
-                    $token = if ($tokenObj.Token -is [System.Security.SecureString]) { 
+                    $token = if ($tokenObj.Token -is [System.Security.SecureString]) {
                         if (Get-Command ConvertFrom-SecureString -ErrorAction SilentlyContinue | Where-Object { $_.Parameters.ContainsKey('AsPlainText') }) {
                             ConvertFrom-SecureString -SecureString $tokenObj.Token -AsPlainText
                         } else { [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenObj.Token)) }
