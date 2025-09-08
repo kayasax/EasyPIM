@@ -2,7 +2,13 @@
     .Synopsis
     Define if approval is required to activate a role, and who are the approvers
     .Description
-    rule 4 in https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview#activation-rules
+    r            $rule += '
+            {
+                "id": "'+ $id + '",
+                "userType": "'+ $type.ToLower() + '",
+                "description": "'+ $name + '",
+                "isBackup": false
+            }'n https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview#activation-rules
     .Parameter ApprovalRequired
     Do we need an approval to activate a role?
     .Parameter Approvers

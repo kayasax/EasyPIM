@@ -115,7 +115,7 @@ function Set-EPOAzureRolePolicy {
                 else { $convertedApprover.Name = $convertedApprover.Id }
                 
                 if ($approver.PSObject.Properties['Type']) { $convertedApprover.Type = $approver.Type }
-                else { $convertedApprover.Type = "user" }
+                # Do NOT set default type - let auto-detection handle it
                 
                 $convertedApprovers += $convertedApprover
             }
