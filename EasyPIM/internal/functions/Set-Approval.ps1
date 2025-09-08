@@ -70,7 +70,7 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
             $name = $_.Name
             $type = $_.Type
             if (-not $type) { $type = $_.type }
-            if (-not $type) { 
+            if (-not $type) {
                 # Auto-detect object type by querying Azure AD
                 Write-Verbose "No type specified for approver $id, attempting automatic detection"
                 try {
