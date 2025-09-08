@@ -11,7 +11,7 @@ Packed with more than 50 cmdlets, EasyPIM leverages the ARM and Graph APIs compl
 ## 🚀 Major Release: EasyPIM v2.0 & Orchestrator v1.0
 
 - 🎯 **Major architectural milestone**: Complete module separation
-- 🔧 **ARM API compatibility fixes**: Resolves InvalidResourceType errors  
+- 🔧 **ARM API compatibility fixes**: Resolves InvalidResourceType errors
 - 🛡️ **Enhanced policy validation**: Proactive error detection with clear guidance
 - 📏 **Parameter standardization**: Consistent naming with backward compatibility
 - 🏗️ **Production-ready orchestrator**
@@ -20,8 +20,8 @@ Packed with more than 50 cmdlets, EasyPIM leverages the ARM and Graph APIs compl
 
 
 
-🆕 **Module separation complete**: The JSON-driven orchestrator is now a standalone module: EasyPIM.Orchestrator (requires EasyPIM ≥ 2.0.0).  
-**Orchestrated flow guide:** [step-by-step](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)  
+🆕 **Module separation complete**: The JSON-driven orchestrator is now a standalone module: EasyPIM.Orchestrator (requires EasyPIM ≥ 2.0.0).
+**Orchestrated flow guide:** [step-by-step](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)
 🌍 EasyPIM supports multi-cloud (Public, Government, China, Germany) thanks to [Chase Dafnis](https://github.com/CHDAFNI-MSFT)!
 
 ## Key features
@@ -45,8 +45,8 @@ Packed with more than 50 cmdlets, EasyPIM leverages the ARM and Graph APIs compl
 
 ```pwsh
 # Install both modules for complete functionality
-Install-Module -Name EasyPIM 
-Install-Module -Name EasyPIM.Orchestrator 
+Install-Module -Name EasyPIM
+Install-Module -Name EasyPIM.Orchestrator
 ```
 
 ### Getting Started
@@ -101,12 +101,23 @@ New-PIMEntraRoleActiveAssignment -tenantID $tenantID -rolename "testrole" -princ
 More samples available in the [documentation](https://github.com/kayasax/EasyPIM/wiki/Documentation)
 
 ## Module split and migration
-- The following commands moved into the EasyPIM.Orchestrator module:  
-    - Invoke-EasyPIMOrchestrator  
-    - Test-PIMPolicyDrift  
-    - Test-PIMEndpointDiscovery  
-- After installing EasyPIM.Orchestrator, import it to access these commands. Any legacy shims in the core module will emit guidance and forward where applicable.  
+- The following commands moved into the EasyPIM.Orchestrator module:
+    - Invoke-EasyPIMOrchestrator
+    - Test-PIMPolicyDrift
+    - Test-PIMEndpointDiscovery
+- After installing EasyPIM.Orchestrator, import it to access these commands. Any legacy shims in the core module will emit guidance and forward where applicable.
 
+## Troubleshooting
+
+### Common Issues
+- **Key Vault Configuration Loading**: If you encounter JSON parsing errors when loading configurations from Azure Key Vault, see the [Key Vault Troubleshooting Guide](./EasyPIM/Documentation/KeyVault-Troubleshooting.md)
+- **ARM API Errors**: For InvalidResourceType or authentication issues, ensure you have the correct permissions and are using the latest module version
+- **Graph API Permissions**: Verify that required Microsoft Graph permissions have been granted to your application
+
+### Getting Help
+- Check the [documentation](https://github.com/kayasax/EasyPIM/wiki/Documentation) for detailed guides
+- Review [common use cases](https://github.com/kayasax/EasyPIM/wiki/Use-Cases) for implementation examples
+- For Key Vault specific issues, use the enhanced diagnostics: `Get-EasyPIMConfiguration -Verbose`
 
 ## Documentation
 [documentation](https://github.com/kayasax/EasyPIM/wiki/Documentation)
@@ -115,8 +126,8 @@ More samples available in the [documentation](https://github.com/kayasax/EasyPIM
 Discover how EasyPIM answers to common challenges [Use cases](https://github.com/kayasax/EasyPIM/wiki/Use-Cases)
 
 ## Contributors
-- **Loïc MICHEL** - Original author and maintainer  
-- **Chase Dafnis** - Multi-cloud / Azure environment support  
+- **Loïc MICHEL** - Original author and maintainer
+- **Chase Dafnis** - Multi-cloud / Azure environment support
 
 ## Requirement
 * Az.Accounts module

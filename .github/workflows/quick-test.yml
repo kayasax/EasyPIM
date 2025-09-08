@@ -1,0 +1,20 @@
+name: ✅ Quick Test Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: 'Test message'
+        required: false
+        default: 'Hello from EasyPIM!'
+        type: string
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo Test
+        run: |
+          echo "🎉 Test workflow is working!"
+          echo "Message: ${{ github.event.inputs.message }}"
+          echo "Workflow triggered successfully via workflow_dispatch"

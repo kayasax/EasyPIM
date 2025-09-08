@@ -1,170 +1,97 @@
-# 🧠 EasyPIM Session Starter
+# EasyPIM Session Starter
 
-## 📘 Current Work Status
-- ✅ **COMPLETED**: Critical drift detection scope fix in `Test-PIMPolicyDrift`
-- ✅ **RESOLVED**: Telemetry issues with KeyVault configurations
-- ✅ **RELEASED**: EasyPIM.Orchestrator v1.2.0 with scope validation fix
-- **Status**: Production ready - critical bug fixed and released
+## 🚨 **CRITICAL TAG FORMAT REQUIREMENTS** 🚨
 
-**Recent Achievements:**
-- 🚨 **Critical Fix**: Resolved scope mismatch causing false "Match" in drift detection for Azure resource policies
-- 🔧 **Telemetry Enhancement**: Fixed KeyVault-based telemetry with enhanced debug output
-- 📦 **Release Management**: Tagged and released orchestrator-v1.2.0 with critical fixes
-- ✅ **Validation**: All 6,958 build tests passing
+# ⚠️ **DO NOT FORGET TAG FORMATS!!!** ⚠️
 
-## 🎯 Project Overview
-**EasyPIM** - PowerShell module for Microsoft Entra PIM management with two-module architecture:
-- **EasyPIM** (Core): Individual PIM functions, backup/restore, policies
-- **EasyPIM.Orchestrator**: Comprehensive configuration management via `Invoke-EasyPIMOrchestrator`
+### **EasyPIM Core Module Tags:**
+```
+core-vX.Y.Z
+```
+**Examples:** `core-v2.0.19`, `core-v2.1.0`
 
-**Current Status**: Production ready, stable releases on PowerShell Gallery
+### **EasyPIM Orchestrator Module Tags:**
+```
+orchestrator-vX.Y.Z
+```
+**Examples:** `orchestrator-v1.3.4`, `orchestrator-v1.4.0`
 
-## 🔧 Current Technical State
+### **GitHub Actions Triggers:**
+- **core-v*** triggers `build-core-tag.yml` workflow
+- **orchestrator-v*** triggers `build-orchestrator.yml` workflow
+- **v*** (without prefix) triggers `build.yml` but is DEPRECATED - use core-v instead!
 
-### Versions
-- **EasyPIM Core**: v2.0.12 (stable) - Published, no changes needed
-- **EasyPIM.Orchestrator**: v1.2.0 (NEW) - Critical drift detection scope fix
-
-### Recent CI/CD Improvements
-- ✅ **Gallery Version Checking**: Build scripts now fail-fast if version already exists
-- ✅ **Proactive Conflict Detection**: Prevents wasted CI cycles from version conflicts
-- ✅ **Systematic Reliability**: No more repeated pipeline failures
-
-### Architecture
-- **Module Split**: Core + Orchestrator with clean dependencies
-- **Build Process**: Flattened modules with UTF-8 BOM, Gallery version validation
-- **CI/CD**: GitHub Actions with tag-based publishing (core-v*, orchestrator-v*)
-
-## 📅 Recent Key Updates
-
-| Date | Update |
-|------|--------|
-| 2025-09-03 | **🚨 CRITICAL DRIFT DETECTION FIX**: Discovered and fixed critical bug in `Test-PIMPolicyDrift` where drift detection showed false "Match" results for Azure resource policies. Root cause: drift detection was always querying subscription-level policies while orchestrator applied resource-specific policies, causing scope validation mismatches. Fixed by implementing scope-aware policy validation in drift detection. Orchestrator bumped to v1.2.0. This resolves cases where policies like "Contributor" at storage account scopes failed to apply but drift detection incorrectly reported "Match". |
-| 2025-09-03 | **Telemetry KeyVault Enhancement**: Enhanced `Send-TelemetryEventFromConfig` with improved debug output and config object validation for KeyVault-based configurations. Added fallback SHA256 identifier creation and comprehensive error handling. |
-| 2025-08-31 | **Issue #136 Implementation**: Implemented policy template merge feature allowing users to specify base templates with inline property overrides. Enhanced EntraRoles.Policies, AzureRoles.Policies, and GroupRoles.Policies sections to copy non-Template properties as overrides when Template is specified. **Dependency Optimization**: Removed unnecessary `Microsoft.Graph.Identity.Governance` requirement from orchestrator module after code analysis showed it only uses `Microsoft.Graph.Authentication` cmdlets. |
-| 2025-08-30 | **Issue #137**: Created branch `feature/issue-137-protected-roles-override` to implement -Force flag for overriding protected roles in orchestrator. Issue #138 confirmed resolved in v2.0.5. |
-| 2025-08-29 | **CI/CD Reliability**: Added proactive Gallery version checking to prevent repeated pipeline failures. Core bumped to v2.0.5. |
-| 2025-08-29 | **Documentation**: Updated Step-by-step Guide for module split architecture with installation and authentication guidance. |
-| 2025-08-28 | **Stable Release**: Promoted to stable versions, removed prerelease tags. Module separation milestone achieved. |
-| 2025-08-27 | **Architecture**: Module split completed with clean internal function duplication, no shared dependencies. |
-
-## 🎯 Immediate Context
-
-### Current Work Status
-- ✅ **Completed**: Critical scope validation fix in drift detection
-- ✅ **Released**: EasyPIM.Orchestrator v1.2.0 with fixes
-- ✅ **Tagged**: orchestrator-v1.2.0 pushed to trigger publishing
-- 📊 **Validation**: All 6,958 build tests passing
-
-### What Just Happened
-- 🚨 **Critical Discovery**: Found scope mismatch bug causing false "Match" in drift detection
-- 🔧 **Root Cause**: Drift detection used subscription scope while orchestrator used resource-specific scopes
-- ✅ **Solution**: Enhanced `Test-PIMPolicyDrift` with scope-aware validation
-- 📦 **Release**: Bumped orchestrator to v1.2.0 and published fix
-
-### Next Actions Available
-- [ ] Monitor publishing workflow for orchestrator-v1.2.0
-- [ ] Validate published module functionality
-- [ ] Update documentation if needed
-- [ ] Continue monitoring for any related issues
-
-## 🧠 Assistant Memory
-
-### **Key Technical Discoveries**
-
-- **Critical Bug Found (Sept 3, 2025)**: Discovered scope mismatch bug in `Test-PIMPolicyDrift` causing false "Match" reports
-  - **Root Cause**: Drift detection queried subscription-level policies while orchestrator applied resource-specific policies
-  - **Impact**: Azure resource policies (e.g., Contributor at storage account scope) would fail to apply but drift showed "Match"
-  - **Solution**: Enhanced drift detection to use policy's specific scope for validation
-  - **Example**: Storage account scope `/subscriptions/.../resourceGroups/.../storageAccounts/...` now properly validated
-  - **Evidence**: 400 Bad Request on policy apply vs "Match" in drift detection for same role
-
-### **Module Architecture Understanding**
-
-- **Two-Module System**: EasyPIM Core (individual functions) + Orchestrator (comprehensive workflows)
-- **Internal Function Duplication**: Orchestrator embeds needed internal functions to avoid shared dependencies
-- **Scope Handling**: Azure policies validated at specific resource scopes vs subscription defaults
-- **Telemetry System**: Supports both file-based and KeyVault-based configurations with PostHog integration
-
-### **Build & CI/CD Patterns**
-
-- **Version Strategy**: Core module stable at v2.0.12, orchestrator v1.2.0 with critical fix
-- **Publishing**: Tag-based for core (`core-v*`), manual/commit for orchestrator
-- **Gallery Integration**: Proactive version checking prevents CI failures
-- **Validation**: 6,958 tests must pass for release readiness
-
-### **Security & Governance**
-
-- **Protected Roles**: Global Admin, Security Admin blocked by default with override capability
-- **Telemetry Consent**: Strict opt-in model (ALLOW_TELEMETRY: true required)
-- **Audit Logging**: Policy changes logged with timestamps and change tracking
-- **Scope Validation**: Different Azure resource scopes have different validation rules
-
-### **Troubleshooting Insights**
-
-- **False Positives**: Drift detection can give false "Match" if scope validation differs
-- **ARM API Errors**: 400 Bad Request often indicates scope-specific validation failures
-- **Configuration Inheritance**: Templates merge with inline overrides for policy customization
-- **Authentication Context**: Auto-removes MFA requirements to prevent conflicts (MfaAndAcrsConflict)
-
-### **Development Workflow**
-
-- **Module Testing**: Import with explicit paths for development: `Import-Module ./EasyPIM.Orchestrator/EasyPIM.Orchestrator.psd1 -Force`
-- **Build Validation**: Always run `.\build\vsts-validate.ps1` before committing
-- **Version Management**: Core and orchestrator modules versioned independently
-- **Release Process**: Tag-based publishing with descriptive commit messages
+## ⚠️ **NEVER USE PLAIN v* TAGS FOR CORE MODULE!** ⚠️
 
 ---
 
-## 🔧 Technical Implementation Guide
+## 🧠 **Assistant Memory & Context**
 
-### **Common Issues & Solutions**
+### **Current State (2025-09-07)**
+- **EasyPIM Core**: v2.0.19 (tagged as `core-v2.0.19`)
+- **EasyPIM.Orchestrator**: v1.3.5 (tagged as `orchestrator-v1.3.5`) 🔥 CRITICAL FIX
+- **Branch**: `hotfix/critical-approver-format-fix` (fixing 400 Bad Request)
+- **Major Bug Found**: Approver format conversion issue causing ARM API failures
 
-| Error | Cause | Solution |
-|-------|-------|----------|
-| `version 'X.Y.Z' is already available` | Version already published | Bump version in manifest |
-| False "Match" in drift detection | Scope mismatch between detection and application | Use scope-aware validation |
-| KeyVault telemetry not working | Missing config object support | Use `Send-TelemetryEventFromConfig` |
-| 400 Bad Request on policy apply | Azure scope-specific validation rules | Check policy compatibility with target scope |
+### **🔥 CRITICAL BUG DISCOVERED & FIXED**
+**Root Cause**: The orchestrator was passing approver objects in config format `{id, description}` but `Set-PIMAzureResourcePolicy` expects ARM API format `{Id, Name, Type}`. This caused 400 Bad Request errors whenever approval was required.
 
-### **Validation Workflow**
+**Solution**: Added proper format conversion in `Set-EPOAzureRolePolicy.ps1` to map:
+- `id` → `Id`
+- `description` → `Name`
+- Added `Type='user'` default
 
-**Before Publishing**:
-1. ✅ Run local build with `-SkipPublish` flag
-2. ✅ Test module import: `Import-Module ./output/ModuleName`
-3. ✅ Verify function availability: `Get-Command -Module ModuleName`
-4. ✅ Check for syntax errors in generated `.psm1`
-5. ✅ Validate dependencies resolve correctly
+**Impact**: Fixes all GitHub Actions failures for approval policies (Contributor role, etc.)
 
-**After Publishing**:
-1. ✅ Verify module appears on PowerShell Gallery
-2. ✅ Test installation: `Install-Module ModuleName -Force`
-3. ✅ Validate functionality in clean environment
+### **Key Technical Achievements**
+- ✅ **Critical Bug Fixed**: Approver format conversion preventing ARM API 400 errors
+- ✅ **Root Cause Identified**: Config {id, description} vs ARM API {Id, Name, Type} mismatch
+- ✅ **Regex-based GUID Validation**: Extracts and validates ALL principals before API calls
+- ✅ **Business Rules Engine**: Handles MFA/Authentication Context conflicts automatically
+- ✅ **Early Error Detection**: Clear messages instead of mysterious API failures
+- ✅ **Performance Optimized**: HashSet-based validation with scope filtering
 
-### **GitHub Actions Integration**
+### **Module Architecture**
+- **EasyPIM Core**: Individual PIM functions, backup/restore, basic policies
+- **EasyPIM.Orchestrator**: Configuration management via `Invoke-EasyPIMOrchestrator`
+- **Key Function**: `Test-PIMPolicyBusinessRules` for conflict resolution
+- **Validation Flow**: Principal validation → Policy processing → Assignment operations
 
-**Core Module**: Tag-based publishing (`build-core-tag.yml`)
-- Triggered by tags matching `core-v*` pattern
-- Automatically builds and publishes to PowerShell Gallery
-- Uses repository secrets for API key
-
-**Orchestrator Module**: Tag-based publishing (`build-orchestrator.yml`)
-- Triggered by tags matching `orchestrator-v*` pattern
-- Automatic trigger on orchestrator file changes
-- Validates dependencies before publishing
-
----
-
-## 📊 Repo Snapshot (Current)
-
-- Created: 2024-01-04 (UTC)
-- Stars: 176, Forks: 15, Watchers: 176, Subscribers: 7
-- Issues: 3 open / 48 closed
-- Pull Requests: 0 open / 68 merged
-- Contributors: 2 (kayasax, patrick-de-kruijf)
-- Languages: PowerShell (~752kB), HTML (~1.6kB)
-- Latest Releases: EasyPIM v2.0.12, EasyPIM.Orchestrator v1.2.0
+### **Publishing Workflow**
+1. Bump versions in `.psd1` files
+2. Create correct tags: `core-vX.Y.Z` and `orchestrator-vX.Y.Z`
+3. Push tags to trigger GitHub Actions
+4. Monitor PowerShell Gallery publication
 
 ---
 
-*Last updated: 2025-09-03 - Critical scope validation fix completed*
+## 🎯 **Project Overview**
+
+**EasyPIM** - PowerShell module for Microsoft Entra PIM management with two-module architecture
+
+### **Key Functions to Remember**
+- `Invoke-EasyPIMOrchestrator`: Main orchestration function
+- `Test-PIMPolicyBusinessRules`: Handles policy conflicts
+- `Get-EasyPIMConfiguration`: Loads from file or Key Vault (in Orchestrator module)
+- `Test-PrincipalExists`: Validates principal existence
+
+### **Testing**
+- Run `.\tests\pester.ps1 -TestGeneral $true -TestFunctions $false -Output Normal -Fast`
+- All 7011+ tests should pass
+- General tests cover file integrity, manifests, PSScriptAnalyzer
+
+### **Common Issues**
+- **400 Bad Request**: Usually invalid principal IDs → now caught by validation
+- **MFA vs Auth Context**: Conflicts automatically resolved by business rules
+- **Module Loading**: Always force reload after changes: `Import-Module -Force`
+
+---
+
+## 📅 **Recent Session Log**
+
+| Date | Key Achievement |
+|------|-----------------|
+| 2025-09-07 | ✅ Principal validation prevents 400 Bad Request errors |
+| 2025-09-07 | ✅ Correct tag formats: core-v2.0.19, orchestrator-v1.3.4 |
+| 2025-09-07 | ✅ Business rules engine for policy conflicts |
+| 2025-09-07 | ✅ Comprehensive GUID validation with scope filtering |

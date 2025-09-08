@@ -62,18 +62,11 @@ Get-ChildItem -Path "$($publishDir.FullName)\EasyPIM.Orchestrator\functions" -Re
 # Join with consistent line endings
 $combinedContent = $text -join "`r`n`r`n"
 
-# Read the original .psm1 file to extract just the Export-ModuleMember section
+# Add the Export-ModuleMember section from the original .psm1 (using core module's proven approach)
 $originalPsm1 = Get-Content "$($moduleOutDir.FullName)\EasyPIM.Orchestrator.psm1" -Raw
-
-# Extract just the Export-ModuleMember block (without try/finally complications)
-if ($originalPsm1 -match "Export-ModuleMember -Function @\((.*?)\)") {
-    $exportFunctions = $matches[1]
-    $exportSection = @"
-
-# Export only the public entrypoints
-Export-ModuleMember -Function @($exportFunctions)
-"@
-    $combinedContent += $exportSection
+$exportSection = ($originalPsm1 -split "Export-ModuleMember")[1]
+if ($exportSection) {
+    $combinedContent += "`r`n`r`n# Export public functions`r`nExport-ModuleMember" + $exportSection
 }
 
 Write-Host ("Flatten build collected characters: length={0}" -f $combinedContent.Length)

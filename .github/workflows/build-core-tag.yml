@@ -1,3 +1,5 @@
+name: EasyPIM Core Build
+
 on:
   push:
     tags:

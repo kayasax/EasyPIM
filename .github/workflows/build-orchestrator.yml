@@ -1,4 +1,6 @@
 
+name: EasyPIM Orchestrator Build
+
 on:
   push:
     tags:
@@ -11,8 +13,8 @@ jobs:
     steps:
       - uses: actions/checkout@v1
 
-      - name: Install EasyPIM Core from Gallery (v2.0.2)
-        run: Install-Module -Name EasyPIM -RequiredVersion 2.0.2 -Force -Scope CurrentUser
+      - name: Install EasyPIM Core from Gallery (latest)
+        run: Install-Module -Name EasyPIM -Force -Scope CurrentUser
         shell: pwsh
 
       - name: Install Prerequisites
