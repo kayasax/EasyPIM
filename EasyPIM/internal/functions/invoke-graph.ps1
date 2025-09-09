@@ -73,7 +73,13 @@ function invoke-graph {
     }
 
     try {
-        $response = Invoke-MgGraphRequest -Uri $uri -Method $Method -Body $body
+        # Only include -Body parameter if we actually have body content
+        # This prevents PS5.1 from sending empty body with GET requests
+        if ($body) {
+            $response = Invoke-MgGraphRequest -Uri $uri -Method $Method -Body $body
+        } else {
+            $response = Invoke-MgGraphRequest -Uri $uri -Method $Method
+        }
 
         # Handle pagination if enabled and response contains @odata.nextLink
         if (-not $NoPagination -and $response.'@odata.nextLink') {
