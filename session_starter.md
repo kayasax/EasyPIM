@@ -30,6 +30,7 @@ orchestrator-vX.Y.Z
 ### **Current State (2025-09-09)**
 - **EasyPIM Core**: v2.0.26 (preparing to tag as `core-v2.0.26`) 🚀 PENDING  
 - **EasyPIM.Orchestrator**: v1.4.3 (preparing to tag as `orchestrator-v1.4.3`) 🚀 PENDING
+
 - **Branch**: `main` (hotfix merged and published)
 - **Major Bug**: ✅ RESOLVED - ARM API userType auto-detection implemented
 
