@@ -95,7 +95,21 @@ function Invoke-ARM {
                     # Use Get-AzAccessToken for ARM resource (recommended approach)
                     $tokenObj = Get-AzAccessToken -ResourceUrl "https://management.azure.com/" -ErrorAction Stop
                     $token = if ($tokenObj.Token -is [System.Security.SecureString]) {
-                        [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenObj.Token))
+                        # PowerShell version-aware SecureString conversion
+                        if ($PSVersionTable.PSVersion.Major -ge 7) {
+                            # PowerShell 7.x: Use ConvertFrom-SecureString -AsPlainText (recommended)
+                            ConvertFrom-SecureString -SecureString $tokenObj.Token -AsPlainText
+                        } else {
+                            # PowerShell 5.1: Use Marshal approach with -Force to avoid prompts
+                            try {
+                                [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenObj.Token))
+                            } catch {
+                                # Fallback: Convert to encrypted string then back (less secure but compatible)
+                                $encryptedToken = ConvertFrom-SecureString -SecureString $tokenObj.Token -Force
+                                $secureToken = ConvertTo-SecureString -String $encryptedToken -Force
+                                [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureToken))
+                            }
+                        }
                     } else {
                         $tokenObj.Token
                     }
