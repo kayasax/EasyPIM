@@ -46,7 +46,7 @@ function Test-EasyPIMConfigurationValidity {
         }
     }
 
-    Write-Verbose "🔍 Starting EasyPIM configuration validation..."
+    Write-Verbose "Starting EasyPIM configuration validation..."
 
     # Deep clone the config for corrections
     if ($AutoCorrect) {
@@ -55,7 +55,7 @@ function Test-EasyPIMConfigurationValidity {
 
     # Validation Rule 1: Check PolicyTemplates for Approvers field mismatches
     if ($Config.PSObject.Properties['PolicyTemplates']) {
-        Write-Verbose "📋 Validating PolicyTemplates..."
+        Write-Verbose "Validating PolicyTemplates..."
 
         foreach ($templateName in $Config.PolicyTemplates.PSObject.Properties.Name) {
             $template = $Config.PolicyTemplates.$templateName
@@ -80,7 +80,7 @@ function Test-EasyPIMConfigurationValidity {
 
     # Validation Rule 2: Check EntraRoles policies for Approvers mismatches
     if ($Config.PSObject.Properties['EntraRoles'] -and $Config.EntraRoles.PSObject.Properties['Policies']) {
-        Write-Verbose "📋 Validating EntraRoles policies..."
+        Write-Verbose "Validating EntraRoles policies..."
 
         foreach ($roleName in $Config.EntraRoles.Policies.PSObject.Properties.Name) {
             $rolePolicy = $Config.EntraRoles.Policies.$roleName
@@ -123,7 +123,7 @@ function Test-EasyPIMConfigurationValidity {
 
     # Validation Rule 3: Check AzureRoles policies for Approvers mismatches
     if ($Config.PSObject.Properties['AzureRoles'] -and $Config.AzureRoles.PSObject.Properties['Policies']) {
-        Write-Verbose "📋 Validating AzureRoles policies..."
+        Write-Verbose "Validating AzureRoles policies..."
 
         foreach ($roleName in $Config.AzureRoles.Policies.PSObject.Properties.Name) {
             $rolePolicy = $Config.AzureRoles.Policies.$roleName
@@ -213,7 +213,7 @@ function Test-EasyPIMConfigurationValidity {
         }
     }
 
-    Write-Verbose "✅ Configuration validation completed"
+    Write-Verbose "Configuration validation completed"
     Write-Verbose "   Issues found: $($validationResult.Issues.Count)"
     Write-Verbose "   Auto-corrections: $($validationResult.ValidationSummary.AutoCorrections)"
 
