@@ -36,7 +36,15 @@ function invoke-graph {
 
     try {
         Write-Verbose "Making Graph API call: $Method $uri"
-        $response = Invoke-MgGraphRequest -Uri $uri -Method $Method -Body $body -ErrorAction Stop
+        
+        # Only include -Body parameter if we actually have body content
+        # This prevents PS5.1 from sending empty body with GET requests
+        if ($body) {
+            $response = Invoke-MgGraphRequest -Uri $uri -Method $Method -Body $body -ErrorAction Stop
+        } else {
+            $response = Invoke-MgGraphRequest -Uri $uri -Method $Method -ErrorAction Stop
+        }
+        
         Write-Verbose "Graph API call successful"
         return $response
     } catch {
