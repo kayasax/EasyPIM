@@ -15,7 +15,7 @@
 ### 🎯 **What Makes EasyPIM Different**
 - **⚡ Comprehensive Coverage**: Azure Resources, Entra ID Roles, and Security Groups in one platform
 - **🔧 Production-Tested**: 50+ cmdlets covering every PIM operation
-- **📊 JSON Orchestration**: Define complete PIM configurations declaratively  
+- **📊 JSON Orchestration**: Define complete PIM configurations declaratively
 - **🔄 Multi-Cloud Support**: Public, Government, China, Germany clouds
 - **🏢 Enterprise Ready**: Powers PIM governance at scale with business rules validation
 
@@ -62,10 +62,10 @@ Invoke-EasyPIMOrchestrator -TenantId $tenantId -ConfigurationPath "./pim-config.
 - Parameter `assignee` renamed to `principalId` (backward-compatible alias provided)
 - Orchestration commands moved to separate EasyPIM.Orchestrator module
 
-### 🔧 **Module Architecture** 
+### 🔧 **Module Architecture**
 | **Module** | **Purpose** | **Key Features** |
 |---|---|---|
-| **EasyPIM** (Core) | Direct PIM API management | 40+ cmdlets for Azure Resources, Entra Roles, Groups |  
+| **EasyPIM** (Core) | Direct PIM API management | 40+ cmdlets for Azure Resources, Entra Roles, Groups |
 | **EasyPIM.Orchestrator** | JSON workflows & governance | Configuration drift detection, business rules, CI/CD ready |
 
 **Migration Guide:** [step-by-step orchestrator setup](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)
@@ -82,7 +82,7 @@ Invoke-EasyPIMOrchestrator -TenantId $tenantId -ConfigurationPath "./pim-config.
 - ✅ **Request Management**: Approve/deny pending requests with workflow automation
 
 ### 🎯 **Advanced Orchestration** (EasyPIM.Orchestrator)
-- 🏗 **JSON-Driven Workflows**: Define complete PIM models (Entra, Azure RBAC, Groups) declaratively  
+- 🏗 **JSON-Driven Workflows**: Define complete PIM models (Entra, Azure RBAC, Groups) declaratively
 - 📋 **Policy Drift Detection**: Continuous compliance monitoring with automated remediation
 - 🛡 **Business Rules Engine**: Intelligent validation preventing misconfigurations
 - 🏢 **CI/CD Integration**: Production-ready automation for GitHub Actions & Azure DevOps
@@ -178,7 +178,7 @@ Test-PIMPolicyDrift -TenantId $tenantId -ConfigurationPath "./pim-config.json" -
 
 ### 📖 **Official Documentation**
 - 📋 **[Complete Documentation](https://github.com/kayasax/EasyPIM/wiki/Documentation)** - In-depth guides and API reference
-- 🎯 **[Use Cases & Examples](https://github.com/kayasax/EasyPIM/wiki/Use-Cases)** - Real-world implementation scenarios  
+- 🎯 **[Use Cases & Examples](https://github.com/kayasax/EasyPIM/wiki/Use-Cases)** - Real-world implementation scenarios
 - 📝 **[Changelog](https://github.com/kayasax/EasyPIM/wiki/Changelog)** - Version history and release notes
 - 🖼️ **[EasyPIM Gallery](Gallery.html)** - Visual showcase of features and capabilities
 
@@ -194,18 +194,18 @@ Test-PIMPolicyDrift -TenantId $tenantId -ConfigurationPath "./pim-config.json" -
 
 ---
 
-## 🔄 **Module Architecture & Migration** 
+## 🔄 **Module Architecture & Migration**
 
 ### 🏗 **Two-Module Design**
 | **Module** | **Purpose** | **Key Commands** |
 |---|---|---|
-| **EasyPIM** (Core) | Direct PIM API management | `Get-PIM*`, `Set-PIM*`, `New-PIM*` |  
+| **EasyPIM** (Core) | Direct PIM API management | `Get-PIM*`, `Set-PIM*`, `New-PIM*` |
 | **EasyPIM.Orchestrator** | JSON-driven workflows, CI/CD | `Invoke-EasyPIMOrchestrator`, `Test-PIMPolicyDrift` |
 
 ### 📦 **Migrated Commands** (v1.x → v2.x)
 These commands moved to **EasyPIM.Orchestrator** for better separation:
 - `Invoke-EasyPIMOrchestrator` - JSON workflow execution
-- `Test-PIMPolicyDrift` - Policy compliance monitoring  
+- `Test-PIMPolicyDrift` - Policy compliance monitoring
 - `Test-PIMEndpointDiscovery` - Connectivity validation
 
 **Migration is seamless** - legacy shims provide guidance and automatic forwarding where applicable.
@@ -234,35 +234,21 @@ Test-PIMEndpointDiscovery -TenantId $tenantId  # Available in EasyPIM.Orchestrat
 
 ### 🆘 **Getting Help**
 - 🐛 **[Report Issues](https://github.com/kayasax/EasyPIM/issues)** - Bug reports with templates
-- 💬 **[Community Discussions](https://github.com/kayasax/EasyPIM/discussions)** - Q&A and feature requests  
+- 💬 **[Community Discussions](https://github.com/kayasax/EasyPIM/discussions)** - Q&A and feature requests
 - 📧 **Enterprise Support** - Available for production deployments
 - 🎯 **[CI/CD Issues](https://github.com/kayasax/EasyPIM-EventDriven-Governance/issues)** - Event-driven governance demo problems
 
 ---
 
-## Contributors
-- **Loïc MICHEL** - Original author and maintainer
-- **Chase Dafnis** - Multi-cloud / Azure environment support
 
-## Requirement
-* Az.Accounts module
-* Permission:
-The PIM API for Azure resource roles is developed on top of the Azure Resource Manager framework. You will need to give consent to Azure Resource Management but won’t need any Microsoft Graph API permission. You will also need to make sure the user or the service principal calling the API has at least the Owner or User Access Administrator role on the resource you are trying to administer.
-* an administrator must grant consent these permissions to the Microsoft Graph PowerShell application:
-"RoleManagementPolicy.ReadWrite.Directory",
-                "RoleManagement.ReadWrite.Directory",
-                "RoleManagementPolicy.ReadWrite.AzureADGroup",
-                "PrivilegedEligibilitySchedule.ReadWrite.AzureADGroup",
-                "PrivilegedAssignmentSchedule.ReadWrite.AzureADGroup",
-                "---
 
 ## 🤝 **Contributors & Community**
 
 ### 👥 **Core Contributors**
-- **[Loïc MICHEL](https://github.com/kayasax)** - Original author and maintainer  
+- **[Loïc MICHEL](https://github.com/kayasax)** - Original author and maintainer
 - **[Chase Dafnis](https://github.com/CHDAFNI-MSFT)** - Multi-cloud / Azure environment support
 
-### 🌟 **Community Support**  
+### 🌟 **Community Support**
 - ⭐ **[Star this repository](https://github.com/kayasax/EasyPIM/stargazers)** if EasyPIM helps you!
 - 🐛 **[Report issues](https://github.com/kayasax/EasyPIM/issues)** to help improve the platform
 - 💡 **[Feature requests](https://github.com/kayasax/EasyPIM/discussions)** for new capabilities
@@ -273,7 +259,7 @@ The PIM API for Azure resource roles is developed on top of the Azure Resource M
 ## 📋 **Requirements**
 
 ### 🖥 **System Requirements**
-- **PowerShell**: 5.1+ (Windows) or 7.0+ (Cross-platform)  
+- **PowerShell**: 5.1+ (Windows) or 7.0+ (Cross-platform)
 - **Modules**: `Az.Accounts`, `Microsoft.Graph.Authentication` (auto-installed)
 - **Permissions**: Azure subscription access + Graph API permissions (see below)
 
@@ -283,11 +269,11 @@ The PIM API for Azure resource roles is developed on top of the Azure Resource M
 - **Azure Subscription**: `Owner` or `User Access Administrator` role
 - **Consent**: Azure Resource Manager API access (automatic)
 
-#### 🟢 **Entra ID & Groups** (Microsoft Graph API)  
+#### 🟢 **Entra ID & Groups** (Microsoft Graph API)
 Administrator must grant these Microsoft Graph permissions:
 ```
 • RoleManagementPolicy.ReadWrite.Directory
-• RoleManagement.ReadWrite.Directory  
+• RoleManagement.ReadWrite.Directory
 • RoleManagementPolicy.ReadWrite.AzureADGroup
 • PrivilegedEligibilitySchedule.ReadWrite.AzureADGroup
 • PrivilegedAssignmentSchedule.ReadWrite.AzureADGroup
@@ -296,7 +282,7 @@ Administrator must grant these Microsoft Graph permissions:
 
 ### 🌍 **Multi-Cloud Support**
 - ✅ **Azure Public** (default)
-- ✅ **Azure Government** (`AzureUSGovernment`)  
+- ✅ **Azure Government** (`AzureUSGovernment`)
 - ✅ **Azure China** (`AzureChinaCloud`)
 - ✅ **Azure Germany** (`AzureGermanCloud`)
 
