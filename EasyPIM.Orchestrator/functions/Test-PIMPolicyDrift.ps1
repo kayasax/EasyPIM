@@ -99,30 +99,56 @@ function Test-PIMPolicyDrift {
 
 	Write-Verbose -Message "Starting PIM policy drift test. ConfigPath: $ConfigPath, KeyVaultName: $KeyVaultName, SecretName: $SecretName"
 
-	# Load config using enhanced error handling
-	if ($KeyVaultName -and $SecretName) {
-		Write-Verbose "Loading config from Azure Key Vault using enhanced error handling: $KeyVaultName, secret: $SecretName"
-		try {
-			# Use the enhanced Get-EasyPIMConfiguration with retry logic
-			$json = Get-EasyPIMConfiguration -KeyVaultName $KeyVaultName -SecretName $SecretName
-			$configRaw = $json | ConvertTo-Json -Depth 100 # For logging purposes
-		} catch {
-			Write-Error "Failed to load config from Key Vault with enhanced error handling: $($_.Exception.Message)"
-			throw
+	# Initialize telemetry for this execution
+	$telemetryStartTime = Get-Date
+	$sessionId = [System.Guid]::NewGuid().ToString()
+
+	try {
+		# Load config using enhanced error handling
+		if ($KeyVaultName -and $SecretName) {
+			Write-Verbose "Loading config from Azure Key Vault using enhanced error handling: $KeyVaultName, secret: $SecretName"
+			try {
+				# Use the enhanced Get-EasyPIMConfiguration with retry logic
+				$json = Get-EasyPIMConfiguration -KeyVaultName $KeyVaultName -SecretName $SecretName
+				$configRaw = $json | ConvertTo-Json -Depth 100 # For logging purposes
+			} catch {
+				Write-Error "Failed to load config from Key Vault with enhanced error handling: $($_.Exception.Message)"
+				throw
+			}
+		} elseif ($ConfigPath) {
+			try {
+				$ConfigPath = (Resolve-Path -Path $ConfigPath -ErrorAction Stop).Path
+				# Use enhanced file loading too
+				$json = Get-EasyPIMConfiguration -ConfigFilePath $ConfigPath
+				$configRaw = Get-Content -Raw -Path $ConfigPath # For logging purposes
+			} catch {
+				throw "Failed to load config file: $($_.Exception.Message)"
+			}
+		} else {
+			throw "You must specify either -ConfigPath or both -KeyVaultName and -SecretName."
 		}
-	} elseif ($ConfigPath) {
-		try {
-			$ConfigPath = (Resolve-Path -Path $ConfigPath -ErrorAction Stop).Path
-			# Use enhanced file loading too
-			$json = Get-EasyPIMConfiguration -ConfigFilePath $ConfigPath
-			$configRaw = Get-Content -Raw -Path $ConfigPath # For logging purposes
-		} catch {
-			throw "Failed to load config file: $($_.Exception.Message)"
+		if (-not $json) { throw "Parsed JSON object is null - invalid configuration." }
+
+		# Send startup telemetry (non-blocking)
+		$startupProperties = @{
+			"function" = "Test-PIMPolicyDrift"
+			"config_source" = if ($KeyVaultName -and $SecretName) { "KeyVault" } else { "File" }
+			"fail_on_drift" = $FailOnDrift.IsPresent
+			"pass_thru" = $PassThru.IsPresent
+			"has_subscription_id" = (-not [string]::IsNullOrEmpty($SubscriptionId))
+			"session_id" = $sessionId
 		}
-	} else {
-		throw "You must specify either -ConfigPath or both -KeyVaultName and -SecretName."
-	}
-	if (-not $json) { throw "Parsed JSON object is null - invalid configuration." }
+		try {
+			if ($KeyVaultName -and $SecretName) {
+				# For KeyVault configs, pass the loaded config object directly
+				Send-TelemetryEventFromConfig -EventName "drift_test_startup" -Properties $startupProperties -Config $json
+			} else {
+				# For file-based configs, use the file path
+				Send-TelemetryEvent -EventName "drift_test_startup" -Properties $startupProperties -ConfigPath $ConfigPath
+			}
+		} catch {
+			Write-Verbose "Telemetry startup failed (non-blocking): $($_.Exception.Message)"
+		}
 
 	# Initialize collections for expected policies
 	$expectedAzure = @()
@@ -230,10 +256,20 @@ function Test-PIMPolicyDrift {
 	$results = @()
 	$driftCount = 0
 
+	# Display processing summary
+	$totalPolicies = $expectedAzure.Count + $expectedEntra.Count + $expectedGroup.Count
+	if ($totalPolicies -gt 0) {
+		Write-Host "🔍 Processing $totalPolicies policies..." -ForegroundColor Cyan
+		if ($expectedAzure.Count -gt 0) { Write-Host "   • Azure Resource roles: $($expectedAzure.Count)" -ForegroundColor Gray }
+		if ($expectedEntra.Count -gt 0) { Write-Host "   • Entra roles: $($expectedEntra.Count)" -ForegroundColor Gray }
+		if ($expectedGroup.Count -gt 0) { Write-Host "   • Group roles: $($expectedGroup.Count)" -ForegroundColor Gray }
+	}
+
 	# Process Azure role policies
 	if ($expectedAzure.Count -gt 0 -and -not $SubscriptionId) {
 		Write-Warning -Message "Azure role policies present but no -SubscriptionId provided; skipping Azure role validation."
 	} elseif ($expectedAzure.Count -gt 0) {
+		Write-Host "📋 Testing Azure Resource role policies..." -ForegroundColor DarkCyan
 		foreach ($policy in $expectedAzure) {
 			$resolvedPolicy = Get-ResolvedPolicyObject -Policy $policy
 
@@ -280,6 +316,9 @@ function Test-PIMPolicyDrift {
 	}
 
 	# Process Entra role policies
+	if ($expectedEntra.Count -gt 0) {
+		Write-Host "🏢 Testing Entra role policies..." -ForegroundColor DarkCyan
+	}
 	foreach ($policy in $expectedEntra) {
 		if ($policy._RoleNotFound) {
 			$results += [pscustomobject]@{
@@ -316,6 +355,9 @@ function Test-PIMPolicyDrift {
 	}
 
 	# Process Group role policies
+	if ($expectedGroup.Count -gt 0) {
+		Write-Host "👥 Testing Group role policies..." -ForegroundColor DarkCyan
+	}
 	foreach ($policy in $expectedGroup) {
 		$resolvedPolicy = Get-ResolvedPolicyObject -Policy $policy
 
@@ -400,5 +442,75 @@ function Test-PIMPolicyDrift {
 		throw "PIM policy drift detected."
 	}
 
+	# Send completion telemetry (non-blocking)
+	$telemetryEndTime = Get-Date
+	$executionDuration = ($telemetryEndTime - $telemetryStartTime).TotalSeconds
+
+	$completionProperties = @{
+		"function" = "Test-PIMPolicyDrift"
+		"config_source" = if ($KeyVaultName -and $SecretName) { "KeyVault" } else { "File" }
+		"execution_duration_seconds" = [math]::Round($executionDuration, 2)
+		"success" = $true
+		"session_id" = $sessionId
+		"total_policies_tested" = $results.Count
+		"policies_with_drift" = ($results | Where-Object { $_.Status -eq 'Drift' }).Count
+		"policies_with_errors" = ($results | Where-Object { $_.Status -eq 'Error' }).Count
+		"policies_matching" = ($results | Where-Object { $_.Status -eq 'Match' }).Count
+		"policies_skipped" = ($results | Where-Object { $_.Status -eq 'SkippedRoleNotFound' }).Count
+		"azure_policies_tested" = ($results | Where-Object { $_.Type -eq 'AzureRole' }).Count
+		"entra_policies_tested" = ($results | Where-Object { $_.Type -eq 'EntraRole' }).Count
+		"group_policies_tested" = ($results | Where-Object { $_.Type -eq 'Group' }).Count
+		"has_subscription_id" = (-not [string]::IsNullOrEmpty($SubscriptionId))
+		"fail_on_drift" = $FailOnDrift.IsPresent
+		"pass_thru" = $PassThru.IsPresent
+	}
+
+	try {
+		if ($KeyVaultName -and $SecretName) {
+			# For KeyVault configs, pass the loaded config object directly
+			Send-TelemetryEventFromConfig -EventName "drift_test_completion" -Properties $completionProperties -Config $json
+		} else {
+			# For file-based configs, use the file path
+			Send-TelemetryEvent -EventName "drift_test_completion" -Properties $completionProperties -ConfigPath $ConfigPath
+		}
+	} catch {
+		Write-Verbose "Telemetry completion failed (non-blocking): $($_.Exception.Message)"
+	}
+
 	return $results
+
+	} catch {
+		# Send error telemetry (non-blocking)
+		if ($sessionId) {
+			$errorProperties = @{
+				"function" = "Test-PIMPolicyDrift"
+				"config_source" = if ($KeyVaultName -and $SecretName) { "KeyVault" } else { "File" }
+				"fail_on_drift" = $FailOnDrift.IsPresent
+				"success" = $false
+				"error_type" = $_.Exception.GetType().Name
+				"session_id" = $sessionId
+			}
+
+			if ($telemetryStartTime) {
+				$errorDuration = ((Get-Date) - $telemetryStartTime).TotalSeconds
+				$errorProperties["execution_duration_seconds"] = [math]::Round($errorDuration, 2)
+			}
+
+			try {
+				if ($KeyVaultName -and $SecretName) {
+					# For KeyVault configs, pass the loaded config object directly
+					Send-TelemetryEventFromConfig -EventName "drift_test_error" -Properties $errorProperties -Config $json
+				} else {
+					# For file-based configs, use the file path
+					Send-TelemetryEvent -EventName "drift_test_error" -Properties $errorProperties -ConfigPath $ConfigPath
+				}
+			} catch {
+				Write-Verbose "Telemetry error failed (non-blocking): $($_.Exception.Message)"
+			}
+		}
+
+		Write-Error -Message "[ERROR] An error occurred during drift testing: $($_.Exception.Message)"
+		Write-Verbose -Message "Stack trace: $($_.ScriptStackTrace)"
+		throw
+	}
 }

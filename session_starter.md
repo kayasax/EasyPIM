@@ -27,12 +27,11 @@ orchestrator-vX.Y.Z
 
 ## 🧠 **Assistant Memory & Context**
 
-### **Current State (2025-09-09)**
-- **EasyPIM Core**: v2.0.26 (preparing to tag as `core-v2.0.26`) 🚀 PENDING  
-- **EasyPIM.Orchestrator**: v1.4.3 (preparing to tag as `orchestrator-v1.4.3`) 🚀 PENDING
-
-- **Branch**: `main` (hotfix merged and published)
-- **Major Bug**: ✅ RESOLVED - ARM API userType auto-detection implemented
+### **Current State (2025-09-12)**
+- **EasyPIM Core**: v2.0.26 (tagged as `core-v2.0.26`) ✅ PUBLISHED  
+- **EasyPIM.Orchestrator**: v1.4.3 (tagged as `orchestrator-v1.4.3`) ✅ PUBLISHED
+- **Branch**: `main` (notification template support merged and published)
+- **Major Feature**: ✅ PUBLISHED - Notification template support for Entra and Azure roles
 
 ### **🔥 CRITICAL BUG DISCOVERED & FIXED**
 **Root Cause**: The orchestrator was passing approver objects in config format `{id, description}` but `Set-PIMAzureResourcePolicy` expects ARM API format `{Id, Name, Type}`. This caused 400 Bad Request errors whenever approval was required.
@@ -92,6 +91,7 @@ orchestrator-vX.Y.Z
 
 | Date | Key Achievement |
 |------|-----------------|
+| 2025-09-12 | ✅ **PUBLISHED**: Notification template support (core-v2.0.26, orchestrator-v1.4.3) - Email notifications now work for Entra/Azure roles |
 | 2025-09-09 | ✅ **PS5.1 COMPATIBILITY**: Fixed Unicode emoji parsing, ARM SecureString conversion, principal validation, and Graph API body handling |
 | 2025-09-08 | 🔥 **MAJOR BREAKTHROUGH**: Discovered & fixed orchestrator hardcoding "Type=user" preventing auto-detection |
 | 2025-09-08 | ✅ **PR CREATED**: Drift detection boolean comparison fix (false positives resolved) |
