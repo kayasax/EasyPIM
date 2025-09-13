@@ -8,25 +8,25 @@
 
 ---
 
-## 💡 **Transform Azure PIM Management from Manual to Intelligent Automation**
+## 💡 **Transform Azure PIM Management with Powerful Automation**
 
 **EasyPIM** is the most comprehensive PowerShell automation platform for Microsoft Privileged Identity Management (PIM). With **50+ specialized cmdlets**, EasyPIM transforms complex ARM and Graph API interactions into simple, reliable automation workflows for **Azure Resources**, **Entra ID Roles**, and **Security Groups**.
 
 ### 🎯 **What Makes EasyPIM Different**
-- **🚀 Event-Driven Automation**: Complete CI/CD integration with GitHub Actions & Azure DevOps
-- **🛡️ Enterprise Security**: Zero-trust architecture with OIDC authentication
-- **📊 Business Rules Engine**: Intelligent policy validation and drift detection  
-- **⚡ Production Ready**: Powers enterprise PIM governance at scale
+- **⚡ Comprehensive Coverage**: Azure Resources, Entra ID Roles, and Security Groups in one platform
+- **�️ Production-Tested**: 50+ cmdlets covering every PIM operation
+- **📊 JSON Orchestration**: Define complete PIM configurations declaratively  
 - **🔄 Multi-Cloud Support**: Public, Government, China, Germany clouds
+- **�️ Enterprise Ready**: Powers PIM governance at scale with business rules validation
 
-> **🆕 NEW**: Experience EasyPIM in production with our [**Event-Driven Governance Demo**](https://github.com/kayasax/EasyPIM-EventDriven-Governance) - complete CI/CD automation with enterprise dashboards!
+> **💼 Enterprise Demo**: See EasyPIM in production with our [**Event-Driven Governance showcase**](https://github.com/kayasax/EasyPIM-EventDriven-Governance)
 
 ---
 
 ## 📋 **Table of Contents**
 - [🚀 Quick Start](#-quick-start) • [🎯 Key Features](#-key-features) • [📦 Installation](#-installation)
-- [💼 Enterprise Demo](#-enterprise-demo) • [📚 Documentation](#-documentation) • [🔧 Troubleshooting](#-troubleshooting)
-- [🆕 Latest Release](#-major-release-easypim-v20--orchestrator-v10) • [🤝 Contributing](#-contributors)
+- [🎯 Sample Usage](#-sample-usage--common-scenarios) • [📚 Documentation](#-documentation--resources) • [🔧 Troubleshooting](#-troubleshooting--support)
+- [🆕 Latest Release](#-major-release-easypim-v20--orchestrator-v10) • [📋 Requirements](#-requirements) • [🤝 Contributors](#-contributors--community)
 
 ---
 
@@ -42,51 +42,35 @@ Get-Command -Module EasyPIM*
 
 # 3. Start with basic PIM operations
 Get-PIMAzureResourcePolicy -TenantID $tenantID -SubscriptionId $subscriptionID -RoleName "reader"
+
+# 4. Try JSON-driven orchestration
+Invoke-EasyPIMOrchestrator -TenantId $tenantId -ConfigurationPath "./pim-config.json"
 ```
-
-**⚡ Ready for Production?** → **[Deploy Event-Driven PIM Governance](https://github.com/kayasax/EasyPIM-EventDriven-Governance)** with complete CI/CD automation!
-
----
-
-## 💼 **Enterprise Demo: Event-Driven PIM Governance**
-
-### 🎯 **[EasyPIM Event-Driven Governance Platform](https://github.com/kayasax/EasyPIM-EventDriven-Governance)**
-
-Experience EasyPIM in a **production-ready enterprise environment** with our comprehensive demo repository featuring:
-
-| 🚀 **Enterprise Features** | 📊 **Business Value** | 
-|---|---|
-| **⚡ Event-Driven Architecture** | Instant policy updates via Azure Event Grid triggers |
-| **🛡️ Zero-Trust Security** | OIDC authentication, no stored secrets, Key Vault encryption |
-| **📋 Business Rules Engine** | 100% configuration accuracy with intelligent validation |
-| **🎛️ Professional Dashboards** | Real-time monitoring, compliance reporting, drift detection |
-| **⚖️ Dual Platform Support** | GitHub Actions + Azure DevOps integration |
-| **🔄 Self-Healing Systems** | Automatic remediation and 24/7 autonomous operations |
-
-#### 🎯 **What You'll Learn:**
-- **CI/CD Integration**: Complete GitHub Actions & Azure DevOps pipeline setup
-- **Enterprise Security**: Zero-trust architecture implementation
-- **Business Rules**: Custom policy validation and governance frameworks
-- **Monitoring**: Professional dashboards with real-time compliance tracking
-- **Automation**: Event-driven responses to configuration changes
-
-**👉 [Start the Demo](https://github.com/kayasax/EasyPIM-EventDriven-Governance) • [Step-by-Step Guide](https://github.com/kayasax/EasyPIM-EventDriven-Governance/blob/main/docs/Step-by-Step-Guide.md)**
 
 ---
 
 ## 🆕 **Major Release: EasyPIM v2.0 & Orchestrator v1.0**
 
-- 🎯 **Major architectural milestone**: Complete module separation
-- 🔧 **ARM API compatibility fixes**: Resolves InvalidResourceType errors
-- 🛡️ **Enhanced policy validation**: Proactive error detection with clear guidance
-- 📏 **Parameter standardization**: Consistent naming with backward compatibility
-- 🏗️ **Production-ready orchestrator**
+### 🎯 **What's New**
+- **🏗️ Module Separation**: Clean separation between core PIM operations and orchestration workflows
+- **🔧 ARM API Fixes**: Resolves InvalidResourceType errors and improves reliability
+- **🛡️ Enhanced Validation**: Proactive error detection with clear guidance and business rules
+- **📏 Standardized Parameters**: Consistent naming with backward compatibility aliases
+- **🌍 Multi-Cloud Support**: Azure Public, Government, China, Germany clouds
 
-⚠️ **Breaking Changes in v2.0**: Parameter `assignee` renamed to `principalId` (alias provided for compatibility)
+### ⚠️ **Breaking Changes in v2.0**
+- Parameter `assignee` renamed to `principalId` (backward-compatible alias provided)
+- Orchestration commands moved to separate EasyPIM.Orchestrator module
 
-🆕 **Module separation complete**: The JSON-driven orchestrator is now a standalone module: EasyPIM.Orchestrator (requires EasyPIM ≥ 2.0.0).
-**Orchestrated flow guide:** [step-by-step](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)
-🌍 EasyPIM supports multi-cloud (Public, Government, China, Germany) thanks to [Chase Dafnis](https://github.com/CHDAFNI-MSFT)!
+### �️ **Module Architecture** 
+| **Module** | **Purpose** | **Key Features** |
+|---|---|---|
+| **EasyPIM** (Core) | Direct PIM API management | 40+ cmdlets for Azure Resources, Entra Roles, Groups |  
+| **EasyPIM.Orchestrator** | JSON workflows & governance | Configuration drift detection, business rules, CI/CD ready |
+
+**Migration Guide:** [step-by-step orchestrator setup](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)
+
+---
 
 ## 🎯 **Key Features**
 ### 🏗️ **Core PIM Management**
@@ -136,8 +120,7 @@ Connect-MgGraph    # Required for Entra ID roles and groups
 ```
 
 ### ⚡ **Ready for Production?**
-Skip manual configuration and jump straight to enterprise automation:
-**👉 [Deploy Event-Driven PIM Governance](https://github.com/kayasax/EasyPIM-EventDriven-Governance) - Complete CI/CD setup in 10 minutes!**
+For enterprise CI/CD automation, explore our [**Event-Driven Governance Demo**](https://github.com/kayasax/EasyPIM-EventDriven-Governance) showcasing GitHub Actions & Azure DevOps integration.
 
 ---
 
@@ -187,9 +170,7 @@ Invoke-EasyPIMOrchestrator -TenantId $tenantId -ConfigurationPath "./pim-config.
 Test-PIMPolicyDrift -TenantId $tenantId -ConfigurationPath "./pim-config.json" -ReportPath "./drift-report.json"
 ```
 
-**💡 Want more examples?** Check our [**Event-Driven Governance Demo**](https://github.com/kayasax/EasyPIM-EventDriven-Governance) for production-ready automation scenarios!
-
-**💡 Want more examples?** Check our [**Event-Driven Governance Demo**](https://github.com/kayasax/EasyPIM-EventDriven-Governance) for production-ready automation scenarios!
+**💡 More examples available in the [documentation](https://github.com/kayasax/EasyPIM/wiki/Documentation)**
 
 ---
 
@@ -204,12 +185,12 @@ Test-PIMPolicyDrift -TenantId $tenantId -ConfigurationPath "./pim-config.json" -
 ### 🚀 **Getting Started Guides**
 - ⚡ **[Quick Start Tutorial](https://github.com/kayasax/EasyPIM/wiki/Getting-Started)** - First steps with EasyPIM
 - 🏗️ **[Orchestrator Guide](https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator-step%E2%80%90by%E2%80%90step-guide)** - JSON-driven workflows
-- 🎛️ **[Event-Driven Demo](https://github.com/kayasax/EasyPIM-EventDriven-Governance)** - Production CI/CD automation
+- 🔄 **[Module Migration](https://github.com/kayasax/EasyPIM/wiki/Module-Migration)** - Upgrading from v1.x to v2.x
 
-### 🏢 **Enterprise Resources**
-- 🔧 **[Module Migration Guide](https://github.com/kayasax/EasyPIM/wiki/Module-Migration)** - Upgrade from v1.x to v2.x
-- 🛡️ **[Security Best Practices](https://github.com/kayasax/EasyPIM/wiki/Security)** - Enterprise security guidelines
-- 📊 **[Monitoring & Compliance](https://github.com/kayasax/EasyPIM-EventDriven-Governance/blob/main/docs/Step-by-Step-Guide.md)** - Governance frameworks
+### 🏢 **Enterprise & Advanced Usage**
+- �️ **[Security Best Practices](https://github.com/kayasax/EasyPIM/wiki/Security)** - Enterprise security guidelines
+- 🎛️ **[Event-Driven Demo](https://github.com/kayasax/EasyPIM-EventDriven-Governance)** - Production CI/CD automation showcase
+- 📊 **[Business Rules & Governance](https://github.com/kayasax/EasyPIM-EventDriven-Governance/blob/main/docs/Step-by-Step-Guide.md)** - Policy validation frameworks
 
 ---
 
@@ -254,8 +235,8 @@ Test-PIMEndpointDiscovery -TenantId $tenantId  # Available in EasyPIM.Orchestrat
 ### 🆘 **Getting Help**
 - 🐛 **[Report Issues](https://github.com/kayasax/EasyPIM/issues)** - Bug reports with templates
 - 💬 **[Community Discussions](https://github.com/kayasax/EasyPIM/discussions)** - Q&A and feature requests  
-- 📧 **[Contact Support](mailto:easypim-support@domain.com)** - Enterprise support available
-- 🎯 **[Event-Driven Demo Issues](https://github.com/kayasax/EasyPIM-EventDriven-Governance/issues)** - CI/CD specific problems
+- 📧 **Enterprise Support** - Available for production deployments
+- 🎯 **[CI/CD Issues](https://github.com/kayasax/EasyPIM-EventDriven-Governance/issues)** - Event-driven governance demo problems
 
 ---
 
@@ -330,6 +311,6 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 **Built with ❤️ for the Azure Administrator Community**
 
 ---
-*⚡ Ready to transform your PIM management? Start with the [Event-Driven Governance Demo](https://github.com/kayasax/EasyPIM-EventDriven-Governance)!*"
+*⚡ Ready for advanced automation? Explore the [Event-Driven Governance Demo](https://github.com/kayasax/EasyPIM-EventDriven-Governance) for production CI/CD integration!*"
 
 
