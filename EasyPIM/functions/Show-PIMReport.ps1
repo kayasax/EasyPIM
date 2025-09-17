@@ -1,19 +1,38 @@
 ﻿<#
     .SYNOPSIS
-    Visualize PIM activities.
+    Visualize PIM activities in multiple formats (HTML, CSV, JSON).
 
     .DESCRIPTION
-    Retrieves PIM-related audit events from Microsoft Graph and returns a summarized object array. Can optionally filter by user UPN. Also computes top categories and actors for HTML visualization.
+    Retrieves PIM-related audit events from Microsoft Graph and returns a summarized object array. Can optionally filter by user UPN. 
+    Supports multiple output formats:
+    - HTML: Interactive report with charts (default, opens in browser)
+    - CSV: Automation-friendly format for Azure runbooks and scripts  
+    - JSON: Structured data for APIs and programmatic use
 
     .EXAMPLE
     Show-PIMReport -tenantID $tenantID
-    Returns recent PIM activity entries for the tenant with useful derived fields.
+    Generates interactive HTML report with charts and opens in browser (default behavior).
+
+    .EXAMPLE  
+    Show-PIMReport -tenantID $tenantID -Format CSV
+    Exports PIM activity data to CSV file for Azure Automation runbooks. Returns object with Data and FilePath properties.
+
+    .EXAMPLE
+    Show-PIMReport -tenantID $tenantID -Format JSON
+    Exports PIM activity data to JSON file for API integration. Returns object with Data and FilePath properties.
+
+    .EXAMPLE
+    Show-PIMReport -tenantID $tenantID -upn "user@domain.com" -Format CSV
+    Filters PIM activities for specific user and exports to CSV format.
 
     .PARAMETER tenantID
     The Entra tenant ID to query.
 
     .PARAMETER upn
     Optional UPN filter to return only activities initiated by a specific user.
+
+    .PARAMETER Format  
+    Output format: 'HTML' for interactive reports (default), 'CSV' for automation scenarios, 'JSON' for programmatic use.
 
     .NOTES
     Author: Loïc MICHEL
@@ -28,12 +47,15 @@ function Show-PIMReport {
         [System.String]
         # Tenant ID
         $tenantID,
-        [Parameter(Position = 1, Mandatory = $false)]
-        [System.String]
-        # upn of the user
-        $upn
-
-    )
+    [Parameter(Position = 1, Mandatory = $false)]
+    [System.String]
+    # upn of the user
+    $upn,
+    [Parameter()]
+    [ValidateSet('HTML', 'CSV', 'JSON')]
+    [String]
+    # Output format: HTML (interactive report), CSV (automation-friendly), JSON (programmatic use)
+    $Format = 'HTML'    )
     try {
         $Script:tenantID = $tenantID
 
@@ -117,7 +139,39 @@ function Show-PIMReport {
             }
             $Myoutput += New-Object PSObject -Property $props
         }
-        $Myoutput
+        
+        # Handle different output formats
+        switch ($Format) {
+            'CSV' {
+                # Generate CSV file for Azure Automation and non-interactive scenarios
+                $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+                $csvPath = "$env:temp\PIMReport-$timestamp.csv"
+                $Myoutput | Export-Csv -Path $csvPath -NoTypeInformation -Force
+                Write-Verbose "CSV report generated: $csvPath"
+                return @{
+                    Data = $Myoutput
+                    FilePath = $csvPath
+                    Format = 'CSV'
+                }
+            }
+            'JSON' {
+                # Generate JSON file for programmatic use and APIs
+                $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+                $jsonPath = "$env:temp\PIMReport-$timestamp.json"
+                $Myoutput | ConvertTo-Json -Depth 10 | Out-File -FilePath $jsonPath -Force
+                Write-Verbose "JSON report generated: $jsonPath"
+                return @{
+                    Data = $Myoutput
+                    FilePath = $jsonPath
+                    Format = 'JSON'
+                }
+            }
+            'HTML' {
+                # Continue with existing HTML generation logic (default behavior)
+                # Return the data array for backward compatibility, HTML generated below
+                $Myoutput
+            }
+        }
 
         #Data for the HTML report
 
