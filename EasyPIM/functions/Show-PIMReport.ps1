@@ -3,17 +3,17 @@
     Visualize PIM activities in multiple formats (HTML, CSV, JSON).
 
     .DESCRIPTION
-    Retrieves PIM-related audit events from Microsoft Graph and returns a summarized object array. Can optionally filter by user UPN. 
+    Retrieves PIM-related audit events from Microsoft Graph and returns a summarized object array. Can optionally filter by user UPN.
     Supports multiple output formats:
     - HTML: Interactive report with charts (default, opens in browser)
-    - CSV: Automation-friendly format for Azure runbooks and scripts  
+    - CSV: Automation-friendly format for Azure runbooks and scripts
     - JSON: Structured data for APIs and programmatic use
 
     .EXAMPLE
     Show-PIMReport -tenantID $tenantID
     Generates interactive HTML report with charts and opens in browser (default behavior).
 
-    .EXAMPLE  
+    .EXAMPLE
     Show-PIMReport -tenantID $tenantID -Format CSV
     Exports PIM activity data to CSV file in temp directory for Azure Automation runbooks. Returns object with Data and FilePath properties.
 
@@ -39,11 +39,11 @@
     .PARAMETER upn
     Optional UPN filter to return only activities initiated by a specific user.
 
-    .PARAMETER Format  
+    .PARAMETER Format
     Output format: 'HTML' for interactive reports (default), 'CSV' for automation scenarios, 'JSON' for programmatic use.
 
     .PARAMETER Path
-    Custom file path for CSV/JSON export. If not specified, uses temp directory with timestamp. 
+    Custom file path for CSV/JSON export. If not specified, uses temp directory with timestamp.
     Directory will be created if it doesn't exist. File extension (.csv/.json) is added automatically if not provided.
 
     .NOTES
@@ -155,7 +155,7 @@ function Show-PIMReport {
             }
             $Myoutput += New-Object PSObject -Property $props
         }
-        
+
         # Handle different output formats
         switch ($Format) {
             'CSV' {
@@ -170,13 +170,13 @@ function Show-PIMReport {
                     $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
                     $csvPath = "$env:temp\PIMReport-$timestamp.csv"
                 }
-                
+
                 # Ensure directory exists
                 $directory = Split-Path -Path $csvPath -Parent
                 if ($directory -and -not (Test-Path -Path $directory)) {
                     New-Item -Path $directory -ItemType Directory -Force | Out-Null
                 }
-                
+
                 $Myoutput | Export-Csv -Path $csvPath -NoTypeInformation -Force
                 Write-Verbose "CSV report generated: $csvPath"
                 return @{
@@ -197,13 +197,13 @@ function Show-PIMReport {
                     $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
                     $jsonPath = "$env:temp\PIMReport-$timestamp.json"
                 }
-                
+
                 # Ensure directory exists
                 $directory = Split-Path -Path $jsonPath -Parent
                 if ($directory -and -not (Test-Path -Path $directory)) {
                     New-Item -Path $directory -ItemType Directory -Force | Out-Null
                 }
-                
+
                 $Myoutput | ConvertTo-Json -Depth 10 | Out-File -FilePath $jsonPath -Force
                 Write-Verbose "JSON report generated: $jsonPath"
                 return @{
