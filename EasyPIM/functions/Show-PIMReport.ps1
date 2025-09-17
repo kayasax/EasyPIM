@@ -15,15 +15,23 @@
 
     .EXAMPLE  
     Show-PIMReport -tenantID $tenantID -Format CSV
-    Exports PIM activity data to CSV file for Azure Automation runbooks. Returns object with Data and FilePath properties.
+    Exports PIM activity data to CSV file in temp directory for Azure Automation runbooks. Returns object with Data and FilePath properties.
+
+    .EXAMPLE
+    Show-PIMReport -tenantID $tenantID -Format CSV -Path "C:\Reports\PIM-Activity.csv"
+    Exports PIM activity data to specific CSV file path. Creates directory if it doesn't exist.
+
+    .EXAMPLE
+    Show-PIMReport -tenantID $tenantID -Format JSON -Path "\\server\share\reports\PIM-$(Get-Date -Format 'yyyyMMdd')"
+    Exports to network share with custom filename (extension automatically added).
 
     .EXAMPLE
     Show-PIMReport -tenantID $tenantID -Format JSON
-    Exports PIM activity data to JSON file for API integration. Returns object with Data and FilePath properties.
+    Exports PIM activity data to JSON file in temp directory for API integration. Returns object with Data and FilePath properties.
 
     .EXAMPLE
-    Show-PIMReport -tenantID $tenantID -upn "user@domain.com" -Format CSV
-    Filters PIM activities for specific user and exports to CSV format.
+    Show-PIMReport -tenantID $tenantID -upn "user@domain.com" -Format CSV -Path "./user-activity.csv"
+    Filters PIM activities for specific user and exports to relative path in current directory.
 
     .PARAMETER tenantID
     The Entra tenant ID to query.
@@ -33,6 +41,10 @@
 
     .PARAMETER Format  
     Output format: 'HTML' for interactive reports (default), 'CSV' for automation scenarios, 'JSON' for programmatic use.
+
+    .PARAMETER Path
+    Custom file path for CSV/JSON export. If not specified, uses temp directory with timestamp. 
+    Directory will be created if it doesn't exist. File extension (.csv/.json) is added automatically if not provided.
 
     .NOTES
     Author: Loïc MICHEL
@@ -55,7 +67,11 @@ function Show-PIMReport {
     [ValidateSet('HTML', 'CSV', 'JSON')]
     [String]
     # Output format: HTML (interactive report), CSV (automation-friendly), JSON (programmatic use)
-    $Format = 'HTML'    )
+    $Format = 'HTML',
+    [Parameter()]
+    [String]
+    # Custom file path for CSV/JSON export. If not specified, uses temp directory with timestamp
+    $Path    )
     try {
         $Script:tenantID = $tenantID
 
@@ -144,8 +160,23 @@ function Show-PIMReport {
         switch ($Format) {
             'CSV' {
                 # Generate CSV file for Azure Automation and non-interactive scenarios
-                $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-                $csvPath = "$env:temp\PIMReport-$timestamp.csv"
+                if ($Path) {
+                    $csvPath = $Path
+                    # Ensure .csv extension if not provided
+                    if (-not $csvPath.EndsWith('.csv', [System.StringComparison]::OrdinalIgnoreCase)) {
+                        $csvPath += '.csv'
+                    }
+                } else {
+                    $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+                    $csvPath = "$env:temp\PIMReport-$timestamp.csv"
+                }
+                
+                # Ensure directory exists
+                $directory = Split-Path -Path $csvPath -Parent
+                if ($directory -and -not (Test-Path -Path $directory)) {
+                    New-Item -Path $directory -ItemType Directory -Force | Out-Null
+                }
+                
                 $Myoutput | Export-Csv -Path $csvPath -NoTypeInformation -Force
                 Write-Verbose "CSV report generated: $csvPath"
                 return @{
@@ -156,8 +187,23 @@ function Show-PIMReport {
             }
             'JSON' {
                 # Generate JSON file for programmatic use and APIs
-                $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-                $jsonPath = "$env:temp\PIMReport-$timestamp.json"
+                if ($Path) {
+                    $jsonPath = $Path
+                    # Ensure .json extension if not provided
+                    if (-not $jsonPath.EndsWith('.json', [System.StringComparison]::OrdinalIgnoreCase)) {
+                        $jsonPath += '.json'
+                    }
+                } else {
+                    $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+                    $jsonPath = "$env:temp\PIMReport-$timestamp.json"
+                }
+                
+                # Ensure directory exists
+                $directory = Split-Path -Path $jsonPath -Parent
+                if ($directory -and -not (Test-Path -Path $directory)) {
+                    New-Item -Path $directory -ItemType Directory -Force | Out-Null
+                }
+                
                 $Myoutput | ConvertTo-Json -Depth 10 | Out-File -FilePath $jsonPath -Force
                 Write-Verbose "JSON report generated: $jsonPath"
                 return @{
@@ -168,6 +214,7 @@ function Show-PIMReport {
             }
             'HTML' {
                 # Continue with existing HTML generation logic (default behavior)
+                # Path parameter ignored for HTML format (uses temp directory)
                 # Return the data array for backward compatibility, HTML generated below
                 $Myoutput
             }
