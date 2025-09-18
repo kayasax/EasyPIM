@@ -5,7 +5,7 @@
     .DESCRIPTION
     Retrieves PIM-related audit events from Microsoft Graph and returns a summarized object array. Can optionally filter by user UPN.
     Supports multiple output formats:
-    - HTML: Interactive report with charts (default, opens in browser)
+    - HTML: Interactive report with charts (default, opens in browser unless -NoAutoOpen specified)
     - CSV: Automation-friendly format for Azure runbooks and scripts
     - JSON: Structured data for APIs and programmatic use
 
@@ -33,6 +33,14 @@
     Show-PIMReport -tenantID $tenantID -upn "user@domain.com" -Format CSV -Path "./user-activity.csv"
     Filters PIM activities for specific user and exports to relative path in current directory.
 
+    .EXAMPLE
+    Show-PIMReport -tenantID $tenantID -NoAutoOpen
+    Generates HTML report and saves to temp directory without opening it. Returns object with Data and FilePath properties.
+
+    .EXAMPLE
+    Show-PIMReport -tenantID $tenantID -NoAutoOpen -Path "C:\Reports\PIM-Report.html"
+    Saves HTML report to specific path without opening it. Useful for server environments or batch processing.
+
     .PARAMETER tenantID
     The Entra tenant ID to query.
 
@@ -45,6 +53,10 @@
     .PARAMETER Path
     Custom file path for CSV/JSON export. If not specified, uses temp directory with timestamp.
     Directory will be created if it doesn't exist. File extension (.csv/.json) is added automatically if not provided.
+
+    .PARAMETER NoAutoOpen
+    When specified with HTML format, saves the HTML file without automatically opening it in the default browser. 
+    Useful for server environments, batch processing, or when you want to save the HTML file for later viewing.
 
     .NOTES
     Author: Loïc MICHEL
@@ -71,7 +83,11 @@ function Show-PIMReport {
     [Parameter()]
     [String]
     # Custom file path for CSV/JSON export. If not specified, uses temp directory with timestamp
-    $Path    )
+    $Path,
+    [Parameter()]
+    [Switch]
+    # When specified with HTML format, saves the HTML file without automatically opening it
+    $NoAutoOpen    )
     try {
         $Script:tenantID = $tenantID
 
@@ -213,8 +229,8 @@ function Show-PIMReport {
                 }
             }
             'HTML' {
-                # Continue with existing HTML generation logic (default behavior)
-                # Path parameter ignored for HTML format (uses temp directory)
+                # Continue with existing HTML generation logic
+                # For HTML format, Path parameter can be used to specify custom location
                 # Return the data array for backward compatibility, HTML generated below
                 $Myoutput
             }
@@ -843,8 +859,40 @@ $html += @'
 
 '@
         $html += $myscript
-        $html | Out-File -FilePath "$env:temp\PIMReport.html" -Force
-        invoke-item "$env:temp\PIMReport.html"
+        
+        # Determine HTML file path
+        if ($Path -and ($Format -eq 'HTML')) {
+            # Use custom path for HTML
+            $htmlPath = $Path
+            # Add .html extension if not provided
+            if (-not [System.IO.Path]::HasExtension($htmlPath)) {
+                $htmlPath += ".html"
+            }
+            # Create directory if needed
+            $directory = [System.IO.Path]::GetDirectoryName($htmlPath)
+            if ($directory -and -not (Test-Path $directory)) {
+                New-Item -ItemType Directory -Path $directory -Force | Out-Null
+            }
+        } else {
+            # Use temp directory (default behavior)
+            $htmlPath = "$env:temp\PIMReport.html"
+        }
+        
+        # Save HTML file
+        $html | Out-File -FilePath $htmlPath -Force
+        
+        # Handle auto-opening
+        if (-not $NoAutoOpen) {
+            # Auto-open HTML file (default behavior)
+            invoke-item $htmlPath
+        } else {
+            # Return object with file path when NoAutoOpen is specified
+            return @{
+                Data = $Myoutput
+                FilePath = $htmlPath
+                Format = 'HTML'
+            }
+        }
 
     }
     catch {
