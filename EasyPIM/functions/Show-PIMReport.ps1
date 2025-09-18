@@ -55,7 +55,7 @@
     Directory will be created if it doesn't exist. File extension (.csv/.json) is added automatically if not provided.
 
     .PARAMETER NoAutoOpen
-    When specified with HTML format, saves the HTML file without automatically opening it in the default browser. 
+    When specified with HTML format, saves the HTML file without automatically opening it in the default browser.
     Useful for server environments, batch processing, or when you want to save the HTML file for later viewing.
 
     .NOTES
@@ -859,7 +859,7 @@ $html += @'
 
 '@
         $html += $myscript
-        
+
         # Determine HTML file path
         if ($Path -and ($Format -eq 'HTML')) {
             # Use custom path for HTML
@@ -877,10 +877,10 @@ $html += @'
             # Use temp directory (default behavior)
             $htmlPath = "$env:temp\PIMReport.html"
         }
-        
+
         # Save HTML file
         $html | Out-File -FilePath $htmlPath -Force
-        
+
         # Handle auto-opening
         if (-not $NoAutoOpen) {
             # Auto-open HTML file (default behavior)
