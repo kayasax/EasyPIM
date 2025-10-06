@@ -46,28 +46,116 @@ function Initialize-EasyPIMPolicies {
         $processEntra  = ($PolicyOperations -contains 'All' -or $PolicyOperations -contains 'EntraRoles')
         $processGroups = ($PolicyOperations -contains 'All' -or $PolicyOperations -contains 'GroupRoles')
 
-        # New format sections - EntraRoles.Policies
-        if ($processEntra -and $Config.PSObject.Properties['EntraRoles'] -and $Config.EntraRoles.PSObject.Properties['Policies'] -and $Config.EntraRoles.Policies) {
-            Write-Verbose "Processing EntraRoles.Policies section"
-            $processedConfig.EntraRolePolicies = @()
-            foreach ($roleName in $Config.EntraRoles.Policies.PSObject.Properties.Name) {
-                $policyContent = $Config.EntraRoles.Policies.$roleName
-                if ($policyContent.PSObject.Properties['Template'] -and $policyContent.Template) {
-                    $policyDefinition = [PSCustomObject]@{ RoleName = $roleName; PolicySource = 'template'; Template = $policyContent.Template }
+        # Entra policy source detection and conflict check
+        $entraArrayTopPresent = ($Config.PSObject.Properties['EntraRolePolicies'] -and $Config.EntraRolePolicies)
+        $entraNestedPresent   = ($Config.PSObject.Properties['EntraRoles'] -and $Config.EntraRoles.PSObject.Properties['Policies'] -and $Config.EntraRoles.Policies)
 
-                    # 🆕 Copy any override properties from policyContent (excluding Template)
-                    foreach ($prop in $policyContent.PSObject.Properties) {
-                        if ($prop.Name -ne 'Template') {
-                            $policyDefinition | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value -Force
+        if ($processEntra -and $entraArrayTopPresent -and $entraNestedPresent) {
+            throw "Both EntraRolePolicies and EntraRoles.Policies are present. Only one format is allowed."
+        }
+
+        if ($processEntra -and ($entraArrayTopPresent -or $entraNestedPresent)) {
+            Write-Verbose "Processing Entra Role policies"
+            if (-not $processedConfig.PSObject.Properties['EntraRolePolicies']) {
+                $processedConfig.EntraRolePolicies = @()
+            }
+
+            $polNode = if ($entraNestedPresent) { $Config.EntraRoles.Policies } else { $Config.EntraRolePolicies }
+            $sourceLabel = if ($entraNestedPresent) { "EntraRoles.Policies" } else { "EntraRolePolicies" }
+
+            if ($polNode -is [System.Collections.IDictionary] -or 
+                ($polNode -is [psobject] -and 
+                 $polNode.PSObject -and 
+                 $polNode.PSObject.Properties.Count -gt 0 -and 
+                 -not ($polNode -is [System.Collections.IEnumerable] -and $polNode -isnot [string]))) {
+                
+                Write-Verbose "Processing $sourceLabel as object/dictionary format"
+                foreach ($roleName in $polNode.PSObject.Properties.Name) {
+                    $policyContent = $polNode.$roleName
+                    if (-not $policyContent) { continue }
+
+                    if ($policyContent.PSObject.Properties['Template'] -and $policyContent.Template) {
+                        $policyDefinition = [PSCustomObject]@{ 
+                            RoleName = $roleName
+                            PolicySource = 'template'
+                            Template = $policyContent.Template
+                        }
+                        foreach ($prop in $policyContent.PSObject.Properties) {
+                            if ($prop.Name -ne 'Template') {
+                                $policyDefinition | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value -Force
+                            }
+                        }
+                    } else {
+                        $policyDefinition = [PSCustomObject]@{ 
+                            RoleName = $roleName
+                            PolicySource = 'inline'
+                            Policy = $policyContent
                         }
                     }
-                } else {
-                    $policyDefinition = [PSCustomObject]@{ RoleName = $roleName; PolicySource = 'inline'; Policy = $policyContent }
+                    $processedPolicy = Resolve-PolicyConfiguration -PolicyDefinition $policyDefinition -Templates $policyTemplates -PolicyType 'EntraRole'
+                    $processedConfig.EntraRolePolicies += $processedPolicy
                 }
-                $processedPolicy = Resolve-PolicyConfiguration -PolicyDefinition $policyDefinition -Templates $policyTemplates -PolicyType 'EntraRole'
-                $processedConfig.EntraRolePolicies += $processedPolicy
             }
-            Write-Verbose "Processed $($processedConfig.EntraRolePolicies.Count) Entra Role policies from EntraRoles.Policies"
+            elseif ($polNode -is [System.Collections.IEnumerable] -and $polNode -isnot [string]) {
+                Write-Verbose "Processing $sourceLabel as array format"
+                foreach ($entry in $polNode) {
+                    if (-not ($entry -is [psobject])) { continue }
+
+                    $roleName = if ($entry.PSObject.Properties['RoleName']) { $entry.RoleName } else { $null }
+                    if (-not $roleName) {
+                        throw "EntraRole array policy entry missing required property: RoleName"
+                    }
+
+                    $hasTemplate = ($entry.PSObject.Properties['Template'] -and $entry.Template)
+                    $hasInlinePolicy = ($entry.PSObject.Properties['Policy'] -and $entry.Policy)
+                    $hasPolicySource = ($entry.PSObject.Properties['PolicySource'] -and $entry.PolicySource)
+
+                    if ($hasTemplate) {
+                        $policyDefinition = [PSCustomObject]@{
+                            RoleName = $roleName
+                            PolicySource = 'template'
+                            Template = $entry.Template
+                        }
+                        foreach ($prop in $entry.PSObject.Properties) {
+                            if ($prop.Name -notin @('Template', 'RoleName', 'Policy')) {
+                                try {
+                                    $policyDefinition | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value -Force
+                                } catch {
+                                }
+                            }
+                        }
+                    }
+                    elseif ($hasInlinePolicy -or ($hasPolicySource -and $entry.PolicySource -eq 'inline')) {
+                        $inlinePolicy = if ($hasInlinePolicy) {
+                            $entry.Policy
+                        } else {
+                            $props = @{}
+                            foreach ($prop in $entry.PSObject.Properties) {
+                                if ($prop.Name -notin @('RoleName', 'Template', 'PolicySource')) {
+                                    $props[$prop.Name] = $prop.Value
+                                }
+                            }
+                            [PSCustomObject]$props
+                        }
+                        $policyDefinition = [PSCustomObject]@{
+                            RoleName = $roleName
+                            PolicySource = 'inline'
+                            Policy = $inlinePolicy
+                        }
+                    }
+                    else {
+                        throw "EntraRole array policy requires Template or inline Policy for role '$roleName'"
+                    }
+
+                    $processedPolicy = Resolve-PolicyConfiguration -PolicyDefinition $policyDefinition -Templates $policyTemplates -PolicyType 'EntraRole'
+                    $processedConfig.EntraRolePolicies += $processedPolicy
+                }
+            }
+            else {
+                throw "Unsupported type for Entra policies: $($polNode.GetType().FullName)"
+            }
+
+            Write-Verbose "Processed $($processedConfig.EntraRolePolicies.Count) Entra Role policies from $sourceLabel"
         }
 
         # Azure policy source detection and conflict check
