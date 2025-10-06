@@ -29,8 +29,15 @@ function Initialize-EasyPIMPolicies {
         # Initialize policy templates - merge parameter and config templates
         $policyTemplates = $PolicyTemplates.Clone()
         if ($Config.PSObject.Properties['PolicyTemplates'] -and $Config.PolicyTemplates) {
-            foreach ($templateName in $Config.PolicyTemplates.PSObject.Properties.Name) {
-                $policyTemplates[$templateName] = $Config.PolicyTemplates.$templateName
+            $cfgTemplates = $Config.PolicyTemplates
+            if ($cfgTemplates -is [System.Collections.IDictionary]) {
+                foreach ($templateName in $cfgTemplates.Keys) {
+                    $policyTemplates[$templateName] = $cfgTemplates[$templateName]
+                }
+            } else {
+                foreach ($templateName in $cfgTemplates.PSObject.Properties.Name) {
+                    $policyTemplates[$templateName] = $cfgTemplates.$templateName
+                }
             }
         }
         Write-Verbose "Found $($policyTemplates.Keys.Count) policy templates"
@@ -63,30 +70,85 @@ function Initialize-EasyPIMPolicies {
             Write-Verbose "Processed $($processedConfig.EntraRolePolicies.Count) Entra Role policies from EntraRoles.Policies"
         }
 
-        # New format sections - AzureRoles.Policies
-        if ($processAzure -and $Config.PSObject.Properties['AzureRoles'] -and $Config.AzureRoles.PSObject.Properties['Policies'] -and $Config.AzureRoles.Policies) {
-            Write-Verbose "Processing AzureRoles.Policies section"
-            $processedConfig.AzureRolePolicies = @()
-            foreach ($roleName in $Config.AzureRoles.Policies.PSObject.Properties.Name) {
-                $policyContent = $Config.AzureRoles.Policies.$roleName
-                $scope = $null
-                if ($policyContent.PSObject.Properties['Scope'] -and $policyContent.Scope) { $scope = $policyContent.Scope }
-                if ($policyContent.PSObject.Properties['Template'] -and $policyContent.Template) {
-                    $policyDefinition = [PSCustomObject]@{ RoleName = $roleName; Scope = $scope; PolicySource = 'template'; Template = $policyContent.Template }
+        # Azure policy source detection and conflict check
+        $azureArrayPresent = ($Config.PSObject.Properties['AzureRoles'] -and $Config.AzureRoles.PSObject.Properties['Policies'] -and $Config.AzureRoles.Policies)
+        $azureObjectPresent = ($Config.PSObject.Properties['AzureRolePolicies'] -and $Config.AzureRolePolicies)
 
-                    # 🆕 Copy any override properties from policyContent (excluding Template and Scope)
-                    foreach ($prop in $policyContent.PSObject.Properties) {
-                        if ($prop.Name -ne 'Template' -and $prop.Name -ne 'Scope') {
-                            $policyDefinition | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value -Force
-                        }
-                    }
-                } else {
-                    $policyOnly = $policyContent | Select-Object -Property * -ExcludeProperty Scope
-                    $policyDefinition = [PSCustomObject]@{ RoleName = $roleName; Scope = $scope; PolicySource = 'inline'; Policy = $policyOnly }
-                }
-                $processedPolicy = Resolve-PolicyConfiguration -PolicyDefinition $policyDefinition -Templates $policyTemplates -PolicyType 'AzureRole'
-                $processedConfig.AzureRolePolicies += $processedPolicy
+        if ($processAzure -and $azureArrayPresent -and $azureObjectPresent) {
+            throw "Both AzureRoles.Policies and AzureRolePolicies are present. Only one format is allowed."
+        }
+        # New format sections - AzureRoles.Policies
+        if ($processAzure -and (($Config.PSObject.Properties['AzureRoles'] -and $Config.AzureRoles.PSObject.Properties['Policies'] -and $Config.AzureRoles.Policies) -or ($Config.PSObject.Properties['AzureRolePolicies'] -and $Config.AzureRolePolicies))) {
+            $processedConfig.AzureRolePolicies = @()
+            $polNode = $null
+            if ($Config.PSObject.Properties['AzureRoles'] -and $Config.AzureRoles.PSObject.Properties['Policies'] -and $Config.AzureRoles.Policies) {
+                Write-Verbose "Processing AzureRoles.Policies section"
+                $polNode = $Config.AzureRoles.Policies
+            } elseif ($Config.PSObject.Properties['AzureRolePolicies'] -and $Config.AzureRolePolicies) {
+                Write-Verbose "Processing legacy AzureRolePolicies section"
+                $polNode = $Config.AzureRolePolicies
             }
+
+            # Backward-compatible dictionary/object format: { "RoleName": { ... } }
+            if ($polNode -is [System.Collections.IDictionary] -or ($polNode -is [psobject] -and $polNode.PSObject -and $polNode.PSObject.Properties.Count -gt 0)) {
+                foreach ($roleName in $polNode.PSObject.Properties.Name) {
+                    $policyContent = $polNode.$roleName
+                    $scope = $null
+                    if ($policyContent.PSObject.Properties['Scope'] -and $policyContent.Scope) { $scope = $policyContent.Scope }
+                    if ($policyContent.PSObject.Properties['Template'] -and $policyContent.Template) {
+                        $policyDefinition = [PSCustomObject]@{ RoleName = $roleName; Scope = $scope; PolicySource = 'template'; Template = $policyContent.Template }
+                        foreach ($prop in $policyContent.PSObject.Properties) {
+                            if ($prop.Name -ne 'Template' -and $prop.Name -ne 'Scope') {
+                                $policyDefinition | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value -Force
+                            }
+                        }
+                    } else {
+                        $policyOnly = $policyContent | Select-Object -Property * -ExcludeProperty Scope
+                        $policyDefinition = [PSCustomObject]@{ RoleName = $roleName; Scope = $scope; PolicySource = 'inline'; Policy = $policyOnly }
+                    }
+                    $processedPolicy = Resolve-PolicyConfiguration -PolicyDefinition $policyDefinition -Templates $policyTemplates -PolicyType 'AzureRole'
+                    $processedConfig.AzureRolePolicies += $processedPolicy
+                }
+            }
+            # New array format: [ { RoleName, Scope, Template|Policy, PolicySource, ... }, ... ]
+            elseif ($polNode -is [System.Collections.IEnumerable]) {
+                foreach ($entry in $polNode) {
+                    if (-not ($entry -is [psobject])) { continue }
+                    $roleName = $null
+                    if ($entry.PSObject.Properties['RoleName']) { $roleName = $entry.RoleName }
+                    $scope = $null
+                    if ($entry.PSObject.Properties['Scope']) { $scope = $entry.Scope }
+
+                    if (-not $roleName) { throw "AzureRole array policy missing required property: RoleName" }
+                    if (-not $scope) { throw "AzureRole array policy missing required property: Scope for role '$roleName'" }
+
+                    $policyDefinition = $null
+                    $hasTemplate = ($entry.PSObject.Properties['Template'] -and $entry.Template)
+                    $hasInline   = ($entry.PSObject.Properties['Policy'] -and $entry.Policy)
+
+                    if ($hasTemplate) {
+                        $policyDefinition = [PSCustomObject]@{ RoleName = $roleName; Scope = $scope; PolicySource = 'template'; Template = $entry.Template }
+                        foreach ($prop in $entry.PSObject.Properties) {
+                            if ($prop.Name -notin @('Template','Scope','RoleName','Policy')) {
+                                try { $policyDefinition | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value -Force } catch { }
+                            }
+                        }
+                    } elseif ($hasInline -or ($entry.PSObject.Properties['PolicySource'] -and ($entry.PolicySource -eq 'inline'))) {
+                        $inlinePolicy = $null
+                        if ($hasInline) { $inlinePolicy = $entry.Policy } else { $inlinePolicy = ($entry | Select-Object -Property * -ExcludeProperty RoleName,Scope,Template,PolicySource) }
+                        $policyDefinition = [PSCustomObject]@{ RoleName = $roleName; Scope = $scope; PolicySource = 'inline'; Policy = $inlinePolicy }
+                    } else {
+                        throw "AzureRole array policy requires Template or Inline Policy for role '$roleName' at scope '$scope'"
+                    }
+
+                    $processedPolicy = Resolve-PolicyConfiguration -PolicyDefinition $policyDefinition -Templates $policyTemplates -PolicyType 'AzureRole'
+                    $processedConfig.AzureRolePolicies += $processedPolicy
+                }
+            }
+            else {
+                throw "Unsupported type for AzureRoles.Policies: $($polNode.GetType().FullName)"
+            }
+
             Write-Verbose "Processed $($processedConfig.AzureRolePolicies.Count) Azure Role policies from AzureRoles.Policies"
         }
 

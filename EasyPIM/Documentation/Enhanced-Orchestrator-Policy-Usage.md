@@ -1,3 +1,21 @@
+#### Azure Role Policies (array format - new, backward compatible, Template-only)
+
+{
+  "AzureRoles": {
+    "Policies": [
+      {
+        "RoleName": "Reader",
+        "Scope": "/subscriptions/subscription-id",
+        "Template": "Standard",
+        "ApprovalRequired": true
+      }
+    ]
+  }
+}
+
+Notes:
+- The array format coexists with the original object format; both are supported.
+- Each entry requires RoleName and Scope, and currently must specify Template (inline/file not supported yet in array).
 # Enhanced EasyPIM Orchestrator - Policy Management Usage Guide
 
 ## Overview
