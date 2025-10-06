@@ -240,44 +240,149 @@ function Initialize-EasyPIMPolicies {
             Write-Verbose "Processed $($processedConfig.AzureRolePolicies.Count) Azure Role policies from AzureRoles.Policies"
         }
 
-        # New format sections - GroupRoles.Policies
-        if ($processGroups -and $Config.PSObject.Properties['GroupRoles'] -and $Config.GroupRoles.PSObject.Properties['Policies'] -and $Config.GroupRoles.Policies) {
-            Write-Verbose "Processing GroupRoles.Policies section"
-            $processedConfig.GroupPolicies = @()
-            foreach ($groupKey in $Config.GroupRoles.Policies.PSObject.Properties.Name) {
-                $groupNode = $Config.GroupRoles.Policies.$groupKey
-                $isGuid = $false
-                if ($groupKey -match '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') { $isGuid = $true }
-                foreach ($roleProp in $groupNode.PSObject.Properties) {
-                    $roleName = $roleProp.Name
-                    if ($roleName -in @('Member','Owner')) {
-                        $roleContent = $roleProp.Value
-                        if ($roleContent.PSObject.Properties['Template'] -and $roleContent.Template) {
-                            if ($isGuid) {
-                                $policyDefinition = [PSCustomObject]@{ PolicySource = 'template'; Template = $roleContent.Template; RoleName = $roleName; GroupId = $groupKey }
-                            } else {
-                                $policyDefinition = [PSCustomObject]@{ PolicySource = 'template'; Template = $roleContent.Template; RoleName = $roleName; GroupName = $groupKey }
-                            }
+        # Group policy source detection and conflict check
+        $groupArrayTopPresent = ($Config.PSObject.Properties['GroupPolicies'] -and $Config.GroupPolicies)
+        $groupNestedPresent   = ($Config.PSObject.Properties['Groups'] -and $Config.Groups.PSObject.Properties['Policies'] -and $Config.Groups.Policies)
+        $groupLegacyPresent   = ($Config.PSObject.Properties['GroupRoles'] -and $Config.GroupRoles.PSObject.Properties['Policies'] -and $Config.GroupRoles.Policies)
 
-                            # 🆕 Copy any override properties from roleContent (excluding Template)
-                            foreach ($prop in $roleContent.PSObject.Properties) {
-                                if ($prop.Name -ne 'Template') {
+        if ($processGroups -and (($groupArrayTopPresent -and $groupNestedPresent) -or ($groupArrayTopPresent -and $groupLegacyPresent) -or ($groupNestedPresent -and $groupLegacyPresent))) {
+            throw "Multiple Group policy formats are present (GroupPolicies, Groups.Policies, GroupRoles.Policies). Only one format is allowed."
+        }
+
+        if ($processGroups -and ($groupArrayTopPresent -or $groupNestedPresent -or $groupLegacyPresent)) {
+            Write-Verbose "Processing Group policies"
+            if (-not $processedConfig.PSObject.Properties['GroupPolicies']) {
+                $processedConfig.GroupPolicies = @()
+            }
+
+            $polNode = $null
+            $sourceLabel = ""
+            if ($groupArrayTopPresent) {
+                $polNode = $Config.GroupPolicies
+                $sourceLabel = "GroupPolicies"
+            } elseif ($groupNestedPresent) {
+                $polNode = $Config.Groups.Policies
+                $sourceLabel = "Groups.Policies"
+            } else {
+                $polNode = $Config.GroupRoles.Policies
+                $sourceLabel = "GroupRoles.Policies"
+            }
+
+            # Check if polNode is an array or object format
+            if ($polNode -is [System.Collections.IEnumerable] -and $polNode -isnot [string]) {
+                Write-Verbose "Processing $sourceLabel as array format"
+                foreach ($entry in $polNode) {
+                    if (-not ($entry -is [psobject])) { continue }
+
+                    $groupId = if ($entry.PSObject.Properties['GroupId']) { $entry.GroupId } else { $null }
+                    $groupName = if ($entry.PSObject.Properties['GroupName']) { $entry.GroupName } else { $null }
+                    
+                    if (-not $groupId -and -not $groupName) {
+                        throw "Group array policy entry missing required property: GroupId or GroupName"
+                    }
+
+                    $roleName = if ($entry.PSObject.Properties['RoleName']) { $entry.RoleName } else { $null }
+                    if (-not $roleName) {
+                        throw "Group array policy entry missing required property: RoleName"
+                    }
+
+                    if ($roleName -notin @('Member', 'Owner')) {
+                        throw "Group array policy RoleName must be 'Member' or 'Owner', got: $roleName"
+                    }
+
+                    $hasTemplate = ($entry.PSObject.Properties['Template'] -and $entry.Template)
+                    $hasInlinePolicy = ($entry.PSObject.Properties['Policy'] -and $entry.Policy)
+                    $hasPolicySource = ($entry.PSObject.Properties['PolicySource'] -and $entry.PolicySource)
+
+                    if ($hasTemplate) {
+                        $policyDefinition = [PSCustomObject]@{
+                            PolicySource = 'template'
+                            Template = $entry.Template
+                            RoleName = $roleName
+                        }
+                        if ($groupId) {
+                            $policyDefinition | Add-Member -NotePropertyName 'GroupId' -NotePropertyValue $groupId -Force
+                        }
+                        if ($groupName) {
+                            $policyDefinition | Add-Member -NotePropertyName 'GroupName' -NotePropertyValue $groupName -Force
+                        }
+                        foreach ($prop in $entry.PSObject.Properties) {
+                            if ($prop.Name -notin @('Template', 'RoleName', 'GroupId', 'GroupName', 'Policy')) {
+                                try {
                                     $policyDefinition | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value -Force
+                                } catch {
                                 }
                             }
-                        } else {
-                            if ($isGuid) {
-                                $policyDefinition = [PSCustomObject]@{ PolicySource = 'inline'; Policy = $roleContent; RoleName = $roleName; GroupId = $groupKey }
-                            } else {
-                                $policyDefinition = [PSCustomObject]@{ PolicySource = 'inline'; Policy = $roleContent; RoleName = $roleName; GroupName = $groupKey }
-                            }
                         }
-                        $processedPolicy = Resolve-PolicyConfiguration -PolicyDefinition $policyDefinition -Templates $policyTemplates -PolicyType 'Group'
-                        $processedConfig.GroupPolicies += $processedPolicy
+                    }
+                    elseif ($hasInlinePolicy -or ($hasPolicySource -and $entry.PolicySource -eq 'inline')) {
+                        $inlinePolicy = if ($hasInlinePolicy) {
+                            $entry.Policy
+                        } else {
+                            $props = @{}
+                            foreach ($prop in $entry.PSObject.Properties) {
+                                if ($prop.Name -notin @('RoleName', 'GroupId', 'GroupName', 'Template', 'PolicySource')) {
+                                    $props[$prop.Name] = $prop.Value
+                                }
+                            }
+                            [PSCustomObject]$props
+                        }
+                        $policyDefinition = [PSCustomObject]@{
+                            PolicySource = 'inline'
+                            Policy = $inlinePolicy
+                            RoleName = $roleName
+                        }
+                        if ($groupId) {
+                            $policyDefinition | Add-Member -NotePropertyName 'GroupId' -NotePropertyValue $groupId -Force
+                        }
+                        if ($groupName) {
+                            $policyDefinition | Add-Member -NotePropertyName 'GroupName' -NotePropertyValue $groupName -Force
+                        }
+                    }
+                    else {
+                        throw "Group array policy requires Template or inline Policy for group $($groupId ?? $groupName) role $roleName"
+                    }
+
+                    $processedPolicy = Resolve-PolicyConfiguration -PolicyDefinition $policyDefinition -Templates $policyTemplates -PolicyType 'Group'
+                    $processedConfig.GroupPolicies += $processedPolicy
+                }
+            }
+            else {
+                Write-Verbose "Processing $sourceLabel as object format"
+                foreach ($groupKey in $polNode.PSObject.Properties.Name) {
+                    $groupNode = $polNode.$groupKey
+                    $isGuid = $false
+                    if ($groupKey -match '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') { $isGuid = $true }
+                    foreach ($roleProp in $groupNode.PSObject.Properties) {
+                        $roleName = $roleProp.Name
+                        if ($roleName -in @('Member','Owner')) {
+                            $roleContent = $roleProp.Value
+                            if ($roleContent.PSObject.Properties['Template'] -and $roleContent.Template) {
+                                if ($isGuid) {
+                                    $policyDefinition = [PSCustomObject]@{ PolicySource = 'template'; Template = $roleContent.Template; RoleName = $roleName; GroupId = $groupKey }
+                                } else {
+                                    $policyDefinition = [PSCustomObject]@{ PolicySource = 'template'; Template = $roleContent.Template; RoleName = $roleName; GroupName = $groupKey }
+                                }
+
+                                foreach ($prop in $roleContent.PSObject.Properties) {
+                                    if ($prop.Name -ne 'Template') {
+                                        $policyDefinition | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value -Force
+                                    }
+                                }
+                            } else {
+                                if ($isGuid) {
+                                    $policyDefinition = [PSCustomObject]@{ PolicySource = 'inline'; Policy = $roleContent; RoleName = $roleName; GroupId = $groupKey }
+                                } else {
+                                    $policyDefinition = [PSCustomObject]@{ PolicySource = 'inline'; Policy = $roleContent; RoleName = $roleName; GroupName = $groupKey }
+                                }
+                            }
+                            $processedPolicy = Resolve-PolicyConfiguration -PolicyDefinition $policyDefinition -Templates $policyTemplates -PolicyType 'Group'
+                            $processedConfig.GroupPolicies += $processedPolicy
+                        }
                     }
                 }
             }
-            Write-Verbose "Processed $($processedConfig.GroupPolicies.Count) Group policies from GroupRoles.Policies"
+            Write-Verbose "Processed $($processedConfig.GroupPolicies.Count) Group policies from $sourceLabel"
         }
 
         # Pass-through other sections
