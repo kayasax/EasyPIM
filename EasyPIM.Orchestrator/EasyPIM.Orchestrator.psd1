@@ -1,6 +1,6 @@
 @{
     RootModule        = 'EasyPIM.Orchestrator.psm1'
-    ModuleVersion = '1.4.4'
+    ModuleVersion = '1.4.5'
     GUID              = 'b6f9b3c9-bc6a-4d4b-8c51-7c45d42157cd'
     Author            = 'Loïc MICHEL'
     CompanyName       = 'EasyPIM'
@@ -30,37 +30,18 @@
         ProjectUri = 'https://github.com/kayasax/EasyPIM'
         LicenseUri = 'https://github.com/kayasax/EasyPIM/blob/main/LICENSE'
 ReleaseNotes = @'
-🚀 EasyPIM.Orchestrator v1.1.0 - Enhanced Stability Release
+🚀 EasyPIM.Orchestrator v1.4.5 - Policy Arrays + Drift Accuracy
 
-RECENT IMPROVEMENTS: Dependency optimization and reliability enhancements.
+### Added
+- Array-based policy definitions now supported across Azure, Entra, and Group scopes with template override support.
+- New documentation and sample JSON (`config/enhanced-sample-config-array.json`) demonstrating the array formats.
 
-✅ UPDATES IN v1.1.1:
-- 🆕 Template + Inline Override Merging: Full implementation of Issue #136 for all policy types
-- 🏗️ Code Architecture Refactoring: Extracted helper functions to internal modules for better maintainability
-- 🔍 Enhanced Drift Detection: Test-PIMPolicyDrift now uses orchestrator logic for consistency
-- 📚 Comprehensive Documentation: Updated step-by-step guide with template + override examples
-- ✅ Quality Standards: PSScriptAnalyzer compliant across all functions
-- 🔧 New Internal Functions: Remove-JsonComments, Get-ResolvedPolicyObject, Test-IsProtectedRole, Convert-RequirementValue, Compare-PIMPolicy, Resolve-PolicyTemplate
+### Fixed
+- `Test-PIMPolicyDrift` now compares template-based policies using the resolved payload produced by the orchestrator.
+- Cleaned source files flagged by FileIntegrity tests (trailing whitespace) to keep CI validation green.
 
-✅ UPDATES IN v1.1.0:
-- Dependency optimization: Removed unnecessary Microsoft.Graph.Identity.Governance requirement
-- Enhanced module architecture with cleaner dependencies
-- Improved reliability with CI/CD gallery version checking
-- Support for protected roles override functionality (Issue #137)
-- Compatible with latest EasyPIM core v2.0.5
-
-✅ CORE FEATURES:
-- Complete PIM orchestration via Invoke-EasyPIMOrchestrator
-- Policy drift detection with Test-PIMPolicyDrift
-- Endpoint discovery with Test-PIMEndpointDiscovery
-- ARM API compatibility fixes for Azure resource roles
-- Parameter standardization: 'principalId' (with 'assignee' alias for compatibility)
-- Auto-configuration of permanent assignment flags based on duration specifications
-
-📋 REQUIREMENTS:
-- EasyPIM (latest stable version, automatically installed)
-- PowerShell 5.1+
-- Az.Accounts, Microsoft.Graph.Authentication modules
+### Docs
+- Added dedicated array policy guides under `EasyPIM/Documentation` for Azure, Entra, and Group scenarios.
 '@
     } }
 }

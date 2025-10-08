@@ -167,16 +167,16 @@ function Test-PIMPolicyDrift {
 	try {
 		$processedConfig = Initialize-EasyPIMPolicies -Config $json -PolicyTemplates $templates
 		$expectedEntra = $processedConfig.EntraRolePolicies | ForEach-Object {
-			$obj = [pscustomobject]@{ RoleName = $_.RoleName; ResolvedPolicy = $_.Policy }
-			$obj
+			$resolvedPolicy = if ($_.PSObject.Properties['ResolvedPolicy']) { $_.ResolvedPolicy } else { $_.Policy }
+			[pscustomobject]@{ RoleName = $_.RoleName; ResolvedPolicy = $resolvedPolicy }
 		}
 		$expectedAzure = $processedConfig.AzureRolePolicies | ForEach-Object {
-			$obj = [pscustomobject]@{ RoleName = $_.RoleName; Scope = $_.Scope; ResolvedPolicy = $_.Policy }
-			$obj
+			$resolvedPolicy = if ($_.PSObject.Properties['ResolvedPolicy']) { $_.ResolvedPolicy } else { $_.Policy }
+			[pscustomobject]@{ RoleName = $_.RoleName; Scope = $_.Scope; ResolvedPolicy = $resolvedPolicy }
 		}
 		$expectedGroup = $processedConfig.GroupPolicies | ForEach-Object {
-			$obj = [pscustomobject]@{ GroupId = $_.GroupId; GroupName = $_.GroupName; RoleName = $_.RoleName; ResolvedPolicy = $_.Policy }
-			$obj
+			$resolvedPolicy = if ($_.PSObject.Properties['ResolvedPolicy']) { $_.ResolvedPolicy } else { $_.Policy }
+			[pscustomobject]@{ GroupId = $_.GroupId; GroupName = $_.GroupName; RoleName = $_.RoleName; ResolvedPolicy = $resolvedPolicy }
 		}
 	} catch {
 		Write-Warning "Failed to use orchestrator policy processing, falling back to local logic: $_"
