@@ -63,19 +63,19 @@ function Initialize-EasyPIMPolicies {
             $polNode = if ($entraNestedPresent) { $Config.EntraRoles.Policies } else { $Config.EntraRolePolicies }
             $sourceLabel = if ($entraNestedPresent) { "EntraRoles.Policies" } else { "EntraRolePolicies" }
 
-            if ($polNode -is [System.Collections.IDictionary] -or 
-                ($polNode -is [psobject] -and 
-                 $polNode.PSObject -and 
-                 $polNode.PSObject.Properties.Count -gt 0 -and 
+            if ($polNode -is [System.Collections.IDictionary] -or
+                ($polNode -is [psobject] -and
+                 $polNode.PSObject -and
+                 $polNode.PSObject.Properties.Count -gt 0 -and
                  -not ($polNode -is [System.Collections.IEnumerable] -and $polNode -isnot [string]))) {
-                
+
                 Write-Verbose "Processing $sourceLabel as object/dictionary format"
                 foreach ($roleName in $polNode.PSObject.Properties.Name) {
                     $policyContent = $polNode.$roleName
                     if (-not $policyContent) { continue }
 
                     if ($policyContent.PSObject.Properties['Template'] -and $policyContent.Template) {
-                        $policyDefinition = [PSCustomObject]@{ 
+                        $policyDefinition = [PSCustomObject]@{
                             RoleName = $roleName
                             PolicySource = 'template'
                             Template = $policyContent.Template
@@ -86,7 +86,7 @@ function Initialize-EasyPIMPolicies {
                             }
                         }
                     } else {
-                        $policyDefinition = [PSCustomObject]@{ 
+                        $policyDefinition = [PSCustomObject]@{
                             RoleName = $roleName
                             PolicySource = 'inline'
                             Policy = $policyContent
@@ -276,7 +276,7 @@ function Initialize-EasyPIMPolicies {
 
                     $groupId = if ($entry.PSObject.Properties['GroupId']) { $entry.GroupId } else { $null }
                     $groupName = if ($entry.PSObject.Properties['GroupName']) { $entry.GroupName } else { $null }
-                    
+
                     if (-not $groupId -and -not $groupName) {
                         throw "Group array policy entry missing required property: GroupId or GroupName"
                     }
