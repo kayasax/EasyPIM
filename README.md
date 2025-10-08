@@ -247,7 +247,8 @@ Test-PIMEndpointDiscovery -TenantId $tenantId  # Available in EasyPIM.Orchestrat
 ### 👥 **Core Contributors**
 - **[Loïc MICHEL](https://github.com/kayasax)** - Original author and maintainer
 - **[Chase Dafnis](https://github.com/CHDAFNI-MSFT)** - Multi-cloud / Azure environment support
-
+## 👥 **Orchestrator Contributors**
+- **[jeenvan](https://github.com/jeevanions)** - Array format in config and fix scope assignement for management groups
 ### 🌟 **Community Support**
 - ⭐ **[Star this repository](https://github.com/kayasax/EasyPIM/stargazers)** if EasyPIM helps you!
 - 🐛 **[Report issues](https://github.com/kayasax/EasyPIM/issues)** to help improve the platform
