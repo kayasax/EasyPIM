@@ -181,30 +181,58 @@ function Test-PIMPolicyDrift {
 	} catch {
 		Write-Warning "Failed to use orchestrator policy processing, falling back to local logic: $_"
 
-		# Fallback to original logic - process different configuration formats
-		if ($json.PSObject.Properties['AzureRolePolicies']) { $expectedAzure += $json.AzureRolePolicies }
-		if ($json.PSObject.Properties['EntraRolePolicies']) { $expectedEntra += $json.EntraRolePolicies }
-		if ($json.PSObject.Properties['GroupPolicies']) { $expectedGroup += $json.GroupPolicies }
-
-		# Process nested format configurations
-		if ($json.PSObject.Properties['AzureRoles'] -and $json.AzureRoles.PSObject.Properties['Policies']) {
-			foreach ($prop in $json.AzureRoles.Policies.PSObject.Properties) {
-				$roleName = $prop.Name
-				$policy = $prop.Value
-				if (-not $policy) { continue }
-
-				$obj = [pscustomobject]@{ RoleName = $roleName; Scope = $policy.Scope }
-				foreach ($policyProperty in $policy.PSObject.Properties) {
-					if ($policyProperty.Name -notin @('Scope')) {
-						$obj | Add-Member -NotePropertyName $policyProperty.Name -NotePropertyValue $policyProperty.Value -Force
-					}
+	# Fallback to original logic - process different configuration formats
+	if ($json.PSObject.Properties['AzureRolePolicies']) { $expectedAzure += $json.AzureRolePolicies }
+	if ($json.PSObject.Properties['EntraRolePolicies']) {
+		if ($json.EntraRolePolicies -is [System.Collections.IEnumerable] -and $json.EntraRolePolicies -isnot [string]) {
+			foreach ($entry in $json.EntraRolePolicies) {
+				if ($entry -and $entry.PSObject.Properties['RoleName']) {
+					$expectedEntra += $entry
 				}
-				$expectedAzure += $obj
 			}
+		} else {
+			$expectedEntra += $json.EntraRolePolicies
 		}
+	}
+	if ($json.PSObject.Properties['GroupPolicies']) {
+		if ($json.GroupPolicies -is [System.Collections.IEnumerable] -and $json.GroupPolicies -isnot [string]) {
+			foreach ($entry in $json.GroupPolicies) {
+				if ($entry -and ($entry.PSObject.Properties['GroupId'] -or $entry.PSObject.Properties['GroupName'])) {
+					$expectedGroup += $entry
+				}
+			}
+		} else {
+			$expectedGroup += $json.GroupPolicies
+		}
+	}
 
-		if ($json.PSObject.Properties['EntraRoles'] -and $json.EntraRoles.PSObject.Properties['Policies']) {
-			foreach ($prop in $json.EntraRoles.Policies.PSObject.Properties) {
+	# Process nested format configurations
+	if ($json.PSObject.Properties['AzureRoles'] -and $json.AzureRoles.PSObject.Properties['Policies']) {
+		foreach ($prop in $json.AzureRoles.Policies.PSObject.Properties) {
+			$roleName = $prop.Name
+			$policy = $prop.Value
+			if (-not $policy) { continue }
+
+			$obj = [pscustomobject]@{ RoleName = $roleName; Scope = $policy.Scope }
+			foreach ($policyProperty in $policy.PSObject.Properties) {
+				if ($policyProperty.Name -notin @('Scope')) {
+					$obj | Add-Member -NotePropertyName $policyProperty.Name -NotePropertyValue $policyProperty.Value -Force
+				}
+			}
+			$expectedAzure += $obj
+		}
+	}
+
+	if ($json.PSObject.Properties['EntraRoles'] -and $json.EntraRoles.PSObject.Properties['Policies']) {
+		$entraPolicies = $json.EntraRoles.Policies
+		if ($entraPolicies -is [System.Collections.IEnumerable] -and $entraPolicies -isnot [string]) {
+			foreach ($entry in $entraPolicies) {
+				if ($entry -and $entry.PSObject.Properties['RoleName']) {
+					$expectedEntra += $entry
+				}
+			}
+		} else {
+			foreach ($prop in $entraPolicies.PSObject.Properties) {
 				$roleName = $prop.Name
 				$policy = $prop.Value
 				if (-not $policy) { continue }
@@ -216,9 +244,18 @@ function Test-PIMPolicyDrift {
 				$expectedEntra += $obj
 			}
 		}
+	}
 
-		if ($json.PSObject.Properties['GroupRoles'] -and $json.GroupRoles.PSObject.Properties['Policies']) {
-			foreach ($groupProperty in $json.GroupRoles.Policies.PSObject.Properties) {
+	if ($json.PSObject.Properties['Groups'] -and $json.Groups.PSObject.Properties['Policies']) {
+		$groupPolicies = $json.Groups.Policies
+		if ($groupPolicies -is [System.Collections.IEnumerable] -and $groupPolicies -isnot [string]) {
+			foreach ($entry in $groupPolicies) {
+				if ($entry -and ($entry.PSObject.Properties['GroupId'] -or $entry.PSObject.Properties['GroupName']) -and $entry.PSObject.Properties['RoleName']) {
+					$expectedGroup += $entry
+				}
+			}
+		} else {
+			foreach ($groupProperty in $groupPolicies.PSObject.Properties) {
 				$groupId = $groupProperty.Name
 				$roleBlock = $groupProperty.Value
 				if (-not $roleBlock) { continue }
@@ -236,6 +273,27 @@ function Test-PIMPolicyDrift {
 				}
 			}
 		}
+	}
+
+	if ($json.PSObject.Properties['GroupRoles'] -and $json.GroupRoles.PSObject.Properties['Policies']) {
+		foreach ($groupProperty in $json.GroupRoles.Policies.PSObject.Properties) {
+			$groupId = $groupProperty.Name
+			$roleBlock = $groupProperty.Value
+			if (-not $roleBlock) { continue }
+
+			foreach ($roleProperty in $roleBlock.PSObject.Properties) {
+				$roleName = $roleProperty.Name
+				$policy = $roleProperty.Value
+				if (-not $policy) { continue }
+
+				$obj = [pscustomobject]@{ GroupId = $groupId; RoleName = $roleName }
+				foreach ($policyProperty in $policy.PSObject.Properties) {
+					$obj | Add-Member -NotePropertyName $policyProperty.Name -NotePropertyValue $policyProperty.Value -Force
+				}
+				$expectedGroup += $obj
+			}
+		}
+	}
 
 		# Apply template resolution for fallback processing
 		$expectedAzure = $expectedAzure | ForEach-Object -Process {

@@ -1,0 +1,20 @@
+{
+  "PolicyTemplates": {
+    "Standard": {
+      "ActivationDuration": "PT8H",
+      "ActivationRequirement": "MultiFactorAuthentication",
+      "ApprovalRequired": false,
+      "Approvers": []
+    }
+  },
+  "AzureRoles": {
+    "Policies": [
+      {
+        "RoleName": "Reader",
+        "Scope": "/subscriptions/00000000-0000-0000-0000-000000000000",
+        "Template": "Standard",
+        "ApprovalRequired": true
+      }
+    ]
+  }
+}

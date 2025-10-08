@@ -78,43 +78,136 @@ function Test-EasyPIMConfigurationValidity {
         }
     }
 
-    # Validation Rule 2: Check EntraRoles policies for Approvers mismatches
-    if ($Config.PSObject.Properties['EntraRoles'] -and $Config.EntraRoles.PSObject.Properties['Policies']) {
-        Write-Verbose "Validating EntraRoles policies..."
+    # Validation Rule 2a: Check EntraRolePolicies (top-level array) for Approvers mismatches
+    if ($Config.PSObject.Properties['EntraRolePolicies'] -and $Config.EntraRolePolicies) {
+        Write-Verbose "Validating EntraRolePolicies (array format)..."
 
-        foreach ($roleName in $Config.EntraRoles.Policies.PSObject.Properties.Name) {
-            $rolePolicy = $Config.EntraRoles.Policies.$roleName
+        if ($Config.EntraRolePolicies -is [System.Collections.IEnumerable] -and $Config.EntraRolePolicies -isnot [string]) {
+            $index = 0
+            foreach ($rolePolicy in $Config.EntraRolePolicies) {
+                if (-not $rolePolicy) { $index++; continue }
+                $roleName = if ($rolePolicy.PSObject.Properties['RoleName']) { $rolePolicy.RoleName } else { "Unknown" }
+                $context = "EntraRolePolicies[$index] (RoleName: $roleName)"
 
-            if ($rolePolicy.PSObject.Properties['Approvers'] -and $rolePolicy.Approvers) {
-                $approverIssues = Test-ApproversFormat -Approvers $rolePolicy.Approvers -Context "EntraRoles.Policies.$roleName"
+                if ($rolePolicy.PSObject.Properties['Approvers'] -and $rolePolicy.Approvers) {
+                    $approverIssues = Test-ApproversFormat -Approvers $rolePolicy.Approvers -Context $context
 
-                if ($approverIssues.HasIssues) {
-                    $validationResult.HasIssues = $true
-                    $validationResult.Issues += $approverIssues.Issues
-                    $validationResult.ValidationSummary.ApproverFieldMismatches += $approverIssues.Issues.Count
+                    if ($approverIssues.HasIssues) {
+                        $validationResult.HasIssues = $true
+                        $validationResult.Issues += $approverIssues.Issues
+                        $validationResult.ValidationSummary.ApproverFieldMismatches += $approverIssues.Issues.Count
 
-                    if ($AutoCorrect -and $approverIssues.CorrectedApprovers) {
-                        $validationResult.CorrectedConfig.EntraRoles.Policies.$roleName.Approvers = $approverIssues.CorrectedApprovers
-                        $validationResult.Corrections += "Auto-corrected Approvers format in EntraRoles.Policies.$roleName"
-                        $validationResult.ValidationSummary.AutoCorrections++
+                        if ($AutoCorrect -and $approverIssues.CorrectedApprovers) {
+                            $Config.EntraRolePolicies[$index].Approvers = $approverIssues.CorrectedApprovers
+                            $validationResult.Corrections += "Auto-corrected Approvers format in $context"
+                            $validationResult.ValidationSummary.AutoCorrections++
+                        }
                     }
                 }
-            }
 
-            # Check for ApprovalRequired=true but missing Approvers
-            if ($rolePolicy.PSObject.Properties['ApprovalRequired'] -and $rolePolicy.ApprovalRequired -eq $true) {
-                if (-not $rolePolicy.PSObject.Properties['Approvers'] -or -not $rolePolicy.Approvers -or $rolePolicy.Approvers.Count -eq 0) {
-                    if (-not $rolePolicy.PSObject.Properties['Template'] -or -not $rolePolicy.Template) {
-                        $issue = [PSCustomObject]@{
-                            Severity = "Error"
-                            Category = "MissingApprovers"
-                            Context = "EntraRoles.Policies.$roleName"
-                            Message = "ApprovalRequired is true but no Approvers defined and no Template specified"
-                            Suggestion = "Add Approvers array or use a Template with Approvers defined"
+                if ($rolePolicy.PSObject.Properties['ApprovalRequired'] -and $rolePolicy.ApprovalRequired -eq $true) {
+                    if (-not $rolePolicy.PSObject.Properties['Approvers'] -or -not $rolePolicy.Approvers -or $rolePolicy.Approvers.Count -eq 0) {
+                        if (-not $rolePolicy.PSObject.Properties['Template'] -or -not $rolePolicy.Template) {
+                            $issue = [PSCustomObject]@{
+                                Severity = "Error"
+                                Category = "MissingApprovers"
+                                Context = $context
+                                Message = "ApprovalRequired is true but no Approvers defined and no Template specified"
+                                Suggestion = "Add Approvers array or use a Template with Approvers defined"
+                            }
+                            $validationResult.HasIssues = $true
+                            $validationResult.Issues += $issue
+                            $validationResult.ValidationSummary.MissingRequiredFields++
                         }
+                    }
+                }
+
+                $index++
+            }
+        }
+    }
+
+    # Validation Rule 2b: Check EntraRoles.Policies for Approvers mismatches (both object and array formats)
+    if ($Config.PSObject.Properties['EntraRoles'] -and $Config.EntraRoles.PSObject.Properties['Policies']) {
+        Write-Verbose "Validating EntraRoles.Policies..."
+
+        $entraPolicies = $Config.EntraRoles.Policies
+        if ($entraPolicies -is [System.Collections.IEnumerable] -and $entraPolicies -isnot [string]) {
+            $index = 0
+            foreach ($rolePolicy in $entraPolicies) {
+                if (-not $rolePolicy) { $index++; continue }
+                $roleName = if ($rolePolicy.PSObject.Properties['RoleName']) { $rolePolicy.RoleName } else { "Unknown" }
+                $context = "EntraRoles.Policies[$index] (RoleName: $roleName)"
+
+                if ($rolePolicy.PSObject.Properties['Approvers'] -and $rolePolicy.Approvers) {
+                    $approverIssues = Test-ApproversFormat -Approvers $rolePolicy.Approvers -Context $context
+
+                    if ($approverIssues.HasIssues) {
                         $validationResult.HasIssues = $true
-                        $validationResult.Issues += $issue
-                        $validationResult.ValidationSummary.MissingRequiredFields++
+                        $validationResult.Issues += $approverIssues.Issues
+                        $validationResult.ValidationSummary.ApproverFieldMismatches += $approverIssues.Issues.Count
+
+                        if ($AutoCorrect -and $approverIssues.CorrectedApprovers) {
+                            $Config.EntraRoles.Policies[$index].Approvers = $approverIssues.CorrectedApprovers
+                            $validationResult.Corrections += "Auto-corrected Approvers format in $context"
+                            $validationResult.ValidationSummary.AutoCorrections++
+                        }
+                    }
+                }
+
+                if ($rolePolicy.PSObject.Properties['ApprovalRequired'] -and $rolePolicy.ApprovalRequired -eq $true) {
+                    if (-not $rolePolicy.PSObject.Properties['Approvers'] -or -not $rolePolicy.Approvers -or $rolePolicy.Approvers.Count -eq 0) {
+                        if (-not $rolePolicy.PSObject.Properties['Template'] -or -not $rolePolicy.Template) {
+                            $issue = [PSCustomObject]@{
+                                Severity = "Error"
+                                Category = "MissingApprovers"
+                                Context = $context
+                                Message = "ApprovalRequired is true but no Approvers defined and no Template specified"
+                                Suggestion = "Add Approvers array or use a Template with Approvers defined"
+                            }
+                            $validationResult.HasIssues = $true
+                            $validationResult.Issues += $issue
+                            $validationResult.ValidationSummary.MissingRequiredFields++
+                        }
+                    }
+                }
+
+                $index++
+            }
+        } else {
+            foreach ($roleName in $entraPolicies.PSObject.Properties.Name) {
+                $rolePolicy = $entraPolicies.$roleName
+
+                if ($rolePolicy.PSObject.Properties['Approvers'] -and $rolePolicy.Approvers) {
+                    $approverIssues = Test-ApproversFormat -Approvers $rolePolicy.Approvers -Context "EntraRoles.Policies.$roleName"
+
+                    if ($approverIssues.HasIssues) {
+                        $validationResult.HasIssues = $true
+                        $validationResult.Issues += $approverIssues.Issues
+                        $validationResult.ValidationSummary.ApproverFieldMismatches += $approverIssues.Issues.Count
+
+                        if ($AutoCorrect -and $approverIssues.CorrectedApprovers) {
+                            $validationResult.CorrectedConfig.EntraRoles.Policies.$roleName.Approvers = $approverIssues.CorrectedApprovers
+                            $validationResult.Corrections += "Auto-corrected Approvers format in EntraRoles.Policies.$roleName"
+                            $validationResult.ValidationSummary.AutoCorrections++
+                        }
+                    }
+                }
+
+                if ($rolePolicy.PSObject.Properties['ApprovalRequired'] -and $rolePolicy.ApprovalRequired -eq $true) {
+                    if (-not $rolePolicy.PSObject.Properties['Approvers'] -or -not $rolePolicy.Approvers -or $rolePolicy.Approvers.Count -eq 0) {
+                        if (-not $rolePolicy.PSObject.Properties['Template'] -or -not $rolePolicy.Template) {
+                            $issue = [PSCustomObject]@{
+                                Severity = "Error"
+                                Category = "MissingApprovers"
+                                Context = "EntraRoles.Policies.$roleName"
+                                Message = "ApprovalRequired is true but no Approvers defined and no Template specified"
+                                Suggestion = "Add Approvers array or use a Template with Approvers defined"
+                            }
+                            $validationResult.HasIssues = $true
+                            $validationResult.Issues += $issue
+                            $validationResult.ValidationSummary.MissingRequiredFields++
+                        }
                     }
                 }
             }
@@ -164,6 +257,153 @@ function Test-EasyPIMConfigurationValidity {
         }
     }
 
+    # Validation Rule 3a: Check GroupPolicies (top-level array) for Approvers mismatches
+    if ($Config.PSObject.Properties['GroupPolicies'] -and $Config.GroupPolicies) {
+        Write-Verbose "Validating GroupPolicies (array format)..."
+
+        if ($Config.GroupPolicies -is [System.Collections.IEnumerable] -and $Config.GroupPolicies -isnot [string]) {
+            $index = 0
+            foreach ($groupPolicy in $Config.GroupPolicies) {
+                if (-not $groupPolicy) { $index++; continue }
+                $groupId = if ($groupPolicy.PSObject.Properties['GroupId']) { $groupPolicy.GroupId } else { "Unknown" }
+                $groupName = if ($groupPolicy.PSObject.Properties['GroupName']) { $groupPolicy.GroupName } else { $groupId }
+                $roleName = if ($groupPolicy.PSObject.Properties['RoleName']) { $groupPolicy.RoleName } else { "Unknown" }
+                $context = "GroupPolicies[$index] (Group: $groupName, Role: $roleName)"
+
+                if ($groupPolicy.PSObject.Properties['Approvers'] -and $groupPolicy.Approvers) {
+                    $approverIssues = Test-ApproversFormat -Approvers $groupPolicy.Approvers -Context $context
+
+                    if ($approverIssues.HasIssues) {
+                        $validationResult.HasIssues = $true
+                        $validationResult.Issues += $approverIssues.Issues
+                        $validationResult.ValidationSummary.ApproverFieldMismatches += $approverIssues.Issues.Count
+
+                        if ($AutoCorrect -and $approverIssues.CorrectedApprovers) {
+                            $Config.GroupPolicies[$index].Approvers = $approverIssues.CorrectedApprovers
+                            $validationResult.Corrections += "Auto-corrected Approvers format in $context"
+                            $validationResult.ValidationSummary.AutoCorrections++
+                        }
+                    }
+                }
+
+                if ($groupPolicy.PSObject.Properties['ApprovalRequired'] -and $groupPolicy.ApprovalRequired -eq $true) {
+                    if (-not $groupPolicy.PSObject.Properties['Approvers'] -or -not $groupPolicy.Approvers -or $groupPolicy.Approvers.Count -eq 0) {
+                        if (-not $groupPolicy.PSObject.Properties['Template'] -or -not $groupPolicy.Template) {
+                            $issue = [PSCustomObject]@{
+                                Severity = "Error"
+                                Category = "MissingApprovers"
+                                Context = $context
+                                Message = "ApprovalRequired is true but no Approvers defined and no Template specified"
+                                Suggestion = "Add Approvers array or use a Template with Approvers defined"
+                            }
+                            $validationResult.HasIssues = $true
+                            $validationResult.Issues += $issue
+                            $validationResult.ValidationSummary.MissingRequiredFields++
+                        }
+                    }
+                }
+
+                $index++
+            }
+        }
+    }
+
+    # Validation Rule 3b: Check Groups.Policies for Approvers mismatches (both object and array formats)
+    if ($Config.PSObject.Properties['Groups'] -and $Config.Groups.PSObject.Properties['Policies']) {
+        Write-Verbose "Validating Groups.Policies..."
+
+        $groupPolicies = $Config.Groups.Policies
+        if ($groupPolicies -is [System.Collections.IEnumerable] -and $groupPolicies -isnot [string]) {
+            $index = 0
+            foreach ($groupPolicy in $groupPolicies) {
+                if (-not $groupPolicy) { $index++; continue }
+                $groupId = if ($groupPolicy.PSObject.Properties['GroupId']) { $groupPolicy.GroupId } else { "Unknown" }
+                $groupName = if ($groupPolicy.PSObject.Properties['GroupName']) { $groupPolicy.GroupName } else { $groupId }
+                $roleName = if ($groupPolicy.PSObject.Properties['RoleName']) { $groupPolicy.RoleName } else { "Unknown" }
+                $context = "Groups.Policies[$index] (Group: $groupName, Role: $roleName)"
+
+                if ($groupPolicy.PSObject.Properties['Approvers'] -and $groupPolicy.Approvers) {
+                    $approverIssues = Test-ApproversFormat -Approvers $groupPolicy.Approvers -Context $context
+
+                    if ($approverIssues.HasIssues) {
+                        $validationResult.HasIssues = $true
+                        $validationResult.Issues += $approverIssues.Issues
+                        $validationResult.ValidationSummary.ApproverFieldMismatches += $approverIssues.Issues.Count
+
+                        if ($AutoCorrect -and $approverIssues.CorrectedApprovers) {
+                            $Config.Groups.Policies[$index].Approvers = $approverIssues.CorrectedApprovers
+                            $validationResult.Corrections += "Auto-corrected Approvers format in $context"
+                            $validationResult.ValidationSummary.AutoCorrections++
+                        }
+                    }
+                }
+
+                if ($groupPolicy.PSObject.Properties['ApprovalRequired'] -and $groupPolicy.ApprovalRequired -eq $true) {
+                    if (-not $groupPolicy.PSObject.Properties['Approvers'] -or -not $groupPolicy.Approvers -or $groupPolicy.Approvers.Count -eq 0) {
+                        if (-not $groupPolicy.PSObject.Properties['Template'] -or -not $groupPolicy.Template) {
+                            $issue = [PSCustomObject]@{
+                                Severity = "Error"
+                                Category = "MissingApprovers"
+                                Context = $context
+                                Message = "ApprovalRequired is true but no Approvers defined and no Template specified"
+                                Suggestion = "Add Approvers array or use a Template with Approvers defined"
+                            }
+                            $validationResult.HasIssues = $true
+                            $validationResult.Issues += $issue
+                            $validationResult.ValidationSummary.MissingRequiredFields++
+                        }
+                    }
+                }
+
+                $index++
+            }
+        } else {
+            foreach ($groupKey in $groupPolicies.PSObject.Properties.Name) {
+                $roleBlock = $groupPolicies.$groupKey
+                if (-not $roleBlock) { continue }
+
+                foreach ($roleProp in $roleBlock.PSObject.Properties) {
+                    $roleName = $roleProp.Name
+                    if ($roleName -notin @('Member', 'Owner')) { continue }
+                    $rolePolicy = $roleProp.Value
+
+                    if ($rolePolicy.PSObject.Properties['Approvers'] -and $rolePolicy.Approvers) {
+                        $approverIssues = Test-ApproversFormat -Approvers $rolePolicy.Approvers -Context "Groups.Policies.$groupKey.$roleName"
+
+                        if ($approverIssues.HasIssues) {
+                            $validationResult.HasIssues = $true
+                            $validationResult.Issues += $approverIssues.Issues
+                            $validationResult.ValidationSummary.ApproverFieldMismatches += $approverIssues.Issues.Count
+
+                            if ($AutoCorrect -and $approverIssues.CorrectedApprovers) {
+                                $validationResult.CorrectedConfig.Groups.Policies.$groupKey.$roleName.Approvers = $approverIssues.CorrectedApprovers
+                                $validationResult.Corrections += "Auto-corrected Approvers format in Groups.Policies.$groupKey.$roleName"
+                                $validationResult.ValidationSummary.AutoCorrections++
+                            }
+                        }
+                    }
+
+                    if ($rolePolicy.PSObject.Properties['ApprovalRequired'] -and $rolePolicy.ApprovalRequired -eq $true) {
+                        if (-not $rolePolicy.PSObject.Properties['Approvers'] -or -not $rolePolicy.Approvers -or $rolePolicy.Approvers.Count -eq 0) {
+                            if (-not $rolePolicy.PSObject.Properties['Template'] -or -not $rolePolicy.Template) {
+                                $issue = [PSCustomObject]@{
+                                    Severity = "Error"
+                                    Category = "MissingApprovers"
+                                    Context = "Groups.Policies.$groupKey.$roleName"
+                                    Message = "ApprovalRequired is true but no Approvers defined and no Template specified"
+                                    Suggestion = "Add Approvers array or use a Template with Approvers defined"
+                                }
+                                $validationResult.HasIssues = $true
+                                $validationResult.Issues += $issue
+                                $validationResult.ValidationSummary.MissingRequiredFields++
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     # Validation Rule 4: Check Template references exist
     $templateNames = if ($Config.PSObject.Properties['PolicyTemplates']) {
         $Config.PolicyTemplates.PSObject.Properties.Name
@@ -171,22 +411,74 @@ function Test-EasyPIMConfigurationValidity {
         @()
     }
 
-    # Check EntraRoles template references
-    if ($Config.PSObject.Properties['EntraRoles'] -and $Config.EntraRoles.PSObject.Properties['Policies']) {
-        foreach ($roleName in $Config.EntraRoles.Policies.PSObject.Properties.Name) {
-            $rolePolicy = $Config.EntraRoles.Policies.$roleName
-            if ($rolePolicy.PSObject.Properties['Template'] -and $rolePolicy.Template) {
-                if ($rolePolicy.Template -notin $templateNames) {
-                    $issue = [PSCustomObject]@{
-                        Severity = "Error"
-                        Category = "InvalidTemplateReference"
-                        Context = "EntraRoles.Policies.$roleName"
-                        Message = "Template '$($rolePolicy.Template)' not found in PolicyTemplates"
-                        Suggestion = "Check spelling or add the template to PolicyTemplates section"
+    # Check EntraRolePolicies (top-level array) template references
+    if ($Config.PSObject.Properties['EntraRolePolicies'] -and $Config.EntraRolePolicies) {
+        if ($Config.EntraRolePolicies -is [System.Collections.IEnumerable] -and $Config.EntraRolePolicies -isnot [string]) {
+            $index = 0
+            foreach ($rolePolicy in $Config.EntraRolePolicies) {
+                if (-not $rolePolicy) { $index++; continue }
+                $roleName = if ($rolePolicy.PSObject.Properties['RoleName']) { $rolePolicy.RoleName } else { "Unknown" }
+                
+                if ($rolePolicy.PSObject.Properties['Template'] -and $rolePolicy.Template) {
+                    if ($rolePolicy.Template -notin $templateNames) {
+                        $issue = [PSCustomObject]@{
+                            Severity = "Error"
+                            Category = "InvalidTemplateReference"
+                            Context = "EntraRolePolicies[$index] (RoleName: $roleName)"
+                            Message = "Template '$($rolePolicy.Template)' not found in PolicyTemplates"
+                            Suggestion = "Check spelling or add the template to PolicyTemplates section"
+                        }
+                        $validationResult.HasIssues = $true
+                        $validationResult.Issues += $issue
+                        $validationResult.ValidationSummary.TemplateReferences++
                     }
-                    $validationResult.HasIssues = $true
-                    $validationResult.Issues += $issue
-                    $validationResult.ValidationSummary.TemplateReferences++
+                }
+                $index++
+            }
+        }
+    }
+
+    # Check EntraRoles.Policies template references (both object and array formats)
+    if ($Config.PSObject.Properties['EntraRoles'] -and $Config.EntraRoles.PSObject.Properties['Policies']) {
+        $entraPolicies = $Config.EntraRoles.Policies
+        if ($entraPolicies -is [System.Collections.IEnumerable] -and $entraPolicies -isnot [string]) {
+            $index = 0
+            foreach ($rolePolicy in $entraPolicies) {
+                if (-not $rolePolicy) { $index++; continue }
+                $roleName = if ($rolePolicy.PSObject.Properties['RoleName']) { $rolePolicy.RoleName } else { "Unknown" }
+                
+                if ($rolePolicy.PSObject.Properties['Template'] -and $rolePolicy.Template) {
+                    if ($rolePolicy.Template -notin $templateNames) {
+                        $issue = [PSCustomObject]@{
+                            Severity = "Error"
+                            Category = "InvalidTemplateReference"
+                            Context = "EntraRoles.Policies[$index] (RoleName: $roleName)"
+                            Message = "Template '$($rolePolicy.Template)' not found in PolicyTemplates"
+                            Suggestion = "Check spelling or add the template to PolicyTemplates section"
+                        }
+                        $validationResult.HasIssues = $true
+                        $validationResult.Issues += $issue
+                        $validationResult.ValidationSummary.TemplateReferences++
+                    }
+                }
+                $index++
+            }
+        } else {
+            foreach ($roleName in $entraPolicies.PSObject.Properties.Name) {
+                $rolePolicy = $entraPolicies.$roleName
+                if ($rolePolicy.PSObject.Properties['Template'] -and $rolePolicy.Template) {
+                    if ($rolePolicy.Template -notin $templateNames) {
+                        $issue = [PSCustomObject]@{
+                            Severity = "Error"
+                            Category = "InvalidTemplateReference"
+                            Context = "EntraRoles.Policies.$roleName"
+                            Message = "Template '$($rolePolicy.Template)' not found in PolicyTemplates"
+                            Suggestion = "Check spelling or add the template to PolicyTemplates section"
+                        }
+                        $validationResult.HasIssues = $true
+                        $validationResult.Issues += $issue
+                        $validationResult.ValidationSummary.TemplateReferences++
+                    }
                 }
             }
         }
@@ -208,6 +500,91 @@ function Test-EasyPIMConfigurationValidity {
                     $validationResult.HasIssues = $true
                     $validationResult.Issues += $issue
                     $validationResult.ValidationSummary.TemplateReferences++
+                }
+            }
+        }
+    }
+
+    # Check GroupPolicies (top-level array) template references
+    if ($Config.PSObject.Properties['GroupPolicies'] -and $Config.GroupPolicies) {
+        if ($Config.GroupPolicies -is [System.Collections.IEnumerable] -and $Config.GroupPolicies -isnot [string]) {
+            $index = 0
+            foreach ($groupPolicy in $Config.GroupPolicies) {
+                if (-not $groupPolicy) { $index++; continue }
+                $groupId = if ($groupPolicy.PSObject.Properties['GroupId']) { $groupPolicy.GroupId } else { "Unknown" }
+                $groupName = if ($groupPolicy.PSObject.Properties['GroupName']) { $groupPolicy.GroupName } else { $groupId }
+                $roleName = if ($groupPolicy.PSObject.Properties['RoleName']) { $groupPolicy.RoleName } else { "Unknown" }
+                
+                if ($groupPolicy.PSObject.Properties['Template'] -and $groupPolicy.Template) {
+                    if ($groupPolicy.Template -notin $templateNames) {
+                        $issue = [PSCustomObject]@{
+                            Severity = "Error"
+                            Category = "InvalidTemplateReference"
+                            Context = "GroupPolicies[$index] (Group: $groupName, Role: $roleName)"
+                            Message = "Template '$($groupPolicy.Template)' not found in PolicyTemplates"
+                            Suggestion = "Check spelling or add the template to PolicyTemplates section"
+                        }
+                        $validationResult.HasIssues = $true
+                        $validationResult.Issues += $issue
+                        $validationResult.ValidationSummary.TemplateReferences++
+                    }
+                }
+                $index++
+            }
+        }
+    }
+
+    # Check Groups.Policies template references (both object and array formats)
+    if ($Config.PSObject.Properties['Groups'] -and $Config.Groups.PSObject.Properties['Policies']) {
+        $groupPolicies = $Config.Groups.Policies
+        if ($groupPolicies -is [System.Collections.IEnumerable] -and $groupPolicies -isnot [string]) {
+            $index = 0
+            foreach ($groupPolicy in $groupPolicies) {
+                if (-not $groupPolicy) { $index++; continue }
+                $groupId = if ($groupPolicy.PSObject.Properties['GroupId']) { $groupPolicy.GroupId } else { "Unknown" }
+                $groupName = if ($groupPolicy.PSObject.Properties['GroupName']) { $groupPolicy.GroupName } else { $groupId }
+                $roleName = if ($groupPolicy.PSObject.Properties['RoleName']) { $groupPolicy.RoleName } else { "Unknown" }
+                
+                if ($groupPolicy.PSObject.Properties['Template'] -and $groupPolicy.Template) {
+                    if ($groupPolicy.Template -notin $templateNames) {
+                        $issue = [PSCustomObject]@{
+                            Severity = "Error"
+                            Category = "InvalidTemplateReference"
+                            Context = "Groups.Policies[$index] (Group: $groupName, Role: $roleName)"
+                            Message = "Template '$($groupPolicy.Template)' not found in PolicyTemplates"
+                            Suggestion = "Check spelling or add the template to PolicyTemplates section"
+                        }
+                        $validationResult.HasIssues = $true
+                        $validationResult.Issues += $issue
+                        $validationResult.ValidationSummary.TemplateReferences++
+                    }
+                }
+                $index++
+            }
+        } else {
+            foreach ($groupKey in $groupPolicies.PSObject.Properties.Name) {
+                $roleBlock = $groupPolicies.$groupKey
+                if (-not $roleBlock) { continue }
+
+                foreach ($roleProp in $roleBlock.PSObject.Properties) {
+                    $roleName = $roleProp.Name
+                    if ($roleName -notin @('Member', 'Owner')) { continue }
+                    $rolePolicy = $roleProp.Value
+
+                    if ($rolePolicy.PSObject.Properties['Template'] -and $rolePolicy.Template) {
+                        if ($rolePolicy.Template -notin $templateNames) {
+                            $issue = [PSCustomObject]@{
+                                Severity = "Error"
+                                Category = "InvalidTemplateReference"
+                                Context = "Groups.Policies.$groupKey.$roleName"
+                                Message = "Template '$($rolePolicy.Template)' not found in PolicyTemplates"
+                                Suggestion = "Check spelling or add the template to PolicyTemplates section"
+                            }
+                            $validationResult.HasIssues = $true
+                            $validationResult.Issues += $issue
+                            $validationResult.ValidationSummary.TemplateReferences++
+                        }
+                    }
                 }
             }
         }

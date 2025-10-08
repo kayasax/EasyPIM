@@ -54,9 +54,29 @@ function Set-EPOAzureRolePolicy {
     # Build parameter map for Set-PIMAzureResourcePolicy (Core public API)
     $params = @{
         tenantID = $TenantId
-        subscriptionID = $SubscriptionId
         rolename = @($PolicyDefinition.RoleName)
     }
+    # Determine scope type: Management Group vs Subscription
+    $scopeVal = $null
+    if ($PolicyDefinition.PSObject.Properties['Scope'] -and $PolicyDefinition.Scope) { $scopeVal = [string]$PolicyDefinition.Scope }
+    if ($scopeVal) {
+        $normalizedScope = $scopeVal.TrimStart('/')
+        if ($normalizedScope -like 'providers/Microsoft.Management/managementGroups/*') {
+            $params.scope = $normalizedScope
+        } elseif ($normalizedScope -like 'subscriptions/*') {
+            $params.subscriptionID = $SubscriptionId
+            $params.scope = $normalizedScope
+        } else {
+            # Unknown prefix: fall back to explicit Scope if provided; do not force subscription path
+            $params.scope = $normalizedScope
+        }
+    } else {
+        # No per-policy scope provided; fall back to subscription mode
+        $params.subscriptionID = $SubscriptionId
+    }
+    Write-Verbose ("[DEBUG] Scope analysis: raw='{0}' normalized='{1}'" -f $scopeVal, $normalizedScope)
+    Write-Verbose ("[DEBUG] Orchestrator param map for Set-PIMAzureResourcePolicy: {0}" -f ((($params.GetEnumerator() | Sort-Object Key) | ForEach-Object { "{0}='{1}'" -f $_.Key, $_.Value }) -join '; '))
+
     $resolved = $PolicyDefinition.ResolvedPolicy; if (-not $resolved) { $resolved = $PolicyDefinition }
 
     # Flatten notifications from templates
