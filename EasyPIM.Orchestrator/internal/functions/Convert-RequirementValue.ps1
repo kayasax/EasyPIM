@@ -25,11 +25,20 @@ function Convert-RequirementValue {
 	# Returns: ""
 	#>
 	[CmdletBinding()]
-	param([Parameter()][string]$Value)
+	param([Parameter()][object]$Value)
 
 	if (-not $Value) { return '' }
 
-	$v = $Value.Trim()
+	# Normalize complex types (hashtables/objects/enumerables) into a string representation
+	if ($Value -is [System.Collections.IDictionary]) {
+		$Value = ($Value.GetEnumerator() | ForEach-Object { $_.Value }) -join ','
+	} elseif ($Value -is [pscustomobject]) {
+		$Value = ($Value.PSObject.Properties | ForEach-Object { $_.Value }) -join ','
+	} elseif ($Value -is [System.Collections.IEnumerable] -and -not ($Value -is [string])) {
+		$Value = ($Value | ForEach-Object { "$_" }) -join ','
+	}
+
+	$v = "$Value".Trim()
 	if ($v -eq '') { return '' }
 
 	# Handle explicit "none" values
