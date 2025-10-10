@@ -31,9 +31,9 @@
     PS> New-PIMAzureResourceEligibleAssigment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "webmaster" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -justification 'TEST' -permanent
 
     Create a permanent eligible assignement for the role webmaster
-    
+
         PS> New-PIMAzureResourceEligibleAssignment -tenantID $tenantID -scope "/subscriptions/$subscriptionId/resourceGroups/demo-rg" -rolename "Reader" -principalName "app@contoso.com"
-    
+
         Resolve the principal name to its object ID before creating the eligible assignment.
 
 
