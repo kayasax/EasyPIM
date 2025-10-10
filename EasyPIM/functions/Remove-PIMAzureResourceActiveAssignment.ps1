@@ -11,6 +11,8 @@
     use scope parameter if you want to work at other scope than a subscription
     .Parameter principalID
     objectID of the principal (user, group or service principal)
+    .Parameter principalName
+    Display name, UPN, object ID, or appId of the principal. Will be resolved to principalID when provided.
     .Parameter rolename
     name of the role to assign
     .Parameter justification
@@ -22,6 +24,10 @@
 
     Remove the active assignment for the role Arcpush and principal id 3604fe63-cb67-4b60-99c9-707d46ab9092
 
+    PS> Remove-PIMAzureResourceActiveAssigment -tenantID $tenantID -scope "/subscriptions/$subscriptionId/resourceGroups/demo-rg" -rolename "Reader" -principalName "user@contoso.com"
+
+    Resolve the UPN to its object ID and remove the active assignment for role Reader in the specified scope.
+
     .Link
     https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
     .Notes
@@ -30,33 +36,44 @@
 #>
 function Remove-PIMAzureResourceActiveAssignment {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'ByPrincipalId')]
     param (
-        [Parameter(Position = 0, Mandatory = $true)]
+        [Parameter(Position = 0, Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
+        [Parameter(Position = 0, Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
         [String]
         # Entra ID tenantID
         $tenantID,
 
-        [Parameter(Position = 1)]
+        [Parameter(Position = 1, ParameterSetName = 'ByPrincipalId')]
+        [Parameter(Position = 1, ParameterSetName = 'ByPrincipalName')]
         [String]
         # subscription ID
         $subscriptionID,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
         [String]
         # scope if not at the subscription level
         $scope,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
         [String]
         # Principal ID
         $principalID,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
+        [String]
+        # Principal name or identifier
+        $principalName,
+
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
         [string]
         # the rolename for which we want to create an assigment
         $rolename,
 
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
         [string]
         # justification (will be auto generated if not provided)
         $justification
@@ -73,6 +90,39 @@ function Remove-PIMAzureResourceActiveAssignment {
             $scope = "/subscriptions/$subscriptionID"
         }
         $script:tenantID = $tenantID
+
+        if ($PSCmdlet.ParameterSetName -eq 'ByPrincipalName') {
+            $resolvedPrincipal = $null
+            try {
+                $resolvedPrincipal = Resolve-EasyPIMPrincipal -PrincipalIdentifier $principalName -AllowDisplayNameLookup -AllowAppIdLookup -ErrorContext 'Remove-PIMAzureResourceActiveAssignment'
+            }
+            catch {
+                Write-Verbose "Primary principal resolution failed for '$principalName': $($_.Exception.Message)"
+            }
+
+            if ($resolvedPrincipal) {
+                $principalID = $resolvedPrincipal.Id
+                Write-Verbose "Resolved principalName '$principalName' to object ID '$principalID' (type=$($resolvedPrincipal.Type))."
+            }
+            else {
+                Write-Verbose "Falling back to active assignment lookup for '$principalName'."
+                $assignments = Get-PIMAzureResourceActiveAssignment -tenantID $tenantID -scope $scope |
+                    Where-Object { $_ -isnot [string] } |
+                    Where-Object { $_.RoleName -eq $rolename -and $_.PrincipalName -match [regex]::Escape($principalName) }
+                $candidateIds = $assignments | Select-Object -ExpandProperty PrincipalId -Unique
+
+                if (-not $candidateIds -or $candidateIds.Count -eq 0) {
+                    throw "No active assignment found matching principalName '$principalName' for role '$rolename' at scope '$scope'. Provide -principalID or ensure the name matches an active assignment."
+                }
+
+                if ($candidateIds.Count -gt 1) {
+                    throw "Multiple active assignments matched principalName '$principalName' for role '$rolename'. Provide -principalID or refine the name to a unique match."
+                }
+
+                $principalID = $candidateIds[0]
+                Write-Verbose "Resolved principalName '$principalName' via assignment lookup to object ID '$principalID'."
+            }
+        }
 
         $ARMhost = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM'
         $ARMendpoint = "$($ARMhost.TrimEnd('/'))/$scope/providers/Microsoft.Authorization"
@@ -99,7 +149,7 @@ function Remove-PIMAzureResourceActiveAssignment {
             $justification = "Removed from EasyPIM module by  $($(get-azcontext).account)"
         }
 
-        $type = "null"
+    $type = "null"
 
 
         $body = '

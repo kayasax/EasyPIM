@@ -11,6 +11,8 @@
     use scope parameter if you want to work at other scope than a subscription
     .Parameter principalID
     objectID of the principal (user, group or service principal)
+    .Parameter principalName
+    Display name, UPN, object ID, or appId of the principal. Will be resolved to principalID when provided.
     .Parameter rolename
     name of the role to assign
     .Parameter duration
@@ -32,6 +34,10 @@
 
     Create a permanent active assignement for the role webmaster
 
+    PS> New-PIMGroupEligibleAssignment -tenantID $tenantID -groupID $gID -principalName "user@contoso.com" -type owner -duration "P7D"
+
+    Create an eligible assignment for the group owner role resolved from principal name with a 7 day duration
+
     .Link
     https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
     .Notes
@@ -40,40 +46,56 @@
 #>
 function New-PIMGroupEligibleAssignment {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
-    [CmdletBinding(SupportsShouldProcess)]
+    [CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'ByPrincipalId')]
     param (
-        [Parameter(Position = 0, Mandatory = $true)]
+        [Parameter(Position = 0, Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
+        [Parameter(Position = 0, Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
         [String]
         # Entra ID tenantID
         $tenantID,
 
-        [Parameter(Position = 1, Mandatory = $true)]
+        [Parameter(Position = 1, Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
+        [Parameter(Position = 1, Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
         [String]
         # Entra ID tenantID
         $groupID,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
         [String]
         # Principal ID
         $principalID,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
+        [String]
+        # Principal name or identifier
+        $principalName,
+
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
         [string]
         # the rolename for which we want to create an assigment
         $type,
 
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
         [string]
         # duration of the assignment, if not set we will use the maximum allowed value from the role policy
         $duration,
 
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
         [string]
         # stat date of assignment if not provided we will use curent time
         $startDateTime,
 
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
         [string]
         # justification (will be auto generated if not provided)
         $justification,
 
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
         [switch]
         # the assignment will not expire
         $permanent
@@ -82,6 +104,12 @@ function New-PIMGroupEligibleAssignment {
 
     try {
         $script:tenantID = $tenantID
+
+        if ($PSCmdlet.ParameterSetName -eq 'ByPrincipalName') {
+            $resolvedPrincipal = Resolve-EasyPIMPrincipal -PrincipalIdentifier $principalName -AllowDisplayNameLookup -AllowAppIdLookup -ErrorContext 'New-PIMGroupEligibleAssignment'
+            $principalID = $resolvedPrincipal.Id
+            Write-Verbose "Resolved principalName '$principalName' to object ID '$principalID' (type=$($resolvedPrincipal.Type))."
+        }
 
 
         if ($PSBoundParameters.Keys.Contains('startDateTime')) {
@@ -97,8 +125,8 @@ function New-PIMGroupEligibleAssignment {
 
         #if permanent assignement is requested check this is allowed in the rule
         if ($permanent) {
-            if ( $config.AllowPermanentEligibleAssignment -eq "false") {
-                throw "ERROR : The role $rolename does not allow permanent eligble assignement, exiting"
+            if ($config.AllowPermanentEligibleAssignment -eq "false") {
+                throw "ERROR : The group role $type does not allow permanent eligble assignement, exiting"
             }
         }
 

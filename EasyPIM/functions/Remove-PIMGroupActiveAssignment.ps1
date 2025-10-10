@@ -1,12 +1,14 @@
 ﻿<#
     .Synopsis
-    Remove an active assignement at the provided scope
+    Remove an active assignment for a PIM-enabled group.
     .Description
-    Active assignment does not require users to activate their role. https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
+    Active assignments do not require activation before use. https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
     .Parameter tenantID
     EntraID tenant ID
     .Parameter principalID
     objectID of the principal (user, group or service principal)
+    .Parameter principalName
+    Display name, UPN, object ID, or appId of the principal. Will be resolved to principalID when provided.
     .Parameter groupID
     ID of the group
     .Parameter type
@@ -20,13 +22,13 @@
 
 
     .Example
-    PS> New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "AcrPush" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092  -startDateTime "2/2/2024 18:20"
+    PS> Remove-PIMGroupActiveAssignment -tenantID $tenantID -groupID $groupID -type owner -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092
 
-    Create an active assignment fot the role Arcpush, starting at a specific date and using default duration
+    Remove the owner assignment for the specified principal ID.
 
-    PS> New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "webmaster" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -justification 'TEST' -permanent
+    PS> Remove-PIMGroupActiveAssignment -tenantID $tenantID -groupID $groupID -type member -principalName "user@contoso.com"
 
-    Create a permanent active assignement for the role webmaster
+    Resolve the principal name to its object ID and remove the member assignment.
 
     .Link
     https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
@@ -36,41 +38,57 @@
 #>
 function Remove-PIMGroupActiveAssignment {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'ByPrincipalId')]
     param (
-        [Parameter(Position = 0, Mandatory = $true)]
+        [Parameter(Position = 0, Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
+        [Parameter(Position = 0, Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
         [String]
         # Entra ID tenantID
         $tenantID,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
         [String]
         # Principal ID
         $principalID,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
+        [String]
+        # Principal name or identifier
+        $principalName,
+
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
         [string]
         # the group ID
         $groupID,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
         [string]
         # member or owner
         $type,
 
 
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
         [string]
         # duration of the assignment, if not set we will use the maximum allowed value from the role policy
         $duration,
 
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
         [string]
         # stat date of assignment if not provided we will use curent time
         $startDateTime,
 
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
         [string]
         # justification (will be auto generated if not provided)
         $justification,
 
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
         [switch]
         # the assignment will not expire
         $permanent
@@ -79,6 +97,37 @@ function Remove-PIMGroupActiveAssignment {
 
     try {
         $script:tenantID = $tenantID
+
+        if ($PSCmdlet.ParameterSetName -eq 'ByPrincipalName') {
+            $resolvedPrincipal = $null
+            try {
+                $resolvedPrincipal = Resolve-EasyPIMPrincipal -PrincipalIdentifier $principalName -AllowDisplayNameLookup -AllowAppIdLookup -ErrorContext 'Remove-PIMGroupActiveAssignment'
+            }
+            catch {
+                Write-Verbose "Primary principal resolution failed for '$principalName': $($_.Exception.Message)"
+            }
+
+            if ($resolvedPrincipal) {
+                $principalID = $resolvedPrincipal.Id
+                Write-Verbose "Resolved principalName '$principalName' to object ID '$principalID' (type=$($resolvedPrincipal.Type))."
+            }
+            else {
+                Write-Verbose "Falling back to group active assignment lookup for '$principalName'."
+                $matchingAssignments = Get-PIMGroupActiveAssignment -tenantID $tenantID -groupID $groupID -type $type -principalName $principalName
+                $principalCandidates = $matchingAssignments | Select-Object -ExpandProperty principalid -Unique
+
+                if (-not $principalCandidates -or $principalCandidates.Count -eq 0) {
+                    throw "No active assignment found matching principalName '$principalName' for group '$groupID' ($type). Provide -principalID or ensure the name matches an active assignment."
+                }
+
+                if ($principalCandidates.Count -gt 1) {
+                    throw "Multiple active assignments matched principalName '$principalName' for group '$groupID' ($type). Provide -principalID or refine the name to a unique match."
+                }
+
+                $principalID = $principalCandidates[0]
+                Write-Verbose "Resolved principalName '$principalName' via group active assignment lookup to object ID '$principalID'."
+            }
+        }
 
 
         if ($PSBoundParameters.Keys.Contains('startDateTime')) {
@@ -90,12 +139,12 @@ function Remove-PIMGroupActiveAssignment {
 
         write-verbose "Calculated date time start is $startDateTime"
         # 2 get role settings:
-        $config = Get-PIMGroupPolicy -tenantID $tenantID -groupID $groupid -type $type
+    $config = Get-PIMGroupPolicy -tenantID $tenantID -groupID $groupid -type $type
 
         #if permanent assignement is requested check this is allowed in the rule
         if ($permanent) {
             if ( $config.AllowPermanentActiveAssignment -eq "false") {
-                throw "ERROR : The role $rolename does not allow permanent eligible assignement, exiting"
+                throw "ERROR : The group policy for $groupID ($type) does not allow permanent active assignment, exiting"
             }
         }
 

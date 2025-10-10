@@ -7,6 +7,8 @@
     EntraID tenant ID
     .Parameter principalID
     objectID of the principal (user, group or service principal)
+    .Parameter principalName
+    Display name, UPN, object ID, or appId of the principal. Will be resolved to principalID when provided.
     .Parameter rolename
     name of the role to assign
     .Parameter duration
@@ -28,6 +30,10 @@
 
     Create a permanent active assignement for the role webmaster
 
+    PS> New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -rolename "Global Administrator" -principalName "user@contoso.com"
+
+    Resolve the principal name to its object ID and create an eligible assignment for Global Administrator.
+
     .Link
     https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
     .Notes
@@ -36,39 +42,56 @@
 #>
 function New-PIMEntraRoleEligibleAssignment {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'ByPrincipalId')]
     param (
-        [Parameter(Position = 0, Mandatory = $true)]
+        [Parameter(Position = 0, Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
+        [Parameter(Position = 0, Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
         [String]
         # Entra ID tenantID
         $tenantID,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
         [String]
         # Principal ID
         $principalID,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
+        [String]
+        # Principal name or identifier
+        $principalName,
+
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
         [string]
         # the rolename for which we want to create an assigment
         $rolename,
 
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
         [string]
         # duration of the assignment, if not set we will use the maximum allowed value from the role policy
         $duration,
 
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
         [string]
         # stat date of assignment if not provided we will use curent time
         $startDateTime,
 
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
         [string]
         # justification (will be auto generated if not provided)
         $justification,
 
+    [Parameter(ParameterSetName = 'ByPrincipalId')]
+    [Parameter(ParameterSetName = 'ByPrincipalName')]
     [switch]
     # the assignment will not expire
     $permanent,
 
+    [Parameter(ParameterSetName = 'ByPrincipalId')]
+    [Parameter(ParameterSetName = 'ByPrincipalName')]
     [switch]
     # skip validation that group principals are role-assignable (mirrors active assignment cmdlet)
     $SkipGroupRoleAssignableCheck
@@ -77,6 +100,12 @@ function New-PIMEntraRoleEligibleAssignment {
 
     try {
         $script:tenantID = $tenantID
+
+        if ($PSCmdlet.ParameterSetName -eq 'ByPrincipalName') {
+            $resolvedPrincipal = Resolve-EasyPIMPrincipal -PrincipalIdentifier $principalName -AllowDisplayNameLookup -AllowAppIdLookup -ErrorContext 'New-PIMEntraRoleEligibleAssignment'
+            $principalID = $resolvedPrincipal.Id
+            Write-Verbose "Resolved principalName '$principalName' to object ID '$principalID' (type=$($resolvedPrincipal.Type))."
+        }
 
     #1 resolve principal object (groups no longer blocked if not role-assignable)
     $endpoint = "directoryObjects/$principalID"
