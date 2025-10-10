@@ -11,6 +11,8 @@
     use scope parameter if you want to work at other scope than a subscription
     .Parameter principalID
     objectID of the principal (user, group or service principal)
+    .Parameter principalName
+    Display name, user principal name (UPN), or object ID of the principal. Will be resolved to the principal ID if provided.
     .Parameter rolename
     name of the role to assign
     .Parameter duration
@@ -28,9 +30,9 @@
 
     Remove the active assignment for the role Arcpush and principal $principalID, at a specific date
 
-    PS> Remove-PIMEntraRoleActiveAssignment -tenantID $tenantID -rolename "webmaster" -principalname "loic" -justification 'TEST'
+    PS> Remove-PIMEntraRoleActiveAssignment -tenantID $tenantID -rolename "webmaster" -principalname "user@contoso.com" -justification 'TEST'
 
-    Remove the active assignement for the role webmaster and username "loic"
+    Resolve the provided principal name to its object ID and remove the active assignment for the role "webmaster".
 
     .Link
     https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
@@ -40,27 +42,38 @@
 #>
 function Remove-PIMEntraRoleActiveAssignment {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'ByPrincipalId')]
     param (
-        [Parameter(Position = 0, Mandatory = $true)]
+        [Parameter(Position = 0, Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
+        [Parameter(Position = 0, Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
         [String]
         # Entra ID tenantID
         $tenantID,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
         [String]
         # Principal ID
         $principalID,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
+        [String]
+        # Principal name (display name, UPN, or object ID)
+        $principalName,
+
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
         [string]
         # the rolename for which we want to create an assigment
         $rolename,
 
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
         [string]
         # stat date of assignment if not provided we will use curent time
         $startDateTime,
 
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
         [string]
         # justification (will be auto generated if not provided)
         $justification
@@ -69,6 +82,39 @@ function Remove-PIMEntraRoleActiveAssignment {
 
     try {
         $script:tenantID = $tenantID
+
+        if ($PSCmdlet.ParameterSetName -eq 'ByPrincipalName') {
+            Write-Verbose "Resolving principalName '$principalName'..."
+            $resolvedPrincipal = $null
+
+            try {
+                $resolvedPrincipal = Resolve-EasyPIMPrincipal -PrincipalIdentifier $principalName -AllowDisplayNameLookup -AllowAppIdLookup -ErrorContext 'Remove-PIMEntraRoleActiveAssignment'
+            }
+            catch {
+                Write-Verbose "Primary principal resolution failed for '$principalName': $($_.Exception.Message)"
+            }
+
+            if (-not $resolvedPrincipal) {
+                Write-Verbose "Falling back to active assignment lookup for '$principalName'."
+                $matchingAssignments = Get-PIMEntraRoleActiveAssignment -tenantID $tenantID -rolename $rolename -principalName $principalName
+                $principalCandidates = $matchingAssignments | Select-Object -ExpandProperty principalid -Unique
+
+                if (-not $principalCandidates -or $principalCandidates.Count -eq 0) {
+                    throw "No active assignment found matching principalName '$principalName' for role '$rolename'. Provide -principalID or ensure the name matches an active assignment."
+                }
+
+                if ($principalCandidates.Count -gt 1) {
+                    throw "Multiple active assignments matched principalName '$principalName' for role '$rolename'. Provide -principalID or refine the name to a unique match."
+                }
+
+                $principalID = $principalCandidates[0]
+                Write-Verbose "Resolved principalName '$principalName' via active assignments to object ID '$principalID'."
+            }
+            else {
+                $principalID = $resolvedPrincipal.Id
+                Write-Verbose "Resolved principalName '$principalName' to object ID '$principalID' (type=$($resolvedPrincipal.Type))."
+            }
+        }
 
 
         if ($PSBoundParameters.Keys.Contains('startDateTime')) {

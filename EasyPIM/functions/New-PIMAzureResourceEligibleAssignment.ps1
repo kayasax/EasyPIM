@@ -31,6 +31,10 @@
     PS> New-PIMAzureResourceEligibleAssigment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "webmaster" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -justification 'TEST' -permanent
 
     Create a permanent eligible assignement for the role webmaster
+    
+        PS> New-PIMAzureResourceEligibleAssignment -tenantID $tenantID -scope "/subscriptions/$subscriptionId/resourceGroups/demo-rg" -rolename "Reader" -principalName "app@contoso.com"
+    
+        Resolve the principal name to its object ID before creating the eligible assignment.
 
 
     .Link
@@ -67,11 +71,13 @@ function New-PIMAzureResourceEligibleAssignment {
         [string]
         # the rolename for which we want to create an assigment
         $rolename,
-
-        [string]
+            .Parameter principalID
+            objectID of the principal (user, group or service principal)
+            .Parameter principalName
+            Display name, UPN, object ID, or appId of the principal. Will be resolved to principalID when provided.
         # duration of the assignment, if not set we will use the maximum allowed value from the role policy
         $duration,
-
+            [CmdletBinding(DefaultParameterSetName = 'ByPrincipalId')]
         [string]
         # stat date of assignment if not provided we will use curent time
         $startDateTime,

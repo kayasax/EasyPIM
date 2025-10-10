@@ -1,8 +1,8 @@
 ﻿<#
     .Synopsis
-    Create an active assignement at the provided scope
+    Remove an eligible assignment for a PIM-enabled group.
     .Description
-    Active assignment does not require users to activate their role. https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
+    Eligible assignments require activation before use. https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
     .Parameter tenantID
     EntraID tenant ID
     .Parameter subscriptionID
@@ -11,6 +11,8 @@
     use scope parameter if you want to work at other scope than a subscription
     .Parameter principalID
     objectID of the principal (user, group or service principal)
+    .Parameter principalName
+    Display name, UPN, object ID, or appId of the principal. Will be resolved to principalID when provided.
     .Parameter rolename
     name of the role to assign
     .Parameter duration
@@ -24,13 +26,13 @@
 
 
     .Example
-    PS> New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "AcrPush" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092  -startDateTime "2/2/2024 18:20"
+    PS> Remove-PIMGroupEligibleAssignment -tenantID $tenantID -groupID $groupID -type owner -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092
 
-    Create an active assignment fot the role Arcpush, starting at a specific date and using default duration
+    Remove the eligible owner assignment for the specified principal ID.
 
-    PS> New-PIMEntraRoleEligibleAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "webmaster" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -justification 'TEST' -permanent
+    PS> Remove-PIMGroupEligibleAssignment -tenantID $tenantID -groupID $groupID -type member -principalName "user@contoso.com"
 
-    Create a permanent active assignement for the role webmaster
+    Resolve the principal name to its object ID and remove the eligible assignment.
 
     .Link
     https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
@@ -40,42 +42,58 @@
 #>
 function Remove-PIMGroupEligibleAssignment {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'ByPrincipalId')]
     param (
-        [Parameter(Position = 0, Mandatory = $true)]
+        [Parameter(Position = 0, Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
+        [Parameter(Position = 0, Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
         [String]
         # Entra ID tenantID
         $tenantID,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
         [String]
         # Principal ID
         $principalID,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
+        [String]
+        # Principal name or identifier
+        $principalName,
+
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
         [string]
         # the group ID
         $groupID,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
         [string]
         # member or owner
         $type,
 
 
-        [string]
+    [Parameter(ParameterSetName = 'ByPrincipalId')]
+    [Parameter(ParameterSetName = 'ByPrincipalName')]
+    [string]
         # duration of the assignment, if not set we will use the maximum allowed value from the role policy
         $duration,
 
-        [string]
+    [Parameter(ParameterSetName = 'ByPrincipalId')]
+    [Parameter(ParameterSetName = 'ByPrincipalName')]
+    [string]
         # stat date of assignment if not provided we will use curent time
         $startDateTime,
 
-        [string]
+    [Parameter(ParameterSetName = 'ByPrincipalId')]
+    [Parameter(ParameterSetName = 'ByPrincipalName')]
+    [string]
         # justification (will be auto generated if not provided)
         $justification,
 
-        [switch]
+    [Parameter(ParameterSetName = 'ByPrincipalId')]
+    [Parameter(ParameterSetName = 'ByPrincipalName')]
+    [switch]
         # the assignment will not expire
         $permanent
 
@@ -83,6 +101,37 @@ function Remove-PIMGroupEligibleAssignment {
 
     try {
         $script:tenantID = $tenantID
+
+        if ($PSCmdlet.ParameterSetName -eq 'ByPrincipalName') {
+            $resolvedPrincipal = $null
+            try {
+                $resolvedPrincipal = Resolve-EasyPIMPrincipal -PrincipalIdentifier $principalName -AllowDisplayNameLookup -AllowAppIdLookup -ErrorContext 'Remove-PIMGroupEligibleAssignment'
+            }
+            catch {
+                Write-Verbose "Primary principal resolution failed for '$principalName': $($_.Exception.Message)"
+            }
+
+            if ($resolvedPrincipal) {
+                $principalID = $resolvedPrincipal.Id
+                Write-Verbose "Resolved principalName '$principalName' to object ID '$principalID' (type=$($resolvedPrincipal.Type))."
+            }
+            else {
+                Write-Verbose "Falling back to group eligible assignment lookup for '$principalName'."
+                $matchingAssignments = Get-PIMGroupEligibleAssignment -tenantID $tenantID -groupID $groupID -type $type -principalName $principalName
+                $principalCandidates = $matchingAssignments | Select-Object -ExpandProperty principalid -Unique
+
+                if (-not $principalCandidates -or $principalCandidates.Count -eq 0) {
+                    throw "No eligible assignment found matching principalName '$principalName' for group '$groupID' ($type). Provide -principalID or ensure the name matches an eligible assignment."
+                }
+
+                if ($principalCandidates.Count -gt 1) {
+                    throw "Multiple eligible assignments matched principalName '$principalName' for group '$groupID' ($type). Provide -principalID or refine the name to a unique match."
+                }
+
+                $principalID = $principalCandidates[0]
+                Write-Verbose "Resolved principalName '$principalName' via group eligible assignment lookup to object ID '$principalID'."
+            }
+        }
 
 
         if ($PSBoundParameters.Keys.Contains('startDateTime')) {
@@ -99,7 +148,7 @@ function Remove-PIMGroupEligibleAssignment {
         #if permanent assignement is requested check this is allowed in the rule
         if ($permanent) {
             if ( $config.AllowPermanentEligibleAssignment -eq "false") {
-                throw "ERROR : The role $rolename does not allow permanent eligible assignement, exiting"
+                throw "ERROR : The group policy for $groupID ($type) does not allow permanent eligible assignment, exiting"
             }
         }
 

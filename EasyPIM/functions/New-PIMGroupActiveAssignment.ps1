@@ -9,6 +9,8 @@
     objectID of the group
     .Parameter principalID
     objectID of the principal (user, group or service principal)
+    .Parameter principalName
+    Display name, UPN, object ID, or appId of the principal. Will be resolved to principalID when provided.
     .Parameter type
     member type (owner or member)
     .Parameter duration
@@ -29,6 +31,10 @@
     PS> New-PIMGroupActiveAssignment -tenantID $tenantID -groupID $gID -principalID $userID -type owner -permanent
 
     Create a permanent active assignement for the ownership role of the group $gID and principal $userID starting now
+
+    PS> New-PIMGroupActiveAssignment -tenantID $tenantID -groupID $gID -principalName "user@contoso.com" -type member -duration "P14D"
+
+    Create an active assignment resolved from principal name for the membership role of the group $gID lasting 14 days
     .Link
     https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
     .Notes
@@ -37,40 +43,56 @@
 #>
 function New-PIMGroupActiveAssignment {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
-    [CmdletBinding(SupportsShouldProcess)]
+    [CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'ByPrincipalId')]
     param (
-        [Parameter(Position = 0, Mandatory = $true)]
+        [Parameter(Position = 0, Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
+        [Parameter(Position = 0, Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
         [String]
         # Entra ID tenantID
         $tenantID,
 
-        [Parameter(Position = 1, Mandatory = $true)]
+        [Parameter(Position = 1, Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
+        [Parameter(Position = 1, Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
         [String]
-        # Entra ID tenantID
+        # Group ID
         $groupID,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
         [String]
         # Principal ID
         $principalID,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
+        [String]
+        # Principal name or identifier
+        $principalName,
+
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalId')]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByPrincipalName')]
         [string]
         # the rolename for which we want to create an assigment
         $type,
 
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
         [string]
         # duration of the assignment, if not set we will use the maximum allowed value from the role policy
         $duration,
 
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
         [string]
         # stat date of assignment if not provided we will use curent time
         $startDateTime,
 
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
         [string]
         # justification (will be auto generated if not provided)
         $justification,
 
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
         [switch]
         # the assignment will not expire
         $permanent
@@ -79,6 +101,12 @@ function New-PIMGroupActiveAssignment {
 
     try {
         $script:tenantID = $tenantID
+
+        if ($PSCmdlet.ParameterSetName -eq 'ByPrincipalName') {
+            $resolvedPrincipal = Resolve-EasyPIMPrincipal -PrincipalIdentifier $principalName -AllowDisplayNameLookup -AllowAppIdLookup -ErrorContext 'New-PIMGroupActiveAssignment'
+            $principalID = $resolvedPrincipal.Id
+            Write-Verbose "Resolved principalName '$principalName' to object ID '$principalID' (type=$($resolvedPrincipal.Type))."
+        }
 
         if ($PSBoundParameters.Keys.Contains('startDateTime')) {
             $startDateTime = get-date ([datetime]::Parse($startDateTime)).touniversaltime().addseconds(30) -f "yyyy-MM-ddTHH:mm:ssZ"
@@ -93,8 +121,8 @@ function New-PIMGroupActiveAssignment {
 
         #if permanent assignement is requested check this is allowed in the rule
         if ($permanent) {
-        if ( $config.AllowPermanentActiveAssignment -eq "false") {
-                throw "ERROR : The role $rolename does not allow permanent eligible assignement, exiting"
+            if ($config.AllowPermanentActiveAssignment -eq "false") {
+                throw "ERROR : The group role $type does not allow permanent eligible assignement, exiting"
             }
         }
 
