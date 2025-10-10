@@ -6,7 +6,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.0.28'
+ModuleVersion = '2.0.29'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -173,6 +173,11 @@ PrivateData = @{
     - Drift detection aligned with policy-setting logic; PSCustomObject normalization
     - Fixed parameter parsing for requirements and booleans; improved Approver handling
     - Added end-to-end tests; lint fixes (trailing spaces); minor robustness improvements
+
+    2.0.29 (2025-10-10)
+    - Added principalName resolution and output across all New-/Remove- assignment cmdlets (Azure resource, Entra role, and group)
+    - Introduced shared Resolve-EasyPIMPrincipal helper for consistent Graph lookups
+    - Updated comment-based help and fast test coverage to reflect new parameter sets
 '@
 
     # AdditionalReleaseNotes of this module
