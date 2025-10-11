@@ -183,10 +183,19 @@ function Initialize-EasyPIMPolicies {
                     $policyContent = $polNode.$roleName
                     $scope = $null
                     if ($policyContent.PSObject.Properties['Scope'] -and $policyContent.Scope) { $scope = $policyContent.Scope }
+                    $templateName = $null
                     if ($policyContent.PSObject.Properties['Template'] -and $policyContent.Template) {
-                        $policyDefinition = [PSCustomObject]@{ RoleName = $roleName; Scope = $scope; PolicySource = 'template'; Template = $policyContent.Template }
+                        $templateName = $policyContent.Template
+                    } elseif ($policyContent.PSObject.Properties['PolicyTemplate'] -and $policyContent.PolicyTemplate) {
+                        $templateName = $policyContent.PolicyTemplate
+                    }
+
+                    if ($templateName -is [string]) { $templateName = $templateName.Trim() }
+
+                    if (-not [string]::IsNullOrWhiteSpace([string]$templateName)) {
+                        $policyDefinition = [PSCustomObject]@{ RoleName = $roleName; Scope = $scope; PolicySource = 'template'; Template = $templateName }
                         foreach ($prop in $policyContent.PSObject.Properties) {
-                            if ($prop.Name -ne 'Template' -and $prop.Name -ne 'Scope') {
+                            if ($prop.Name -notin @('Template','PolicyTemplate','Scope')) {
                                 $policyDefinition | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value -Force
                             }
                         }
@@ -211,13 +220,22 @@ function Initialize-EasyPIMPolicies {
                     if (-not $scope) { throw "AzureRole array policy missing required property: Scope for role '$roleName'" }
 
                     $policyDefinition = $null
-                    $hasTemplate = ($entry.PSObject.Properties['Template'] -and $entry.Template)
+                    $templateName = $null
+                    if ($entry.PSObject.Properties['Template'] -and $entry.Template) {
+                        $templateName = $entry.Template
+                    } elseif ($entry.PSObject.Properties['PolicyTemplate'] -and $entry.PolicyTemplate) {
+                        $templateName = $entry.PolicyTemplate
+                    }
+
+                    if ($templateName -is [string]) { $templateName = $templateName.Trim() }
+
+                    $hasTemplate = (-not [string]::IsNullOrWhiteSpace([string]$templateName))
                     $hasInline   = ($entry.PSObject.Properties['Policy'] -and $entry.Policy)
 
                     if ($hasTemplate) {
-                        $policyDefinition = [PSCustomObject]@{ RoleName = $roleName; Scope = $scope; PolicySource = 'template'; Template = $entry.Template }
+                        $policyDefinition = [PSCustomObject]@{ RoleName = $roleName; Scope = $scope; PolicySource = 'template'; Template = $templateName }
                         foreach ($prop in $entry.PSObject.Properties) {
-                            if ($prop.Name -notin @('Template','Scope','RoleName','Policy')) {
+                            if ($prop.Name -notin @('Template','PolicyTemplate','Scope','RoleName','Policy')) {
                                 try { $policyDefinition | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value -Force } catch { }
                             }
                         }

@@ -118,10 +118,28 @@
 				# Idempotency: naive check via active/eligible getters if available; otherwise proceed
 				try {
 					$VerbosePreference = 'SilentlyContinue'  # Suppress confusing verbose output
-					$existsActive = Get-PIMAzureResourceActiveAssignment -tenantID $TenantId -subscriptionID $SubscriptionId -scope $scope -principalId $a.principalId -ErrorAction SilentlyContinue
-					$existsElig = Get-PIMAzureResourceEligibleAssignment -tenantID $TenantId -subscriptionID $SubscriptionId -scope $scope -principalId $a.principalId -ErrorAction SilentlyContinue
+					$existsActiveRaw = Get-PIMAzureResourceActiveAssignment -tenantID $TenantId -subscriptionID $SubscriptionId -scope $scope -principalId $a.principalId -ErrorAction SilentlyContinue
+					$existsEligRaw = Get-PIMAzureResourceEligibleAssignment -tenantID $TenantId -subscriptionID $SubscriptionId -scope $scope -principalId $a.principalId -ErrorAction SilentlyContinue
 					$VerbosePreference = $script:originalVerbosePreference
-					if ($existsActive -or $existsElig) { Write-Host "  ⏭️ Skipped existing: $ctx" -ForegroundColor Yellow; $summary.Skipped++; continue }
+
+					$roleMatch = {
+						param($obj)
+						if (-not $obj) { return $false }
+						if ($obj -is [string]) { return $false }
+						if (-not $obj.PSObject.Properties['ScopeId'] -or -not $obj.ScopeId) { return $false }
+						if (-not $obj.PSObject.Properties['RoleName'] -or -not $obj.RoleName) { return $false }
+						if ($obj.ScopeId -ne $scope) { return $false }
+						return ($obj.RoleName -eq $roleName)
+					}
+
+					$existsActiveData = @($existsActiveRaw | Where-Object { & $roleMatch $_ })
+					$existsEligData = @($existsEligRaw | Where-Object { & $roleMatch $_ })
+
+					if ($existsActiveData.Count -gt 0 -or $existsEligData.Count -gt 0) {
+						$foundType = if ($existsActiveData.Count -gt 0) { 'Active' } else { 'Eligible' }
+						Write-Host "  ⏭️ Skipped existing: $ctx [Found: $foundType]" -ForegroundColor Yellow
+						$summary.Skipped++; continue
+					}
 				} catch {
 					$VerbosePreference = $script:originalVerbosePreference
 					# Pre-check failed, but assignment will still be attempted
