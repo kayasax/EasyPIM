@@ -1,4 +1,4 @@
-# EasyPIM Progressive Validation Runbook (August, 31 2025)
+# EasyPIM Progressive Validation Runbook (October 11, 2025)
 
 A safe, step-by-step plan to exercise the orchestrator and policies in a real tenant. Each step includes a minimal JSON and a preview (-WhatIf) run before applying.
 
@@ -11,6 +11,13 @@ EasyPIM is now split into two complementary modules:
 - **EasyPIM.Orchestrator**: Provides comprehensive configuration management through `Invoke-EasyPIMOrchestrator`, policy drift detection, and end-to-end workflows. This module depends on the core EasyPIM module.
 
 This guide focuses on the orchestrator workflows, but individual core functions can be used independently for specific tasks.
+
+## What's New in 2.0.30 / 1.4.7
+
+- **Array-first configuration** – `EntraRoles.Policies`, `AzureRoles.Policies`, and `GroupPolicies` now accept array payloads in addition to the legacy dictionary format. Arrays make pull requests easier to read and enable per-entry metadata such as `PolicySource`.
+- **Template overrides everywhere** – Template + inline overrides now work across Entra, Azure, and Group policies even when you use the array format. Only the properties you list in an entry override the template defaults.
+- **Safer assignments** – Assignment reconciliation now matches both scope and role name, so inherited or unrelated assignments are no longer treated as duplicates. Status-only strings (for example, "0 assignment(s)") are ignored automatically.
+- **Activation requirement hygiene** – Validation steps now remove stray `AuthenticationContext` tokens before deployment, preventing the common `MfaAndAcrsConflict` failure.
 
 ## Table of Contents
 
@@ -70,6 +77,35 @@ Set-AzContext -SubscriptionId "<your-subscription-id>"
 **Note:** The orchestrator includes automatic connection checks and will prompt if authentication is missing.
 
 Tip: Keep one file and replace/append sections as you move through steps.
+
+## Configuration Format Quick Reference
+
+You can express policies using either a **dictionary** (object where each property is the role name) or a **record array** (each policy is its own object in an array). Both shapes are supported for Entra, Azure, and Group policies. Pick whichever is easier for your source control strategy.
+
+```jsonc
+// Dictionary (legacy) style
+{
+  "EntraRoles": {
+    "Policies": {
+      "User Administrator": { "Template": "HighSecurity" }
+    }
+  }
+}
+
+// Array style (new in 1.4.7)
+{
+  "EntraRoles": {
+    "Policies": [
+      { "RoleName": "User Administrator", "Template": "HighSecurity" },
+      { "RoleName": "Guest Inviter", "Policy": { "ActivationDuration": "PT4H" } }
+    ]
+  }
+}
+```
+
+> ⚠️ Use **only one** format per policy block. If both are present the orchestrator stops with a validation error.
+
+Array entries also accept optional metadata such as `PolicySource`, additional per-role overrides, or alternate template property names (`Template` or `PolicyTemplate`). The orchestrator normalizes both formats to the same internal model before validation.
 
 
 <a id="step-0"></a>
@@ -156,6 +192,31 @@ Write pim-config.json (always keep `ProtectedUsers` first; you can add comments 
   }
 }
 ```
+
+**Array format equivalent**
+
+```jsonc
+{
+  "ProtectedUsers": [
+    "00000000-0000-0000-0000-000000000001"
+  ],
+  "EntraRoles": {
+    "Policies": [
+      {
+        "RoleName": "User Administrator",
+        "Policy": {
+          "ActivationDuration": "PT2H",
+          "ActivationRequirement": "MultiFactorAuthentication,Justification",
+          "ApprovalRequired": true,
+          "Approvers": [
+            { "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "description": "PIM Approver 1" }
+          ]
+        }
+      }
+    ]
+  }
+}
+```
 This example above uses only a subset of available options. Refer to [Step 12](#step-12--comprehensive-policy-validation-all-options) for the complete list of supported options.
 
 Preview (policies only)
@@ -173,6 +234,8 @@ Why templates? A PolicyTemplate lets you define a reusable policy profile once (
 * Clear diffs – PRs show a small change in one template block instead of many duplicated inline edits.
 * Easier promotion – copy a vetted template set from test → prod without hunting per‑role tweaks.
 * Guardrails – high‑risk roles point to a hardened template (HighSecurity) while low‑risk roles stay on Standard.
+
+> 💡 Tip: If your template or inline policy ever included the literal string `AuthenticationContext` inside `ActivationRequirement`, the latest validation logic automatically strips it before deployment. This keeps Azure from rejecting the payload with `MfaAndAcrsConflict` while still honoring any explicit `AuthenticationContext_Enabled` setting.
 
 Override strategy (important): The current engine resolves either a Template OR an inline policy for a role; it does NOT merge a template plus per‑role overrides field‑by‑field. To “override” for a specific role you simply stop using the Template reference and replace it with a full inline policy object for that role. (Future enhancement could add partial overlay, but today it is a switch, not a merge.)
 
@@ -292,6 +355,35 @@ Write pim-config.json
 }
 ```
 
+**Array format with template overrides**
+
+```jsonc
+{
+  "PolicyTemplates": {
+    "Standard": {
+      "ActivationDuration": "PT8H",
+      "ActivationRequirement": "MultiFactorAuthentication,Justification"
+    },
+    "HighSecurity": {
+      "ActivationDuration": "PT2H",
+      "ActivationRequirement": "MultiFactorAuthentication,Justification",
+      "ApprovalRequired": true,
+      "Approvers": [ { "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" } ]
+    }
+  },
+  "EntraRoles": {
+    "Policies": [
+      { "RoleName": "User Administrator", "Template": "Standard" },
+      {
+        "RoleName": "Privileged Role Administrator",
+        "Template": "HighSecurity",
+        "ActivationDuration": "PT1H" // override just this property
+      }
+    ]
+  }
+}
+```
+
 Preview (policies only)
 
 ```powershell
@@ -306,6 +398,8 @@ Note: The orchestrator supports multiple assignments per role in the Assignments
 Note: The orchestrator supports a unified Assignments schema with an assignmentType field (Eligible or Active). This is parsed by Initialize-EasyPIMAssignments and mapped internally to legacy sections. If you prefer the legacy format, see the alternative below.
 
 Note: `principalType` is optional in modern Assignments examples; the orchestrator infers the object type (User/Group/Service Principal) from the ID. It's kept only for legacy readability and can be omitted below.
+
+**New in 2.0.30:** assignment matching now requires both the scope **and** the role name to align with your config, and status-only strings returned by Azure are ignored. This prevents inherited assignments or stale status messages from being treated as matches. If an assignment shows as "skipped" in -WhatIf, double-check that the scope path exactly matches what you expect (subscriptions vs. resource groups).
 
 Write pim-config.json
 
@@ -548,6 +642,26 @@ If you prefer to patch in just the new portion (assumes the earlier sections alr
 }
 ```
 
+**Array format (same outcome)**
+
+```jsonc
+{
+  "AzureRoles": {
+    "Policies": [
+      {
+        "RoleName": "Reader",
+        "Scope": "/subscriptions/<sub-guid>",
+        "Policy": {
+          "ActivationDuration": "PT1H",
+          "ActivationRequirement": "MultiFactorAuthentication",
+          "ApprovalRequired": false
+        }
+      }
+    ]
+  }
+}
+```
+
 Preview (policies only)
 
 ```powershell
@@ -589,6 +703,21 @@ Step 7 replacement (after):
       "Template": "Standard" // <— inline properties replaced by a template reference
     }
   }
+}
+```
+
+Array style with template override:
+
+```jsonc
+"AzureRoles": {
+  "Policies": [
+    {
+      "RoleName": "Reader",
+      "Scope": "/subscriptions/<sub-guid>",
+      "Template": "Standard",
+      "ActivationRequirement": "Justification" // optional inline override while still inheriting the template
+    }
+  ]
 }
 ```
 
