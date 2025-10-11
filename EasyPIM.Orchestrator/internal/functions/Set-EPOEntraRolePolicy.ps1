@@ -19,7 +19,14 @@ function Set-EPOEntraRolePolicy {
 
     Write-Verbose "[Orchestrator] Applying Entra role policy for $($PolicyDefinition.RoleName)"
 
-    $protectedRoles = @("Global Administrator","Privileged Role Administrator","Security Administrator","User Access Administrator")
+    $alwaysBypassRoles = @("Global Administrator")
+    if ($alwaysBypassRoles -contains $PolicyDefinition.RoleName) {
+        Write-Warning "[WARNING] ALWAYS-BYPASSED ROLE: '$($PolicyDefinition.RoleName)' policy changes are disabled and will be skipped."
+        Write-Host "[PROTECTED] Global Administrator policy is always bypassed for safety; manual management is required." -ForegroundColor Yellow
+        return @{ RoleName = $PolicyDefinition.RoleName; Status = "Protected (Always Skipped)"; Mode = $Mode; Details = "Global Administrator policy is intentionally excluded from automation and must be managed manually." }
+    }
+
+    $protectedRoles = @("Privileged Role Administrator","Security Administrator","User Access Administrator")
     if ($protectedRoles -contains $PolicyDefinition.RoleName) {
         if (-not $AllowProtectedRoles) {
             Write-Warning "[WARNING] PROTECTED ROLE: '$($PolicyDefinition.RoleName)' is a critical role. Policy changes are blocked for security."
