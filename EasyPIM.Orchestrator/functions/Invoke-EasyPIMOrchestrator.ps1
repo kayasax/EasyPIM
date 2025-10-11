@@ -665,8 +665,15 @@ function Invoke-EasyPIMOrchestrator {
 			# Policy functions no longer support a separate 'validate' mode. Always use 'delta'; rely on -WhatIf for preview.
 			$effectivePolicyMode = "delta"
 			# Protected roles safety check: identify and confirm if protected roles are being modified
+			if ($policyConfig.ContainsKey('EntraRolePolicies') -and $policyConfig.EntraRolePolicies) {
+				$alwaysProtectedEntraRoles = @("Global Administrator")
+				$alwaysBypassed = $policyConfig.EntraRolePolicies | Where-Object { $alwaysProtectedEntraRoles -contains $_.RoleName }
+				if ($alwaysBypassed) {
+					Write-Host ""; Write-Host "ℹ️ [INFO] Global Administrator policy entries detected. EasyPIM always bypasses this role to preserve break-glass access." -ForegroundColor Yellow
+				}
+			}
 			if ($AllowProtectedRoles -and -not $WhatIfPreference) {
-				$protectedEntraRoles = @("Global Administrator","Privileged Role Administrator","Security Administrator","User Access Administrator")
+				$protectedEntraRoles = @("Privileged Role Administrator","Security Administrator","User Access Administrator")
 				$protectedAzureRoles = @("Owner","User Access Administrator")
 				$protectedRolesFound = @()
 				# Check for protected Entra roles

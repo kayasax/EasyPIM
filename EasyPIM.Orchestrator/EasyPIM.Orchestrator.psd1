@@ -1,6 +1,6 @@
 @{
     RootModule        = 'EasyPIM.Orchestrator.psm1'
-    ModuleVersion = '1.4.7'
+    ModuleVersion = '1.4.8'
     GUID              = 'b6f9b3c9-bc6a-4d4b-8c51-7c45d42157cd'
     Author            = 'Loïc MICHEL'
     CompanyName       = 'EasyPIM'
@@ -30,17 +30,14 @@
         ProjectUri = 'https://github.com/kayasax/EasyPIM'
         LicenseUri = 'https://github.com/kayasax/EasyPIM/blob/main/LICENSE'
 ReleaseNotes = @'
-EasyPIM.Orchestrator v1.4.7 - Assignment Scope Accuracy
-
-Added
-- `Test-PIMPolicyDrift` now uses the orchestrator policy normalization path when available, keeping drift checks aligned with live execution.
+EasyPIM.Orchestrator v1.4.8 - Protected Role Safeguards
 
 Fixed
-- Azure assignment pre-checks ignore status-only strings and now require both scope and role name before skipping an entry.
-- `Test-EasyPIMConfigurationValidity` strips AuthenticationContext-only activation requirements to prevent deployment conflicts.
+- `Set-EPOEntraRolePolicy` now hard-skips Global Administrator policy automation regardless of override flags and surfaces clearer safety messaging.
 
-Docs
-- Validation sample configuration updated with Azure role policy coverage demonstrating the new normalization path.
+Improved
+- `Invoke-EasyPIMOrchestrator` highlights Global Administrator entries during execution so operators know they are preserved as break-glass roles.
+- Added dedicated Pester coverage to ensure protected-role overrides behave consistently across future changes.
 '@
     } }
 }

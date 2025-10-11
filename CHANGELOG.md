@@ -16,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Improved
 - Assignment validation now requires both scope and role when checking existing Azure entries, preventing status strings from blocking new assignments.
 
+## [EasyPIM.Orchestrator 1.4.8] - 2025-10-13
+
+### Fixed
+- `Set-EPOEntraRolePolicy` now permanently bypasses Global Administrator policy automation with explicit safety messaging and manual-management guidance.
+
+### Improved
+- `Invoke-EasyPIMOrchestrator` highlights Global Administrator policy entries during runs so operators know they remain untouched as break-glass roles.
+- Added targeted unit coverage to guard protected-role override behavior against regressions.
+
 ## [EasyPIM.Orchestrator 1.4.7] - 2025-10-11
 
 ### Fixed
