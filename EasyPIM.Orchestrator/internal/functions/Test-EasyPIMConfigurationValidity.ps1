@@ -42,7 +42,95 @@ function Test-EasyPIMConfigurationValidity {
             ApproverFieldMismatches = 0
             MissingRequiredFields = 0
             TemplateReferences = 0
+            InvalidActivationRequirements = 0
             AutoCorrections = 0
+        }
+    }
+
+    $getTemplateName = {
+        param([psobject]$Policy)
+        if (-not $Policy) { return $null }
+        if ($Policy.PSObject.Properties['Template'] -and $Policy.Template) { return $Policy.Template }
+        if ($Policy.PSObject.Properties['PolicyTemplate'] -and $Policy.PolicyTemplate) { return $Policy.PolicyTemplate }
+        return $null
+    }
+
+    $processActivationRequirement = {
+        param(
+            [psobject]$Policy,
+            [string]$Context,
+            [psobject]$CorrectionTarget
+        )
+
+        if (-not $Policy) { return }
+
+        foreach ($propertyName in @('ActivationRequirement', 'ActiveAssignmentRequirement')) {
+            if (-not ($Policy.PSObject.Properties[$propertyName])) { continue }
+            $value = $Policy.$propertyName
+            if ($null -eq $value) { continue }
+
+            $normalized = @()
+
+            if ($value -is [string]) {
+                if ($value -match ',') {
+                    $normalized = ($value -split ',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+                } else {
+                    $trimmed = $value.Trim()
+                    if ($trimmed) { $normalized = @($trimmed) }
+                }
+            } elseif ($value -is [System.Collections.IEnumerable]) {
+                foreach ($item in $value) {
+                    if ($null -eq $item) { continue }
+                    $normalized += $item.ToString().Trim()
+                }
+                $normalized = @($normalized | Where-Object { $_ })
+            } else {
+                $normalized = @($value.ToString().Trim())
+            }
+
+            if ($normalized -contains 'AuthenticationContext') {
+                $filtered = @($normalized | Where-Object { $_ -ne 'AuthenticationContext' -and $_ })
+                $issue = [PSCustomObject]@{
+                    Severity = 'Error'
+                    Category = 'InvalidActivationRequirement'
+                    Context = "$Context.$propertyName"
+                    Message = "Invalid value 'AuthenticationContext' detected in $propertyName. This requirement is controlled by AuthenticationContext_Enabled and AuthenticationContext_Value."
+                    Suggestion = "Remove 'AuthenticationContext' from $propertyName and rely on AuthenticationContext_Enabled plus AuthenticationContext_Value to enforce authentication context."
+                }
+                $validationResult.HasIssues = $true
+                $validationResult.Issues += $issue
+                $validationResult.ValidationSummary.InvalidActivationRequirements++
+
+                if ($AutoCorrect -and $CorrectionTarget) {
+                    $replacement = $filtered
+                    if ($value -is [string]) {
+                        $replacement = ($filtered -join ',')
+                        if (-not $replacement) { $replacement = '' }
+                    } elseif ($filtered.Count -eq 0) {
+                        $replacement = @()
+                    }
+
+                    try {
+                        $CorrectionTarget.PSObject.Properties[$propertyName] | Out-Null
+                        $CorrectionTarget.$propertyName = $replacement
+                    } catch {
+                        try {
+                            $CorrectionTarget | Add-Member -NotePropertyName $propertyName -NotePropertyValue $replacement -Force
+                        } catch {
+                            $CorrectionTarget.$propertyName = $replacement
+                        }
+                    }
+
+                    try {
+                        $Policy.$propertyName = $replacement
+                    } catch {
+                        # ignore if policy is immutable
+                    }
+
+                    $validationResult.Corrections += "Auto-removed 'AuthenticationContext' from $Context.$propertyName"
+                    $validationResult.ValidationSummary.AutoCorrections++
+                }
+            }
         }
     }
 
@@ -50,7 +138,7 @@ function Test-EasyPIMConfigurationValidity {
 
     # Deep clone the config for corrections
     if ($AutoCorrect) {
-        $validationResult.CorrectedConfig = $Config | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+        $validationResult.CorrectedConfig = $Config | ConvertTo-Json -Depth 20 | ConvertFrom-Json -Depth 100
     }
 
     # Validation Rule 1: Check PolicyTemplates for Approvers field mismatches
@@ -76,6 +164,12 @@ function Test-EasyPIMConfigurationValidity {
                 }
             }
         }
+
+        $templateCorrectionTarget = $null
+        if ($AutoCorrect) {
+            $templateCorrectionTarget = $validationResult.CorrectedConfig.PolicyTemplates.$templateName
+        }
+        & $processActivationRequirement -Policy $template -Context "PolicyTemplates.$templateName" -CorrectionTarget $templateCorrectionTarget
     }
 
     # Validation Rule 2a: Check EntraRolePolicies (top-level array) for Approvers mismatches
@@ -88,6 +182,7 @@ function Test-EasyPIMConfigurationValidity {
                 if (-not $rolePolicy) { $index++; continue }
                 $roleName = if ($rolePolicy.PSObject.Properties['RoleName']) { $rolePolicy.RoleName } else { "Unknown" }
                 $context = "EntraRolePolicies[$index] (RoleName: $roleName)"
+                $templateName = & $getTemplateName $rolePolicy
 
                 if ($rolePolicy.PSObject.Properties['Approvers'] -and $rolePolicy.Approvers) {
                     $approverIssues = Test-ApproversFormat -Approvers $rolePolicy.Approvers -Context $context
@@ -107,7 +202,7 @@ function Test-EasyPIMConfigurationValidity {
 
                 if ($rolePolicy.PSObject.Properties['ApprovalRequired'] -and $rolePolicy.ApprovalRequired -eq $true) {
                     if (-not $rolePolicy.PSObject.Properties['Approvers'] -or -not $rolePolicy.Approvers -or $rolePolicy.Approvers.Count -eq 0) {
-                        if (-not $rolePolicy.PSObject.Properties['Template'] -or -not $rolePolicy.Template) {
+                        if ([string]::IsNullOrWhiteSpace([string]$templateName)) {
                             $issue = [PSCustomObject]@{
                                 Severity = "Error"
                                 Category = "MissingApprovers"
@@ -123,6 +218,12 @@ function Test-EasyPIMConfigurationValidity {
                 }
 
                 $index++
+
+                $policyCorrectionTarget = $null
+                if ($AutoCorrect -and $validationResult.CorrectedConfig.PSObject.Properties['EntraRolePolicies']) {
+                    $policyCorrectionTarget = $validationResult.CorrectedConfig.EntraRolePolicies[$index - 1]
+                }
+                & $processActivationRequirement -Policy $rolePolicy -Context $context -CorrectionTarget $policyCorrectionTarget
             }
         }
     }
@@ -138,6 +239,7 @@ function Test-EasyPIMConfigurationValidity {
                 if (-not $rolePolicy) { $index++; continue }
                 $roleName = if ($rolePolicy.PSObject.Properties['RoleName']) { $rolePolicy.RoleName } else { "Unknown" }
                 $context = "EntraRoles.Policies[$index] (RoleName: $roleName)"
+                $templateName = & $getTemplateName $rolePolicy
 
                 if ($rolePolicy.PSObject.Properties['Approvers'] -and $rolePolicy.Approvers) {
                     $approverIssues = Test-ApproversFormat -Approvers $rolePolicy.Approvers -Context $context
@@ -157,7 +259,7 @@ function Test-EasyPIMConfigurationValidity {
 
                 if ($rolePolicy.PSObject.Properties['ApprovalRequired'] -and $rolePolicy.ApprovalRequired -eq $true) {
                     if (-not $rolePolicy.PSObject.Properties['Approvers'] -or -not $rolePolicy.Approvers -or $rolePolicy.Approvers.Count -eq 0) {
-                        if (-not $rolePolicy.PSObject.Properties['Template'] -or -not $rolePolicy.Template) {
+                        if ([string]::IsNullOrWhiteSpace([string]$templateName)) {
                             $issue = [PSCustomObject]@{
                                 Severity = "Error"
                                 Category = "MissingApprovers"
@@ -173,10 +275,17 @@ function Test-EasyPIMConfigurationValidity {
                 }
 
                 $index++
+
+                $policyCorrectionTarget = $null
+                if ($AutoCorrect -and $validationResult.CorrectedConfig.EntraRoles.PSObject.Properties['Policies']) {
+                    $policyCorrectionTarget = $validationResult.CorrectedConfig.EntraRoles.Policies[$index - 1]
+                }
+                & $processActivationRequirement -Policy $rolePolicy -Context $context -CorrectionTarget $policyCorrectionTarget
             }
         } else {
             foreach ($roleName in $entraPolicies.PSObject.Properties.Name) {
                 $rolePolicy = $entraPolicies.$roleName
+                $templateName = & $getTemplateName $rolePolicy
 
                 if ($rolePolicy.PSObject.Properties['Approvers'] -and $rolePolicy.Approvers) {
                     $approverIssues = Test-ApproversFormat -Approvers $rolePolicy.Approvers -Context "EntraRoles.Policies.$roleName"
@@ -194,9 +303,15 @@ function Test-EasyPIMConfigurationValidity {
                     }
                 }
 
+                $policyCorrectionTarget = $null
+                if ($AutoCorrect -and $validationResult.CorrectedConfig.EntraRoles.PSObject.Properties['Policies']) {
+                    $policyCorrectionTarget = $validationResult.CorrectedConfig.EntraRoles.Policies.$roleName
+                }
+                & $processActivationRequirement -Policy $rolePolicy -Context "EntraRoles.Policies.$roleName" -CorrectionTarget $policyCorrectionTarget
+
                 if ($rolePolicy.PSObject.Properties['ApprovalRequired'] -and $rolePolicy.ApprovalRequired -eq $true) {
                     if (-not $rolePolicy.PSObject.Properties['Approvers'] -or -not $rolePolicy.Approvers -or $rolePolicy.Approvers.Count -eq 0) {
-                        if (-not $rolePolicy.PSObject.Properties['Template'] -or -not $rolePolicy.Template) {
+                        if ([string]::IsNullOrWhiteSpace([string]$templateName)) {
                             $issue = [PSCustomObject]@{
                                 Severity = "Error"
                                 Category = "MissingApprovers"
@@ -220,6 +335,7 @@ function Test-EasyPIMConfigurationValidity {
 
         foreach ($roleName in $Config.AzureRoles.Policies.PSObject.Properties.Name) {
             $rolePolicy = $Config.AzureRoles.Policies.$roleName
+            $templateName = & $getTemplateName $rolePolicy
 
             if ($rolePolicy.PSObject.Properties['Approvers'] -and $rolePolicy.Approvers) {
                 $approverIssues = Test-ApproversFormat -Approvers $rolePolicy.Approvers -Context "AzureRoles.Policies.$roleName"
@@ -237,10 +353,16 @@ function Test-EasyPIMConfigurationValidity {
                 }
             }
 
+            $policyCorrectionTarget = $null
+            if ($AutoCorrect -and $validationResult.CorrectedConfig.AzureRoles.PSObject.Properties['Policies']) {
+                $policyCorrectionTarget = $validationResult.CorrectedConfig.AzureRoles.Policies.$roleName
+            }
+            & $processActivationRequirement -Policy $rolePolicy -Context "AzureRoles.Policies.$roleName" -CorrectionTarget $policyCorrectionTarget
+
             # Check for ApprovalRequired=true but missing Approvers
             if ($rolePolicy.PSObject.Properties['ApprovalRequired'] -and $rolePolicy.ApprovalRequired -eq $true) {
                 if (-not $rolePolicy.PSObject.Properties['Approvers'] -or -not $rolePolicy.Approvers -or $rolePolicy.Approvers.Count -eq 0) {
-                    if (-not $rolePolicy.PSObject.Properties['Template'] -or -not $rolePolicy.Template) {
+                    if ([string]::IsNullOrWhiteSpace([string]$templateName)) {
                         $issue = [PSCustomObject]@{
                             Severity = "Error"
                             Category = "MissingApprovers"
@@ -269,6 +391,7 @@ function Test-EasyPIMConfigurationValidity {
                 $groupName = if ($groupPolicy.PSObject.Properties['GroupName']) { $groupPolicy.GroupName } else { $groupId }
                 $roleName = if ($groupPolicy.PSObject.Properties['RoleName']) { $groupPolicy.RoleName } else { "Unknown" }
                 $context = "GroupPolicies[$index] (Group: $groupName, Role: $roleName)"
+                $templateName = & $getTemplateName $groupPolicy
 
                 if ($groupPolicy.PSObject.Properties['Approvers'] -and $groupPolicy.Approvers) {
                     $approverIssues = Test-ApproversFormat -Approvers $groupPolicy.Approvers -Context $context
@@ -288,7 +411,7 @@ function Test-EasyPIMConfigurationValidity {
 
                 if ($groupPolicy.PSObject.Properties['ApprovalRequired'] -and $groupPolicy.ApprovalRequired -eq $true) {
                     if (-not $groupPolicy.PSObject.Properties['Approvers'] -or -not $groupPolicy.Approvers -or $groupPolicy.Approvers.Count -eq 0) {
-                        if (-not $groupPolicy.PSObject.Properties['Template'] -or -not $groupPolicy.Template) {
+                        if ([string]::IsNullOrWhiteSpace([string]$templateName)) {
                             $issue = [PSCustomObject]@{
                                 Severity = "Error"
                                 Category = "MissingApprovers"
@@ -304,6 +427,12 @@ function Test-EasyPIMConfigurationValidity {
                 }
 
                 $index++
+
+                $groupPolicyCorrectionTarget = $null
+                if ($AutoCorrect -and $validationResult.CorrectedConfig.PSObject.Properties['GroupPolicies']) {
+                    $groupPolicyCorrectionTarget = $validationResult.CorrectedConfig.GroupPolicies[$index - 1]
+                }
+                & $processActivationRequirement -Policy $groupPolicy -Context $context -CorrectionTarget $groupPolicyCorrectionTarget
             }
         }
     }
@@ -321,6 +450,7 @@ function Test-EasyPIMConfigurationValidity {
                 $groupName = if ($groupPolicy.PSObject.Properties['GroupName']) { $groupPolicy.GroupName } else { $groupId }
                 $roleName = if ($groupPolicy.PSObject.Properties['RoleName']) { $groupPolicy.RoleName } else { "Unknown" }
                 $context = "Groups.Policies[$index] (Group: $groupName, Role: $roleName)"
+                $templateName = & $getTemplateName $groupPolicy
 
                 if ($groupPolicy.PSObject.Properties['Approvers'] -and $groupPolicy.Approvers) {
                     $approverIssues = Test-ApproversFormat -Approvers $groupPolicy.Approvers -Context $context
@@ -340,7 +470,7 @@ function Test-EasyPIMConfigurationValidity {
 
                 if ($groupPolicy.PSObject.Properties['ApprovalRequired'] -and $groupPolicy.ApprovalRequired -eq $true) {
                     if (-not $groupPolicy.PSObject.Properties['Approvers'] -or -not $groupPolicy.Approvers -or $groupPolicy.Approvers.Count -eq 0) {
-                        if (-not $groupPolicy.PSObject.Properties['Template'] -or -not $groupPolicy.Template) {
+                        if ([string]::IsNullOrWhiteSpace([string]$templateName)) {
                             $issue = [PSCustomObject]@{
                                 Severity = "Error"
                                 Category = "MissingApprovers"
@@ -356,6 +486,12 @@ function Test-EasyPIMConfigurationValidity {
                 }
 
                 $index++
+
+                $groupPolicyCorrectionTarget = $null
+                if ($AutoCorrect -and $validationResult.CorrectedConfig.Groups.PSObject.Properties['Policies']) {
+                    $groupPolicyCorrectionTarget = $validationResult.CorrectedConfig.Groups.Policies[$index - 1]
+                }
+                & $processActivationRequirement -Policy $groupPolicy -Context $context -CorrectionTarget $groupPolicyCorrectionTarget
             }
         } else {
             foreach ($groupKey in $groupPolicies.PSObject.Properties.Name) {
@@ -366,6 +502,7 @@ function Test-EasyPIMConfigurationValidity {
                     $roleName = $roleProp.Name
                     if ($roleName -notin @('Member', 'Owner')) { continue }
                     $rolePolicy = $roleProp.Value
+                    $templateName = & $getTemplateName $rolePolicy
 
                     if ($rolePolicy.PSObject.Properties['Approvers'] -and $rolePolicy.Approvers) {
                         $approverIssues = Test-ApproversFormat -Approvers $rolePolicy.Approvers -Context "Groups.Policies.$groupKey.$roleName"
@@ -383,9 +520,15 @@ function Test-EasyPIMConfigurationValidity {
                         }
                     }
 
+                    $groupPolicyCorrectionTarget = $null
+                    if ($AutoCorrect -and $validationResult.CorrectedConfig.Groups.PSObject.Properties['Policies']) {
+                        $groupPolicyCorrectionTarget = $validationResult.CorrectedConfig.Groups.Policies.$groupKey.$roleName
+                    }
+                    & $processActivationRequirement -Policy $rolePolicy -Context "Groups.Policies.$groupKey.$roleName" -CorrectionTarget $groupPolicyCorrectionTarget
+
                     if ($rolePolicy.PSObject.Properties['ApprovalRequired'] -and $rolePolicy.ApprovalRequired -eq $true) {
                         if (-not $rolePolicy.PSObject.Properties['Approvers'] -or -not $rolePolicy.Approvers -or $rolePolicy.Approvers.Count -eq 0) {
-                            if (-not $rolePolicy.PSObject.Properties['Template'] -or -not $rolePolicy.Template) {
+                            if ([string]::IsNullOrWhiteSpace([string]$templateName)) {
                                 $issue = [PSCustomObject]@{
                                     Severity = "Error"
                                     Category = "MissingApprovers"
@@ -418,14 +561,15 @@ function Test-EasyPIMConfigurationValidity {
             foreach ($rolePolicy in $Config.EntraRolePolicies) {
                 if (-not $rolePolicy) { $index++; continue }
                 $roleName = if ($rolePolicy.PSObject.Properties['RoleName']) { $rolePolicy.RoleName } else { "Unknown" }
+                $templateName = & $getTemplateName $rolePolicy
                 
-                if ($rolePolicy.PSObject.Properties['Template'] -and $rolePolicy.Template) {
-                    if ($rolePolicy.Template -notin $templateNames) {
+                if (-not [string]::IsNullOrWhiteSpace([string]$templateName)) {
+                    if ($templateName -notin $templateNames) {
                         $issue = [PSCustomObject]@{
                             Severity = "Error"
                             Category = "InvalidTemplateReference"
                             Context = "EntraRolePolicies[$index] (RoleName: $roleName)"
-                            Message = "Template '$($rolePolicy.Template)' not found in PolicyTemplates"
+                            Message = "Template '$templateName' not found in PolicyTemplates"
                             Suggestion = "Check spelling or add the template to PolicyTemplates section"
                         }
                         $validationResult.HasIssues = $true
@@ -446,14 +590,15 @@ function Test-EasyPIMConfigurationValidity {
             foreach ($rolePolicy in $entraPolicies) {
                 if (-not $rolePolicy) { $index++; continue }
                 $roleName = if ($rolePolicy.PSObject.Properties['RoleName']) { $rolePolicy.RoleName } else { "Unknown" }
-                
-                if ($rolePolicy.PSObject.Properties['Template'] -and $rolePolicy.Template) {
-                    if ($rolePolicy.Template -notin $templateNames) {
+                $templateName = & $getTemplateName $rolePolicy
+
+                if (-not [string]::IsNullOrWhiteSpace([string]$templateName)) {
+                    if ($templateName -notin $templateNames) {
                         $issue = [PSCustomObject]@{
                             Severity = "Error"
                             Category = "InvalidTemplateReference"
                             Context = "EntraRoles.Policies[$index] (RoleName: $roleName)"
-                            Message = "Template '$($rolePolicy.Template)' not found in PolicyTemplates"
+                            Message = "Template '$templateName' not found in PolicyTemplates"
                             Suggestion = "Check spelling or add the template to PolicyTemplates section"
                         }
                         $validationResult.HasIssues = $true
@@ -466,13 +611,14 @@ function Test-EasyPIMConfigurationValidity {
         } else {
             foreach ($roleName in $entraPolicies.PSObject.Properties.Name) {
                 $rolePolicy = $entraPolicies.$roleName
-                if ($rolePolicy.PSObject.Properties['Template'] -and $rolePolicy.Template) {
-                    if ($rolePolicy.Template -notin $templateNames) {
+                $templateName = & $getTemplateName $rolePolicy
+                if (-not [string]::IsNullOrWhiteSpace([string]$templateName)) {
+                    if ($templateName -notin $templateNames) {
                         $issue = [PSCustomObject]@{
                             Severity = "Error"
                             Category = "InvalidTemplateReference"
                             Context = "EntraRoles.Policies.$roleName"
-                            Message = "Template '$($rolePolicy.Template)' not found in PolicyTemplates"
+                            Message = "Template '$templateName' not found in PolicyTemplates"
                             Suggestion = "Check spelling or add the template to PolicyTemplates section"
                         }
                         $validationResult.HasIssues = $true
@@ -488,13 +634,14 @@ function Test-EasyPIMConfigurationValidity {
     if ($Config.PSObject.Properties['AzureRoles'] -and $Config.AzureRoles.PSObject.Properties['Policies']) {
         foreach ($roleName in $Config.AzureRoles.Policies.PSObject.Properties.Name) {
             $rolePolicy = $Config.AzureRoles.Policies.$roleName
-            if ($rolePolicy.PSObject.Properties['Template'] -and $rolePolicy.Template) {
-                if ($rolePolicy.Template -notin $templateNames) {
+            $templateName = & $getTemplateName $rolePolicy
+            if (-not [string]::IsNullOrWhiteSpace([string]$templateName)) {
+                if ($templateName -notin $templateNames) {
                     $issue = [PSCustomObject]@{
                         Severity = "Error"
                         Category = "InvalidTemplateReference"
                         Context = "AzureRoles.Policies.$roleName"
-                        Message = "Template '$($rolePolicy.Template)' not found in PolicyTemplates"
+                        Message = "Template '$templateName' not found in PolicyTemplates"
                         Suggestion = "Check spelling or add the template to PolicyTemplates section"
                     }
                     $validationResult.HasIssues = $true
@@ -514,14 +661,15 @@ function Test-EasyPIMConfigurationValidity {
                 $groupId = if ($groupPolicy.PSObject.Properties['GroupId']) { $groupPolicy.GroupId } else { "Unknown" }
                 $groupName = if ($groupPolicy.PSObject.Properties['GroupName']) { $groupPolicy.GroupName } else { $groupId }
                 $roleName = if ($groupPolicy.PSObject.Properties['RoleName']) { $groupPolicy.RoleName } else { "Unknown" }
-                
-                if ($groupPolicy.PSObject.Properties['Template'] -and $groupPolicy.Template) {
-                    if ($groupPolicy.Template -notin $templateNames) {
+                $templateName = & $getTemplateName $groupPolicy
+
+                if (-not [string]::IsNullOrWhiteSpace([string]$templateName)) {
+                    if ($templateName -notin $templateNames) {
                         $issue = [PSCustomObject]@{
                             Severity = "Error"
                             Category = "InvalidTemplateReference"
                             Context = "GroupPolicies[$index] (Group: $groupName, Role: $roleName)"
-                            Message = "Template '$($groupPolicy.Template)' not found in PolicyTemplates"
+                            Message = "Template '$templateName' not found in PolicyTemplates"
                             Suggestion = "Check spelling or add the template to PolicyTemplates section"
                         }
                         $validationResult.HasIssues = $true
@@ -544,14 +692,15 @@ function Test-EasyPIMConfigurationValidity {
                 $groupId = if ($groupPolicy.PSObject.Properties['GroupId']) { $groupPolicy.GroupId } else { "Unknown" }
                 $groupName = if ($groupPolicy.PSObject.Properties['GroupName']) { $groupPolicy.GroupName } else { $groupId }
                 $roleName = if ($groupPolicy.PSObject.Properties['RoleName']) { $groupPolicy.RoleName } else { "Unknown" }
-                
-                if ($groupPolicy.PSObject.Properties['Template'] -and $groupPolicy.Template) {
-                    if ($groupPolicy.Template -notin $templateNames) {
+                $templateName = & $getTemplateName $groupPolicy
+
+                if (-not [string]::IsNullOrWhiteSpace([string]$templateName)) {
+                    if ($templateName -notin $templateNames) {
                         $issue = [PSCustomObject]@{
                             Severity = "Error"
                             Category = "InvalidTemplateReference"
                             Context = "Groups.Policies[$index] (Group: $groupName, Role: $roleName)"
-                            Message = "Template '$($groupPolicy.Template)' not found in PolicyTemplates"
+                            Message = "Template '$templateName' not found in PolicyTemplates"
                             Suggestion = "Check spelling or add the template to PolicyTemplates section"
                         }
                         $validationResult.HasIssues = $true
@@ -566,13 +715,14 @@ function Test-EasyPIMConfigurationValidity {
                 $roleBlock = $groupPolicies.$groupKey
                 if (-not $roleBlock) { continue }
 
-                foreach ($roleProp in $roleBlock.PSObject.Properties) {
-                    $roleName = $roleProp.Name
+                                $templateName = & $getTemplateName $rolePolicy
+                                if (-not [string]::IsNullOrWhiteSpace([string]$templateName)) {
+                                    if ($templateName -notin $templateNames) {
                     if ($roleName -notin @('Member', 'Owner')) { continue }
                     $rolePolicy = $roleProp.Value
 
                     if ($rolePolicy.PSObject.Properties['Template'] -and $rolePolicy.Template) {
-                        if ($rolePolicy.Template -notin $templateNames) {
+                                            Message = "Template '$templateName' not found in PolicyTemplates"
                             $issue = [PSCustomObject]@{
                                 Severity = "Error"
                                 Category = "InvalidTemplateReference"

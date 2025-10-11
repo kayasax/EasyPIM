@@ -6,7 +6,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.0.29'
+ModuleVersion = '2.0.30'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -163,6 +163,11 @@ PrivateData = @{
 
     # Appended in 2.0.2 and 2.0.3
     AdditionalReleaseNotes = @'
+    2.0.30 (2025-10-11)
+    - Hardened Test-PIMPolicyBusinessRules to remove conflicting AuthenticationContext requirements.
+    - Updated Test-EasyPIMConfigurationValidity to surface invalid activation requirements before deployment.
+    - Improved assignment validation to require both scope and role when matching Azure role entries.
+
     2.0.3 (2025-08-29)
     - Stable release polish: removed prerelease references; validated end-to-end scenario passes
     - E2E test improvements: auto-connect to Graph/Az, comprehensive policy options exercise (Step 14)

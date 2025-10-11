@@ -1,6 +1,6 @@
 @{
     RootModule        = 'EasyPIM.Orchestrator.psm1'
-    ModuleVersion = '1.4.6'
+    ModuleVersion = '1.4.7'
     GUID              = 'b6f9b3c9-bc6a-4d4b-8c51-7c45d42157cd'
     Author            = 'Loïc MICHEL'
     CompanyName       = 'EasyPIM'
@@ -30,18 +30,17 @@
         ProjectUri = 'https://github.com/kayasax/EasyPIM'
         LicenseUri = 'https://github.com/kayasax/EasyPIM/blob/main/LICENSE'
 ReleaseNotes = @'
-🚀 EasyPIM.Orchestrator v1.4.5 - Policy Arrays + Drift Accuracy
+EasyPIM.Orchestrator v1.4.7 - Assignment Scope Accuracy
 
-### Added
-- Array-based policy definitions now supported across Azure, Entra, and Group scopes with template override support.
-- New documentation and sample JSON (`config/enhanced-sample-config-array.json`) demonstrating the array formats.
+Added
+- `Test-PIMPolicyDrift` now uses the orchestrator policy normalization path when available, keeping drift checks aligned with live execution.
 
-### Fixed
-- `Test-PIMPolicyDrift` now compares template-based policies using the resolved payload produced by the orchestrator.
-- Cleaned source files flagged by FileIntegrity tests (trailing whitespace) to keep CI validation green.
+Fixed
+- Azure assignment pre-checks ignore status-only strings and now require both scope and role name before skipping an entry.
+- `Test-EasyPIMConfigurationValidity` strips AuthenticationContext-only activation requirements to prevent deployment conflicts.
 
-### Docs
-- Added dedicated array policy guides under `EasyPIM/Documentation` for Azure, Entra, and Group scenarios.
+Docs
+- Validation sample configuration updated with Azure role policy coverage demonstrating the new normalization path.
 '@
     } }
 }

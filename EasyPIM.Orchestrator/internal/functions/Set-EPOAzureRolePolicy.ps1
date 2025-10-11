@@ -64,7 +64,9 @@ function Set-EPOAzureRolePolicy {
         if ($normalizedScope -like 'providers/Microsoft.Management/managementGroups/*') {
             $params.scope = $normalizedScope
         } elseif ($normalizedScope -like 'subscriptions/*') {
-            $params.subscriptionID = $SubscriptionId
+            # When a scope is supplied explicitly, prefer the dedicated -Scope parameter set.
+            # Avoid passing -SubscriptionId simultaneously because Set-PIMAzureResourcePolicy
+            # exposes mutually exclusive parameter sets for SubscriptionId vs Scope.
             $params.scope = $normalizedScope
         } else {
             # Unknown prefix: fall back to explicit Scope if provided; do not force subscription path

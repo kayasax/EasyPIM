@@ -69,6 +69,12 @@ function Test-PIMPolicyBusinessRules {
             $requirements = $requirements -split ',' | ForEach-Object { $_.Trim() }
         }
 
+        if ($requirements -is [string]) {
+            $requirements = @($requirements)
+        } elseif ($requirements -isnot [System.Collections.IEnumerable]) {
+            $requirements = @($requirements)
+        }
+
         if ($authContextEnabled -and $requirements -and ($requirements -contains 'MultiFactorAuthentication')) {
             $conflicts += @{
                 Field = 'ActivationRequirement'
@@ -83,6 +89,21 @@ function Test-PIMPolicyBusinessRules {
                 $hasChanges = $true
             }
         }
+
+        if ($requirements -and ($requirements -contains 'AuthenticationContext')) {
+            $conflicts += @{
+                Field = 'ActivationRequirement'
+                Type = 'AuthenticationContextInvalidValue'
+                Message = "ActivationRequirement contains 'AuthenticationContext', which is controlled by AuthenticationContext_Enabled/Value. The entry will be removed."
+                OriginalValue = $requirements
+                AdjustedValue = @($requirements | Where-Object { $_ -ne 'AuthenticationContext' })
+            }
+
+            if ($ApplyAdjustments) {
+                $adjustedSettings.ActivationRequirement = @($requirements | Where-Object { $_ -ne 'AuthenticationContext' })
+                $hasChanges = $true
+            }
+        }
     }
 
     # Check ActiveAssignmentRequirement for MFA conflicts
@@ -92,6 +113,12 @@ function Test-PIMPolicyBusinessRules {
         # Normalize to array if comma-separated string
         if ($requirements -is [string] -and $requirements -match ',') {
             $requirements = $requirements -split ',' | ForEach-Object { $_.Trim() }
+        }
+
+        if ($requirements -is [string]) {
+            $requirements = @($requirements)
+        } elseif ($requirements -isnot [System.Collections.IEnumerable]) {
+            $requirements = @($requirements)
         }
 
         if ($authContextEnabled -and $requirements -and ($requirements -contains 'MultiFactorAuthentication')) {
@@ -105,6 +132,21 @@ function Test-PIMPolicyBusinessRules {
 
             if ($ApplyAdjustments) {
                 $adjustedSettings.ActiveAssignmentRequirement = @($requirements | Where-Object { $_ -ne 'MultiFactorAuthentication' })
+                $hasChanges = $true
+            }
+        }
+
+        if ($requirements -and ($requirements -contains 'AuthenticationContext')) {
+            $conflicts += @{
+                Field = 'ActiveAssignmentRequirement'
+                Type = 'AuthenticationContextInvalidValue'
+                Message = "ActiveAssignmentRequirement contains 'AuthenticationContext', which is controlled by AuthenticationContext_Enabled/Value. The entry will be removed."
+                OriginalValue = $requirements
+                AdjustedValue = @($requirements | Where-Object { $_ -ne 'AuthenticationContext' })
+            }
+
+            if ($ApplyAdjustments) {
+                $adjustedSettings.ActiveAssignmentRequirement = @($requirements | Where-Object { $_ -ne 'AuthenticationContext' })
                 $hasChanges = $true
             }
         }
