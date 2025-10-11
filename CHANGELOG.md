@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [EasyPIM Core 2.0.30] - 2025-10-11
+
+### Fixed
+- Hardened `Test-PIMPolicyBusinessRules` to strip conflicting AuthenticationContext entries from activation requirement arrays.
+- Updated `Test-EasyPIMConfigurationValidity` to surface invalid activation requirements before deployment and align template normalization with runtime behavior.
+
+### Improved
+- Assignment validation now requires both scope and role when checking existing Azure entries, preventing status strings from blocking new assignments.
+
+## [EasyPIM.Orchestrator 1.4.7] - 2025-10-11
+
+### Fixed
+- Azure assignment pre-checks ignore status-only strings and enforce scope + role matches before skipping creations.
+- `Test-EasyPIMConfigurationValidity` removes stray AuthenticationContext activation requirements that would fail during deployment.
+
+### Changed
+- `Test-PIMPolicyDrift` reuses orchestrator normalization when available so drift detection mirrors live execution.
+
 ## [EasyPIM.Orchestrator 1.4.5] - 2025-10-08
 
 ### Added
