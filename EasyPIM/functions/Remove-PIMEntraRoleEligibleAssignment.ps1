@@ -7,8 +7,8 @@
     EntraID tenant ID
     .Parameter subscriptionID
     subscription ID
-    .Parameter scope
-    use scope parameter if you want to work at other scope than a subscription
+    .Parameter Scope
+    Optional directory scope for the removal request. Provide '/' for tenant scope (default), an Administrative Unit GUID, display name, or a full path like '/administrativeUnits/<GUID>'.
     .Parameter principalID
     objectID of the principal (user, group or service principal)
     .Parameter principalName
@@ -33,6 +33,14 @@
     PS> Remove-PIMEntraRoleEligibleAssignment -tenantID $tenantID -rolename "Global Administrator" -principalName "user@contoso.com"
 
     Resolve the principal name to its object ID and remove the eligible assignment for Global Administrator.
+
+    PS> Remove-PIMEntraRoleEligibleAssignment -tenantID $tenantID -rolename "Helpdesk Administrator" -principalId $principal.Id -Scope "e2a1d1b3-3a8a-4cc8-9ff6-8a90e2f17c11"
+
+    Remove the eligible assignment scoped to a specific Administrative Unit by supplying its GUID (translated to '/administrativeUnits/<GUID>').
+
+    PS> Remove-PIMEntraRoleEligibleAssignment -tenantID $tenantID -rolename "Helpdesk Administrator" -principalId $principal.Id -Scope "Sales Operations AU"
+
+    Remove the eligible assignment scoped to a specific Administrative Unit by referencing the AU display name; the name is resolved to its GUID automatically.
 
     .Link
     https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
@@ -83,6 +91,13 @@ function Remove-PIMEntraRoleEligibleAssignment {
         [string]
         # justification (will be auto generated if not provided)
         $justification,
+
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
+        [Alias('DirectoryScopeId','AdministrativeUnitId')]
+        [string]
+        # Optional scope for the removal request; defaults to '/' (tenant)
+        $Scope,
 
         [Parameter(ParameterSetName = 'ByPrincipalId')]
         [Parameter(ParameterSetName = 'ByPrincipalName')]
@@ -162,12 +177,15 @@ function Remove-PIMEntraRoleEligibleAssignment {
             $type = "NoExpiration"
         }
 
+        # Resolve the directory scope to the correct Graph identifier (defaults to '/' for tenant scope)
+        $targetScope = Resolve-EasyPIMDirectoryScope -Scope $Scope -DefaultScope '/' -ErrorContext 'Remove-PIMEntraRoleEligibleAssignment'
+
         $body = '
 {
     "action": "adminRemove",
     "justification": "'+ $justification + '",
     "roleDefinitionId": "'+ $config.roleID + '",
-    "directoryScopeId": "/",
+    "directoryScopeId": "'+ $targetScope + '",
     "principalId": "'+ $principalID + '",
     "scheduleInfo": {
         "startDateTime": "'+ $startDateTime + '",

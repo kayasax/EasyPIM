@@ -6,7 +6,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.0.30'
+ModuleVersion = '2.0.31'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -163,6 +163,10 @@ PrivateData = @{
 
     # Appended in 2.0.2 and 2.0.3
     AdditionalReleaseNotes = @'
+    2.0.31 (2025-10-11)
+    - Added Resolve-EasyPIMDirectoryScope helper to normalize tenant, GUID, full path, or display-name scopes.
+    - Restored Administrative Unit cleanup support for removal cmdlets with AU GUID or display name resolution.
+
     2.0.30 (2025-10-11)
     - Hardened Test-PIMPolicyBusinessRules to remove conflicting AuthenticationContext requirements.
     - Updated Test-EasyPIMConfigurationValidity to surface invalid activation requirements before deployment.
