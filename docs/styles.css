@@ -13,8 +13,27 @@
     --border: rgba(148, 163, 184, 0.3);
     --shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
     --radius: 18px;
+.hero-copy p,
+.hero-lead {
     --transition: 220ms ease;
     font-family: "Segoe UI", "Segoe UI Web (West European)", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+}
+
+.hero-lead {
+    font-size: 1.05rem;
+    margin-bottom: 1.25rem;
+}
+
+.hero-points {
+    margin: 0 0 1.75rem;
+    padding-left: 1.4rem;
+    color: rgba(203, 213, 225, 0.86);
+    display: grid;
+    gap: 0.6rem;
+}
+
+.hero-points li {
+    list-style: disc;
 }
 
 * {
@@ -168,9 +187,27 @@ body {
     margin-bottom: 1rem;
 }
 
-.hero-copy p {
+.hero-copy p,
+.hero-lead {
     max-width: 36rem;
     color: rgba(226, 232, 240, 0.88);
+}
+
+.hero-lead {
+    font-size: 1.05rem;
+    margin-bottom: 1.25rem;
+}
+
+.hero-points {
+    margin: 0 0 1.75rem;
+    padding-left: 1.4rem;
+    color: rgba(203, 213, 225, 0.86);
+    display: grid;
+    gap: 0.6rem;
+}
+
+.hero-points li {
+    list-style: disc;
 }
 
 .highlight {
@@ -254,6 +291,15 @@ body {
 .glass-card h2 {
     margin-top: 0;
     font-size: 1.25rem;
+}
+
+.glass-card .card-eyebrow {
+    display: inline-block;
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(191, 219, 254, 0.8);
+    margin-bottom: 0.75rem;
 }
 
 .glass-card ul {
@@ -573,6 +619,46 @@ body {
     color: rgba(226, 232, 240, 0.88);
 }
 
+.adoption {
+    background: rgba(15, 23, 42, 0.36);
+}
+
+.adoption-grid {
+    display: grid;
+    gap: 2.5rem;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    align-items: stretch;
+}
+
+.adoption-copy ul {
+    margin: 1.5rem 0;
+    padding-left: 1.4rem;
+    color: rgba(226, 232, 240, 0.84);
+    display: grid;
+    gap: 0.75rem;
+}
+
+.adoption-visual .glass-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.adoption-steps {
+    margin: 0;
+    padding-left: 1.25rem;
+    color: rgba(226, 232, 240, 0.9);
+    counter-reset: step;
+    display: grid;
+    gap: 0.85rem;
+}
+
+.adoption-steps li::marker {
+    color: rgba(125, 211, 252, 0.85);
+    font-weight: 600;
+}
+
 .cta-final {
     text-align: center;
     background: linear-gradient(135deg, rgba(37, 99, 235, 0.35), rgba(15, 23, 42, 0.8));
@@ -637,6 +723,11 @@ body {
     .responsive-embed {
         max-width: 100%;
     }
+
+    .adoption-grid {
+        grid-template-columns: 1fr;
+    }
+}
 }
 
 @media (prefers-reduced-motion: reduce) {
