@@ -1,0 +1,345 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="EasyPIM is the enterprise-ready PowerShell automation platform for Microsoft Entra PIM with JSON orchestration, drift detection, and CI/CD integration.">
+    <title>EasyPIM | Enterprise Entra PIM Automation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="site-header">
+        <div class="container">
+            <a class="brand" href="#top">EasyPIM</a>
+            <nav class="site-nav" aria-label="Main navigation">
+                <button class="nav-toggle" aria-expanded="false" aria-controls="primary-nav">Menu</button>
+                <ul id="primary-nav">
+                    <li><a href="#value">Value</a></li>
+                    <li><a href="#solutions">Solutions</a></li>
+                    <li><a href="#faq">FAQ</a></li>
+                    <li><a class="cta" href="https://github.com/kayasax/EasyPIM">Get EasyPIM</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main id="top">
+        <section class="hero">
+            <div class="container hero-grid">
+                <div class="hero-copy">
+                    <p class="eyebrow">Enterprise Privileged Identity Management</p>
+                    <h1>Automate Microsoft Entra PIM with one trusted PowerShell platform</h1>
+                    <p><span class="highlight">EasyPIM Core</span> delivers unified syntax for Microsoft Graph and Azure ARM APIs, while <span class="highlight">EasyPIM Orchestrator</span> adds JSON-based automation and governance so teams ship compliant changes in minutes, not weeks.</p>
+                    <div class="hero-actions">
+                        <a class="btn primary" href="https://www.powershellgallery.com/packages/EasyPIM" target="_blank" rel="noopener">Install from PowerShell Gallery</a>
+                        <a class="btn secondary" href="https://github.com/kayasax/EasyPIM/wiki/Documentation" target="_blank" rel="noopener">Explore the documentation</a>
+                    </div>
+                    <dl class="hero-metrics">
+                        <div>
+                            <dt>50+</dt>
+                            <dd>Automation cmdlets covering Entra roles, Azure RBAC, and security groups</dd>
+                        </div>
+                        <div>
+                            <dt>4</dt>
+                            <dd>Clouds supported including Azure Government and China</dd>
+                        </div>
+                        <div>
+                            <dt>8023</dt>
+                            <dd>Validation tests keeping every release production ready</dd>
+                        </div>
+                    </dl>
+                </div>
+                <div class="hero-visual" aria-hidden="true">
+                    <div class="glass-card">
+                        <h2>Policy Orchestration</h2>
+                        <ul>
+                            <li>JSON-driven workflows</li>
+                            <li>CI/CD ready delta deployments</li>
+                            <li>Granular approval routing</li>
+                        </ul>
+                    </div>
+                    <div class="glass-card">
+                        <h2>Operational Guardrails</h2>
+                        <ul>
+                            <li>Business rule validation</li>
+                            <li>Automated drift detection</li>
+                            <li>Detailed WhatIf reporting</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="value" class="section value">
+            <div class="container">
+                <h2>Why security teams choose EasyPIM</h2>
+                <p class="section-lead">EasyPIM brings engineering discipline to access governance with a toolkit that is fast to adopt, safe to operate, and built for scale.</p>
+                <div class="card-grid">
+                    <article class="value-card gradient-blue">
+                        <h3>Unified automation coverage</h3>
+                        <p>Manage Azure resources, Entra roles, and security groups with a single module that standardizes authentication, parameters, and output formatting.</p>
+                    </article>
+                    <article class="value-card gradient-purple">
+                        <h3>Enterprise-grade orchestration</h3>
+                        <p>Model complete PIM states in declarative JSON, run drift detection in CI, and deploy changes with WhatIf assurance before enforcing delta updates.</p>
+                    </article>
+                    <article class="value-card gradient-teal">
+                        <h3>Layered security guardrails</h3>
+                        <p>Enforce justification, ticketing, approval, conditional access, and emergency access controls in tandem so every privileged change passes through multiple security layers.</p>
+                    </article>
+                    <article class="value-card gradient-amber">
+                        <h3>Confidence through testing</h3>
+                        <p>Over eight thousand automated tests, PSScriptAnalyzer compliance, and detailed telemetry guard every release from regression risk.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section platform">
+            <div class="container">
+                <h2>Two modules, one automation platform</h2>
+                <p class="section-lead">Choose the module that fits your workflow—or run both for end-to-end automation. EasyPIM keeps syntax meaningful and predictable no matter which API you call.</p>
+                <div class="platform-grid">
+                    <article class="module-card core">
+                        <h3>EasyPIM (Core)</h3>
+                        <ul>
+                            <li>Consistent PowerShell verbs and parameters across Microsoft Graph (Entra) and Azure ARM endpoints.</li>
+                            <li>Human-readable output with rich objects designed for pipeline composition.</li>
+                            <li>Inline WhatIf and error handling patterns that mirror native Azure cmdlets.</li>
+                            <li>Bulk operations and backups that keep role, scope, and assignment data in sync.</li>
+                        </ul>
+                    </article>
+                    <article class="module-card orchestrator">
+                        <h3>EasyPIM.Orchestrator</h3>
+                        <ul>
+                            <li>Declarative JSON templates for policies, assignments, and business rules.</li>
+                            <li>Delta, validate, and initial deployment modes tuned for CI/CD pipelines.</li>
+                            <li>Approval routing, notifications, and drift remediation out of the box.</li>
+                            <li>Event Grid + Function triggers that keep Key Vault backed secrets and privileged access aligned within seconds.</li>
+                            <li>Event-driven integrations with GitHub Actions, Azure DevOps, and alerting systems.</li>
+                        </ul>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="solutions" class="section solutions">
+            <div class="container">
+                <h2>Proven outcomes for identity, cloud, and compliance teams</h2>
+                <div class="solutions-grid">
+                    <article>
+                        <h3>Identity Governance</h3>
+                        <ul>
+                            <li>Automate role lifecycle with scheduled expiration and approvals</li>
+                            <li>Standardize activation controls across every critical role</li>
+                            <li>Generate auditable reports with assignment history and policy diffs</li>
+                        </ul>
+                    </article>
+                    <article>
+                        <h3>Cloud Platform Engineering</h3>
+                        <ul>
+                            <li>Template multi-subscription Azure RBAC policies for repeatable deployment</li>
+                            <li>Promote configurations through dev, test, and production using GitOps</li>
+                            <li>Integrate with GitHub Actions or Azure DevOps without custom glue</li>
+                        </ul>
+                    </article>
+                    <article>
+                        <h3>Security Operations</h3>
+                        <ul>
+                            <li>Detect configuration drift before it impacts privileged access</li>
+                            <li>Automate emergency access cleanup and stale assignment removal</li>
+                            <li>Trigger remediation workflows with Event Grid or alerting pipelines</li>
+                        </ul>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section community">
+            <div class="container">
+                <h2>Highlights from the EasyPIM community</h2>
+                <p class="section-lead">These LinkedIn stories showcase how teams are using EasyPIM to automate privileged access, embrace zero trust, and replace risky manual work with predictable pipelines.</p>
+                <div class="card-grid">
+                    <article class="value-card gradient-blue">
+                        <h3>Event-driven governance with CI/CD</h3>
+                        <p>The new <a href="https://lnkd.in/e965yNJn" target="_blank" rel="noopener">EasyPIM Event-Driven Governance</a> repository wires Azure Event Grid and Functions to your Key Vault backed configuration. Any change to your PIM model immediately launches a GitHub Actions or Azure DevOps workflow so production access stays in sync with policy-as-code.</p>
+                        <p class="caption">“Define roles once, let the pipeline enforce them in seconds.”</p>
+                    </article>
+                    <article class="value-card gradient-purple">
+                        <h3>PIM that feels boring on purpose</h3>
+                        <p><a href="https://lnkd.in/eWgZJE6b" target="_blank" rel="noopener">Invoke-EasyPIMOrchestrator</a> turns privileged access changes into a predictable edit → preview → apply flow. JSON becomes the single source of truth, WhatIf mode guards every run, and drift detection catches surprises before auditors do.</p>
+                        <p class="caption">“Faster reviews, fewer surprises, cleaner least-privilege posture.”</p>
+                    </article>
+                    <article class="value-card gradient-teal">
+                        <h3>Escape portal fatigue</h3>
+                        <p>Administrators highlight how EasyPIM replaces endless portal clicks with bulk imports, CSV round-trips, assignment cloning, and approvals in just a few commands. It is the shortcut for Entra, Azure Resource, and Group scenarios.</p>
+                        <p class="caption">“Bulk modify, back up, import, approve – all without leaving PowerShell.”</p>
+                    </article>
+                    <article class="value-card gradient-amber">
+                        <h3>One tool for Graph and ARM</h3>
+                        <p>Instead of juggling scripts for each API, EasyPIM speaks both Microsoft Graph and Azure Resource Manager with a unified verb and parameter set. Platform teams standardize automation and reduce custom glue.</p>
+                        <p class="caption">“Unified command structure. Consistent automation. One script to rule them all.”</p>
+                    </article>
+                    <article class="value-card gradient-purple">
+                        <h3>Enforce MFA in a single line</h3>
+                        <p>Need to require multifactor authentication for a sensitive role? EasyPIM handles both Entra ID and Azure RBAC with parallel syntax, letting you roll out critical protections in minutes.</p>
+                        <p class="caption">“It really takes one line of code to protect your roles with MFA.”</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section proof">
+            <div class="container">
+                <h2>Designed for real-world scale</h2>
+                <div class="proof-grid">
+                    <article>
+                        <h3>Zero surprises in production</h3>
+                        <p>Every cmdlet ships with WhatIf support and consistent error handling, making it safe to run EasyPIM from jump boxes, pipelines, or delegated admin workstations.</p>
+                    </article>
+                    <article>
+                        <h3>Flexible deployment choices</h3>
+                        <p>Whether you prefer declarative JSON, CSV import, or targeted scripting, EasyPIM honors your process and keeps the platform compliant along the way.</p>
+                    </article>
+                    <article>
+                        <h3>Secured by default</h3>
+                        <p>Native support for Managed Identity, modern authentication, and tenant isolation ensures sensitive credentials stay outside of automation code.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section layers">
+            <div class="container">
+                <h2>Defense-in-depth for privileged access</h2>
+                <div class="layers-grid">
+                    <article>
+                        <h3>Prevent misconfiguration</h3>
+                        <p>Template enforcement, policy validation, and schema-aware linting stop risky changes before they reach production.</p>
+                    </article>
+                    <article>
+                        <h3>Detect risky drift</h3>
+                        <p>Scheduled drift scans compare JSON baselines against live tenant state and raise alerts through your SIEM of choice.</p>
+                    </article>
+                    <article>
+                        <h3>Respond automatically</h3>
+                        <p>Event-driven remediation hooks revoke stale assignments, remove emergency access, and confirm clean-up with audit logs.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="faq" class="section faq">
+            <div class="container">
+                <h2>Frequently asked questions</h2>
+                <dl>
+                    <div class="faq-item">
+                        <dt><button type="button" aria-expanded="false">What does it take to get started?</button></dt>
+                        <dd>Install the EasyPIM and EasyPIM.Orchestrator modules from the PowerShell Gallery, review the quick start guide, and run the WhatIf mode in a test tenant before promoting to production.</dd>
+                    </div>
+                    <div class="faq-item">
+                        <dt><button type="button" aria-expanded="false">How does EasyPIM handle multi-cloud tenants?</button></dt>
+                        <dd>All cmdlets support Azure Public, Government, China, and Germany clouds with parameterized endpoints and authentication helpers that honor each environment.</dd>
+                    </div>
+                    <div class="faq-item">
+                        <dt><button type="button" aria-expanded="false">Can EasyPIM integrate with our CI/CD pipeline?</button></dt>
+                        <dd>Yes. EasyPIM ships with drift detection, JSON templates, and consistent exit codes so you can gate pull requests, schedule remediation jobs, or run ad-hoc validation in GitHub Actions or Azure DevOps.</dd>
+                    </div>
+                    <div class="faq-item">
+                        <dt><button type="button" aria-expanded="false">Is there a roadmap or community support?</button></dt>
+                        <dd>We publish roadmap updates and solicit feedback through GitHub Discussions. Contributors are welcome, and production issues receive documented mitigation guidance.</dd>
+                    </div>
+                </dl>
+            </div>
+        </section>
+
+        <section class="section code-example">
+            <div class="container">
+                <h2>Real-world automation in action</h2>
+                <p class="section-lead">Approve privileged access, enforce layered controls, and verify compliance with a single declarative run.</p>
+                <div class="code-example-grid">
+                    <div>
+                        <h3>Configuration excerpt</h3>
+                        <pre class="code-block"><code>{
+    "tenantId": "00000000-0000-0000-0000-000000000000",
+    "policies": [
+        {
+            "roleName": "Global Administrator",
+            "activation": {
+                "requirements": [
+                    "MultiFactorAuthentication",
+                    "Justification",
+                    "Ticketing"
+                ],
+                "approvalStages": [
+                    {
+                        "approvers": ["identity-leads@contoso.com"],
+                        "minimumApprovers": 2
+                    }
+                ],
+                "maximumDuration": "PT4H"
+            },
+            "notifications": {
+                "activation": ["security-operations@contoso.com"]
+            }
+        }
+    ]
+}</code></pre>
+                    </div>
+                    <div>
+                        <h3>Pipeline execution</h3>
+                        <pre class="code-block"><code>Install-Module EasyPIM, EasyPIM.Orchestrator -Force
+
+$configPath = "./config/global-admin.json"
+
+Invoke-EasyPIMOrchestrator `
+    -ConfigFilePath $configPath `
+    -TenantId $env:TENANT_ID `
+    -SubscriptionId $env:SUBSCRIPTION_ID `
+    -Mode delta `
+    -SkipCleanup `
+    -WouldRemoveExportPath "./reports/global-admin-preview.csv" `
+    -WhatIf
+
+Test-PIMPolicyDrift `
+    -TenantId $env:TENANT_ID `
+    -SubscriptionId $env:SUBSCRIPTION_ID `
+    -ConfigPath $configPath `
+    -FailOnDrift</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section video-demo">
+            <div class="container">
+                <h2>Watch EasyPIM uncover risky role exposure</h2>
+                <p class="section-lead">See how EasyPIM surfaces business-critical insights in seconds with meaningful syntax and unified data across Graph and ARM APIs.</p>
+                <div class="video-frame">
+                    <iframe title="EasyPIM eligibility walkthrough" src="https://www.redditmedia.com/r/entra/comments/1l0y870/hey_rentra_how_many_users_are_eligible_for_the/?ref_source=embed&amp;ref=share&amp;embed=true" allowfullscreen loading="lazy"></iframe>
+                </div>
+            </div>
+        </section>
+
+        <section class="section cta-final">
+            <div class="container">
+                <h2>Start governing privileged access with confidence</h2>
+                <p>Bring EasyPIM into your security toolkit and give your teams automation that keeps up with the pace of the business.</p>
+                <div class="hero-actions">
+                    <a class="btn primary" href="https://github.com/kayasax/EasyPIM" target="_blank" rel="noopener">View the source on GitHub</a>
+                    <a class="btn secondary" href="https://github.com/kayasax/EasyPIM/wiki/Documentation" target="_blank" rel="noopener">Read the implementation guides</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>&copy; 2025 EasyPIM. MIT Licensed. Built for Microsoft Entra PIM automation teams.</p>
+            <a href="https://github.com/kayasax/EasyPIM/wiki/Changelog" target="_blank" rel="noopener">Release notes</a>
+        </div>
+    </footer>
+
+    <script src="script.js" defer></script>
+</body>
+</html>
