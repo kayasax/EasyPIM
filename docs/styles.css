@@ -29,6 +29,13 @@ body {
     min-height: 100vh;
 }
 
+.container {
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding-inline: clamp(1.5rem, 5vw, 3.5rem);
+}
+
 .site-header {
     position: sticky;
     top: 0;
@@ -43,7 +50,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem 0;
+    padding: 1rem clamp(1.5rem, 5vw, 3.5rem);
 }
 
 .brand {
@@ -92,13 +99,67 @@ body {
 }
 
 .hero {
-    padding: 8rem 0 4rem;
+    position: relative;
+    padding: clamp(5rem, 10vw, 8.5rem) 0 5rem;
+    overflow: hidden;
+}
+
+.hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.35), transparent 55%),
+        radial-gradient(circle at bottom right, rgba(20, 184, 166, 0.25), transparent 55%);
+    opacity: 0.85;
+    pointer-events: none;
+}
+
+.hero .container {
+    position: relative;
+    z-index: 1;
 }
 
 .hero-grid {
     display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
     gap: 3rem;
     align-items: center;
+}
+
+.hero-copy {
+    position: relative;
+    padding-left: clamp(1rem, 3vw, 1.75rem);
+}
+
+.hero-copy::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: clamp(0.5rem, 2vw, 1.25rem);
+    height: calc(100% - clamp(0.5rem, 2vw, 1.25rem));
+    width: 4px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.85), rgba(14, 165, 233, 0.65));
+    opacity: 0.85;
+}
+
+.hero-copy .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(191, 219, 254, 0.9);
+    margin-bottom: 1rem;
+}
+
+.hero-copy .eyebrow::before {
+    content: "";
+    display: inline-block;
+    width: 32px;
+    height: 1px;
+    background: rgba(191, 219, 254, 0.65);
 }
 
 .hero-copy h1 {
@@ -107,9 +168,27 @@ body {
     margin-bottom: 1rem;
 }
 
-.hero-copy p {
+.hero-copy p,
+.hero-lead {
     max-width: 36rem;
     color: rgba(226, 232, 240, 0.88);
+}
+
+.hero-lead {
+    font-size: 1.05rem;
+    margin-bottom: 1.25rem;
+}
+
+.hero-points {
+    margin: 0 0 1.75rem;
+    padding-left: 1.4rem;
+    color: rgba(203, 213, 225, 0.86);
+    display: grid;
+    gap: 0.6rem;
+}
+
+.hero-points li {
+    list-style: disc;
 }
 
 .hero-actions {
@@ -162,19 +241,19 @@ body {
 }
 
 .hero-metrics dt {
-    font-size: 2.2rem;
+    font-size: 2.6rem;
     font-weight: 700;
 }
 
 .hero-metrics dd {
-    margin: 0.25rem 0 0;
-    color: rgba(148, 163, 184, 0.9);
-    font-size: 0.9rem;
+    margin: 0.35rem 0 0;
+    color: rgba(203, 213, 225, 0.85);
+    font-size: 0.92rem;
 }
 
 .hero-visual {
     display: grid;
-    gap: 1.5rem;
+    gap: 1.75rem;
 }
 
 .glass-card {
@@ -190,10 +269,36 @@ body {
     font-size: 1.25rem;
 }
 
+.glass-card .card-eyebrow {
+    display: inline-block;
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(191, 219, 254, 0.8);
+    margin-bottom: 0.75rem;
+}
+
 .glass-card ul {
     margin: 1rem 0 0;
     padding-left: 1.25rem;
     color: rgba(226, 232, 240, 0.88);
+}
+
+.hero-visual .glass-card {
+    position: relative;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.hero-visual .glass-card:hover,
+.hero-visual .glass-card:focus-within {
+    transform: translateY(-6px);
+    box-shadow: 0 35px 80px rgba(15, 23, 42, 0.45);
+}
+
+.highlight {
+    color: rgba(125, 211, 252, 0.95);
+    font-weight: 600;
 }
 
 .section {
@@ -428,6 +533,112 @@ body {
     box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
 }
 
+.video-frame {
+    margin-top: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    align-items: center;
+}
+
+.responsive-embed {
+    position: relative;
+    width: 100%;
+    max-width: 920px;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.4);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(8, 13, 25, 0.75);
+}
+
+.responsive-embed iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.video-caption {
+    margin: 0;
+    max-width: 720px;
+    text-align: center;
+    color: rgba(203, 213, 225, 0.78);
+    font-size: 0.95rem;
+}
+
+.event-driven {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(15, 118, 110, 0.18));
+}
+
+.event-content {
+    display: grid;
+    gap: 2.25rem;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    align-items: stretch;
+}
+
+.event-copy ul {
+    margin: 1.5rem 0;
+    padding-left: 1.4rem;
+    color: rgba(226, 232, 240, 0.86);
+}
+
+.event-visual .glass-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1.2rem;
+}
+
+.event-visual ul {
+    margin: 0;
+    padding-left: 1.2rem;
+    color: rgba(226, 232, 240, 0.88);
+}
+
+.adoption {
+    background: rgba(15, 23, 42, 0.36);
+}
+
+.adoption-grid {
+    display: grid;
+    gap: 2.5rem;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    align-items: stretch;
+}
+
+.adoption-copy ul {
+    margin: 1.5rem 0;
+    padding-left: 1.4rem;
+    color: rgba(226, 232, 240, 0.84);
+    display: grid;
+    gap: 0.75rem;
+}
+
+.adoption-visual .glass-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.adoption-steps {
+    margin: 0;
+    padding-left: 1.25rem;
+    color: rgba(226, 232, 240, 0.9);
+    display: grid;
+    gap: 0.85rem;
+}
+
+.adoption-steps li::marker {
+    color: rgba(125, 211, 252, 0.85);
+    font-weight: 600;
+}
+
 .cta-final {
     text-align: center;
     background: linear-gradient(135deg, rgba(37, 99, 235, 0.35), rgba(15, 23, 42, 0.8));
@@ -473,11 +684,27 @@ body {
         gap: 0.35rem;
     }
 
-    .hero {
-        padding-top: 6rem;
+    .hero-grid {
+        grid-template-columns: 1fr;
     }
 
-    .hero-grid {
+    .hero-copy {
+        padding-left: 0;
+    }
+
+    .hero-copy::before {
+        display: none;
+    }
+
+    .event-content {
+        grid-template-columns: 1fr;
+    }
+
+    .responsive-embed {
+        max-width: 100%;
+    }
+
+    .adoption-grid {
         grid-template-columns: 1fr;
     }
 }

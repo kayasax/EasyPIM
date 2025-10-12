@@ -28,8 +28,13 @@
             <div class="container hero-grid">
                 <div class="hero-copy">
                     <p class="eyebrow">Enterprise Privileged Identity Management</p>
-                    <h1>Automate Microsoft Entra PIM with one trusted PowerShell platform</h1>
-                    <p><span class="highlight">EasyPIM Core</span> delivers unified syntax for Microsoft Graph and Azure ARM APIs, while <span class="highlight">EasyPIM Orchestrator</span> adds JSON-based automation and governance so teams ship compliant changes in minutes, not weeks.</p>
+                    <h1>Enterprise-ready Entra PIM automation engineered for security</h1>
+                    <p class="hero-lead">EasyPIM unifies Microsoft Graph and Azure RBAC automation with built-in guardrails so regulated teams deliver least-privilege at DevOps speed without sacrificing compliance.</p>
+                    <ul class="hero-points">
+                        <li><span class="highlight">Unified PowerShell syntax</span> for Microsoft Graph, Azure ARM, and security groups with consistent output you can trust.</li>
+                        <li><span class="highlight">Battle-tested safety</span> backed by 8K+ validations, drift detection, and WhatIf-first orchestration.</li>
+                        <li><span class="highlight">Security-first workflows</span> including approvals, conditional access, business rules, and emergency access cleanup.</li>
+                    </ul>
                     <div class="hero-actions">
                         <a class="btn primary" href="https://www.powershellgallery.com/packages/EasyPIM" target="_blank" rel="noopener">Install from PowerShell Gallery</a>
                         <a class="btn secondary" href="https://github.com/kayasax/EasyPIM/wiki/Documentation" target="_blank" rel="noopener">Explore the documentation</a>
@@ -50,20 +55,31 @@
                     </dl>
                 </div>
                 <div class="hero-visual" aria-hidden="true">
-                    <div class="glass-card">
-                        <h2>Policy Orchestration</h2>
+                    <div class="glass-card feature-card">
+                        <span class="card-eyebrow">Unified automation</span>
+                        <h2>One module family, every privileged surface</h2>
                         <ul>
-                            <li>JSON-driven workflows</li>
-                            <li>CI/CD ready delta deployments</li>
-                            <li>Granular approval routing</li>
+                            <li>EasyPIM Core standardizes cmdlets across Entra roles, Azure RBAC, and privileged groups.</li>
+                            <li>Human-readable objects and consistent pipelines keep exports, backups, and cloning effortless.</li>
+                            <li>Cross-cloud ready with native endpoints for Government, China, and Germany environments.</li>
                         </ul>
                     </div>
-                    <div class="glass-card">
-                        <h2>Operational Guardrails</h2>
+                    <div class="glass-card feature-card">
+                        <span class="card-eyebrow">Production-ready</span>
+                        <h2>Change control teams actually trust</h2>
                         <ul>
-                            <li>Business rule validation</li>
-                            <li>Automated drift detection</li>
-                            <li>Detailed WhatIf reporting</li>
+                            <li>8,000+ automated tests and PSScriptAnalyzer compliance ship every release hardened.</li>
+                            <li>WhatIf previews, WouldRemove exports, and delta mode deliver predictable rollouts.</li>
+                            <li>JSON, CSV, and inline scenarios supported so you meet auditors where they are.</li>
+                        </ul>
+                    </div>
+                    <div class="glass-card feature-card">
+                        <span class="card-eyebrow">Security intelligence</span>
+                        <h2>Guardrails that enforce least privilege</h2>
+                        <ul>
+                            <li>Business rule engine blocks unsafe assignments before they land in production tenants.</li>
+                            <li>Approvals, conditional access, ticketing, and emergency access cleanup operate in tandem.</li>
+                            <li>Drift detection and telemetry give security teams instant feedback on privileged exposure.</li>
                         </ul>
                     </div>
                 </div>
@@ -316,7 +332,71 @@ Test-PIMPolicyDrift `
                 <h2>Watch EasyPIM uncover risky role exposure</h2>
                 <p class="section-lead">See how EasyPIM surfaces business-critical insights in seconds with meaningful syntax and unified data across Graph and ARM APIs.</p>
                 <div class="video-frame">
-                    <iframe title="EasyPIM eligibility walkthrough" src="https://www.redditmedia.com/r/entra/comments/1l0y870/hey_rentra_how_many_users_are_eligible_for_the/?ref_source=embed&amp;ref=share&amp;embed=true" allowfullscreen loading="lazy"></iframe>
+                    <div class="responsive-embed">
+                        <iframe title="EasyPIM eligibility walkthrough" src="https://www.redditmedia.com/r/entra/comments/1l0y870/hey_rentra_how_many_users_are_eligible_for_the/?ref_source=embed&amp;ref=share&amp;embed=true" allowfullscreen loading="lazy"></iframe>
+                    </div>
+                    <p class="video-caption">Reddit community walkthrough showing how quickly EasyPIM highlights Security Reader eligibility exposure.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="event-driven" class="section event-driven">
+            <div class="container">
+                <div class="event-content">
+                    <div class="event-copy">
+                        <h2>Launch event-driven automation in minutes</h2>
+                        <p class="section-lead">Pair EasyPIM with the <span class="highlight">EasyPIM Event-Driven Governance</span> reference implementation to trigger pipelines whenever your privileged access model changes.</p>
+                        <ul>
+                            <li>Wire Azure Event Grid and Functions to your JSON configuration for near-real-time enforcement.</li>
+                            <li>Promote pull requests with automatic drift checks, approval snapshots, and audit exports.</li>
+                            <li>Use the included demos to stand up a full end-to-end automation platform in under an hour.</li>
+                        </ul>
+                        <div class="hero-actions">
+                            <a class="btn primary" href="https://github.com/kayasax/EasyPIM-EventDriven-Governance" target="_blank" rel="noopener">Explore the Event-Driven repo</a>
+                            <a class="btn secondary" href="https://github.com/kayasax/EasyPIM-EventDriven-Governance#readme" target="_blank" rel="noopener">Read the automation guide</a>
+                        </div>
+                    </div>
+                    <div class="event-visual" aria-hidden="true">
+                        <div class="glass-card">
+                            <h3>Pipeline Highlights</h3>
+                            <ul>
+                                <li>Key Vault backed config updates trigger orchestrated deployments</li>
+                                <li>Automated WouldRemove reports drop into Teams and email</li>
+                                <li>CI gates verify assignments before production rollout</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section adoption" id="orchestrator-guide">
+            <div class="container">
+                <div class="adoption-grid">
+                    <div class="adoption-copy">
+                        <h2>Step-by-step guide to production-safe orchestration</h2>
+                        <p class="section-lead">Follow the EasyPIM Orchestrator runbook to introduce policy-as-code safely—starting with read-only validation and progressing to fully automated deployments.</p>
+                        <ul>
+                            <li>Progressive stages that take you from export-only to automated remediation with confidence checkpoints.</li>
+                            <li>WhatIf-first validation scripts, sample JSON, and guardrail recommendations for every milestone.</li>
+                            <li>Checklist-driven approach designed for enterprise change management and audit review.</li>
+                        </ul>
+                        <div class="hero-actions">
+                            <a class="btn primary" href="https://github.com/kayasax/EasyPIM/blob/main/EasyPIM/Documentation/Step-by-step-Guide.md" target="_blank" rel="noopener">Open the orchestration guide</a>
+                            <a class="btn secondary" href="https://github.com/kayasax/EasyPIM/blob/main/EasyPIM/Documentation/Step-by-step-Guide.md#progressive-validation-checklist" target="_blank" rel="noopener">Review the validation checklist</a>
+                        </div>
+                    </div>
+                    <div class="adoption-visual" aria-hidden="true">
+                        <div class="glass-card">
+                            <h3>Runbook Milestones</h3>
+                            <ol class="adoption-steps">
+                                <li>Baseline export + WhatIf to understand current exposure.</li>
+                                <li>Automate policy previews with approval routing and ticketing enforced.</li>
+                                <li>Enable delta deployments with drift detection and emergency access cleanup.</li>
+                                <li>Connect pipelines and Event Grid triggers for continuous governance.</li>
+                            </ol>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
