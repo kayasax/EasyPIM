@@ -48,30 +48,30 @@
         throw "$ErrorContext : Failed to query administrative units for scope '$Scope'. $($_.Exception.Message)"
     }
 
-    $matches = @()
+    $auMatches = @()
     if ($response) {
         if ($response.PSObject.Properties.Name -contains 'value') {
-            $matches = @($response.value)
+            $auMatches = @($response.value)
         }
         elseif ($response.PSObject.Properties.Name -contains 'id') {
-            $matches = @($response)
+            $auMatches = @($response)
         }
     }
 
-    if (-not $matches -or $matches.Count -eq 0) {
+    if (-not $auMatches -or $auMatches.Count -eq 0) {
         throw "$ErrorContext : No administrative unit found matching display name '$Scope'. Provide a GUID or supply the full '/administrativeUnits/<GUID>' scope."
     }
 
-    if ($matches.Count -gt 1) {
-        $displayNames = ($matches | ForEach-Object { $_.displayName }) -join ', '
+    if ($auMatches.Count -gt 1) {
+        $displayNames = ($auMatches | ForEach-Object { $_.displayName }) -join ', '
         throw "$ErrorContext : Multiple administrative units matched '$Scope' ($displayNames). Provide a GUID or the full scope path to disambiguate."
     }
 
-    if (-not $matches[0].PSObject.Properties.Name -contains 'id') {
+    if (-not $auMatches[0].PSObject.Properties.Name -contains 'id') {
         throw "$ErrorContext : Unable to determine administrative unit identifier for '$Scope'."
     }
 
-    $resolvedId = $matches[0].id
+    $resolvedId = $auMatches[0].id
     if (-not $resolvedId) {
         throw "$ErrorContext : Administrative unit '$Scope' did not include an 'id' property."
     }
