@@ -1239,17 +1239,17 @@ $csvData | Get-Member
 
 **Symptoms:**
 ```
-❌ Administrative Unit scoped assignment cannot be automatically removed
+❌ Administrative Unit scoped assignment requires an explicit scope during removal
 ```
 
 **Solutions:**
-1. AU-scoped Entra role assignments are detected but cannot be removed automatically due to API limitations
-2. These assignments must be removed manually through the Azure portal or PowerShell
-3. The orchestrator will report these assignments but skip cleanup
+1. Provide the Administrative Unit scope when removing assignments by using the `-Scope` parameter (GUID, display name, or `/administrativeUnits/<GUID>`)
+2. The orchestrator reports AU assignments; ensure scope details are supplied so automated cleanup can target the correct directory scope
+3. Manual removal remains available if additional validation is required
 
 ```powershell
-# Manually remove AU-scoped assignment
-Remove-MgRoleManagementDirectoryRoleEligibilityScheduleRequest -UnifiedRoleEligibilityScheduleRequestId "request-id"
+# Remove an AU-scoped assignment with EasyPIM
+Remove-PIMEntraRoleActiveAssignment -TenantId $tenantId -PrincipalId $principalId -RoleName 'Helpdesk Administrator' -Scope 'Sales Operations AU' -Justification 'Policy cleanup'
 ```
 
 ### Best Practices Checklist

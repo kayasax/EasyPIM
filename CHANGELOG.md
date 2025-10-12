@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- Enforced Global Administrator policy protection, ensuring orchestrator automation always skips modifications for this break-glass role.
+
+## [EasyPIM Core 2.0.31] - 2025-10-11
+
+### Fixed
+- Restored Administrative Unit scope support for `Remove-PIMEntraRoleActiveAssignment` and `Remove-PIMEntraRoleEligibleAssignment` by honoring the provided `Scope` (tenant, GUID, display name, or full path) when building removal requests.
+
 ## [EasyPIM Core 2.0.30] - 2025-10-11
 
 ### Fixed
