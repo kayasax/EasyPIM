@@ -29,11 +29,12 @@
                 <div class="hero-copy">
                     <p class="eyebrow">Enterprise Privileged Identity Management</p>
                     <h1>Enterprise-ready Entra PIM automation engineered for security</h1>
-                    <p class="hero-lead">EasyPIM unifies Microsoft Graph and Azure RBAC automation with built-in guardrails so regulated teams deliver least-privilege at DevOps speed without sacrificing compliance.</p>
-                    <ul class="hero-points">
-                        <li><span class="highlight">Unified PowerShell syntax</span> for Microsoft Graph, Azure ARM, and security groups with consistent output you can trust.</li>
-                        <li><span class="highlight">Battle-tested safety</span> backed by 8K+ validations, drift detection, and WhatIf-first orchestration.</li>
-                        <li><span class="highlight">Security-first workflows</span> including approvals, conditional access, business rules, and emergency access cleanup.</li>
+                    <p class="hero-subheadline">Automate Azure PIM Like a Pro</p>
+                    <p class="hero-lead">EasyPIM delivers unified PowerShell automation for Azure, Entra ID, and privileged groups so security teams ship governed access changes at DevOps speed.</p>
+                    <ul class="hero-pillars">
+                        <li><span class="highlight">Unified syntax</span> across Microsoft Graph, Azure ARM, and groups.</li>
+                        <li><span class="highlight">Bulk PIM management</span> for backups, restores, config and assignment cloning, and multi-role updates the Azure portal cannot do.</li>
+                        <li><span class="highlight">Security-first guardrails</span> spanning least-privilege enforcement, OIDC integration, Azure Key Vault secrets, protected role policies, and break-glass account hygiene.</li>
                     </ul>
                     <div class="hero-actions">
                         <a class="btn primary" href="https://www.powershellgallery.com/packages/EasyPIM" target="_blank" rel="noopener">Install from PowerShell Gallery</a>
@@ -58,29 +59,17 @@
                     <div class="glass-card feature-card">
                         <span class="card-eyebrow">Unified automation</span>
                         <h2>One module family, every privileged surface</h2>
-                        <ul>
-                            <li>EasyPIM Core standardizes cmdlets across Entra roles, Azure RBAC, and privileged groups.</li>
-                            <li>Human-readable objects and consistent pipelines keep exports, backups, and cloning effortless.</li>
-                            <li>Cross-cloud ready with native endpoints for Government, China, and Germany environments.</li>
-                        </ul>
+                        <p>EasyPIM Core standardizes cmdlets across Entra roles, Azure RBAC, and privileged groups with human-friendly objects ready for pipelines.</p>
                     </div>
                     <div class="glass-card feature-card">
                         <span class="card-eyebrow">Production-ready</span>
                         <h2>Change control teams actually trust</h2>
-                        <ul>
-                            <li>8,000+ automated tests and PSScriptAnalyzer compliance ship every release hardened.</li>
-                            <li>WhatIf previews, WouldRemove exports, and delta mode deliver predictable rollouts.</li>
-                            <li>JSON, CSV, and inline scenarios supported so you meet auditors where they are.</li>
-                        </ul>
+                        <p>8K+ automated tests, PSScriptAnalyzer compliance, and WhatIf-first workflows make every release predictable for auditors and operators.</p>
                     </div>
                     <div class="glass-card feature-card">
                         <span class="card-eyebrow">Security intelligence</span>
                         <h2>Guardrails that enforce least privilege</h2>
-                        <ul>
-                            <li>Business rule engine blocks unsafe assignments before they land in production tenants.</li>
-                            <li>Approvals, conditional access, ticketing, and emergency access cleanup operate in tandem.</li>
-                            <li>Drift detection and telemetry give security teams instant feedback on privileged exposure.</li>
-                        </ul>
+                        <p>Business rules, approvals, conditional access, and telemetry work together to block risky assignments and keep privileged exposure in check.</p>
                     </div>
                 </div>
             </div>
@@ -113,27 +102,62 @@
 
         <section class="section platform">
             <div class="container">
-                <h2>Two modules, one automation platform</h2>
-                <p class="section-lead">Choose the module that fits your workflow—or run both for end-to-end automation. EasyPIM keeps syntax meaningful and predictable no matter which API you call.</p>
+                <h2>Adopt EasyPIM in three stages</h2>
+                <p class="section-lead">Start with the core module for high-volume privileged access work, layer in the orchestrator to run PIM as code, then add event-driven enforcement for continuous compliance.</p>
                 <div class="platform-grid">
                     <article class="module-card core">
-                        <h3>EasyPIM (Core)</h3>
+                        <span class="step-label">Step 1 · Bulk management</span>
+                        <h3>EasyPIM Core module</h3>
+                        <p>Automate daily privileged access across Entra roles, Azure RBAC, and groups with one consistent PowerShell surface.</p>
                         <ul>
-                            <li>Consistent PowerShell verbs and parameters across Microsoft Graph (Entra) and Azure ARM endpoints.</li>
-                            <li>Human-readable output with rich objects designed for pipeline composition.</li>
-                            <li>Inline WhatIf and error handling patterns that mirror native Azure cmdlets.</li>
-                            <li>Bulk operations and backups that keep role, scope, and assignment data in sync.</li>
+                            <li>Export, back up, and restore assignments in seconds.</li>
+                            <li>Clone role configurations across tenants and subscriptions.</li>
+                            <li>Push multi-role updates and cleanups the Azure portal can’t handle.</li>
                         </ul>
                     </article>
                     <article class="module-card orchestrator">
+                        <span class="step-label">Step 2 · PIM as code</span>
                         <h3>EasyPIM.Orchestrator</h3>
+                        <p>Capture policies, approvals, and assignments in declarative JSON so every change runs through a safe, reviewable pipeline.</p>
                         <ul>
-                            <li>Declarative JSON templates for policies, assignments, and business rules.</li>
-                            <li>Delta, validate, and initial deployment modes tuned for CI/CD pipelines.</li>
-                            <li>Approval routing, notifications, and drift remediation out of the box.</li>
-                            <li>Event Grid + Function triggers that keep Key Vault backed secrets and privileged access aligned within seconds.</li>
-                            <li>Event-driven integrations with GitHub Actions, Azure DevOps, and alerting systems.</li>
+                            <li>Model business rules, policies, and assignments in one configuration.</li>
+                            <li>Use validate, delta, and initial modes to control rollouts with WhatIf-first previews.</li>
+                            <li>Drive tickets, notifications, and staged remediation automatically.</li>
                         </ul>
+                    </article>
+                    <article class="module-card event">
+                        <span class="step-label">Step 3 · Event-driven automation</span>
+                        <h3>EasyPIM Event-Driven Governance</h3>
+                        <p>Extend the orchestrator with Azure Functions and Event Grid so every configuration change triggers enforcement immediately.</p>
+                        <ul>
+                            <li>Watch Key Vault-backed configs and launch CI/CD when JSON changes.</li>
+                            <li>Sync privileged access across tenants without manual intervention.</li>
+                            <li>Capture audit-ready evidence with automatic remediation and logging.</li>
+                        </ul>
+                        <div class="module-actions">
+                            <a class="btn secondary" href="https://github.com/kayasax/EasyPIM-EventDriven-Governance" target="_blank" rel="noopener">View reference implementation</a>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="use-cases" class="section use-cases">
+            <div class="container">
+                <h2>Use Cases</h2>
+                <p class="section-lead">Teams adopt EasyPIM to replace fragile scripting with governed, repeatable privileged access operations.</p>
+                <div class="use-cases-grid">
+                    <article>
+                        <h3>Cross-tenant automation</h3>
+                        <p>Automate PIM role assignments and lifecycle tasks across multiple tenants with consistent tooling.</p>
+                    </article>
+                    <article>
+                        <h3>Policy enforcement</h3>
+                        <p>Use JSON-driven orchestration, approvals, and ticketing to enforce security policies every run.</p>
+                    </article>
+                    <article>
+                        <h3>CI/CD drift defense</h3>
+                        <p>Detect and remediate policy drift directly inside pipelines before it hits production.</p>
                     </article>
                 </div>
             </div>
