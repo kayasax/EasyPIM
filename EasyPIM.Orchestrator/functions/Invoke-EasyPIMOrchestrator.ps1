@@ -39,6 +39,9 @@ Use cases: change review, audit evidence, diffing consecutive previews, verifyin
 Allow policy changes to protected roles (Entra: Global Administrator, Privileged Role Administrator, Security Administrator, User Access Administrator; Azure: Owner, User Access Administrator).
 WARNING: This bypasses critical security safeguards. Policy changes to these roles will be logged and require explicit confirmation.
 Use with extreme caution and only with proper authorization and change management processes.
+.PARAMETER ProtectedRoleOverrideToken
+Automation override for protected role confirmation. Must be set to 'CONFIRM-PROTECTED-OVERRIDE' when used with -AllowProtectedRoles in non-interactive contexts to bypass the interactive Read-Host prompt.
+WARNING: Supplying this token acknowledges you have the proper approvals for protected role changes. Use only in secured, audited automation pipelines.
 .EXAMPLE
 Invoke-EasyPIMOrchestrator -ConfigFilePath .\pim-config.json -TenantId $env:tenantid -SubscriptionId $env:subscriptionid -Mode initial -WhatIf -WouldRemoveExportPath .\LOGS
 Produces a preview (no changes) and writes a timestamped JSON file under .\LOGS listing every assignment that would be removed by an initial reconcile.
@@ -89,7 +92,9 @@ function Invoke-EasyPIMOrchestrator {
 		[Parameter(Mandatory = $false)]
 		[string]$WouldRemoveExportPath,
 		[Parameter(Mandatory = $false)]
-		[switch]$AllowProtectedRoles
+		[switch]$AllowProtectedRoles,
+		[Parameter(Mandatory = $false)]
+		[string]$ProtectedRoleOverrideToken
 	)
 	# Non-gating ShouldProcess: still emits WhatIf message but always executes body for rich simulation output.
 	$null = $PSCmdlet.ShouldProcess("EasyPIM Orchestration lifecycle", "Execute")
@@ -100,6 +105,18 @@ function Invoke-EasyPIMOrchestrator {
 	if (-not $PSBoundParameters) {
 		Show-EasyPIMUsage
 		return
+	}
+
+	$protectedRoleOverrideTokenProvided = $false
+	if ($PSBoundParameters.ContainsKey('ProtectedRoleOverrideToken')) {
+		if ($ProtectedRoleOverrideToken) {
+			$ProtectedRoleOverrideToken = $ProtectedRoleOverrideToken.Trim()
+			if ($ProtectedRoleOverrideToken.Length -gt 0) {
+				$protectedRoleOverrideTokenProvided = $true
+			} else {
+				$ProtectedRoleOverrideToken = $null
+			}
+		}
 	}
 	# Check Microsoft Graph authentication before proceeding
 	try {
@@ -252,6 +269,7 @@ function Invoke-EasyPIMOrchestrator {
 		$startupProperties = @{
 			"execution_mode" = if ($WhatIfPreference) { "WhatIf" } else { $Mode }
 			"protected_roles_override" = $AllowProtectedRoles.IsPresent
+			"protected_roles_override_token_supplied" = $protectedRoleOverrideTokenProvided
 			"config_source" = if ($PSCmdlet.ParameterSetName -eq 'KeyVault') { "KeyVault" } else { "File" }
 			"skip_assignments" = $SkipAssignments.IsPresent
 			"skip_cleanup" = $SkipCleanup.IsPresent
@@ -700,11 +718,24 @@ function Invoke-EasyPIMOrchestrator {
 					Write-Host ""
 					Write-Host "This action will be logged for audit purposes." -ForegroundColor Cyan
 					Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Red
-					$confirmation = Read-Host "Type 'CONFIRM-PROTECTED-OVERRIDE' to proceed"
-					if ($confirmation -ne 'CONFIRM-PROTECTED-OVERRIDE') {
-						throw "Protected role policy modification cancelled by user. Run without -AllowProtectedRoles to skip protected roles."
+					$confirmation = $null
+					if ($protectedRoleOverrideTokenProvided) {
+						$confirmation = $ProtectedRoleOverrideToken
+						Write-Host "🔒 [SECURITY] Protected role override token supplied via parameter - bypassing interactive confirmation" -ForegroundColor Green
+					} else {
+						try {
+							$confirmation = Read-Host "Type 'CONFIRM-PROTECTED-OVERRIDE' to proceed"
+						} catch {
+							throw "Protected role policy confirmation requires interactive input. Supply -ProtectedRoleOverrideToken 'CONFIRM-PROTECTED-OVERRIDE' when running in non-interactive automation contexts."
+						}
 					}
-					Write-Host "🔒 [SECURITY] User confirmed protected role policy override - proceeding with changes" -ForegroundColor Green
+					$normalizedConfirmation = if ($null -ne $confirmation) { ($confirmation.ToString()).Trim() } else { $null }
+					if ([string]::IsNullOrWhiteSpace($normalizedConfirmation) -or $normalizedConfirmation.ToUpperInvariant() -ne 'CONFIRM-PROTECTED-OVERRIDE') {
+						throw "Protected role policy modification cancelled. Provide -ProtectedRoleOverrideToken 'CONFIRM-PROTECTED-OVERRIDE' to acknowledge the risk, or run without -AllowProtectedRoles to skip protected roles."
+					}
+					if (-not $protectedRoleOverrideTokenProvided) {
+						Write-Host "🔒 [SECURITY] User confirmed protected role policy override - proceeding with changes" -ForegroundColor Green
+					}
 				}
 			}
 			# Convert hashtable to PSCustomObject for the policy function
@@ -804,6 +835,7 @@ function Invoke-EasyPIMOrchestrator {
 		$completionProperties = @{
 			"execution_mode" = if ($WhatIfPreference) { "WhatIf" } else { $Mode }
 			"protected_roles_override" = $AllowProtectedRoles.IsPresent
+			"protected_roles_override_token_supplied" = $protectedRoleOverrideTokenProvided
 			"execution_duration_seconds" = [math]::Round($executionDuration, 2)
 			"success" = $true
 			"errors_encountered" = 0
@@ -845,6 +877,7 @@ function Invoke-EasyPIMOrchestrator {
 			$errorProperties = @{
 				"execution_mode" = if ($WhatIfPreference) { "WhatIf" } else { $Mode }
 				"protected_roles_override" = $AllowProtectedRoles.IsPresent
+				"protected_roles_override_token_supplied" = $protectedRoleOverrideTokenProvided
 				"success" = $false
 				"error_type" = $_.Exception.GetType().Name
 				"session_id" = $sessionId
