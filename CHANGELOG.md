@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Improved
 - Assignment validation now requires both scope and role when checking existing Azure entries, preventing status strings from blocking new assignments.
 
+## [EasyPIM.Orchestrator 1.4.9] - 2025-10-13
+
+### Added
+- `Invoke-EasyPIMOrchestrator` now supports `-ProtectedRoleOverrideToken`, enabling CI pipelines to acknowledge protected-role policy updates without interactive prompts.
+
+### Improved
+- Startup/completion telemetry records whether the override token was provided, giving auditors visibility into protected-role automation runs.
+- Added Pester coverage ensuring the override token path bypasses `Read-Host` only with the correct confirmation value.
+
 ## [EasyPIM.Orchestrator 1.4.8] - 2025-10-13
 
 ### Fixed
