@@ -1,0 +1,121 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<svg width="320" height="320" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="320" height="320" rx="48" fill="url(#bg)"/>
+  <g filter="url(#shadow)">
+    <path d="M160 32L56 96V168C56 234 108 302 160 320C212 302 264 234 264 168V96L160 32Z" fill="url(#shield)"/>
+  </g>
+  <path d="M160 40C102 76 90 110 90 168C90 222 120 272 160 292C200 272 230 222 230 168C230 110 218 76 160 40Z" fill="url(#shieldInner)" opacity="0.68"/>
+  <path d="M160 32L56 96V168C56 234 108 302 160 320C212 302 264 234 264 168V96L160 32Z" fill="none" stroke="url(#shieldOutline)" stroke-width="6" opacity="0.95"/>
+  <path d="M160 56C118 82 88 122 88 168" stroke="url(#shieldEdgeLight)" stroke-width="0" stroke-linecap="round" opacity="0"/>
+  <path d="M160 304C214 286 244 242 252 198" stroke="url(#shieldEdgeShadow)" stroke-width="4" stroke-linecap="round" opacity="0.45"/>
+  <g>
+  <circle cx="116" cy="128" r="31" fill="url(#earOuter)" stroke="#8AD5FF" stroke-width="3"/>
+  <circle cx="204" cy="128" r="31" fill="url(#earOuter)" stroke="#8AD5FF" stroke-width="3"/>
+  <circle cx="116" cy="132" r="17" fill="url(#earInner)"/>
+  <circle cx="204" cy="132" r="17" fill="url(#earInner)"/>
+  <path d="M94 138C102 122 118 114 130 124" fill="url(#earHighlight)" opacity="0.55"/>
+  <path d="M226 138C218 122 202 114 190 124" fill="url(#earHighlight)" opacity="0.55"/>
+  </g>
+  <g>
+  <ellipse cx="160" cy="170" rx="64" ry="60" fill="url(#faceGradient)" stroke="#8AD5FF" stroke-width="4"/>
+    <g>
+      <path d="M112 158C122 140 150 142 156 168C162 194 140 210 122 204C106 198 98 176 112 158Z" fill="#1B2E45"/>
+      <circle cx="136" cy="172" r="18" fill="#F8FCFF" opacity="0.72"/>
+      <circle cx="136" cy="172" r="15" fill="url(#irisGradient)"/>
+        <circle cx="136" cy="172" r="8.5" fill="#0A1629"/>
+      <circle cx="130" cy="160" r="4.4" fill="#FFFFFF" opacity="0.94"/>
+      <circle cx="134" cy="168" r="2.5" fill="#F5FBFF" opacity="0.85"/>
+      <circle cx="143" cy="177" r="1.1" fill="#C8E8FF" opacity="0.7"/>
+    </g>
+    <g>
+      <path d="M208 158C198 140 170 142 164 168C158 194 180 210 198 204C214 198 222 176 208 158Z" fill="#1B2E45"/>
+      <circle cx="184" cy="172" r="18" fill="#F8FCFF" opacity="0.72"/>
+      <circle cx="184" cy="172" r="15" fill="url(#irisGradient)"/>
+      <circle cx="184" cy="172" r="8.5" fill="#0A1629"/>
+      <circle cx="190" cy="160" r="4.4" fill="#FFFFFF" opacity="0.94"/>
+      <circle cx="186" cy="168" r="2.5" fill="#F5FBFF" opacity="0.85"/>
+      <circle cx="177" cy="177" r="1.1" fill="#C8E8FF" opacity="0.7"/>
+    </g>
+    <path d="M160 182C154 182 149 186 149 191C149 197 153 202 160 207C167 202 171 197 171 191C171 186 166 182 160 182Z" fill="#0A1629"/>
+    <path d="M160 182C154 182 149 186 149 191C149 197 153 202 160 207C167 202 171 197 171 191C171 186 166 182 160 182Z" stroke="#74C8FF" stroke-width="2"/>
+    <path d="M150 204Q160 212 170 204" stroke="#74C8FF" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <circle cx="132" cy="206" r="12" fill="url(#cheekGradientSoft)"/>
+    <circle cx="188" cy="206" r="12" fill="url(#cheekGradientSoft)"/>
+  </g>
+  <g>
+    <path d="M122 224Q160 246 198 224" stroke="#8AD5FF" stroke-width="5" stroke-linecap="round" opacity="0.45"/>
+    <path d="M134 234Q160 248 186 234" stroke="#8AD5FF" stroke-width="4" stroke-linecap="round" opacity="0.3"/>
+  </g>
+  <g fill="#0078D7" font-family="'Cascadia Code','Segoe UI',monospace" font-size="36" font-weight="700" text-anchor="middle">
+    <text x="118" y="214">&lt;</text>
+    <text x="202" y="214">&gt;</text>
+  </g>
+  <text font-family="'Segoe UI',sans-serif" font-weight="800" font-size="22" fill="#E2F1FF" letter-spacing="0.8" text-anchor="middle" style="paint-order:stroke fill;stroke:#051226;stroke-width:1.1;">
+    <textPath href="#crestTextArc" startOffset="50%" method="align" spacing="auto" dy="12">EASY PIM</textPath>
+  </text>
+  <defs>
+    <linearGradient id="bg" x1="64" y1="32" x2="272" y2="288" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1120"/>
+      <stop offset="0.6" stop-color="#12263F"/>
+      <stop offset="1" stop-color="#0A1C33"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="160" y1="60" x2="160" y2="278" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#102942"/>
+      <stop offset="0.5" stop-color="#153557"/>
+      <stop offset="1" stop-color="#0F2337"/>
+    </linearGradient>
+    <radialGradient id="shieldInner" cx="0.5" cy="0.35" r="0.8" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#1B3C63" stop-opacity="0.95"/>
+      <stop offset="0.6" stop-color="#112437" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#09172A" stop-opacity="0.45"/>
+    </radialGradient>
+    <radialGradient id="earOuter" cx="0.5" cy="0.45" r="0.85" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#182B45"/>
+      <stop offset="1" stop-color="#050e1d"/>
+    </radialGradient>
+    <radialGradient id="earInner" cx="0.5" cy="0.5" r="0.7" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#263D63"/>
+      <stop offset="1" stop-color="#101F35"/>
+    </radialGradient>
+    <linearGradient id="earHighlight" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8AD5FF" stop-opacity="0.6"/>
+      <stop offset="1" stop-color="#8AD5FF" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="faceGradient" cx="0.5" cy="0.35" r="0.75" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#F2FBFF"/>
+      <stop offset="0.6" stop-color="#DCEFFF"/>
+      <stop offset="1" stop-color="#BFDFFF"/>
+    </radialGradient>
+    <radialGradient id="cheekGradientSoft" cx="0.5" cy="0.5" r="0.9" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#FFC4DC" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#FFC4DC" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="shieldEdgeLight" x1="96" y1="80" x2="168" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8AD5FF"/>
+      <stop offset="1" stop-color="#1E88E5" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="shieldEdgeShadow" x1="160" y1="250" x2="244" y2="208" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#06152A" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#092746" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="irisGradient" cx="0.5" cy="0.42" r="0.85" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#F2FBFF"/>
+      <stop offset="0.45" stop-color="#8BCBFF"/>
+      <stop offset="1" stop-color="#1A365D"/>
+    </radialGradient>
+  <path id="crestTextArc" d="M104 266Q160 300 216 266" fill="none"/>
+  <filter id="shadow" x="56" y="20" width="208" height="320" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="12"/>
+      <feGaussianBlur stdDeviation="10"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.0 0 0 0 0 0.3 0 0 0 0 0.55 0 0 0 0.32 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/>
+    </filter>
+    <linearGradient id="shieldOutline" x1="124" y1="70" x2="208" y2="268" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8AD5FF"/>
+      <stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+  </defs>
+</svg>

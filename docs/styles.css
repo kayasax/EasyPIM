@@ -168,27 +168,53 @@ body {
     margin-bottom: 1rem;
 }
 
+.hero-subheadline {
+    font-size: clamp(1.05rem, 1.25vw, 1.3rem);
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(191, 219, 254, 0.9);
+}
+
 .hero-copy p,
 .hero-lead {
-    max-width: 36rem;
+    max-width: 40rem;
     color: rgba(226, 232, 240, 0.88);
 }
 
 .hero-lead {
-    font-size: 1.05rem;
-    margin-bottom: 1.25rem;
+    font-size: clamp(1.05rem, 1.25vw, 1.22rem);
+    margin-bottom: 1.5rem;
 }
 
-.hero-points {
-    margin: 0 0 1.75rem;
-    padding-left: 1.4rem;
-    color: rgba(203, 213, 225, 0.86);
-    display: grid;
-    gap: 0.6rem;
+.hero-pillars {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.1rem;
+    padding: 0;
+    margin: 0 0 2rem;
+    list-style: none;
+    font-size: clamp(0.98rem, 1.1vw, 1.08rem);
+    color: rgba(226, 232, 240, 0.88);
 }
 
-.hero-points li {
-    list-style: disc;
+.hero-pillars li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(11, 21, 38, 0.55);
+    border: 1px solid rgba(138, 213, 255, 0.18);
+    border-radius: 999px;
+    padding: 0.55rem 0.9rem;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 0 0 1px rgba(138, 213, 255, 0.12) inset;
+}
+
+.hero-pillars .highlight {
+    color: #8ad5ff;
+    font-weight: 600;
 }
 
 .hero-actions {
@@ -276,6 +302,13 @@ body {
     text-transform: uppercase;
     color: rgba(191, 219, 254, 0.8);
     margin-bottom: 0.75rem;
+}
+
+.glass-card p {
+    margin: 0.75rem 0 0;
+    color: rgba(226, 232, 240, 0.88);
+    font-size: 0.98rem;
+    line-height: 1.6;
 }
 
 .glass-card ul {
@@ -427,8 +460,8 @@ body {
 
 .platform-grid {
     display: grid;
-    gap: 1.5rem;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
 .module-card {
@@ -461,10 +494,36 @@ body {
     background: radial-gradient(circle, rgba(168, 85, 247, 0.45), transparent 70%);
 }
 
+.module-card.event::before {
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.45), transparent 70%);
+}
+
 .module-card h3 {
     position: relative;
     margin-top: 0;
     font-size: 1.35rem;
+}
+
+.module-card .step-label {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    background: rgba(12, 26, 45, 0.6);
+    border: 1px solid rgba(138, 213, 255, 0.2);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: rgba(191, 219, 254, 0.85);
+}
+
+.module-card p {
+    position: relative;
+    margin: 0.85rem 0 1.1rem;
+    color: rgba(226, 232, 240, 0.9);
+    line-height: 1.6;
 }
 
 .module-card ul {
@@ -472,6 +531,18 @@ body {
     margin: 1rem 0 0;
     padding-left: 1.2rem;
     color: rgba(226, 232, 240, 0.9);
+}
+
+.module-card ul li {
+    margin-bottom: 0.6rem;
+}
+
+.module-actions {
+    margin-top: 1.75rem;
+}
+
+.module-actions .btn {
+    width: 100%;
 }
 
 .faq dl {
@@ -639,6 +710,37 @@ body {
     font-weight: 600;
 }
 
+.use-cases {
+    background: rgba(15, 23, 42, 0.32);
+}
+
+.use-cases-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(1.75rem, 2.5vw, 2.6rem);
+    margin-top: 2rem;
+}
+
+.use-cases-grid article {
+    background: rgba(12, 29, 49, 0.6);
+    border: 1px solid rgba(138, 213, 255, 0.16);
+    border-radius: 1.15rem;
+    padding: clamp(1.4rem, 1.8vw, 2rem);
+    box-shadow: 0 25px 55px -25px rgba(0, 0, 0, 0.45);
+}
+
+.use-cases-grid h3 {
+    margin: 0 0 0.85rem;
+    font-size: 1.1rem;
+    color: #8ad5ff;
+}
+
+.use-cases-grid p {
+    margin: 0;
+    color: rgba(226, 232, 240, 0.85);
+    line-height: 1.55;
+}
+
 .cta-final {
     text-align: center;
     background: linear-gradient(135deg, rgba(37, 99, 235, 0.35), rgba(15, 23, 42, 0.8));
@@ -696,6 +798,17 @@ body {
         display: none;
     }
 
+    .hero-pillars {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+
+    .hero-pillars li {
+        justify-content: center;
+        border-radius: 0.85rem;
+    }
+
     .event-content {
         grid-template-columns: 1fr;
     }
@@ -706,6 +819,11 @@ body {
 
     .adoption-grid {
         grid-template-columns: 1fr;
+    }
+
+    .use-cases-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
     }
 }
 
