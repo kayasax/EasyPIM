@@ -1,3 +1,8 @@
+<p align="center">
+    <img src="docs/assets/logo_transparent.svg" alt="EasyPIM logo" width="220">
+</p>
+
+
 # 🛡 EasyPIM - Enterprise Privileged Identity Management Automation
 
 [![PSGallery Version](https://img.shields.io/powershellgallery/v/easypim.svg?style=for-the-badge&logo=powershell&label=Core%20Version)](https://www.powershellgallery.com/packages/easypim) [![PSGallery Downloads](https://img.shields.io/powershellgallery/dt/easypim.svg?style=for-the-badge&logo=powershell&label=Core%20Downloads)](https://www.powershellgallery.com/packages/easypim)
