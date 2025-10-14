@@ -16,6 +16,7 @@
                 <ul id="primary-nav">
                     <li><a href="#value">Value</a></li>
                     <li><a href="#solutions">Solutions</a></li>
+                    <li><a href="template-guide.html">Template guide</a></li>
                     <li><a href="#faq">FAQ</a></li>
                     <li><a class="cta" href="https://github.com/kayasax/EasyPIM">Get EasyPIM</a></li>
                 </ul>
@@ -179,7 +180,7 @@
                         <h3>Cloud Platform Engineering</h3>
                         <ul>
                             <li>Template multi-subscription Azure RBAC policies for repeatable deployment</li>
-                            <li>Promote configurations through dev, test, and production using GitOps</li>
+                            <li>Promote configurations through dev, test, and production with a guided approval flow</li>
                             <li>Integrate with GitHub Actions or Azure DevOps without custom glue</li>
                         </ul>
                     </article>
@@ -283,7 +284,7 @@
                     </div>
                     <div class="faq-item">
                         <dt><button type="button" aria-expanded="false">Can EasyPIM integrate with our CI/CD pipeline?</button></dt>
-                        <dd>Yes. EasyPIM ships with drift detection, JSON templates, and consistent exit codes so you can gate pull requests, schedule remediation jobs, or run ad-hoc validation in GitHub Actions or Azure DevOps.</dd>
+                        <dd>Yes. EasyPIM ships with drift detection, JSON templates, and consistent exit codes so you can require human approval before changes go live, schedule remediation jobs, or run ad-hoc validation in GitHub Actions or Azure DevOps.</dd>
                     </div>
                     <div class="faq-item">
                         <dt><button type="button" aria-expanded="false">Is there a roadmap or community support?</button></dt>
@@ -372,7 +373,7 @@ Test-PIMPolicyDrift `
                         <p class="section-lead">Pair EasyPIM with the <span class="highlight">EasyPIM Event-Driven Governance</span> reference implementation to trigger pipelines whenever your privileged access model changes.</p>
                         <ul>
                             <li>Wire Azure Event Grid and Functions to your JSON configuration for near-real-time enforcement.</li>
-                            <li>Promote pull requests with automatic drift checks, approval snapshots, and audit exports.</li>
+                            <li>Review upcoming changes with automatic drift checks, approval snapshots, and audit exports.</li>
                             <li>Use the included demos to stand up a full end-to-end automation platform in under an hour.</li>
                         </ul>
                         <div class="hero-actions">
@@ -407,6 +408,7 @@ Test-PIMPolicyDrift `
                         </ul>
                         <div class="hero-actions">
                             <a class="btn primary" href="https://github.com/kayasax/EasyPIM/blob/main/EasyPIM/Documentation/Step-by-step-Guide.md" target="_blank" rel="noopener">Open the orchestration guide</a>
+                            <a class="btn secondary" href="template-guide.html">Explore template + override patterns</a>
                             <a class="btn secondary" href="https://github.com/kayasax/EasyPIM/blob/main/EasyPIM/Documentation/Step-by-step-Guide.md#progressive-validation-checklist" target="_blank" rel="noopener">Review the validation checklist</a>
                         </div>
                     </div>

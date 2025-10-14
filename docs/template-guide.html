@@ -1,0 +1,247 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="EasyPIM Orchestrator template patterns that prevent human error and keep privileged role policies consistent.">
+    <title>EasyPIM Templates & Inline Overrides</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="guide-page">
+    <header class="site-header guide-header">
+        <div class="container">
+            <a class="brand" href="index.html">EasyPIM</a>
+            <nav class="site-nav" aria-label="Guide navigation">
+                <button class="nav-toggle" aria-expanded="false" aria-controls="guide-nav">Menu</button>
+                <ul id="guide-nav">
+                    <li><a href="index.html#value">Back to site</a></li>
+                    <li><a href="#templates">Templates 101</a></li>
+                    <li><a href="#overrides">Inline overrides</a></li>
+                    <li><a href="#workflow">Automation workflow</a></li>
+                    <li><a class="cta" href="https://github.com/kayasax/EasyPIM" target="_blank" rel="noopener">Get EasyPIM</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="guide-main">
+        <section class="hero guide-hero" id="templates">
+            <div class="container hero-grid">
+                <div class="hero-copy">
+                    <p class="eyebrow">EasyPIM.Orchestrator best practices</p>
+                    <h1>Template-driven PIM policies without the copy/paste debt</h1>
+                    <p class="hero-lead">Ship policy changes once, roll them across dozens of roles, and keep every inline exception intentional.</p>
+                    <ul class="hero-pillars">
+                        <li><span class="highlight">Single source of truth</span> for approvals, activation requirements, and notifications.</li>
+                        <li><span class="highlight">Inline overrides</span> document why a critical role needs different requirements.</li>
+                        <li><span class="highlight">Predictable automation</span> so pipelines update every role consistently.</li>
+                        <li><span class="highlight">Same template</span> works for both Entra and Azure role policies—no copy/paste.</li>
+                    </ul>
+                </div>
+                <div class="hero-visual" aria-hidden="true">
+          <div class="glass-card feature-card">
+            <span class="card-eyebrow">Prevent human error</span>
+            <h2>Same template, any platform</h2>
+            <p>Define the policy once and apply it to both Entra roles and Azure RBAC roles—no duplicate JSON to maintain.</p>
+          </div>
+          <div class="glass-card feature-card">
+            <span class="card-eyebrow">Auditable exceptions</span>
+            <h2>Overrides stay with each role</h2>
+            <p>Inline adjustments sit next to the role definition, so reviewers can see why the change exists and confirm it was approved.</p>
+          </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" aria-labelledby="why">
+            <div class="container">
+                <h2 id="why">Why templates matter for privileged access</h2>
+                <div class="card-grid">
+                    <article class="value-card gradient-blue">
+                        <h3>Reduce copy/paste drift</h3>
+                        <p>Templates keep approval rules, durations, and multi-factor enforcement identical across every role that references them.</p>
+                    </article>
+                    <article class="value-card gradient-purple">
+                        <h3>Accelerate reviews</h3>
+                        <p>Security teams approve a single template change, then let EasyPIM apply the update everywhere.</p>
+                    </article>
+                    <article class="value-card gradient-teal">
+                        <h3>Ensure safe overrides</h3>
+                        <p>Inline overrides stay co-located with the role definition so exceptions are governed, intentional, and easy to audit later.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" aria-labelledby="baseline-template">
+            <div class="container">
+                <h2 id="baseline-template">Step 1 · define the reusable template</h2>
+                <p class="section-lead">Start by declaring the baseline approval experience in the <code>PolicyTemplates</code> object. Template names become keys so every policy reference is explicit and validation can confirm they exist.</p>
+                <pre class="code-block"><code>{
+  "PolicyTemplates": {
+    "HighSecurity": {
+      "ActivationDuration": "PT4H",
+      "ActivationRequirement": "MultiFactorAuthentication,Justification,Ticketing",
+      "ApprovalRequired": true,
+      "Approvers": [
+        {
+          "id": "11111111-2222-3333-4444-555555555555",
+          "description": "Privileged Access CAB"
+        }
+      ],
+      "AllowPermanentEligibility": false,
+      "MaximumEligibilityDuration": "P30D",
+      "Notification_Activation_Alert": {
+        "isDefaultRecipientEnabled": true,
+        "notificationLevel": "All",
+        "Recipients": ["soc-alerts@contoso.com"]
+      }
+    }
+  }
+}</code></pre>
+                <div class="glass-card guide-callout">
+                    <h3>Template keys = telemetry context</h3>
+                    <p>Use descriptive template names (<code>HighSecurity</code>, <code>Tier0</code>, <code>FinanceSOX</code>). They appear in drift reports, WhatIf output, and telemetry, making it obvious which safeguard is in effect.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="overrides" aria-labelledby="reference-template">
+            <div class="container">
+                <h2 id="reference-template">Step 2 · reference the template in your role policies</h2>
+                <p class="section-lead">Define each role in the array-based policy block and point it at the shared template. Set <code>PolicySource</code> to <code>"template"</code> so diffs stay explicit.</p>
+                <pre class="code-block"><code>{
+  "EntraRoles": {
+    "Policies": [
+      {
+        "RoleName": "Security Administrator",
+        "PolicySource": "template",
+        "Template": "HighSecurity"
+      },
+      {
+        "RoleName": "Privileged Role Administrator",
+        "PolicySource": "template",
+        "Template": "HighSecurity"
+      }
+    ]
+  }
+}</code></pre>
+                <div class="glass-card guide-callout">
+                    <h3>One template for different resources</h3>
+                    <p>Because they share common structure a single template can be applied to Entra and Azure roles</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" aria-labelledby="inline-override">
+            <div class="container">
+                <h2 id="inline-override">Step 3 · add inline overrides when a role needs something special</h2>
+                <p class="section-lead">Only specify the fields that differ from the template. EasyPIM merges your overrides with the template and records the resulting payload as <code>ResolvedPolicy</code> for auditing.</p>
+                <div class="code-example-grid">
+                    <div>
+                        <h3>Configuration excerpt</h3>
+                        <pre class="code-block"><code>{
+  "EntraRoles": {
+    "Policies": [
+      {
+        "RoleName": "User Access Administrator",
+        "PolicySource": "template",
+        "Template": "HighSecurity",
+        "ActivationRequirement": "MultiFactorAuthentication,Justification,Ticketing",
+        "AuthenticationContext_Enabled": true,
+        "AuthenticationContext_Value": "c1:HighRiskOperations",
+        "Notification_Activation_Alert": {
+          "isDefaultRecipientEnabled": true,
+          "notificationLevel": "Critical",
+          "Recipients": [
+            "soc-alerts@contoso.com",
+            "compliance@contoso.com"
+          ]
+        }
+      }
+    ]
+  }
+}</code></pre>
+                    </div>
+                    <div>
+                        <h3>What the orchestrator applies</h3>
+                        <pre class="code-block"><code>{
+  "RoleName": "User Access Administrator",
+  "PolicySource": "template",
+  "Template": "HighSecurity",
+  "ResolvedPolicy": {
+    "ActivationDuration": "PT4H",
+    "ActivationRequirement": "MultiFactorAuthentication,Justification,Ticketing",
+    "ApprovalRequired": true,
+    "Approvers": [
+      {
+        "id": "11111111-2222-3333-4444-555555555555",
+        "description": "Privileged Access CAB"
+      }
+    ],
+    "AuthenticationContext_Enabled": true,
+    "AuthenticationContext_Value": "c1:HighRiskOperations",
+    "AllowPermanentEligibility": false,
+    "MaximumEligibilityDuration": "P30D",
+    "Notification_Activation_Alert": {
+      "isDefaultRecipientEnabled": true,
+      "notificationLevel": "Critical",
+      "Recipients": [
+        "soc-alerts@contoso.com",
+        "compliance@contoso.com"
+      ]
+    }
+  }
+}</code></pre>
+                    </div>
+                </div>
+        <div class="glass-card guide-callout">
+          <h3>Make the review easy to follow</h3>
+          <p>Include a short note in your change review explaining why this role deviates. Auditors can trace the review back to the JSON line that changed and confirm the override in <code>ResolvedPolicy</code> output.</p>
+        </div>
+            </div>
+        </section>
+
+        <section class="section" id="workflow" aria-labelledby="automation">
+            <div class="container">
+                <h2 id="automation">Run the configuration through EasyPIM.Orchestrator</h2>
+                <p class="section-lead">Templates and overrides work in every execution mode. Use WhatIf to preview, then let delta or initial mode apply the synchronized policies.</p>
+                <pre class="code-block"><code>$configPath = "./config/pim-template-demo.json"
+
+Invoke-EasyPIMOrchestrator `
+    -ConfigFilePath $configPath `
+    -TenantId $TENANT_ID `
+    -SubscriptionId $SUBSCRIPTION_ID `
+    -Mode delta `
+    -WhatIf
+
+# When the preview looks good, drop -WhatIf to apply
+</code></pre>
+                <div class="glass-card guide-callout">
+                    <h3>Capture overrides</h3>
+                    <p>The orchestrator records whether the protected-role override token was used and which templates produced inline differences. That data feeds dashboards and audit exports.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" aria-labelledby="next-steps">
+            <div class="container">
+                <h2 id="next-steps">Next steps</h2>
+                <div class="hero-actions">
+                    <a class="btn primary" href="https://github.com/kayasax/EasyPIM/blob/main/EasyPIM/Documentation/Configuration-Schema.md" target="_blank" rel="noopener">Review the configuration schema</a>
+                    <a class="btn secondary" href="https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator" target="_blank" rel="noopener">Read the orchestrator walkthrough</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>&copy; Loïc MICHEL, 2025 EasyPIM. MIT Licensed. Built for Microsoft Entra PIM automation teams.</p>
+            <a href="index.html">Return to homepage</a>
+        </div>
+    </footer>
+
+    <script src="script.js" defer></script>
+</body>
+</html>
