@@ -1,12 +1,20 @@
-﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <filter id="brighten">
+    <linearGradient id="faviconGlow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#69d1ff" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#1e3f73" stop-opacity="0.95"/>
+    </linearGradient>
+    <filter id="faviconBoost" color-interpolation-filters="sRGB">
       <feComponentTransfer>
-        <feFuncR type="linear" slope="1.4" intercept="0"/>
-        <feFuncG type="linear" slope="1.4" intercept="0"/>
-        <feFuncB type="linear" slope="1.4" intercept="0"/>
+        <feFuncR type="linear" slope="1.5"/>
+        <feFuncG type="linear" slope="1.5"/>
+        <feFuncB type="linear" slope="1.5"/>
       </feComponentTransfer>
     </filter>
   </defs>
-  <image href="logo_transparent.svg" x="-80" y="-80" width="1184" height="1184" filter="url(#brighten)" preserveAspectRatio="xMidYMid meet"/>
+  <path d="M256 32c36 44 118 68 178 84 0 104-18 192-62 264-36 60-72 96-116 124-44-28-80-64-116-124-44-72-62-160-62-264 60-16 142-40 178-84z" fill="url(#faviconGlow)"/>
+  <clipPath id="shieldClip">
+    <path d="M256 32c36 44 118 68 178 84 0 104-18 192-62 264-36 60-72 96-116 124-44-28-80-64-116-124-44-72-62-160-62-264 60-16 142-40 178-84z"/>
+  </clipPath>
+  <image href="logo_transparent.svg" x="-120" y="-120" width="752" height="752" filter="url(#faviconBoost)" preserveAspectRatio="xMidYMid slice" clip-path="url(#shieldClip)"/>
 </svg>

@@ -12,30 +12,46 @@
     --accent-strong: #1d4ed8;
     --border: rgba(148, 163, 184, 0.3);
     --shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
-    background-image: url("./assets/logo_transparent.svg");
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: contain;
-    flex-shrink: 0;
     --transition: 220ms ease;
-
-.brand-name {
-    line-height: 1;
-}
-    font-family: "Segoe UI", "Segoe UI Web (West European)", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    --hero-emblem-size: clamp(780px, 92vw, 1200px);
+    --hero-emblem-opacity: 0.1;
 }
 
 * {
     box-sizing: border-box;
 }
-    filter: brightness(1.35) contrast(1.2);
 
 body {
+    position: relative;
     margin: 0;
     background: linear-gradient(135deg, #0b1120 0%, #111827 60%, #0f172a 100%);
     color: var(--text-inverse);
     line-height: 1.6;
     min-height: 100vh;
+    font-family: "Segoe UI", "Segoe UI Web (West European)", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    isolation: isolate;
+}
+
+body::after {
+    content: "";
+    position: fixed;
+    inset: 4% 0 -20%;
+    background: url("./assets/logo_transparent.svg") center top/var(--hero-emblem-size) no-repeat;
+    opacity: 0.45;
+    filter: saturate(0.65) brightness(0.65);
+    pointer-events: none;
+    z-index: 0;
+}
+
+header,
+main,
+footer {
+    position: relative;
+    z-index: 1;
+}
+
+.brand-name {
+    line-height: 1;
 }
 
 .container {
@@ -77,7 +93,7 @@ body {
     height: clamp(56px, 5vw, 72px);
     width: clamp(56px, 5vw, 72px);
     background: url("assets/logo_transparent.svg") center/contain no-repeat;
-    filter: brightness(1.45) contrast(1.2);
+    filter: brightness(1.5) contrast(1.2);
 }
 
 .site-nav ul {
