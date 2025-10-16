@@ -1,0 +1,190 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Stage 3 of the EasyPIM adoption journey activates event-driven governance with CI/CD integration.">
+    <title>EasyPIM Stage 3 · Event-Driven Governance</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" sizes="any">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="guide-page">
+    <header class="site-header guide-header">
+        <div class="container">
+            <a class="brand" href="index.html">
+                <span class="brand-mark" aria-hidden="true"></span>
+                <span class="brand-name">EasyPIM</span>
+            </a>
+            <nav class="site-nav" aria-label="Adoption navigation">
+                <button class="nav-toggle" aria-expanded="false" aria-controls="stage-nav">Menu</button>
+                <ul id="stage-nav">
+                    <li><a href="index.html#adoption">Adoption map</a></li>
+                    <li><a href="core.html">Stage 1 · Core</a></li>
+                    <li><a href="template-guide.html">Stage 2 · Orchestrator</a></li>
+                    <li><a href="event-driven.html" aria-current="page">Stage 3 · Event-driven</a></li>
+                    <li><a class="cta" href="https://github.com/kayasax/EasyPIM" target="_blank" rel="noopener">Get EasyPIM</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <nav class="stage-nav" aria-label="Stage navigation">
+                <a href="index.html#adoption">← Back to adoption map</a>
+                <a href="core.html">Stage 1 · Core</a>
+                <a href="template-guide.html">Stage 2 · Orchestrator</a>
+                <a href="event-driven.html" aria-current="page">Stage 3 · Event-driven</a>
+            </nav>
+        </div>
+
+        <section class="hero guide-hero" id="overview">
+            <div class="container hero-grid">
+                <div class="hero-copy">
+                    <p class="eyebrow">Stage 3 · Event-Driven Automation</p>
+                    <h1>Ship event-driven governance in minutes</h1>
+                    <p class="hero-lead">Clone the reference repo, run <code>setup-platform.ps1</code>, and get Azure Functions, Key Vault wiring, and secure CI/CD automation online in about ten minutes.</p>
+                    <ul class="hero-pillars">
+                        <li><span class="highlight">Everything included</span> deployment script, GitHub Actions and Azure DevOps templates, plus hardened defaults.</li>
+                        <li><span class="highlight">Security-first pipelines</span> enforce OIDC authentication, principle of least privilege, and zero stored secrets.</li>
+                        <li><span class="highlight">Smart routing</span> steers each change to the right platform, environment, and orchestrator mode.</li>
+                    </ul>
+                    <div class="hero-actions">
+                        <a class="btn" href="https://github.com/kayasax/EasyPIM-EventDriven-Governance" target="_blank" rel="noopener">View the reference implementation</a>
+                        <a class="btn" href="https://github.com/kayasax/EasyPIM-EventDriven-Governance/blob/main/docs/Dual-Platform-Setup-Guide.md" target="_blank" rel="noopener">Open the dual-platform setup guide</a>
+                    </div>
+                </div>
+                <div class="hero-visual" aria-hidden="true">
+                    <div class="glass-card feature-card">
+                        <span class="card-eyebrow">Adoption goal</span>
+                        <h2>Policy-as-code meets CI/CD</h2>
+                        <p>Configuration updates live in Git-backed JSON. Pipelines validate, approve, and deploy without manual intervention.</p>
+                    </div>
+                    <div class="glass-card feature-card">
+                        <span class="card-eyebrow">Success checkpoint</span>
+                        <h2>Alerts and remediation before production drift</h2>
+                        <p>WouldRemove exports, notifications, and telemetry prove that production access never strays from the desired state.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="included">
+            <div class="container">
+                <h2>Everything you need ships in the repo</h2>
+                <div class="card-grid">
+                    <article class="value-card gradient-blue">
+                        <h3>Zero-guess deployment</h3>
+                        <p>Run <code>setup-platform.ps1</code> to provision Azure Functions, Event Grid, Storage, and Key Vault with the correct identities and permissions.</p>
+                    </article>
+                    <article class="value-card gradient-purple">
+                        <h3>Automation templates</h3>
+                        <p>Drop-in workflows for GitHub Actions and Azure DevOps are bundled so you can pick your CI/CD platform without extra wiring.</p>
+                    </article>
+                    <article class="value-card gradient-teal">
+                        <h3>Security baked in</h3>
+                        <p>OIDC workload identities replace PATs, managed identities secure Azure resources, and no secrets land in code or pipelines.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="quickstart">
+            <div class="container">
+                                <h2>Launch the automation in about ten minutes</h2>
+                                <p class="section-lead">After cloning the reference repository, run the setup wizard and choose GitHub Actions, Azure DevOps, or both. The script provisions Azure resources and links your CI/CD provider automatically.</p>
+                                <pre class="code-block"><code># From the reference repo root
+pwsh ./setup-platform.ps1 -Platform GitHub
+
+# Other options:
+# pwsh ./setup-platform.ps1 -Platform AzureDevOps
+# pwsh ./setup-platform.ps1 -Platform Both
+
+# The wizard provisions:
+# - Azure Function + Event Grid subscription
+# - Key Vault with configuration secrets
+# - GitHub Actions and/or Azure DevOps pipelines ready to run</code></pre>
+                <div class="glass-card guide-callout">
+                    <h3>One script, consistent environments</h3>
+                    <p>The deployment script applies the same baseline in test and production, so promoting changes is as easy as running it again with a different subscription or resource group.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="flow">
+            <div class="container">
+                <h2>Event-driven flow at a glance</h2>
+                <div class="card-grid">
+                    <article class="value-card gradient-blue">
+                        <h3>1. Configuration lives in Key Vault</h3>
+                        <p>Your orchestrator JSON and secrets stay in Key Vault. Any update to a secret or config entry is the signal to evaluate drift.</p>
+                    </article>
+                    <article class="value-card gradient-purple">
+                        <h3>2. Azure Function listens for changes</h3>
+                        <p>Event Grid triggers the Function, which reads the updated secret name and chooses the right workflow target and orchestrator mode.</p>
+                    </article>
+                    <article class="value-card gradient-amber">
+                        <h3>3. Smart routing runs the pipeline</h3>
+                        <p>Secrets prefixed with <code>gh-</code> send the payload to GitHub Actions, <code>ado-</code> to Azure DevOps. Suffixes like <code>-test</code> or <code>-prod</code> set environments and pick <code>-WhatIf</code>, <code>-delta</code>, or <code>-initial</code>—all executed with short-lived tokens and scoped permissions.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="routing">
+            <div class="container">
+                <h2>Smart routing keeps approvals and deployment aligned</h2>
+                <div class="card-grid">
+                    <article class="value-card gradient-purple">
+                        <h3>Intent captured in naming</h3>
+                        <p>Secret names act as routing rules: choose the provider (GitHub or Azure DevOps) and environment (Test or Prod) by how you label the payload.</p>
+                    </article>
+                    <article class="value-card gradient-blue">
+                        <h3>Context-aware orchestrator runs</h3>
+                        <p>The pipeline parameters adapt automatically—Test secrets trigger WhatIf, production secrets switch to delta or initial mode for first-time rollout.</p>
+                    </article>
+                    <article class="value-card gradient-teal">
+                        <h3>Security-focused hand-offs</h3>
+                        <p>Each run ships compliance-ready summaries that highlight token provenance, scopes granted, and confirms no static secrets were used.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="resources">
+            <div class="container">
+                <h2>Resources</h2>
+                <div class="hero-actions">
+                    <a class="btn" href="https://github.com/kayasax/EasyPIM-EventDriven-Governance" target="_blank" rel="noopener">Reference implementation</a>
+                    <a class="btn" href="https://github.com/kayasax/EasyPIM-EventDriven-Governance/blob/main/docs/Step-by-Step-Guide.md" target="_blank" rel="noopener">Step-by-step implementation guide</a>
+                    <a class="btn" href="https://github.com/kayasax/EasyPIM/wiki/Progressive-Validation-Guide" target="_blank" rel="noopener">Progressive validation guide</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="section cta-final" id="next">
+            <div class="container">
+                <h2>Need to review Stage 2 first?</h2>
+                <p>Event-driven success depends on well-governed templates and overrides. Ensure Stage 2 is running clean before automating enforcement.</p>
+                <div class="hero-actions">
+                    <a class="btn" href="template-guide.html">Return to Stage 2 · Orchestrator</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>&copy; 2025 EasyPIM. MIT Licensed. Built for Microsoft Entra PIM automation teams.</p>
+            <div class="stage-nav" aria-label="Footer adoption navigation">
+                <a href="index.html#adoption">Adoption map</a>
+                <a href="core.html">Stage 1</a>
+                <a href="template-guide.html">Stage 2</a>
+                <a href="event-driven.html" aria-current="page">Stage 3</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js" defer></script>
+</body>
+</html>

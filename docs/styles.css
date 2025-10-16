@@ -96,6 +96,37 @@ footer {
     filter: brightness(1.5) contrast(1.2);
 }
 
+.stage-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 1.75rem;
+}
+
+.stage-nav a {
+    padding: 0.55rem 1.1rem;
+    border-radius: 999px;
+    border: 1px solid rgba(138, 213, 255, 0.35);
+    background: rgba(12, 28, 49, 0.55);
+    color: rgba(226, 232, 240, 0.9);
+    font-size: 0.92rem;
+    text-decoration: none;
+    transition: background var(--transition), border var(--transition), color var(--transition);
+}
+
+.stage-nav a:hover,
+.stage-nav a:focus {
+    border-color: rgba(138, 213, 255, 0.75);
+    background: rgba(21, 40, 73, 0.75);
+    color: rgba(226, 232, 240, 0.96);
+}
+
+.stage-nav a[aria-current="page"] {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.35), rgba(14, 165, 233, 0.35));
+    border-color: rgba(138, 213, 255, 0.8);
+    color: #e2e8f0;
+}
+
 .site-nav ul {
     display: flex;
     align-items: center;
@@ -268,33 +299,20 @@ footer {
     justify-content: center;
     padding: 0.85rem 1.6rem;
     border-radius: 999px;
-    border: 1px solid transparent;
+    border: 1px solid rgba(138, 213, 255, 0.4);
     font-weight: 600;
+    background: linear-gradient(145deg, rgba(15, 23, 42, 0.82), rgba(37, 99, 235, 0.18));
+    color: rgba(226, 232, 240, 0.96);
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.35);
     transition: transform var(--transition), box-shadow var(--transition), background var(--transition), border var(--transition);
 }
 
-.btn.primary {
-    background: linear-gradient(135deg, var(--accent) 0%, #38bdf8 90%);
-    color: #0b1120;
-    box-shadow: var(--shadow);
-}
-
-.btn.primary:hover,
-.btn.primary:focus {
+.btn:hover,
+.btn:focus {
+    border-color: rgba(138, 213, 255, 0.75);
+    background: linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(56, 189, 248, 0.28));
+    box-shadow: 0 25px 60px rgba(59, 130, 246, 0.25);
     transform: translateY(-2px);
-    box-shadow: 0 30px 50px rgba(59, 130, 246, 0.35);
-}
-
-.btn.secondary {
-    border: 1px solid rgba(148, 163, 184, 0.4);
-    color: #e2e8f0;
-    background: rgba(15, 23, 42, 0.6);
-}
-
-.btn.secondary:hover,
-.btn.secondary:focus {
-    border-color: rgba(148, 163, 184, 0.8);
-    background: rgba(15, 23, 42, 0.85);
 }
 
 .hero-metrics {

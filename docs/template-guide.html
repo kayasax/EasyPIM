@@ -15,31 +15,39 @@
         <span class="brand-mark" aria-hidden="true"></span>
         <span class="brand-name">EasyPIM</span>
       </a>
-            <nav class="site-nav" aria-label="Guide navigation">
-                <button class="nav-toggle" aria-expanded="false" aria-controls="guide-nav">Menu</button>
-                <ul id="guide-nav">
-                    <li><a href="index.html#value">Back to site</a></li>
-                    <li><a href="#templates">Templates 101</a></li>
-                    <li><a href="#overrides">Inline overrides</a></li>
-                    <li><a href="#workflow">Automation workflow</a></li>
-                    <li><a class="cta" href="https://github.com/kayasax/EasyPIM" target="_blank" rel="noopener">Get EasyPIM</a></li>
-                </ul>
+      <nav class="site-nav" aria-label="Adoption navigation">
+        <button class="nav-toggle" aria-expanded="false" aria-controls="guide-nav">Menu</button>
+        <ul id="guide-nav">
+          <li><a href="index.html#adoption">Adoption map</a></li>
+          <li><a href="core.html">Stage 1 · Core</a></li>
+          <li><a href="template-guide.html" aria-current="page">Stage 2 · Orchestrator</a></li>
+          <li><a href="event-driven.html">Stage 3 · Event-driven</a></li>
+          <li><a class="cta" href="https://github.com/kayasax/EasyPIM" target="_blank" rel="noopener">Get EasyPIM</a></li>
+        </ul>
             </nav>
         </div>
     </header>
 
-    <main class="guide-main">
+  <main class="guide-main">
+    <div class="container">
+      <nav class="stage-nav" aria-label="Stage navigation">
+        <a href="index.html#adoption">← Back to adoption map</a>
+        <a href="core.html">Stage 1 · Core</a>
+        <a href="template-guide.html" aria-current="page">Stage 2 · Orchestrator</a>
+        <a href="event-driven.html">Stage 3 · Event-driven</a>
+      </nav>
+    </div>
         <section class="hero guide-hero" id="templates">
             <div class="container hero-grid">
                 <div class="hero-copy">
-                    <p class="eyebrow">EasyPIM.Orchestrator best practices</p>
-                    <h1>Template-driven PIM policies without the copy/paste debt</h1>
-                    <p class="hero-lead">Ship policy changes once, roll them across dozens of roles, and keep every inline exception intentional.</p>
+      <p class="eyebrow">Stage 2 · EasyPIM.Orchestrator</p>
+          <h1>Bring privileged access under EasyPIM.Orchestrator control</h1>
+          <p class="hero-lead">Store your PIM model in JSON, preview drift, and apply approved policies and assignments consistently across Entra, Azure, and group roles.</p>
                     <ul class="hero-pillars">
-                        <li><span class="highlight">Single source of truth</span> for approvals, activation requirements, and notifications.</li>
-                        <li><span class="highlight">Inline overrides</span> document why a critical role needs different requirements.</li>
-                        <li><span class="highlight">Predictable automation</span> so pipelines update every role consistently.</li>
-                        <li><span class="highlight">Same template</span> works for both Entra and Azure role policies—no copy/paste.</li>
+            <li><span class="highlight">Configuration-as-code</span> covering policy expectations, assignments, and protected users.</li>
+            <li><span class="highlight">Safety-first workflow</span> with WhatIf previews, WouldRemove exports, and drift reports.</li>
+            <li><span class="highlight">Reusable templates</span> to enforce the same requirements everywhere without copy/paste.</li>
+            <li><span class="highlight">Scoped overrides</span> that document the rare roles needing different guardrails.</li>
                     </ul>
                 </div>
                 <div class="hero-visual" aria-hidden="true">
@@ -57,30 +65,67 @@
             </div>
         </section>
 
-        <section class="section" aria-labelledby="why">
+        <section class="section" aria-labelledby="config-overview">
             <div class="container">
-                <h2 id="why">Why templates matter for privileged access</h2>
+                <h2 id="config-overview">Step 1 · Model your privileged access as code</h2>
+                <p class="section-lead">EasyPIM.Orchestrator reads a single configuration file that captures policy expectations and assignments for Entra roles, Azure RBAC, and privileged groups so you can version control every change.</p>
                 <div class="card-grid">
                     <article class="value-card gradient-blue">
-                        <h3>Reduce copy/paste drift</h3>
-                        <p>Templates keep approval rules, durations, and multi-factor enforcement identical across every role that references them.</p>
+                        <h3>Single configuration source</h3>
+                        <p>Track policy baselines, assignments, ProtectedUsers, and metadata together under source control.</p>
                     </article>
                     <article class="value-card gradient-purple">
-                        <h3>Accelerate reviews</h3>
-                        <p>Security teams approve a single template change, then let EasyPIM apply the update everywhere.</p>
+                        <h3>Deterministic apply</h3>
+                        <p>EasyPIM.Orchestrator resolves the JSON into concrete policies and assignments before touching your tenant.</p>
                     </article>
                     <article class="value-card gradient-teal">
-                        <h3>Ensure safe overrides</h3>
-                        <p>Inline overrides stay co-located with the role definition so exceptions are governed, intentional, and easy to audit later.</p>
+                        <h3>CI/CD ready</h3>
+                        <p>Run the same file locally, in GitHub Actions, or Azure DevOps with OIDC authentication and audit-friendly exports.</p>
                     </article>
+                </div>
+                <pre class="code-block"><code>{
+  "PolicyTemplates": {}, #empty for clarity, see step 2 to learn more
+  "EntraRoles": {
+    "Policies": {
+      "Security Reader": { "Template": "HighSecurity" }
+    }
+  },
+  "AzureRoles": {
+    "Policies": {
+      "Reader": {
+        "Scope": "/subscriptions/&lt;subscriptionId&gt;",
+        "Template": "HighSecurity"
+      }
+    }
+  },
+  "Assignments": {
+    "EntraRoles": [
+      {
+        "roleName": "Security Reader",
+        "assignments": [
+          {
+            "principalId": "11111111-2222-3333-4444-555555555555",
+            "principalType": "User",
+            "assignmentType": "Eligible",
+            "duration": "P30D",
+            "justification": "Baseline Tier-0 review cadence"
+          }
+        ]
+      }
+    ]
+  }
+}</code></pre>
+                <div class="glass-card guide-callout">
+                    <h3>Treat the JSON like any other infrastructure code</h3>
+                    <p>Store the configuration in Git, require pull requests, and let orchestrator commands enforce the approved state in every environment.</p>
                 </div>
             </div>
         </section>
 
-        <section class="section" aria-labelledby="baseline-template">
-            <div class="container">
-                <h2 id="baseline-template">Step 1 · define the reusable template</h2>
-                <p class="section-lead">Start by declaring the baseline approval experience in the <code>PolicyTemplates</code> object. Template names become keys so every policy reference is explicit and validation can confirm they exist.</p>
+    <section class="section" aria-labelledby="baseline-template">
+      <div class="container">
+        <h2 id="baseline-template">Step 2 · define reusable policy templates</h2>
+        <p class="section-lead">Capture your default approval, activation, and notification requirements inside the <code>PolicyTemplates</code> block so every role can inherit the same guardrails.</p>
                 <pre class="code-block"><code>{
   "PolicyTemplates": {
     "HighSecurity": {
@@ -110,10 +155,10 @@
             </div>
         </section>
 
-        <section class="section" id="overrides" aria-labelledby="reference-template">
-            <div class="container">
-                <h2 id="reference-template">Step 2 · reference the template in your role policies</h2>
-                <p class="section-lead">Define each role in the array-based policy block and point it at the shared template. Set <code>PolicySource</code> to <code>"template"</code> so diffs stay explicit.</p>
+    <section class="section" id="overrides" aria-labelledby="reference-template">
+      <div class="container">
+        <h2 id="reference-template">Step 3 · reference the template in your role policies</h2>
+        <p class="section-lead">Define each role in the policy block and point it at the shared template. Set <code>PolicySource</code> to <code>"template"</code> so diffs stay explicit.</p>
                 <pre class="code-block"><code>{
   "EntraRoles": {
     "Policies": [
@@ -137,9 +182,9 @@
             </div>
         </section>
 
-        <section class="section" aria-labelledby="inline-override">
-            <div class="container">
-                <h2 id="inline-override">Step 3 · add inline overrides when a role needs something special</h2>
+    <section class="section" aria-labelledby="inline-override">
+      <div class="container">
+        <h2 id="inline-override">Step 4 · add inline overrides when a role needs something special</h2>
                 <p class="section-lead">Only specify the fields that differ from the template. EasyPIM merges your overrides with the template and records the resulting payload as <code>ResolvedPolicy</code> for auditing.</p>
                 <div class="code-example-grid">
                     <div>
@@ -203,37 +248,48 @@
           <h3>Make the review easy to follow</h3>
           <p>Include a short note in your change review explaining why this role deviates. Auditors can trace the review back to the JSON line that changed and confirm the override in <code>ResolvedPolicy</code> output.</p>
         </div>
-            </div>
-        </section>
-
-        <section class="section" id="workflow" aria-labelledby="automation">
-            <div class="container">
-                <h2 id="automation">Run the configuration through EasyPIM.Orchestrator</h2>
-                <p class="section-lead">Templates and overrides work in every execution mode. Use WhatIf to preview, then let delta or initial mode apply the synchronized policies.</p>
-                <pre class="code-block"><code>$configPath = "./config/pim-template-demo.json"
-
-Invoke-EasyPIMOrchestrator `
-    -ConfigFilePath $configPath `
-    -TenantId $TENANT_ID `
-    -SubscriptionId $SUBSCRIPTION_ID `
-    -Mode delta `
-    -WhatIf
-
-# When the preview looks good, drop -WhatIf to apply
-</code></pre>
-                <div class="glass-card guide-callout">
-                    <h3>Capture overrides</h3>
-                    <p>The orchestrator records whether the protected-role override token was used and which templates produced inline differences. That data feeds dashboards and audit exports.</p>
+                <div class="hero-actions">
+                    <a class="btn" href="https://github.com/kayasax/EasyPIM/blob/main/EasyPIM/Documentation/Enhanced-Orchestrator-Policy-Usage.md#inline-overrides" target="_blank" rel="noopener">Review inline override playbook</a>
+                    <a class="btn" href="https://github.com/kayasax/EasyPIM/blob/main/EasyPIM/Documentation/Step-by-step-Guide.md#step-8---inline-overrides" target="_blank" rel="noopener">Practice the override workflow</a>
                 </div>
             </div>
         </section>
 
+    <section class="section" id="workflow" aria-labelledby="automation">
+      <div class="container">
+        <h2 id="automation">Step 5 · validate drift and apply with EasyPIM.Orchestrator</h2>
+        <p class="section-lead">Run <code>Test-PIMPolicyDrift</code> to spot configuration deviations, then execute <code>Invoke-EasyPIMOrchestrator</code> once reviewers approve the change.</p>
+        <pre class="code-block"><code># Detect drift before merging a pull request
+Test-PIMPolicyDrift `
+  -TenantId $TENANT_ID `
+  -SubscriptionId $SUBSCRIPTION_ID `
+  -ConfigPath "./config/pim-template-demo.json" `
+  -PassThru |
+  Where-Object Status -ne 'Match'</code></pre>
+        <pre class="code-block"><code># Apply the approved configuration
+Invoke-EasyPIMOrchestrator `
+  -ConfigFilePath "./config/pim-template-demo.json" `
+  -TenantId $TENANT_ID `
+  -SubscriptionId $SUBSCRIPTION_ID `
+  -Mode delta `
+  -WhatIf `
+  -WouldRemoveExportPath "./reports/would-remove"
+
+# When the preview looks good, rerun without -WhatIf</code></pre>
+        <div class="glass-card guide-callout">
+          <h3>Audit every run</h3>
+          <p><code>Test-PIMPolicyDrift</code> produces a drift report you can archive, and the orchestrator’s WouldRemove export captures every assignment change for reviewers and auditors.</p>
+        </div>
+      </div>
+    </section>
+
         <section class="section" aria-labelledby="next-steps">
             <div class="container">
                 <h2 id="next-steps">Next steps</h2>
-                <div class="hero-actions">
-                    <a class="btn primary" href="https://github.com/kayasax/EasyPIM/blob/main/EasyPIM/Documentation/Configuration-Schema.md" target="_blank" rel="noopener">Review the configuration schema</a>
-                    <a class="btn secondary" href="https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator" target="_blank" rel="noopener">Read the orchestrator walkthrough</a>
+        <div class="hero-actions">
+          <a class="btn" href="https://github.com/kayasax/EasyPIM/blob/main/EasyPIM/Documentation/Configuration-Schema.md" target="_blank" rel="noopener">Review the configuration schema</a>
+          <a class="btn" href="https://github.com/kayasax/EasyPIM/blob/main/EasyPIM/Documentation/Step-by-step-Guide.md" target="_blank" rel="noopener">Follow the step-by-step guide</a>
+          <a class="btn" href="event-driven.html">Prepare for Stage 3 event-driven automation</a>
                 </div>
             </div>
         </section>
