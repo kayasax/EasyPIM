@@ -6,6 +6,7 @@
     <meta name="description" content="Stage 1 of the EasyPIM adoption journey focuses on bulk privileged access management with the EasyPIM Core module.">
     <title>EasyPIM Stage 1 · Core Bulk Management</title>
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" sizes="any">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body class="guide-page">
@@ -77,14 +78,14 @@
                     <article class="value-card gradient-blue">
                         <h3>1. Install and authenticate</h3>
                         <p>Install the module from the PowerShell Gallery, load it, then connect to Azure and Microsoft Graph with your preferred identity.</p>
-                        <pre class="code-block"><code>Install-Module EasyPIM -Scope CurrentUser
+                        <pre class="code-block"><code class="language-powershell">Install-Module EasyPIM -Scope CurrentUser
 Import-Module EasyPIM
 </code></pre>
                     </article>
                     <article class="value-card gradient-purple">
                         <h3>2. Capture a policy and assignment baseline</h3>
                         <p>Use the built-in `Export-PIM*` cmdlets so policy requirements, notifications, and eligibility settings are archived before you touch production.</p>
-                        <pre class="code-block"><code>Export-PIMEntraRolePolicy -TenantId $tenantId -RoleName "Security Administrator" `
+                        <pre class="code-block"><code class="language-powershell">Export-PIMEntraRolePolicy -TenantId $tenantId -RoleName "Security Administrator" `
     -Path "./baselines/entra-security-admin-policy.csv"
 Export-PIMAzureResourcePolicy -TenantId $tenantId -SubscriptionId $subscriptionId `
     -RoleName "Reader","Contributor" -ExportFilename "./baselines/subscription-rbac-policy.csv"</code></pre>
@@ -92,7 +93,7 @@ Export-PIMAzureResourcePolicy -TenantId $tenantId -SubscriptionId $subscriptionI
                     <article class="value-card gradient-teal">
                         <h3>3. Apply changes safely</h3>
                         <p>Use WhatIf and scoped cmdlets to adjust policies, add assignments, and clean up stale access with confidence.</p>
-                        <pre class="code-block"><code>Set-PIMEntraRolePolicy -TenantId $tenantId -RoleName "Security Administrator" `
+                        <pre class="code-block"><code class="language-powershell">Set-PIMEntraRolePolicy -TenantId $tenantId -RoleName "Security Administrator" `
     -ActivationRequirement "Justification","Ticketing" -WhatIf
 New-PIMAzureResourceEligibleAssignment -TenantId $tenantId -SubscriptionId $subscriptionId `
     -RoleName "Contributor" -PrincipalName "user@contoso.com"
@@ -193,6 +194,9 @@ Remove-PIMEntraRoleEligibleAssignment -TenantId $tenantId -RoleName "Security Re
         </div>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-powershell.min.js" defer></script>
     <script src="script.js" defer></script>
 </body>
 </html>

@@ -6,6 +6,7 @@
     <meta name="description" content="Stage 3 of the EasyPIM adoption journey activates event-driven governance with CI/CD integration.">
     <title>EasyPIM Stage 3 · Event-Driven Governance</title>
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" sizes="any">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body class="guide-page">
@@ -93,7 +94,7 @@
             <div class="container">
                                 <h2>Launch the automation in about ten minutes</h2>
                                 <p class="section-lead">After cloning the reference repository, run the setup wizard and choose GitHub Actions, Azure DevOps, or both. The script provisions Azure resources and links your CI/CD provider automatically.</p>
-                                <pre class="code-block"><code># From the reference repo root
+                                <pre class="code-block"><code class="language-powershell"># From the reference repo root
 pwsh ./setup-platform.ps1 -Platform GitHub
 
 # Other options:
@@ -185,6 +186,9 @@ pwsh ./setup-platform.ps1 -Platform GitHub
         </div>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-powershell.min.js" defer></script>
     <script src="script.js" defer></script>
 </body>
 </html>
