@@ -1,0 +1,198 @@
+﻿"<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Stage 1 of the EasyPIM adoption journey focuses on bulk privileged access management with the EasyPIM Core module.">
+    <title>EasyPIM Stage 1 · Core Bulk Management</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" sizes="any">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="guide-page">
+    <header class="site-header guide-header">
+        <div class="container">
+            <a class="brand" href="index.html">
+                <span class="brand-mark" aria-hidden="true"></span>
+                <span class="brand-name">EasyPIM</span>
+            </a>
+            <nav class="site-nav" aria-label="Adoption navigation">
+                <button class="nav-toggle" aria-expanded="false" aria-controls="stage-nav">Menu</button>
+                <ul id="stage-nav">
+                    <li><a href="index.html#adoption">Adoption map</a></li>
+                    <li><a href="core.html" aria-current="page">Stage 1 · Core</a></li>
+                    <li><a href="template-guide.html">Stage 2 · Orchestrator</a></li>
+                    <li><a href="event-driven.html">Stage 3 · Event-driven</a></li>
+                    <li><a class="cta" href="https://github.com/kayasax/EasyPIM" target="_blank" rel="noopener">Get EasyPIM</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <nav class="stage-nav" aria-label="Stage navigation">
+                <a href="index.html#adoption">← Back to adoption map</a>
+                <a href="core.html" aria-current="page">Stage 1 · Core</a>
+                <a href="template-guide.html">Stage 2 · Orchestrator</a>
+                <a href="event-driven.html">Stage 3 · Event-driven</a>
+            </nav>
+        </div>
+
+        <section class="hero guide-hero" id="overview">
+            <div class="container hero-grid">
+                <div class="hero-copy">
+                    <p class="eyebrow">Stage 1 · Bulk Management</p>
+                    <h1>Stabilize daily privileged operations with EasyPIM Core</h1>
+                    <p class="hero-lead">Skip portal limitations and Graph/ARM guesswork—run the EasyPIM cmdlets that baseline policies, audit assignments, and move configurations across tenants long before you need templates.</p>
+                    <ul class="hero-pillars">
+                        <li><span class="highlight">Unified cmdlets</span> for Entra roles, Azure RBAC, and privileged groups.</li>
+                        <li><span class="highlight">Repeatable workflows</span> that cover policy baselines, approvals, and assignment lifecycle tasks.</li>
+                        <li><span class="highlight">Cross-tenant portability</span> with proven Export-, Import-, and Copy-PIM commands you can trust.</li>
+                    </ul>
+                    <div class="hero-actions">
+                        <a class="btn" href="https://www.powershellgallery.com/packages/EasyPIM" target="_blank" rel="noopener">Install EasyPIM Core</a>
+                        <a class="btn" href="https://github.com/kayasax/EasyPIM/wiki/Documentation" target="_blank" rel="noopener">Read the documentation</a>
+                    </div>
+                </div>
+                <div class="hero-visual" aria-hidden="true">
+                    <div class="glass-card feature-card">
+                        <span class="card-eyebrow">Adoption goal</span>
+                        <h2>Move from ad-hoc scripts to standardized automation</h2>
+                        <p>Stage 1 proves that privileged access work can be repeatable, auditable, and fast—setting the stage for policy-as-code in Stage 2.</p>
+                    </div>
+                    <div class="glass-card feature-card">
+                        <span class="card-eyebrow">Success checkpoint</span>
+                        <h2>Daily operations run from a single module</h2>
+                        <p>Teams rely on EasyPIM Core for exports, restores, and cloning without jumping into portals or maintaining one-off scripts.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="quickstart">
+            <div class="container">
+                <h2>Quick start checklist</h2>
+                <p class="section-lead">Use this starter flow to roll EasyPIM Core into operations within hours.</p>
+                <div class="card-grid">
+                    <article class="value-card gradient-blue">
+                        <h3>1. Install and authenticate</h3>
+                        <p>Install the module from the PowerShell Gallery, load it, then connect to Azure and Microsoft Graph with your preferred identity.</p>
+                        <pre class="code-block"><code>Install-Module EasyPIM -Scope CurrentUser
+Import-Module EasyPIM
+</code></pre>
+                    </article>
+                    <article class="value-card gradient-purple">
+                        <h3>2. Capture a policy and assignment baseline</h3>
+                        <p>Use the built-in `Export-PIM*` cmdlets so policy requirements, notifications, and eligibility settings are archived before you touch production.</p>
+                        <pre class="code-block"><code>Export-PIMEntraRolePolicy -TenantId $tenantId -RoleName "Security Administrator" `
+    -Path "./baselines/entra-security-admin-policy.csv"
+Export-PIMAzureResourcePolicy -TenantId $tenantId -SubscriptionId $subscriptionId `
+    -RoleName "Reader","Contributor" -ExportFilename "./baselines/subscription-rbac-policy.csv"</code></pre>
+                    </article>
+                    <article class="value-card gradient-teal">
+                        <h3>3. Apply changes safely</h3>
+                        <p>Use WhatIf and scoped cmdlets to adjust policies, add assignments, and clean up stale access with confidence.</p>
+                        <pre class="code-block"><code>Set-PIMEntraRolePolicy -TenantId $tenantId -RoleName "Security Administrator" `
+    -ActivationRequirement "Justification","Ticketing" -WhatIf
+New-PIMAzureResourceEligibleAssignment -TenantId $tenantId -SubscriptionId $subscriptionId `
+    -RoleName "Contributor" -PrincipalName "user@contoso.com"
+Remove-PIMEntraRoleEligibleAssignment -TenantId $tenantId -RoleName "Security Reader" `
+    -PrincipalName "user@contoso.com"</code></pre>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="workflows">
+            <div class="container">
+                <h2>Core workflows to master</h2>
+                <p class="section-lead">Focus on these scenarios to deliver immediate value while building confidence for Stage 2.</p>
+                <div class="card-grid">
+                    <article class="value-card gradient-blue">
+                        <h3>Policy baselines and approvals</h3>
+                        <p>Keep role settings aligned with governance standards using the same cmdlets operations and auditors rely on.</p>
+                        <ul>
+                            <li>Use `Get-PIM*Policy` to review activation rules across Entra, Azure RBAC, and group roles.</li>
+                            <li>Run `Set-PIM*Policy -WhatIf` during change control, then apply with approval tracking.</li>
+                            <li>Store backups with `Backup-PIM*Policy` so you can roll back quickly if needed.</li>
+                        </ul>
+                    </article>
+                    <article class="value-card gradient-purple">
+                        <h3>Assignment lifecycle management</h3>
+                        <p>Provision, review, and retire privileged access from a single module without portal hopping.</p>
+                        <ul>
+                            <li>Audit your posture with `Get-PIM*ActiveAssignment` and `Get-PIM*EligibleAssignment`.</li>
+                            <li>Create or extend access using `New-PIM*Assignment` with principal name resolution built in.</li>
+                            <li>Remove stale entries via `Remove-PIM*Assignment` and capture outputs for ticketing systems.</li>
+                        </ul>
+                    </article>
+                    <article class="value-card gradient-amber">
+                        <h3>Cross-tenant and scope cloning</h3>
+                        <p>Standardize experience by reusing proven policies and eligibilities wherever your teams operate.</p>
+                        <ul>
+                            <li>Clone settings with `Copy-PIM*Policy` to propagate proven configurations.</li>
+                            <li>Move eligibilities with `Copy-PIM*EligibleAssignment` when teams shift environments.</li>
+                            <li>Combine with `Import-PIM*Policy` for rapid tenant onboarding or disaster recovery.</li>
+                        </ul>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="guardrails">
+            <div class="container">
+                <h2>Guardrails before moving to Stage 2</h2>
+                <div class="card-grid">
+                    <article class="value-card gradient-teal">
+                        <h3>Validated backups</h3>
+                        <p>Store exports securely and verify they can be restored on demand. Document the process for auditors.</p>
+                    </article>
+                    <article class="value-card gradient-blue">
+                        <h3>Documented change windows</h3>
+                        <p>Schedule bulk updates during approved windows and capture summary reports for change control.</p>
+                    </article>
+                    <article class="value-card gradient-purple">
+                        <h3>Baseline metrics</h3>
+                        <p>Record key metrics—number of assignments, cleanup deltas, response time—to measure improvement in later stages.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="resources">
+            <div class="container">
+                <h2>Resources</h2>
+                <div class="hero-actions">
+                    <a class="btn" href="https://github.com/kayasax/EasyPIM/wiki/Documentation" target="_blank" rel="noopener">Documentation hub</a>
+                    <a class="btn" href="https://github.com/kayasax/EasyPIM/wiki/Sample-Scripts" target="_blank" rel="noopener">Sample scripts</a>
+                    <a class="btn" href="https://github.com/kayasax/EasyPIM/wiki/Progressive-Validation-Guide" target="_blank" rel="noopener">Progressive validation guide</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="section cta-final" id="next">
+            <div class="container">
+                <h2>Ready for Stage 2?</h2>
+                <p>When exports, restores, and cleanup runs are second nature, move to EasyPIM.Orchestrator to codify policies and approvals.</p>
+                <div class="hero-actions">
+                    <a class="btn" href="template-guide.html">Explore Stage 2 · Orchestrator</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>&copy; 2025 EasyPIM. MIT Licensed. Built for Microsoft Entra PIM automation teams.</p>
+            <div class="stage-nav" aria-label="Footer adoption navigation">
+                <a href="index.html#adoption">Adoption map</a>
+                <a href="core.html" aria-current="page">Stage 1</a>
+                <a href="template-guide.html">Stage 2</a>
+                <a href="event-driven.html">Stage 3</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js" defer></script>
+</body>
+</html>
