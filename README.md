@@ -13,6 +13,8 @@
 
 ---
 
+> 🌐 **New adoption site:** Explore the three-stage journey at our [EasyPIM adoption hub](docs/index.html) for up-to-date guidance and quick-starts.
+
 ## 💡 **Transform Azure PIM Management with Powerful Automation**
 
 **EasyPIM** is the most comprehensive PowerShell automation platform for Microsoft Privileged Identity Management (PIM). With **50+ specialized cmdlets**, EasyPIM transforms complex ARM and Graph API interactions into simple, reliable automation workflows for **Azure Resources**, **Entra ID Roles**, and **Security Groups**.

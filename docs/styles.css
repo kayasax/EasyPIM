@@ -139,12 +139,19 @@ footer {
 .site-nav a {
     padding: 0.5rem 0.75rem;
     border-radius: 999px;
-    transition: background var(--transition);
+    color: rgba(226, 232, 240, 0.78);
+    text-decoration: none;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    position: relative;
+    transition: color var(--transition), background var(--transition), transform var(--transition);
 }
 
 .site-nav a:hover,
 .site-nav a:focus {
-    background: var(--accent-soft);
+    color: rgba(226, 232, 240, 0.95);
+    background: rgba(37, 99, 235, 0.14);
+    transform: translateY(-1px);
 }
 
 .site-nav .cta {

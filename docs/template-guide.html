@@ -84,7 +84,7 @@
                         <p>Run the same file locally, in GitHub Actions, or Azure DevOps with OIDC authentication and audit-friendly exports.</p>
                     </article>
                 </div>
-                <pre class="code-block"><code class="language-json">{
+                <pre class="code-block language-json"><code class="language-json">{
   "PolicyTemplates": {}, #empty for clarity, see step 2 to learn more
   "EntraRoles": {
     "Policies": {
@@ -127,7 +127,7 @@
       <div class="container">
         <h2 id="baseline-template">Step 2 · define reusable policy templates</h2>
         <p class="section-lead">Capture your default approval, activation, and notification requirements inside the <code>PolicyTemplates</code> block so every role can inherit the same guardrails.</p>
-                <pre class="code-block"><code class="language-json">{
+                <pre class="code-block language-json"><code class="language-json">{
   "PolicyTemplates": {
     "HighSecurity": {
       "ActivationDuration": "PT4H",
@@ -160,7 +160,7 @@
       <div class="container">
         <h2 id="reference-template">Step 3 · reference the template in your role policies</h2>
         <p class="section-lead">Define each role in the policy block and point it at the shared template. Set <code>PolicySource</code> to <code>"template"</code> so diffs stay explicit.</p>
-                <pre class="code-block"><code class="language-json">{
+                <pre class="code-block language-json"><code class="language-json">{
   "EntraRoles": {
     "Policies": [
       {
@@ -190,7 +190,7 @@
                 <div class="code-example-grid">
                     <div>
                         <h3>Configuration excerpt</h3>
-                        <pre class="code-block"><code class="language-json">{
+                        <pre class="code-block language-json"><code class="language-json">{
   "EntraRoles": {
     "Policies": [
       {
@@ -215,7 +215,7 @@
                     </div>
                     <div>
                         <h3>What the orchestrator applies</h3>
-                        <pre class="code-block"><code class="language-json">{
+                        <pre class="code-block language-json"><code class="language-json">{
   "RoleName": "User Access Administrator",
   "PolicySource": "template",
   "Template": "HighSecurity",
@@ -260,14 +260,14 @@
       <div class="container">
         <h2 id="automation">Step 5 · validate drift and apply with EasyPIM.Orchestrator</h2>
         <p class="section-lead">Run <code>Test-PIMPolicyDrift</code> to spot configuration deviations, then execute <code>Invoke-EasyPIMOrchestrator</code> once reviewers approve the change.</p>
-  <pre class="code-block"><code class="language-powershell"># Detect drift before merging a pull request
+  <pre class="code-block language-powershell"><code class="language-powershell"># Detect drift before merging a pull request
 Test-PIMPolicyDrift `
   -TenantId $TENANT_ID `
   -SubscriptionId $SUBSCRIPTION_ID `
   -ConfigPath "./config/pim-template-demo.json" `
   -PassThru |
   Where-Object Status -ne 'Match'</code></pre>
-  <pre class="code-block"><code class="language-powershell"># Apply the approved configuration
+  <pre class="code-block language-powershell"><code class="language-powershell"># Apply the approved configuration
 Invoke-EasyPIMOrchestrator `
   -ConfigFilePath "./config/pim-template-demo.json" `
   -TenantId $TENANT_ID `
