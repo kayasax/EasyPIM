@@ -188,6 +188,7 @@ Test-PIMPolicyDrift -TenantId $tenantId -ConfigurationPath "./pim-config.json" -
 - 🎯 **[Use Cases & Examples](https://github.com/kayasax/EasyPIM/wiki/Use-Cases)** - Real-world implementation scenarios
 - 📝 **[Changelog](https://github.com/kayasax/EasyPIM/wiki/Changelog)** - Version history and release notes
 - 🖼️ **[EasyPIM Gallery](Gallery.html)** - Visual showcase of features and capabilities
+- 💾 **[Automation Snippets](docs/snippets.html)** - Searchable scripts for Core and Orchestrator stages
 
 ### 🚀 **Getting Started Guides**
 - ⚡ **[Quick Start Tutorial](https://github.com/kayasax/EasyPIM/wiki/Getting-Started)** - First steps with EasyPIM

@@ -1,0 +1,257 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Searchable automation snippets for EasyPIM Core and EasyPIM.Orchestrator covering baselines, drift validation, and deployments.">
+    <title>EasyPIM Automation Snippets</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" sizes="any">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="snippets-page">
+    <header class="site-header guide-header">
+        <div class="container">
+            <a class="brand" href="index.html">
+                <span class="brand-mark" aria-hidden="true"></span>
+                <span class="brand-name">EasyPIM</span>
+            </a>
+            <nav class="site-nav" aria-label="Adoption navigation">
+                <button class="nav-toggle" aria-expanded="false" aria-controls="stage-nav">Menu</button>
+                <ul id="stage-nav">
+                    <li><a href="index.html#adoption">Adoption map</a></li>
+                    <li><a href="core.html">Stage 1 · Core</a></li>
+                    <li><a href="template-guide.html">Stage 2 · Orchestrator</a></li>
+                    <li><a href="event-driven.html">Stage 3 · Event-driven</a></li>
+                    <li><a class="cta" href="https://github.com/kayasax/EasyPIM" target="_blank" rel="noopener">Get EasyPIM</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="snippets-main">
+        <div class="container">
+            <a class="snippet-back" href="index.html#adoption">← Back to adoption map</a>
+            <h1>Automation snippets for EasyPIM</h1>
+            <p class="snippet-lead">Copy, adapt, and commit these vetted starters instead of rewriting exports, drift validation, or deployment flows from scratch. Every snippet ships in the repository under <code>docs/snippets/</code>.</p>
+
+            <div class="snippet-controls">
+                <label class="snippet-search-label" for="snippet-search">Search snippets</label>
+                <input type="search" id="snippet-search" name="snippet-search" placeholder="Filter by command, stage, or purpose">
+                <span class="snippet-results" data-results-count></span>
+            </div>
+
+            <section class="snippet-section" id="core-snippets">
+                <h2>Stage 1 · Core module</h2>
+
+                <article class="snippet-card" data-snippet data-search="core baseline export entra azure rbac policy assignments" aria-labelledby="snippet-core-export-title">
+                    <header class="snippet-card-header">
+                        <h3 id="snippet-core-export-title">Export current policies and assignments</h3>
+                        <div class="snippet-tags" aria-label="Tags">
+                            <span class="snippet-tag">core</span>
+                            <span class="snippet-tag">baseline</span>
+                            <span class="snippet-tag">export</span>
+                        </div>
+                    </header>
+                    <p>Capture Entra role and Azure RBAC policy state before making changes so you always have a safe rollback point.</p>
+                    <pre class="language-powershell"><code class="language-powershell" id="snippet-core-export">Import-Module EasyPIM
+
+$tenantId = Read-Host "Enter the Entra tenant ID"
+$exportPath = Join-Path -Path (Get-Location) -ChildPath "Baseline"
+
+if (-not (Test-Path -Path $exportPath)) {
+    New-Item -Path $exportPath -ItemType Directory | Out-Null
+}
+
+Export-PIMEntraRolePolicy -TenantId $tenantId -OutputPath $exportPath -IncludeAssignments
+Export-PIMAzureResourcePolicy -TenantId $tenantId -OutputPath $exportPath -IncludeAssignments
+
+Write-Host "Baseline exported to $exportPath"</code></pre>
+                    <div class="snippet-actions">
+                        <a class="btn" href="snippets/core-baseline-export.ps1" download>Download .ps1</a>
+                        <button class="snippet-copy" type="button" data-copy-target="snippet-core-export">Copy</button>
+                    </div>
+                </article>
+
+                <article class="snippet-card" data-snippet data-search="core restore import assignments entra azure whatif" aria-labelledby="snippet-core-restore-title">
+                    <header class="snippet-card-header">
+                        <h3 id="snippet-core-restore-title">Restore a captured assignment set</h3>
+                        <div class="snippet-tags" aria-label="Tags">
+                            <span class="snippet-tag">core</span>
+                            <span class="snippet-tag">restore</span>
+                            <span class="snippet-tag">whatif</span>
+                        </div>
+                    </header>
+                    <p>Re-apply saved assignments after cleanup work. Run with <code>-WhatIf</code> first so reviewers can confirm changes.</p>
+                    <pre class="language-powershell"><code class="language-powershell" id="snippet-core-restore">Import-Module EasyPIM
+
+$tenantId = Read-Host "Enter the Entra tenant ID"
+$importPath = Resolve-Path "./Baseline/Assignments"
+
+Import-PIMEntraRoleAssignment -TenantId $tenantId -Path $importPath -WhatIf
+Import-PIMAzureResourceAssignment -TenantId $tenantId -Path $importPath -WhatIf
+
+Write-Host "Review the WhatIf output, then rerun without -WhatIf to apply."</code></pre>
+                    <div class="snippet-actions">
+                        <a class="btn" href="snippets/core-restore-import.ps1" download>Download .ps1</a>
+                        <button class="snippet-copy" type="button" data-copy-target="snippet-core-restore">Copy</button>
+                    </div>
+                </article>
+            </section>
+
+            <section class="snippet-section" id="orchestrator-snippets">
+                <h2>Stage 2 · EasyPIM.Orchestrator</h2>
+
+                <article class="snippet-card" data-snippet data-search="orchestrator policy json approvers mfa" aria-labelledby="snippet-orch-policy-title">
+                    <header class="snippet-card-header">
+                        <h3 id="snippet-orch-policy-title">Define an approver-backed policy</h3>
+                        <div class="snippet-tags" aria-label="Tags">
+                            <span class="snippet-tag">orchestrator</span>
+                            <span class="snippet-tag">policy</span>
+                            <span class="snippet-tag">json</span>
+                        </div>
+                    </header>
+                    <p>Start a configuration file that enforces MFA, limits activation duration, and routes approvals to a privileged group.</p>
+                    <pre class="language-json"><code class="language-json" id="snippet-orch-policy">{
+  "$schema": "https://raw.githubusercontent.com/kayasax/EasyPIM/main/docs/schema/pim-configuration.schema.json",
+  "TenantId": "00000000-0000-0000-0000-000000000000",
+  "Policies": [
+    {
+      "RoleName": "Global Reader",
+      "Scope": "/",
+      "Activation": {
+        "MaximumDuration": "PT2H",
+        "RequireTicket": true,
+        "RequireMfa": true
+      },
+      "Approval": {
+        "Required": true,
+        "PrimaryApprovers": [
+          {
+            "Type": "Group",
+            "Id": "11111111-1111-1111-1111-111111111111"
+          }
+        ]
+      }
+    }
+  ]
+}</code></pre>
+                    <div class="snippet-actions">
+                        <a class="btn" href="snippets/orchestrator-role-policy.json" download>Download JSON</a>
+                        <button class="snippet-copy" type="button" data-copy-target="snippet-orch-policy">Copy</button>
+                    </div>
+                </article>
+
+                <article class="snippet-card" data-snippet data-search="orchestrator drift delta deployment whatif" aria-labelledby="snippet-orch-deploy-title">
+                    <header class="snippet-card-header">
+                        <h3 id="snippet-orch-deploy-title">Validate drift then deploy changes</h3>
+                        <div class="snippet-tags" aria-label="Tags">
+                            <span class="snippet-tag">orchestrator</span>
+                            <span class="snippet-tag">drift</span>
+                            <span class="snippet-tag">deployment</span>
+                        </div>
+                    </header>
+                    <p>Run drift detection in the console, review results, then execute the orchestrator in delta mode once the change is approved.</p>
+                    <pre class="language-powershell"><code class="language-powershell" id="snippet-orch-deploy">Import-Module EasyPIM.Orchestrator
+
+$tenantId = Read-Host "Enter the Entra tenant ID"
+$configurationPath = Resolve-Path "./config/pim-configuration.json"
+
+Test-PIMPolicyDrift -TenantId $tenantId -ConfigurationPath $configurationPath | Out-String
+
+Invoke-EasyPIMOrchestrator \
+    -TenantId $tenantId \
+    -ConfigurationPath $configurationPath \
+    -PolicyMode Delta \
+    -WhatIf:$false</code></pre>
+                    <div class="snippet-actions">
+                        <a class="btn" href="snippets/orchestrator-drift-and-deploy.ps1" download>Download .ps1</a>
+                        <button class="snippet-copy" type="button" data-copy-target="snippet-orch-deploy">Copy</button>
+                    </div>
+                </article>
+            </section>
+        </div>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>&copy; 2025 EasyPIM. MIT Licensed. Built for Microsoft Entra PIM automation teams.</p>
+            <div class="stage-nav" aria-label="Footer adoption navigation">
+                <a href="index.html#adoption">Adoption map</a>
+                <a href="core.html">Stage 1</a>
+                <a href="template-guide.html">Stage 2</a>
+                <a href="event-driven.html">Stage 3</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-powershell.min.js" defer></script>
+    <script src="script.js" defer></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const searchInput = document.getElementById('snippet-search');
+            const cards = Array.from(document.querySelectorAll('[data-snippet]'));
+            const countEl = document.querySelector('[data-results-count]');
+
+            function formatCount(total) {
+                return total === 1 ? '1 snippet' : `${total} snippets`;
+            }
+
+            function applyFilter() {
+                const term = searchInput.value.trim().toLowerCase();
+                let visible = 0;
+
+                cards.forEach(card => {
+                    if (!card.dataset.haystack) {
+                        const base = card.dataset.search || "";
+                        card.dataset.haystack = `${base} ${card.textContent}`.toLowerCase();
+                    }
+
+                    const haystack = card.dataset.haystack;
+                    const match = !term || haystack.includes(term);
+                    card.hidden = !match;
+                    if (match) {
+                        visible += 1;
+                    }
+                });
+
+                if (countEl) {
+                    countEl.textContent = formatCount(visible);
+                }
+            }
+
+            searchInput.addEventListener('input', applyFilter);
+            applyFilter();
+
+            document.querySelectorAll('[data-copy-target]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const target = document.getElementById(button.dataset.copyTarget);
+                    if (!target) {
+                        return;
+                    }
+
+                    const content = target.textContent.trim();
+                    try {
+                        await navigator.clipboard.writeText(content);
+                        const original = button.textContent;
+                        button.textContent = 'Copied';
+                        button.disabled = true;
+                        setTimeout(() => {
+                            button.textContent = original;
+                            button.disabled = false;
+                        }, 2000);
+                    } catch (error) {
+                        console.error('Copy failed', error);
+                        button.textContent = 'Copy failed';
+                        setTimeout(() => {
+                            button.textContent = 'Copy';
+                        }, 2000);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
