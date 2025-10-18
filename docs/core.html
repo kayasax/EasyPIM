@@ -20,9 +20,8 @@
                 <button class="nav-toggle" aria-expanded="false" aria-controls="stage-nav">Menu</button>
                 <ul id="stage-nav">
                     <li><a href="index.html#adoption">Adoption map</a></li>
-                    <li><a href="core.html" aria-current="page">Stage 1 · Core</a></li>
-                    <li><a href="template-guide.html">Stage 2 · Orchestrator</a></li>
-                    <li><a href="event-driven.html">Stage 3 · Event-driven</a></li>
+                    <li><a href="compare.html">Compare workflows</a></li>
+                    <li><a href="index.html#faq">FAQ</a></li>
                     <li><a class="cta" href="https://github.com/kayasax/EasyPIM" target="_blank" rel="noopener">Get EasyPIM</a></li>
                 </ul>
             </nav>
@@ -78,14 +77,14 @@
                     <article class="value-card gradient-blue">
                         <h3>1. Install and authenticate</h3>
                         <p>Install the module from the PowerShell Gallery, load it, then connect to Azure and Microsoft Graph with your preferred identity.</p>
-                        <pre class="code-block"><code class="language-powershell">Install-Module EasyPIM -Scope CurrentUser
+                        <pre class="code-block language-powershell"><code class="language-powershell">Install-Module EasyPIM -Scope CurrentUser
 Import-Module EasyPIM
 </code></pre>
                     </article>
                     <article class="value-card gradient-purple">
                         <h3>2. Capture a policy and assignment baseline</h3>
                         <p>Use the built-in `Export-PIM*` cmdlets so policy requirements, notifications, and eligibility settings are archived before you touch production.</p>
-                        <pre class="code-block"><code class="language-powershell">Export-PIMEntraRolePolicy -TenantId $tenantId -RoleName "Security Administrator" `
+                        <pre class="code-block language-powershell"><code class="language-powershell">Export-PIMEntraRolePolicy -TenantId $tenantId -RoleName "Security Administrator" `
     -Path "./baselines/entra-security-admin-policy.csv"
 Export-PIMAzureResourcePolicy -TenantId $tenantId -SubscriptionId $subscriptionId `
     -RoleName "Reader","Contributor" -ExportFilename "./baselines/subscription-rbac-policy.csv"</code></pre>
@@ -93,7 +92,7 @@ Export-PIMAzureResourcePolicy -TenantId $tenantId -SubscriptionId $subscriptionI
                     <article class="value-card gradient-teal">
                         <h3>3. Apply changes safely</h3>
                         <p>Use WhatIf and scoped cmdlets to adjust policies, add assignments, and clean up stale access with confidence.</p>
-                        <pre class="code-block"><code class="language-powershell">Set-PIMEntraRolePolicy -TenantId $tenantId -RoleName "Security Administrator" `
+                        <pre class="code-block language-powershell"><code class="language-powershell">Set-PIMEntraRolePolicy -TenantId $tenantId -RoleName "Security Administrator" `
     -ActivationRequirement "Justification","Ticketing" -WhatIf
 New-PIMAzureResourceEligibleAssignment -TenantId $tenantId -SubscriptionId $subscriptionId `
     -RoleName "Contributor" -PrincipalName "user@contoso.com"
@@ -167,6 +166,8 @@ Remove-PIMEntraRoleEligibleAssignment -TenantId $tenantId -RoleName "Security Re
                     <a class="btn" href="https://github.com/kayasax/EasyPIM/wiki/Documentation" target="_blank" rel="noopener">Documentation hub</a>
                     <a class="btn" href="https://github.com/kayasax/EasyPIM/wiki/Sample-Scripts" target="_blank" rel="noopener">Sample scripts</a>
                     <a class="btn" href="https://github.com/kayasax/EasyPIM/wiki/Progressive-Validation-Guide" target="_blank" rel="noopener">Progressive validation guide</a>
+                    <a class="btn" href="compare.html">Microsoft Learn comparison</a>
+                    <a class="btn" href="snippets.html">Automation snippets</a>
                 </div>
             </div>
         </section>

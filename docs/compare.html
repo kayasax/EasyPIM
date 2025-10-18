@@ -1,0 +1,308 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Side-by-side comparison of Microsoft Learn Privileged Identity Management steps and EasyPIM automation commands.">
+    <title>EasyPIM vs. Microsoft Learn · Side-by-side Workflows</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" sizes="any">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="compare-page">
+    <header class="site-header guide-header">
+        <div class="container">
+            <a class="brand" href="index.html">
+                <span class="brand-mark" aria-hidden="true"></span>
+                <span class="brand-name">EasyPIM</span>
+            </a>
+            <nav class="site-nav" aria-label="Adoption navigation">
+                <button class="nav-toggle" aria-expanded="false" aria-controls="compare-nav">Menu</button>
+                <ul id="compare-nav">
+                    <li><a href="index.html#adoption">Adoption map</a></li>
+                    <li><a href="compare.html" aria-current="page">Compare workflows</a></li>
+                    <li><a href="index.html#faq">FAQ</a></li>
+                    <li><a class="cta" href="https://github.com/kayasax/EasyPIM" target="_blank" rel="noopener">Get EasyPIM</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main id="top">
+        <div class="container">
+            <nav class="stage-nav" aria-label="Page navigation">
+                <a href="index.html#adoption">← Back to adoption map</a>
+                <a href="#eligible-assignment">Eligible assignments</a>
+                <a href="#active-assignment">Active assignments</a>
+                <a href="#export-policy">Export policy settings</a>
+                <a href="#copy-assignment">Copy assignments</a>
+                <a href="#azure-policy">Azure resource policies</a>
+            </nav>
+        </div>
+
+        <section class="hero compare-hero" id="overview">
+            <div class="container hero-grid">
+                <div class="hero-copy">
+                    <p class="eyebrow">Side-by-side reference</p>
+                    <h1>Compare Microsoft Learn workflows with EasyPIM shortcuts</h1>
+                    <p class="hero-lead">Microsoft Learn documents every step required to manage Privileged Identity Management with Microsoft Graph SDKs, REST calls, or the Entra admin center. This guide pairs those official instructions with the one-line EasyPIM commands that deliver the same outcome.</p>
+                    <p class="hero-subheadline">Use the left column when you need to follow Microsoft Learn verbatim. Use the right column when you want to automate the same scenario in seconds.</p>
+                    <div class="hero-actions">
+                        <a class="btn" href="snippets.html">Browse automation snippets</a>
+                        <a class="btn" href="https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/" target="_blank" rel="noopener">Explore Microsoft Learn</a>
+                    </div>
+                </div>
+                <div class="hero-visual" aria-hidden="true">
+                    <div class="glass-card feature-card">
+                        <span class="card-eyebrow">Why this page exists</span>
+                        <h2>Boost adoption with authoritative comparisons</h2>
+                        <p>Show stakeholders that EasyPIM respects Microsoft Learn guidance while removing boilerplate auth, GUID lookups, and JSON payloads.</p>
+                    </div>
+                    <div class="glass-card feature-card">
+                        <span class="card-eyebrow">How to use it</span>
+                        <h2>Pick the scenario, copy the path you need</h2>
+                        <p>Each section highlights the official steps, then links the equivalent EasyPIM command with optional parameters for deeper control.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section compare-section" id="eligible-assignment">
+            <div class="container">
+                <h2>Create an eligible Microsoft Entra role assignment</h2>
+                <div class="compare-grid">
+                    <article class="compare-card compare-card--official">
+                        <h3>Official Microsoft Learn path</h3>
+                        <p class="compare-summary">Microsoft Learn describes building a request body that specifies the principal, role definition ID, scope, schedule, justification, and action before calling <code>New-MgRoleManagementDirectoryRoleEligibilityScheduleRequest</code>.</p>
+                        <pre class="code-block language-powershell"><code class="language-powershell">Connect-MgGraph -Scopes "RoleManagement.ReadWrite.Directory"
+$params = @{
+    PrincipalId      = "&lt;principalId&gt;"
+    RoleDefinitionId = "&lt;roleDefinitionId&gt;"
+    Justification    = "Add eligible assignment"
+    DirectoryScopeId = "/"
+    Action           = "AdminAssign"
+    ScheduleInfo     = @{
+        StartDateTime = Get-Date
+        Expiration    = @{
+            Type     = "AfterDuration"
+            Duration = "PT10H"
+        }
+    }
+}
+New-MgRoleManagementDirectoryRoleEligibilityScheduleRequest -BodyParameter $params</code></pre>
+                        <p class="compare-source">Source: <a href="https://learn.microsoft.com/en-us/powershell/microsoftgraph/how-to-assign-microsoft-entra-roles-in-pim?view=graph-powershell-1.0#step-2-create-an-eligible-role-assignment-for-the-user-for-10-hours" target="_blank" rel="noopener">Assign Microsoft Entra roles in Privileged Identity Management using Microsoft Graph PowerShell</a>.</p>
+                    </article>
+                    <article class="compare-card compare-card--easypim">
+                        <h3>The EasyPIM way</h3>
+                        <p class="compare-summary">EasyPIM resolves principal names, pulls the role ID, and respects policy limits automatically.</p>
+                        <pre class="code-block language-powershell"><code class="language-powershell">New-PIMEntraRoleEligibleAssignment `
+    -TenantId $tenantId `
+    -RoleName "User Administrator" `
+    -PrincipalName "user@contoso.com" `
+    -Duration "PT10H" `
+    -Justification "Add eligible assignment"</code></pre>
+                        <p class="compare-tip">Tip: omit <code>-Duration</code> to adopt the maximum allowed by the role policy or add <code>-Permanent</code> when policy permits never-expiring eligibility.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section compare-section" id="active-assignment">
+            <div class="container">
+                <h2>Create an active assignment directly (admin path)</h2>
+                <div class="compare-grid">
+                    <article class="compare-card compare-card--official">
+                        <h3>Official Microsoft Learn path</h3>
+                        <p class="compare-summary">Microsoft Learn shows administrators how to build the request payload by hand, swapping <code>Action</code> to <code>AdminAssign</code> so the assignment is created active without user interaction.</p>
+                        <pre class="code-block language-powershell"><code class="language-powershell">Connect-MgGraph -Scopes "RoleManagement.ReadWrite.Directory"
+$params = @{
+    PrincipalId      = "&lt;principalId&gt;"
+    RoleDefinitionId = "&lt;roleDefinitionId&gt;"
+    Justification    = "Create active assignment"
+    DirectoryScopeId = "/"
+    Action           = "AdminAssign"
+    ScheduleInfo     = @{
+        StartDateTime = Get-Date
+        Expiration    = @{
+            Type     = "AfterDuration"
+            Duration = "PT1H"
+        }
+    }
+}
+New-MgRoleManagementDirectoryRoleAssignmentScheduleRequest -BodyParameter $params</code></pre>
+                        <p class="compare-source">Source: <a href="https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-how-to-add-role-to-user#assign-a-role-using-microsoft-graph-api" target="_blank" rel="noopener">Assign Microsoft Entra roles in Privileged Identity Management</a>.</p>
+                    </article>
+                    <article class="compare-card compare-card--easypim">
+                        <h3>The EasyPIM way</h3>
+                        <p class="compare-summary">EasyPIM resolves the user, validates policy limits, and creates the time-bound active assignment in one call.</p>
+                        <pre class="code-block language-powershell"><code class="language-powershell">New-PIMEntraRoleActiveAssignment `
+    -TenantId $tenantId `
+    -RoleName "User Administrator" `
+    -PrincipalName "user@contoso.com" `
+    -Duration "PT1H" `
+    -Justification "Create active assignment"</code></pre>
+                        <p class="compare-tip">Add <code>-WhatIf</code> to validate policy checks without creating the activation.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section compare-section" id="export-policy">
+            <div class="container">
+                <h2>Export Entra role policy settings to a file</h2>
+                <div class="compare-grid">
+                    <article class="compare-card compare-card--official">
+                        <h3>Official Microsoft Learn path</h3>
+                        <p class="compare-summary">Microsoft Learn walks through listing policies, finding the assignment that maps a role to a policy, and then enumerating all rules with multiple <code>Get-MgPolicy*</code> calls.</p>
+                        <pre class="code-block language-powershell"><code class="language-powershell">Connect-MgGraph -Scopes "RoleManagement.ReadWrite.Directory"
+$policy = Get-MgPolicyRoleManagementPolicy `
+    -Filter "scopeId eq '/' and scopeType eq 'DirectoryRole'" `
+    | Where-Object { $_.DisplayName -eq "DirectoryRole" }
+$policyId = $policy.Id
+Get-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $policyId | Format-List</code></pre>
+                        <p class="compare-source">Source: <a href="https://learn.microsoft.com/en-us/powershell/microsoftgraph/how-to-manage-pim-policies?view=graph-powershell-1.0#step-1-list-policies" target="_blank" rel="noopener">Manage PIM policies in Microsoft Graph PowerShell</a>.</p>
+                        <p><strong>Limitation:</strong> The official walkthrough stops at raw objects—administrators must stitch together policy metadata and build their own CSV or JSON export pipeline.</p>
+                    </article>
+                    <article class="compare-card compare-card--easypim">
+                        <h3>The EasyPIM way</h3>
+                        <p class="compare-summary">One command resolves the role ID, pulls policy rules, flattens them, and writes a CSV.</p>
+                        <pre class="code-block language-powershell"><code class="language-powershell">Export-PIMEntraRolePolicy `
+    -TenantId $tenantId `
+    -RoleName "Security Administrator" `
+    -Path "./exports/entra-policy.csv"</code></pre>
+                        <p class="compare-tip">Target multiple roles at once with <code>-RoleName</code> accepting an array, or omit <code>-Path</code> to use the EasyPIM exports directory.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section compare-section" id="copy-assignment">
+            <div class="container">
+                <h2>Copy eligible assignments from one user to another</h2>
+                <div class="compare-grid">
+                    <article class="compare-card compare-card--official">
+                        <h3>Official Microsoft Learn path</h3>
+                        <p class="compare-summary">Microsoft Learn only documents creating, extending, or removing one assignment at a time. There is no built-in clone workflow—admins must enumerate each existing assignment and reissue <code>New-MgRoleManagementDirectoryRoleEligibilityScheduleRequest</code> for the new user.</p>
+                        <pre class="code-block language-powershell"><code class="language-powershell"># List existing assignments for the source user
+Get-MgRoleManagementDirectoryRoleEligibilityScheduleInstance `
+    -Filter "principalId eq '&lt;sourcePrincipalId&gt;'"
+
+# Recreate each assignment manually
+New-MgRoleManagementDirectoryRoleEligibilityScheduleRequest `
+    -PrincipalId "&lt;targetPrincipalId&gt;" `
+    -RoleDefinitionId "&lt;roleDefinitionId&gt;" `
+    -Action "AdminAssign" `
+    -Justification "Recreate eligibility"</code></pre>
+                        <p class="compare-source">Source: <a href="https://learn.microsoft.com/en-us/powershell/microsoftgraph/how-to-assign-microsoft-entra-roles-in-pim?view=graph-powershell-1.0#step-2-create-an-eligible-role-assignment-for-the-user-for-10-hours" target="_blank" rel="noopener">Assign Microsoft Entra roles in Privileged Identity Management using Microsoft Graph PowerShell</a>.</p>
+                        <p><strong>Limitation:</strong> No Microsoft Learn sample automates the loop; administrators shoulder the scripting effort to replicate settings user-by-user.</p>
+                    </article>
+                    <article class="compare-card compare-card--easypim">
+                        <h3>The EasyPIM way</h3>
+                        <p class="compare-summary">EasyPIM reads every eligible assignment for the source principal and applies the same roles to the target principal in one command.</p>
+                        <pre class="code-block language-powershell"><code class="language-powershell">Copy-PIMEntraRoleEligibleAssignment `
+    -TenantId $tenantId `
+    -From "alice@contoso.com" `
+    -To "bob@contoso.com"</code></pre>
+                        <p class="compare-tip">Supports UPNs or object IDs for both principals and skips roles that already exist on the destination user.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section compare-section" id="azure-policy">
+            <div class="container">
+                <h2>Configure Azure resource activation policy rules</h2>
+                <div class="compare-grid">
+                    <article class="compare-card compare-card--official">
+                        <h3>Official Microsoft Learn path</h3>
+                        <p class="compare-summary">The official guidance first resolves the policy assignment to learn the hidden policy ID, then instantiates multiple strongly-typed rules before calling <code>Update-AzRoleManagementPolicy</code> for each scope.</p>
+                        <pre class="code-block language-powershell"><code class="language-powershell">Connect-AzAccount
+$scope = "/subscriptions/&lt;subscriptionId&gt;"
+$roleDefinitionId = (Get-AzRoleDefinition -Name "Contributor").Id
+
+# Microsoft Learn omits this lookup: find the policy GUID that backs the assignment
+$assignment = Get-AzRoleManagementPolicyAssignment -Scope $scope |
+    Where-Object { $_.RoleDefinitionId -eq $roleDefinitionId }
+$policyId = $assignment.PolicyId
+
+$enablementRule = [Microsoft.Azure.PowerShell.Cmdlets.Resources.Authorization.Models.Api20201001Preview.RoleManagementPolicyEnablementRule]@{
+    enabledRules   = @('MultiFactorAuthentication', 'Justification')
+    id             = 'Enablement_EndUser_Assignment'
+    ruleType       = [Microsoft.Azure.PowerShell.Cmdlets.Resources.Authorization.Support.RoleManagementPolicyRuleType]::RoleManagementPolicyEnablementRule
+    targetCaller   = 'EndUser'
+    targetOperation = @('Activate')
+    targetLevel    = 'Assignment'
+}
+$notificationRule = [Microsoft.Azure.PowerShell.Cmdlets.Resources.Authorization.Models.Api20201001Preview.RoleManagementPolicyNotificationRule]@{
+    notificationType           = 'Email'
+    recipientType              = 'Approver'
+    notificationRecipients     = @('approver@contoso.com')
+    isDefaultRecipientsEnabled = 'false'
+    notificationLevel          = 'Critical'
+    id                         = 'Notification_Approver_EndUser_Assignment'
+    ruleType                   = [Microsoft.Azure.PowerShell.Cmdlets.Resources.Authorization.Support.RoleManagementPolicyRuleType]::RoleManagementPolicyNotificationRule
+    targetCaller               = 'EndUser'
+    targetOperation            = @('Activate')
+    targetLevel                = 'Assignment'
+}
+# Additional rules (for approvals, ticketing, etc.) require more typed objects.
+$rules = [Microsoft.Azure.PowerShell.Cmdlets.Resources.Authorization.Models.Api20201001Preview.IRoleManagementPolicyRule[]]@(
+    $enablementRule,
+    $notificationRule
+)
+Update-AzRoleManagementPolicy -Scope $scope -Name $policyId -Rule $rules</code></pre>
+                        <p class="compare-source">Source: <a href="https://learn.microsoft.com/en-us/powershell/module/az.resources/update-azrolemanagementpolicy?view=azps-14.5.0#example-2" target="_blank" rel="noopener">Update-AzRoleManagementPolicy (Az.Resources)</a>.</p>
+                        <p><strong>Extra work:</strong> Requiring approvers means creating an additional <code>RoleManagementPolicyApprovalRule</code> plus nested stage objects that reference each approver&#8217;s object ID.</p>
+                        <p><strong>Limitation:</strong> Administrators must discover the policy GUID up front, keep track of role definition IDs, and author each <code>RoleManagementPolicy*</code> object manually for every subscription.</p>
+                    </article>
+                    <article class="compare-card compare-card--easypim">
+                        <h3>The EasyPIM way</h3>
+                        <p class="compare-summary">EasyPIM resolves the policy and pushes all requirements—MFA, justification prompts, mail notifications, and optional approvals—in a single command without building SDK objects.</p>
+                        <pre class="code-block language-powershell"><code class="language-powershell">$approver = Resolve-EasyPIMPrincipal -PrincipalIdentifier "approver@contoso.com"
+
+Set-PIMAzureResourcePolicy `
+    -TenantId $tenantId `
+    -SubscriptionId $subscriptionId `
+    -RoleName "Contributor" `
+    -ActivationRequirement @("MultiFactorAuthentication", "Justification") `
+    -ApprovalRequired $true `
+    -Approvers @(@{ Id = $approver.Id; Name = $approver.DisplayName; Type = $approver.Type }) `
+    -Notification_Activation_Approver @{ isDefaultRecipientEnabled = "false"; notificationLevel = "Critical"; Recipients = @("approver@contoso.com") }</code></pre>
+                        <p class="compare-tip">Apply identical settings to many roles or scopes by passing arrays to <code>-RoleName</code> or <code>-Scope</code>; EasyPIM discovers the policy IDs and loops the updates automatically.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section cta-final" id="next">
+            <div class="container">
+                <h2>Ready to automate more scenarios?</h2>
+                <p>Jump back into the adoption journey or explore the automation snippets for copy-ready scripts that build on these shortcuts.</p>
+                <div class="hero-actions">
+                    <a class="btn" href="core.html">Stage 1 · Core</a>
+                    <a class="btn" href="template-guide.html">Stage 2 · Orchestrator</a>
+                    <a class="btn" href="snippets.html">Automation snippets</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>&copy; 2025 EasyPIM. MIT Licensed. Built for Microsoft Entra PIM automation teams.</p>
+            <div class="stage-nav" aria-label="Footer adoption navigation">
+                <a href="index.html#adoption">Adoption map</a>
+                <a href="core.html">Stage 1</a>
+                <a href="template-guide.html">Stage 2</a>
+                <a href="event-driven.html">Stage 3</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-powershell.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-http.min.js" defer></script>
+    <script src="script.js" defer></script>
+</body>
+</html>

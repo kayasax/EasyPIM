@@ -20,9 +20,8 @@
         <button class="nav-toggle" aria-expanded="false" aria-controls="guide-nav">Menu</button>
         <ul id="guide-nav">
           <li><a href="index.html#adoption">Adoption map</a></li>
-          <li><a href="core.html">Stage 1 · Core</a></li>
-          <li><a href="template-guide.html" aria-current="page">Stage 2 · Orchestrator</a></li>
-          <li><a href="event-driven.html">Stage 3 · Event-driven</a></li>
+          <li><a href="compare.html">Compare workflows</a></li>
+          <li><a href="index.html#faq">FAQ</a></li>
           <li><a class="cta" href="https://github.com/kayasax/EasyPIM" target="_blank" rel="noopener">Get EasyPIM</a></li>
         </ul>
             </nav>
@@ -35,7 +34,7 @@
         <a href="index.html#adoption">← Back to adoption map</a>
         <a href="core.html">Stage 1 · Core</a>
         <a href="template-guide.html" aria-current="page">Stage 2 · Orchestrator</a>
-        <a href="event-driven.html">Stage 3 · Event-driven</a>
+                <a href="event-driven.html">Stage 3 · Event-driven</a>
       </nav>
     </div>
         <section class="hero guide-hero" id="templates">
@@ -84,7 +83,7 @@
                         <p>Run the same file locally, in GitHub Actions, or Azure DevOps with OIDC authentication and audit-friendly exports.</p>
                     </article>
                 </div>
-                <pre class="code-block"><code class="language-json">{
+                <pre class="code-block language-json"><code class="language-json">{
   "PolicyTemplates": {}, #empty for clarity, see step 2 to learn more
   "EntraRoles": {
     "Policies": {
@@ -127,7 +126,7 @@
       <div class="container">
         <h2 id="baseline-template">Step 2 · define reusable policy templates</h2>
         <p class="section-lead">Capture your default approval, activation, and notification requirements inside the <code>PolicyTemplates</code> block so every role can inherit the same guardrails.</p>
-                <pre class="code-block"><code class="language-json">{
+                <pre class="code-block language-json"><code class="language-json">{
   "PolicyTemplates": {
     "HighSecurity": {
       "ActivationDuration": "PT4H",
@@ -160,7 +159,7 @@
       <div class="container">
         <h2 id="reference-template">Step 3 · reference the template in your role policies</h2>
         <p class="section-lead">Define each role in the policy block and point it at the shared template. Set <code>PolicySource</code> to <code>"template"</code> so diffs stay explicit.</p>
-                <pre class="code-block"><code class="language-json">{
+                <pre class="code-block language-json"><code class="language-json">{
   "EntraRoles": {
     "Policies": [
       {
@@ -190,7 +189,7 @@
                 <div class="code-example-grid">
                     <div>
                         <h3>Configuration excerpt</h3>
-                        <pre class="code-block"><code class="language-json">{
+                        <pre class="code-block language-json"><code class="language-json">{
   "EntraRoles": {
     "Policies": [
       {
@@ -215,7 +214,7 @@
                     </div>
                     <div>
                         <h3>What the orchestrator applies</h3>
-                        <pre class="code-block"><code class="language-json">{
+                        <pre class="code-block language-json"><code class="language-json">{
   "RoleName": "User Access Administrator",
   "PolicySource": "template",
   "Template": "HighSecurity",
@@ -260,14 +259,14 @@
       <div class="container">
         <h2 id="automation">Step 5 · validate drift and apply with EasyPIM.Orchestrator</h2>
         <p class="section-lead">Run <code>Test-PIMPolicyDrift</code> to spot configuration deviations, then execute <code>Invoke-EasyPIMOrchestrator</code> once reviewers approve the change.</p>
-  <pre class="code-block"><code class="language-powershell"># Detect drift before merging a pull request
+  <pre class="code-block language-powershell"><code class="language-powershell"># Detect drift before merging a pull request
 Test-PIMPolicyDrift `
   -TenantId $TENANT_ID `
   -SubscriptionId $SUBSCRIPTION_ID `
   -ConfigPath "./config/pim-template-demo.json" `
   -PassThru |
   Where-Object Status -ne 'Match'</code></pre>
-  <pre class="code-block"><code class="language-powershell"># Apply the approved configuration
+  <pre class="code-block language-powershell"><code class="language-powershell"># Apply the approved configuration
 Invoke-EasyPIMOrchestrator `
   -ConfigFilePath "./config/pim-template-demo.json" `
   -TenantId $TENANT_ID `
@@ -291,17 +290,24 @@ Invoke-EasyPIMOrchestrator `
           <a class="btn" href="https://github.com/kayasax/EasyPIM/blob/main/EasyPIM/Documentation/Configuration-Schema.md" target="_blank" rel="noopener">Review the configuration schema</a>
           <a class="btn" href="https://github.com/kayasax/EasyPIM/blob/main/EasyPIM/Documentation/Step-by-step-Guide.md" target="_blank" rel="noopener">Follow the step-by-step guide</a>
           <a class="btn" href="event-driven.html">Prepare for Stage 3 event-driven automation</a>
+      <a class="btn" href="compare.html">Compare with Microsoft Learn</a>
+      <a class="btn" href="snippets.html">Browse automation snippets</a>
                 </div>
             </div>
         </section>
     </main>
 
-    <footer class="site-footer">
-        <div class="container">
-            <p>&copy; Loïc MICHEL, 2025 EasyPIM. MIT Licensed. Built for Microsoft Entra PIM automation teams.</p>
-            <a href="index.html">Return to homepage</a>
-        </div>
-    </footer>
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; 2025 EasyPIM. MIT Licensed. Built for Microsoft Entra PIM automation teams.</p>
+      <div class="stage-nav" aria-label="Footer adoption navigation">
+        <a href="index.html#adoption">Adoption map</a>
+        <a href="core.html">Stage 1</a>
+        <a href="template-guide.html" aria-current="page">Stage 2</a>
+        <a href="event-driven.html">Stage 3</a>
+      </div>
+    </div>
+  </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js" defer></script>
