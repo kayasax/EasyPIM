@@ -13,7 +13,7 @@
 
 ---
 
-> 🌐 **New adoption site:** Explore the three-stage journey at our [EasyPIM adoption hub](docs/index.html) for up-to-date guidance and quick-starts.
+> 🌐 **New adoption site:** Explore the three-stage journey at our [EasyPIM adoption hub]([docs/index.html](https://kayasax.github.io/EasyPIM/index.html#adoption)) for up-to-date guidance and quick-starts.
 
 ## 💡 **Transform Azure PIM Management with Powerful Automation**
 
