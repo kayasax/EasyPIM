@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://kayasax.github.io/EasyPIM/</loc>
+    <lastmod>2025-10-26</lastmod>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://kayasax.github.io/EasyPIM/core.html</loc>
+    <lastmod>2025-10-26</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://kayasax.github.io/EasyPIM/template-guide.html</loc>
+    <lastmod>2025-10-26</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://kayasax.github.io/EasyPIM/event-driven.html</loc>
+    <lastmod>2025-10-26</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://kayasax.github.io/EasyPIM/compare.html</loc>
+    <lastmod>2025-10-26</lastmod>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://kayasax.github.io/EasyPIM/snippets.html</loc>
+    <lastmod>2025-10-26</lastmod>
+    <priority>0.6</priority>
+  </url>
+</urlset>
