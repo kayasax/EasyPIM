@@ -6,7 +6,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.0.38'
+ModuleVersion = '2.0.39'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -24,7 +24,7 @@ Author = 'Loïc MICHEL'
 Copyright = '(c) loicmichel. All rights reserved.'
 
 # Description of the functionality provided by this module
-Description = 'Manage PIM Azure Resource, PIM Entra role and PIM for Group settings and assignments with simplicity in mind'
+Description = 'Unified PowerShell module for Microsoft PIM management across Azure Resources (ARM API) and Entra ID (Graph API). Manage role policies, assignments, and approvals for Azure RBAC, Entra Roles, and PIM Groups with export/import, bulk operations, and interactive HTML reports.'
 
 # Script files (.ps1) that are run in the caller's environment prior to importing this module.
 # ScriptsToProcess intentionally left empty to simplify CI import path
@@ -119,13 +119,13 @@ PrivateData = @{
         # Prerelease = 'beta1'
 
         # Tags applied to this module. These help with module discovery in online galleries.
-        Tags = @("Azure","PIM","EntraID","PrivilegedIdentityManagement")
+        Tags = @("Azure","PIM","EntraID","PrivilegedIdentityManagement","RBAC","AzureAD","Identity","Security","Governance","Compliance","ARM","Graph")
 
         # A URL to the license for this module.
         LicenseUri = 'https://github.com/kayasax/EasyPIM/blob/main/LICENSE'
 
         # A URL to the main website for this project.
-        ProjectUri = 'https://github.com/kayasax/EasyPIM/'
+        ProjectUri = 'https://kayasax.github.io/EasyPIM/'
 
         # A URL to an icon representing this module.
         # IconUri = ''
@@ -207,7 +207,7 @@ PrivateData = @{
 } # End of PrivateData hashtable
 
 # HelpInfo URI of this module
-HelpInfoURI = 'https://github.com/kayasax/EasyPIM/wiki/Documentation'
+HelpInfoURI = 'https://kayasax.github.io/EasyPIM/'
 
 # Default prefix for commands exported from this module. Override the default prefix using Import-Module -Prefix.
 # DefaultCommandPrefix = ''
