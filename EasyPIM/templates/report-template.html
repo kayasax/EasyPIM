@@ -214,6 +214,44 @@
             #fixedDiv {
                 display: none;
             }
+            
+            /* Prevent page breaks within charts */
+            .chart-row {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            
+            .chart-container {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            
+            .section-header {
+                page-break-after: avoid;
+                break-after: avoid;
+            }
+            
+            /* Ensure charts fit on page */
+            .chart-container.bar {
+                max-height: 600px;
+                overflow: visible;
+            }
+            
+            /* Keep tiles together */
+            .summary-tiles {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            
+            /* Adjust body for better print layout */
+            body {
+                padding: 0;
+            }
+            
+            #container {
+                max-width: 100%;
+                box-shadow: none;
+            }
         }
     </style>
 </head>
@@ -225,10 +263,10 @@
             <li><a href="#summary">📊 Summary</a></li>
             <li><a href="#category">📂 Category</a></li>
             <li><a href="#result">✅ Result</a></li>
-            <li><a href="#activities">📈 Activities</a></li>
+            <li><a href="#activity">📈 Activities</a></li>
             <li><a href="#requestor">👤 Requestor</a></li>
-            <li><a href="#resources">☁️ Azure Roles</a></li>
-            <li><a href="#roles">🔐 Entra Roles</a></li>
+            <li><a href="#azureRoles">☁️ Azure Roles</a></li>
+            <li><a href="#entraRoles">🔐 Entra Roles</a></li>
         </ul>
         <button class="export-btn" onclick="window.print()">🖨️ Export to PDF</button>
     </div>
