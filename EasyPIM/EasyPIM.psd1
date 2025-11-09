@@ -24,7 +24,7 @@ Author = 'Loïc MICHEL'
 Copyright = '(c) loicmichel. All rights reserved.'
 
 # Description of the functionality provided by this module
-Description = 'Unified PowerShell module for Microsoft PIM management across Azure Resources (ARM API) and Entra ID (Graph API). Manage role policies, assignments, and approvals for Azure RBAC, Entra Roles, and PIM Groups with export/import, bulk operations, and interactive HTML reports.'
+Description = 'EasyPIM simplifies Microsoft PIM management by abstracting complex Graph and ARM APIs into intuitive PowerShell cmdlets. Overcome portal limitations with bulk operations, export/import policies across tenants, manage Azure RBAC and Entra roles using friendly role names instead of GUIDs, track changes with interactive HTML reports, and automate what the portal cannot. One unified module for Azure Resources, Entra Roles, and PIM Groups—built for ease and automation at scale.'
 
 # Script files (.ps1) that are run in the caller's environment prior to importing this module.
 # ScriptsToProcess intentionally left empty to simplify CI import path
