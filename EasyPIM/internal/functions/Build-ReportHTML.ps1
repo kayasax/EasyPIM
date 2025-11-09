@@ -295,9 +295,7 @@ function Build-ReportHTML {
 
 "@
         
-        # Generate chart configuration using ECharts
-        . "$PSScriptRoot\New-EChartsConfig.ps1"
-        
+        # Generate chart configuration using ECharts (function is auto-loaded from internal/functions)
         $horizontal = if ($config.horizontal) { $true } else { $false }
         $chartConfigObj = New-EChartsConfig -Type $config.type -Data $config.data -Title $config.title -Horizontal:$horizontal
         
