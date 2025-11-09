@@ -982,8 +982,9 @@ function Show-PIMReport {
         # Build chart data
         $chartData = Build-ChartData -Activities $Myoutput -StartDate $StartDate -EndDate $EndDate
 
-        # Load template
-        $templatePath = Join-Path $PSScriptRoot "..\templates\report-template.html"
+        # Load template - $PSScriptRoot points to module root in built module
+        $moduleRoot = if ($PSScriptRoot -match '\\functions$') { Split-Path $PSScriptRoot } else { $PSScriptRoot }
+        $templatePath = Join-Path $moduleRoot "templates\report-template.html"
         $template = Get-Content $templatePath -Raw
 
         # Build HTML using new architecture
