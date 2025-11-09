@@ -172,7 +172,7 @@ function Build-ChartData {
     } else {
         0
     }
-    $chartData['uniqueUsers'] = ($Activities | Select-Object -Property requestor -Unique).Count
+    $chartData['uniqueUsers'] = ($Activities | Select-Object -Property initiatedBy -Unique).Count
 
     if ($StartDate -and $EndDate) {
         $chartData['timePeriodDays'] = ($EndDate - $StartDate).Days
