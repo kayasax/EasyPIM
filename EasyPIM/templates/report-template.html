@@ -1,0 +1,174 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasyPIM: Activity Summary</title>
+    <style>
+        body {
+            background-color: #2b2b2b;
+            color: #f5f5f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        #container {
+            background-color: #3c3c3c;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4facfe;
+            margin-bottom: 40px;
+        }
+
+        .section-header {
+            text-align: center;
+            margin: 50px 0 30px 0;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            font-weight: bold;
+        }
+
+        .summary-tiles {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tile {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 10px;
+            flex: 1;
+            min-width: 200px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .tile-label {
+            font-size: 14px;
+            color: #e0e0e0;
+            margin-bottom: 10px;
+        }
+
+        .tile-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .chart-row {
+            margin: 30px 0;
+            background-color: #444;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .chart {
+            width: 100%;
+            height: 100%;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        .chart-container.pie {
+            height: 400px;
+        }
+
+        .chart-container.bar {
+            /* Height set dynamically */
+        }
+
+        .chart-container.line {
+            height: 400px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            border-top: 1px solid #555;
+            color: #999;
+        }
+
+        .footer a {
+            color: #4facfe;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Description sections */
+        .description {
+            background-color: #3a3a3a;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #4facfe;
+            border-radius: 5px;
+            color: #a7a7a7;
+        }
+
+        code {
+            font-family: Consolas, "Courier New", monospace;
+            background-color: #203048;
+            color: #f5f5f5;
+            padding: 0.2em 0.4em;
+            font-size: 85%;
+            border-radius: 6px;
+        }
+
+        pre {
+            background-color: #2d2d2d;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        pre code {
+            background-color: transparent;
+            padding: 0;
+            border-radius: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>📊 PIM Activity Report</h1>
+        
+        <!-- PLACEHOLDER_SUMMARY_TILES -->
+        
+        <div id="chartContainer">
+            <!-- PLACEHOLDER_CHARTS -->
+        </div>
+        
+        <div class="footer">
+            <p>Generated with <a href="https://powershellgallery.com/packages/EasyPIM" target="_blank">EasyPIM</a></p>
+            <p>Report generated on <!-- PLACEHOLDER_DATE --></p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script>
+        // PLACEHOLDER_CHART_SCRIPTS
+    </script>
+</body>
+</html>

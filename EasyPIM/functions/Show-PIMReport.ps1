@@ -1,4 +1,4 @@
-﻿<#
+<#
     .SYNOPSIS
     Visualize PIM activities in multiple formats (HTML, CSV, JSON).
 
@@ -40,6 +40,14 @@
     .EXAMPLE
     Show-PIMReport -tenantID $tenantID -NoAutoOpen -Path "C:\Reports\PIM-Report.html"
     Saves HTML report to specific path without opening it. Useful for server environments or batch processing.
+
+    .EXAMPLE
+    Show-PIMReport -tenantID $tenantID -NoCodeSnippets
+    Generates HTML report without PowerShell code snippets for management presentations.
+
+    .EXAMPLE
+    Show-PIMReport -tenantID $tenantID -StartDate (Get-Date).AddDays(-30) -EndDate (Get-Date)
+    Generates report for activities in the last 30 days.
 
     .PARAMETER tenantID
     The Entra tenant ID to query.
@@ -87,14 +95,39 @@ function Show-PIMReport {
     [Parameter()]
     [Switch]
     # When specified with HTML format, saves the HTML file without automatically opening it
-    $NoAutoOpen    )
+    $NoAutoOpen,
+    [Parameter()]
+    [Switch]
+    # Hide PowerShell code examples in HTML report for management presentations
+    $NoCodeSnippets,
+    [Parameter()]
+    [DateTime]
+    # Start date for filtering PIM activities
+    $StartDate,
+    [Parameter()]
+    [DateTime]
+    # End date for filtering PIM activities
+    $EndDate
+    )
     try {
         $Script:tenantID = $tenantID
 
         $allresults = @()
 
-        #$top = 100
-        $endpoint = "auditlogs/directoryAudits?`$filter=loggedByService eq 'PIM'" #&`$top=$top"
+        # Build filter with date range if specified
+        $filter = "loggedByService eq 'PIM'"
+        if ($StartDate -or $EndDate) {
+            if ($StartDate) {
+                $startDateStr = $StartDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+                $filter += " and activityDateTime ge $startDateStr"
+            }
+            if ($EndDate) {
+                $endDateStr = $EndDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+                $filter += " and activityDateTime le $endDateStr"
+            }
+        }
+
+        $endpoint = "auditlogs/directoryAudits?`$filter=$filter"
         $result = invoke-graph -Endpoint $endpoint -Method "GET"
         $allresults += $result.value
 
@@ -231,36 +264,51 @@ function Show-PIMReport {
             'HTML' {
                 # Continue with existing HTML generation logic
                 # For HTML format, Path parameter can be used to specify custom location
-                # Return the data array for backward compatibility, HTML generated below
-                $Myoutput
+                # Return the data array for backward compatibility only when auto-opening
+                if (-not $NoAutoOpen) {
+                    $Myoutput
+                }
             }
         }
 
         #Data for the HTML report
 
+        # Calculate summary statistics
+        $totalActivities = ($Myoutput | Measure-Object).Count
+        $successCount = ($Myoutput | Where-Object { $_.result -eq 'success' } | Measure-Object).Count
+        $successRate = if ($totalActivities -gt 0) { [math]::Round(($successCount / $totalActivities) * 100, 1) } else { 0 }
+        $uniqueUsers = ($Myoutput | Select-Object -Property initiatedBy -Unique | Measure-Object).Count
+        
+        $startDate = ($Myoutput | Sort-Object -Property activityDateTime | Select-Object -First 1).activityDateTime
+        $endDate = ($Myoutput | Sort-Object -Property activityDateTime -Descending | Select-Object -First 1).activityDateTime
+        $timePeriodDays = if ($startDate -and $endDate) {
+            $span = ([DateTime]$endDate) - ([DateTime]$startDate)
+            [math]::Max(1, [math]::Round($span.TotalDays, 0))
+        } else { 0 }
+
         $props = @{}
-        $stats_category = @{}
+        $stats_category = [ordered]@{}
         $categories = $Myoutput | Group-Object -Property category
         $categories | ForEach-Object {
             $stats_category[$_.Name] = $_.Count
         }
         $props["category"] = $stats_category
 
-        $stats_requestor = @{}
+        $stats_requestor = [ordered]@{}
         $requestors = $Myoutput | Group-Object -Property initiatedBy | Sort-Object -Property Count -Descending | select-object -first 10
         $requestors | ForEach-Object {
             $stats_requestor[$_.Name] = $_.Count
         }
         $props["requestor"] = $stats_requestor
 
-        $stats_result = @{}
+        $stats_result = [ordered]@{}
         $results = $Myoutput | Group-Object -Property result
         $results | ForEach-Object {
             $stats_result[$_.Name] = $_.Count
         }
         $props["result"] = $stats_result
 
-        $stats_activity = @{}
+        $stats_activity = [ordered]@{}
         $activities = $Myoutput | Group-Object -Property activityDisplayName
         $activities | ForEach-Object {
             if ($_.Name -notmatch "completed") {
@@ -270,28 +318,149 @@ function Show-PIMReport {
         }
         $props["activity"] = $stats_activity
 
-        $stats_group = @{}
+        $stats_group = [ordered]@{}
         $targetgroup = $Myoutput | Where-Object { $_.category -match "group" } | Group-Object -Property targetresources | Sort-Object -Property Count -Descending | select-object -first 10
         $targetgroup | ForEach-Object {
             $stats_group[$_.Name] = $_.Count
         }
         $props["targetgroup"] = $stats_group
 
-        $stats_resource = @{}
+        $stats_resource = [ordered]@{}
         $targetresource = $Myoutput | Where-Object { $_.category -match "resource" } | Group-Object -Property role | Sort-Object -Property Count -Descending | select-object -first 10
         $targetresource | ForEach-Object {
             $stats_resource[$_.Name] = $_.Count
         }
         $props["targetresource"] = $stats_resource
 
-        $stats_role = @{}
+        $stats_role = [ordered]@{}
         $targetrole = $Myoutput | Where-Object { $_.category -match "role" } | Group-Object -Property role | Sort-Object -Property Count -Descending | select-object -first 10
         $targetrole | ForEach-Object {
             $stats_role[$_.Name] = $_.Count
         }
         $props["targetrole"] = $stats_role
-        $props["startdate"]=($Myoutput | Sort-Object -Property activityDateTime | Select-Object -First 1).activityDateTime
-        $props["enddate"]=($Myoutput | Sort-Object -Property activityDateTime -Descending | Select-Object -First 1).activityDateTime
+        $props["startdate"] = $startDate
+        $props["enddate"] = $endDate
+
+        # Failure analysis
+        $failedActivities = $Myoutput | Where-Object { $_.result -eq 'failure' }
+        $stats_failureReasons = [ordered]@{}
+        $failureReasons = $failedActivities | Group-Object -Property resultReason | Sort-Object -Property Count -Descending | Select-Object -First 10
+        $failureReasons | ForEach-Object {
+            if ($_.Name) {
+                $stats_failureReasons[$_.Name] = $_.Count
+            }
+        }
+        $props["failureReasons"] = $stats_failureReasons
+
+        $stats_failureUsers = [ordered]@{}
+        $failureUsers = $failedActivities | Group-Object -Property initiatedBy | Sort-Object -Property Count -Descending | Select-Object -First 10
+        $failureUsers | ForEach-Object {
+            if ($_.Name) {
+                $stats_failureUsers[$_.Name] = $_.Count
+            }
+        }
+        $props["failureUsers"] = $stats_failureUsers
+
+        $stats_failureRoles = [ordered]@{}
+        $failureRoles = $failedActivities | Group-Object -Property role | Sort-Object -Property Count -Descending | Select-Object -First 10
+        $failureRoles | ForEach-Object {
+            if ($_.Name) {
+                $stats_failureRoles[$_.Name] = $_.Count
+            }
+        }
+        $props["failureRoles"] = $stats_failureRoles
+
+        # Timeline data - group by date
+        $stats_timeline = [ordered]@{}
+        $Myoutput | ForEach-Object {
+            $activityDate = ([DateTime]$_.activityDateTime).ToString("yyyy-MM-dd")
+            if ($stats_timeline.Contains($activityDate)) {
+                $stats_timeline[$activityDate]++
+            } else {
+                $stats_timeline[$activityDate] = 1
+            }
+        }
+        $props["timeline"] = $stats_timeline
+
+        # Build description sections conditionally
+        $descriptionSection1 = if (-not $NoCodeSnippets) {
+            @'
+        <div class="row">
+            <div class="description">
+                Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
+                filter the activity for a specific category:<br>
+                <pre><code>$r | where-object { $_.category -eq "GroupManagement" }</code></pre>
+            </div>
+        </div>
+'@
+        } else { "" }
+
+        $descriptionSection2 = if (-not $NoCodeSnippets) {
+            @'
+        <div class="row">
+            <div class="description">
+                Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
+                consult the failed operations:<br>
+                <code>$r | where-object {$_.result -eq "Failure"}</code>
+            </div>
+        </div>
+'@
+        } else { "" }
+
+        $descriptionSection3 = if (-not $NoCodeSnippets) {
+            @'
+        <div class="row">
+            <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
+            consult the details:<br>
+            <code>$r | where-object {$_.activityDisplayName -eq "Add member to role in PIM requested (timebound)"}</code>
+        </div>
+        </div>
+'@
+        } else { "" }
+
+        $descriptionSection4 = if (-not $NoCodeSnippets) {
+            @'
+        <div class="row">
+        <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
+            filter the activity requested by User1:<br>
+            <code>$r | where-object {$_.Initiatedby -match "user1"}</code>
+        </div>
+</div>
+'@
+        } else { "" }
+
+        $descriptionSection5 = if (-not $NoCodeSnippets) {
+            @'
+        <div class="row">
+        <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
+            get the details for a group:<br>
+            <code>$r | where-object {$_.category -match "group" -and $_.targetresources -eq "PIM_GuestAdmins"}</code>
+        </div>
+        </div>
+'@
+        } else { "" }
+
+        $descriptionSection6 = if (-not $NoCodeSnippets) {
+            @'
+        <div class="row">
+        <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
+            consult the details for a specific Azure role:<br>
+            <code>$r | where-object {$_.category -match "resource" -and $_.role -eq "Reader"}</code>
+        </div>
+        </div>
+'@
+        } else { "" }
+
+        $descriptionSection7 = if (-not $NoCodeSnippets) {
+            @'
+        <div class="row">
+        <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
+            consult the details for a specific Enntra role:<br>
+            <code>$r | where-object {$_.category -match "role" -and $_.role -eq "Global Administrator"}</code>
+        </div>
+        </div>
+'@
+        } else { "" }
 
         #$props
 
@@ -328,7 +497,7 @@ function Show-PIMReport {
                         }]
                     },
                     options: {
-                        responsive: false,
+                        responsive: true,
                         radius: 70,
                         layout: {
                             padding: {
@@ -378,7 +547,7 @@ function Show-PIMReport {
                         }]
                     },
                     options: {
-                        responsive: false,
+                        responsive: true,
                         radius: 70,
                         layout: {
                             padding: {
@@ -427,7 +596,7 @@ function Show-PIMReport {
                         }]
                     },
                     options: {
-                        responsive: false,
+                        responsive: true,
                         radius: 70,
                         layout: {
                             padding: {
@@ -480,7 +649,7 @@ function Show-PIMReport {
                         }]
                     },
                     options: {
-                        responsive: false,
+                        responsive: true,
 
 
                         indexAxis: 'y',
@@ -529,7 +698,7 @@ function Show-PIMReport {
                         }]
                     },
                     options: {
-                        responsive: false,
+                        responsive: true,
 
 
                         indexAxis: 'y',
@@ -560,7 +729,7 @@ function Show-PIMReport {
                     type: 'bar',
                     data: {
                         labels: ["
-        $props.targetResource.Keys | ForEach-Object {
+        $props.targetresource.Keys | ForEach-Object {
             $myscript += "'" + $_ + "',"
         }
         $myscript = $myscript.Replace(",$", "") #remove the last comma
@@ -574,18 +743,19 @@ function Show-PIMReport {
         $myscript = $myscript.Replace(",$", "") #remove the last comma
         $myscript += "],
 
-                            hoverOffset: 10
+                            backgroundColor: '#4fc3f7',
+                            hoverOffset: 10,
+                            barThickness: 40,
+                            maxBarThickness: 50
                         }]
                     },
                     options: {
-                        responsive: false,
-
-
+                        responsive: true,
+                        maintainAspectRatio: false,
                         indexAxis: 'y',
                         plugins: {
                             legend: {
                                 display: false,
-
                                 position: 'right',
                             },
                             title: {
@@ -594,13 +764,22 @@ function Show-PIMReport {
                                 position: 'top',
                                 padding: {
                                     top: 10
+                                },
+                                font: { size: 18, weight: 'bold' }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                ticks: { 
+                                    stepSize: 1,
+                                    font: { size: 16 }
                                 }
                             },
-
-
+                            y: {
+                                ticks: { font: { size: 16 } }
+                            }
                         }
-
-
                     }
                 });
 
@@ -609,32 +788,33 @@ function Show-PIMReport {
                     type: 'bar',
                     data: {
                         labels: ["
+        $rolesLabels = @()
         $props.targetrole.Keys | ForEach-Object {
-            $myscript += "'" + $_ + "',"
+            $rolesLabels += "'" + $_ + "'"
         }
-        $myscript = $myscript.Replace(",$", "") #remove the last comma
+        $myscript += ($rolesLabels -join ',')
         $myscript += "],
                         datasets: [{
                             label: 'Number of requests',
                             data: ["
+        $rolesData = @()
         $props.targetrole.Keys | ForEach-Object {
-            $myscript += "'" + $props.targetrole[$_] + "',"
+            $rolesData += "'" + $props.targetrole[$_] + "'"
         }
-        $myscript = $myscript.Replace(",$", "") #remove the last comma
+        $myscript += ($rolesData -join ',')
         $myscript += "],
 
+                            backgroundColor: '#ff9a9e',
                             hoverOffset: 10
                         }]
                     },
                     options: {
-                        responsive: false,
-
-
+                        responsive: true,
+                        maintainAspectRatio: false,
                         indexAxis: 'y',
                         plugins: {
                             legend: {
                                 display: false,
-
                                 position: 'right',
                             },
                             title: {
@@ -643,13 +823,244 @@ function Show-PIMReport {
                                 position: 'top',
                                 padding: {
                                     top: 10
+                                },
+                                font: { size: 18, weight: 'bold' }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                ticks: { 
+                                    stepSize: 1,
+                                    font: { size: 16 }
                                 }
                             },
-
-
+                            y: {
+                                ticks: { 
+                                    font: { size: 16 },
+                                    autoSkip: false
+                                }
+                            }
                         }
+                    }
+                });
 
+                // Timeline chart
+                const ctxTimeline = document.getElementById('timeline');
+                new Chart(ctxTimeline, {
+                    type: 'line',
+                    data: {
+                        labels: ["
+        $props.timeline.Keys | ForEach-Object {
+            $myscript += "'" + $_ + "',"
+        }
+        $myscript = $myscript.Replace(",$", "")
+        $myscript += "],
+                        datasets: [{
+                            label: 'Activities per Day',
+                            data: ["
+        $props.timeline.Keys | ForEach-Object {
+            $myscript += "'" + $props.timeline[$_] + "',"
+        }
+        $myscript = $myscript.Replace(",$", "")
+        $myscript += "],
+                            borderColor: '#1cd031',
+                            backgroundColor: 'rgba(28, 208, 49, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: { font: { size: 14 } }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Activity Timeline',
+                                position: 'top',
+                                padding: { top: 10 },
+                                font: { size: 16, weight: 'bold' }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { font: { size: 14 } }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: { 
+                                    stepSize: 1,
+                                    font: { size: 14 }
+                                }
+                            }
+                        }
+                    }
+                });
 
+                // Failure Reasons chart
+                const ctxFailureReasons = document.getElementById('failureReasons');
+                new Chart(ctxFailureReasons, {
+                    type: 'bar',
+                    data: {
+                        labels: ["
+        $props.failureReasons.Keys | ForEach-Object {
+            $myscript += "'" + $_ + "',"
+        }
+        $myscript = $myscript.Replace(",$", "")
+        $myscript += "],
+                        datasets: [{
+                            label: 'Number of Failures',
+                            data: ["
+        $props.failureReasons.Keys | ForEach-Object {
+            $myscript += "'" + $props.failureReasons[$_] + "',"
+        }
+        $myscript = $myscript.Replace(",$", "")
+        $myscript += "],
+                            backgroundColor: '#ff6b6b',
+                            hoverOffset: 10,
+                            barThickness: 40,
+                            maxBarThickness: 50
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        plugins: {
+                            legend: { display: false },
+                            title: {
+                                display: true,
+                                text: 'Top Failure Reasons',
+                                position: 'top',
+                                padding: { top: 10 },
+                                font: { size: 16, weight: 'bold' }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                ticks: { 
+                                    stepSize: 1,
+                                    font: { size: 14 }
+                                }
+                            },
+                            y: {
+                                ticks: { font: { size: 14 } }
+                            }
+                        }
+                    }
+                });
+
+                // Failure Users chart
+                const ctxFailureUsers = document.getElementById('failureUsers');
+                new Chart(ctxFailureUsers, {
+                    type: 'bar',
+                    data: {
+                        labels: ["
+        $props.failureUsers.Keys | ForEach-Object {
+            $myscript += "'" + $_ + "',"
+        }
+        $myscript = $myscript.Replace(",$", "")
+        $myscript += "],
+                        datasets: [{
+                            label: 'Number of Failures',
+                            data: ["
+        $props.failureUsers.Keys | ForEach-Object {
+            $myscript += "'" + $props.failureUsers[$_] + "',"
+        }
+        $myscript = $myscript.Replace(",$", "")
+        $myscript += "],
+                            backgroundColor: '#ffa07a',
+                            hoverOffset: 10,
+                            barThickness: 40,
+                            maxBarThickness: 50
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        plugins: {
+                            legend: { display: false },
+                            title: {
+                                display: true,
+                                text: 'Users with Most Failures',
+                                position: 'top',
+                                padding: { top: 10 },
+                                font: { size: 16, weight: 'bold' }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                ticks: { 
+                                    stepSize: 1,
+                                    font: { size: 14 }
+                                }
+                            },
+                            y: {
+                                ticks: { font: { size: 14 } }
+                            }
+                        }
+                    }
+                });
+
+                // Failure Roles chart
+                const ctxFailureRoles = document.getElementById('failureRoles');
+                new Chart(ctxFailureRoles, {
+                    type: 'bar',
+                    data: {
+                        labels: ["
+        $props.failureRoles.Keys | ForEach-Object {
+            $myscript += "'" + $_ + "',"
+        }
+        $myscript = $myscript.Replace(",$", "")
+        $myscript += "],
+                        datasets: [{
+                            label: 'Number of Failures',
+                            data: ["
+        $props.failureRoles.Keys | ForEach-Object {
+            $myscript += "'" + $props.failureRoles[$_] + "',"
+        }
+        $myscript = $myscript.Replace(",$", "")
+        $myscript += "],
+                            backgroundColor: '#ff8c94',
+                            hoverOffset: 10,
+                            barThickness: 40,
+                            maxBarThickness: 50
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        plugins: {
+                            legend: { display: false },
+                            title: {
+                                display: true,
+                                text: 'Roles with Most Failures',
+                                position: 'top',
+                                padding: { top: 10 },
+                                font: { size: 16, weight: 'bold' }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                ticks: { 
+                                    stepSize: 1,
+                                    font: { size: 14 }
+                                }
+                            },
+                            y: {
+                                ticks: { font: { size: 14 } }
+                            }
+                        }
                     }
                 });
 
@@ -662,203 +1073,21 @@ function Show-PIMReport {
         #$myscript
 
 
-        $html = @'
+        # Use new architecture for HTML generation
+        . "$PSScriptRoot\..\internal\Build-ChartData.ps1"
+        . "$PSScriptRoot\..\internal\Build-ReportHTML.ps1"
+        
+        # Build chart data
+        $chartData = Build-ChartData -Activities $Myoutput -StartDate $StartDate -EndDate $EndDate
+        
+        # Load template
+        $templatePath = Join-Path $PSScriptRoot "..\templates\report-template.html"
+        $template = Get-Content $templatePath -Raw
+        
+        # Build HTML using new architecture
+        $html = Build-ReportHTML -Template $template -ChartData $chartData -NoCodeSnippets:$NoCodeSnippets
 
-        <html>
-
-<head>
-    <title>EasyPIM: Activity summary</title>
-
-</head>
-<style>
-    body {
-        background-color: #2b2b2b;
-        color: #f5f5f5;
-    }
-
-    #container {
-        background-color: #3c3c3c;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        /* Optional: Adds some space between the divs */
-    }
-
-    .row {
-        display: flex;
-        padding: 10px;
-        border-bottom: 1px solid #444;
-    }
-
-    .chart {
-        flex: 1;
-        /* Optional: Each div will take up an equal amount of space */
-    }
-
-    .description {
-        flex: 1;
-        /* Optional: Each div will take up an equal amount of space */
-        vertical-align: middle;
-        color:#a7a7a7;
-    }
-
-    code {
-        font-family: Consolas, "Courier New", monospace;
-        background-color: #203048;
-        color: #f5f5f5;
-        padding: 0.2em 0.4em;
-        font-size: 85%;
-        border-radius: 6px;
-        line-height: 1.5;
-    }
-
-    #fixedDiv {
-        background-color: #3c3c3c;
-        color: #f5f5f5;
-        position: fixed;
-        top: 10;
-        left: 980;
-        width: 200px;
-        /* Adjust as needed */
-        height: 200px;
-
-        /* Adjust as needed */
-        padding: 10px;
-        /* Adjust as needed */
-        z-index: 1000;
-        /* Ensure the div stays on top of other elements */
-    }
-
-    a {
-        color: #1cd031;
-    }
-    H1,H2{
-        text-align: center;
-    }
-    .header{
-        border-bottom: #444 1px solid;
-    }
-    .footer{
-        text-align: center;
-        color: #a7a7a7;
-    }
-</style>
-
-
-<body>
-    <div id="fixedDiv">Navigation
-        <ul>
-            <li><a href="#myChart">Category</a></li>
-            <li><a href="#result">Result</a></li>
-            <li><a href="#activities">Activities</a></li>
-            <li><a href="#requestor">Requestor</a></li>
-            <li><a href="#Groups">Groups</a></li>
-            <li><a href="#Resources">Azure Roles</a></li>
-            <li><a href="#Roles">Entra Roles</a></li>
-        </ul>
-    </div>
-    <div id="container" style="width: 950px">
-    <div class="header">
-        <h1>PIM activity summary</h1>
-    <h2>from
-'@
-
-$html+= $props['startdate'].ToString() + " to " + $props['enddate'].ToString() + "</h2></div>"
-$html += @'
-        <div class="row">
-            <div class="chart">
-                <canvas id="myChart" width="900" height="200"></canvas>
-            </div>
-        </div>
-        <div class="row">
-            <div class="description">
-                Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-                filter the activity for a specific category:<br>
-                <pre><code>$r | where-object { $_.category -eq "GroupManagement" }</code></pre>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="chart">
-                <canvas id="result" width="900" height="200"></canvas>
-            </div>
-        </div>
-        <div class="row">
-            <div class="description">
-                Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-                consult the failed operations:<br>
-                <code>$r | where-object {$_.result -eq "Failure"}</code>
-            </div>
-        </div>
-
-
-    <div class="row">
-        <div class="chart">
-            <canvas id="activities" width="900" height="400"></canvas>
-        </div>
-
-    </div>
-    <div class="row">
-        <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-            consult the details:<br>
-            <code>$r | where-object {$_.activityDisplayName -eq "Add member to role in PIM requested (timebound)"}</code>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="chart">
-            <canvas id="requestor" width="900" height="500"></canvas>
-        </div>
-    </div>
-    <div class="row">
-        <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-            filter the activity requested by User1:<br>
-            <code>$r | where-object {$_.Initiatedby -match "user1"}</code>
-        </div>
-</div>
-        <div class="row">
-        <div class="chart">
-            <canvas id="Groups" width="900" height="500"></canvas>
-        </div>
-    </div>
-    <div class="row">
-        <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-            get the details for a group:<br>
-            <code>$r | where-object {$_.category -match "group" -and $_.targetresources -eq "PIM_GuestAdmins"}</code>
-        </div>
-        </div>
-        <div class="row">
-        <div class="chart">
-            <canvas id="Resources" width="900" height="500"></canvas>
-        </div>
-    </div>
-    <div class="row">
-        <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-            consult the details for a specific Azure role:<br>
-            <code>$r | where-object {$_.category -match "resource" -and $_.role -eq "Reader"}</code>
-        </div>
-        </div>
-
-        <div class="row">
-        <div class="chart">
-            <canvas id="Roles" width="900" height="500"></canvas>
-        </div>
-    </div>
-    <div class="row">
-        <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-            consult the details for a specific Enntra role:<br>
-            <code>$r | where-object {$_.category -match "role" -and $_.role -eq "Global Administrator"}</code>
-        </div>
-        </div>
-        <div class='footer'>
-        <p>Generated with <a href='https://powershellgallery.com/packages/EasyPIM'>EasyPIM</a></p>
-    </div>
-    </div> <!-- container -->
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-'@
-        $html += $myscript
+        
 
         # Determine HTML file path
         if ($Path -and ($Format -eq 'HTML')) {
@@ -899,3 +1128,4 @@ $html += @'
         MyCatch $_
     }
 }
+
