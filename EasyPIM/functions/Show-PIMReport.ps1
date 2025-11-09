@@ -273,18 +273,9 @@ function Show-PIMReport {
 
         #Data for the HTML report
 
-        # Calculate summary statistics
-        $totalActivities = ($Myoutput | Measure-Object).Count
-        $successCount = ($Myoutput | Where-Object { $_.result -eq 'success' } | Measure-Object).Count
-        $successRate = if ($totalActivities -gt 0) { [math]::Round(($successCount / $totalActivities) * 100, 1) } else { 0 }
-        $uniqueUsers = ($Myoutput | Select-Object -Property initiatedBy -Unique | Measure-Object).Count
-
+        # Calculate summary statistics (used for old HTML generation path)
         $startDate = ($Myoutput | Sort-Object -Property activityDateTime | Select-Object -First 1).activityDateTime
         $endDate = ($Myoutput | Sort-Object -Property activityDateTime -Descending | Select-Object -First 1).activityDateTime
-        $timePeriodDays = if ($startDate -and $endDate) {
-            $span = ([DateTime]$endDate) - ([DateTime]$startDate)
-            [math]::Max(1, [math]::Round($span.TotalDays, 0))
-        } else { 0 }
 
         $props = @{}
         $stats_category = [ordered]@{}
@@ -381,90 +372,6 @@ function Show-PIMReport {
             }
         }
         $props["timeline"] = $stats_timeline
-
-        # Build description sections conditionally
-        $descriptionSection1 = if (-not $NoCodeSnippets) {
-            @'
-        <div class="row">
-            <div class="description">
-                Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-                filter the activity for a specific category:<br>
-                <pre><code>$r | where-object { $_.category -eq "GroupManagement" }</code></pre>
-            </div>
-        </div>
-'@
-        } else { "" }
-
-        $descriptionSection2 = if (-not $NoCodeSnippets) {
-            @'
-        <div class="row">
-            <div class="description">
-                Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-                consult the failed operations:<br>
-                <code>$r | where-object {$_.result -eq "Failure"}</code>
-            </div>
-        </div>
-'@
-        } else { "" }
-
-        $descriptionSection3 = if (-not $NoCodeSnippets) {
-            @'
-        <div class="row">
-            <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-            consult the details:<br>
-            <code>$r | where-object {$_.activityDisplayName -eq "Add member to role in PIM requested (timebound)"}</code>
-        </div>
-        </div>
-'@
-        } else { "" }
-
-        $descriptionSection4 = if (-not $NoCodeSnippets) {
-            @'
-        <div class="row">
-        <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-            filter the activity requested by User1:<br>
-            <code>$r | where-object {$_.Initiatedby -match "user1"}</code>
-        </div>
-</div>
-'@
-        } else { "" }
-
-        $descriptionSection5 = if (-not $NoCodeSnippets) {
-            @'
-        <div class="row">
-        <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-            get the details for a group:<br>
-            <code>$r | where-object {$_.category -match "group" -and $_.targetresources -eq "PIM_GuestAdmins"}</code>
-        </div>
-        </div>
-'@
-        } else { "" }
-
-        $descriptionSection6 = if (-not $NoCodeSnippets) {
-            @'
-        <div class="row">
-        <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-            consult the details for a specific Azure role:<br>
-            <code>$r | where-object {$_.category -match "resource" -and $_.role -eq "Reader"}</code>
-        </div>
-        </div>
-'@
-        } else { "" }
-
-        $descriptionSection7 = if (-not $NoCodeSnippets) {
-            @'
-        <div class="row">
-        <div class="description">Assuming this page was generated with <code>$r=show-PIMreport</code>, you can use the following code to
-            consult the details for a specific Enntra role:<br>
-            <code>$r | where-object {$_.category -match "role" -and $_.role -eq "Global Administrator"}</code>
-        </div>
-        </div>
-'@
-        } else { "" }
-
-        #$props
-
-
 
         #building the dynamic part of the report
         $myscript = "
