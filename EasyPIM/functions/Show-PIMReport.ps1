@@ -1,4 +1,4 @@
-<#
+﻿<#
     .SYNOPSIS
     Visualize PIM activities in multiple formats (HTML, CSV, JSON).
 
@@ -278,7 +278,7 @@ function Show-PIMReport {
         $successCount = ($Myoutput | Where-Object { $_.result -eq 'success' } | Measure-Object).Count
         $successRate = if ($totalActivities -gt 0) { [math]::Round(($successCount / $totalActivities) * 100, 1) } else { 0 }
         $uniqueUsers = ($Myoutput | Select-Object -Property initiatedBy -Unique | Measure-Object).Count
-        
+
         $startDate = ($Myoutput | Sort-Object -Property activityDateTime | Select-Object -First 1).activityDateTime
         $endDate = ($Myoutput | Sort-Object -Property activityDateTime -Descending | Select-Object -First 1).activityDateTime
         $timePeriodDays = if ($startDate -and $endDate) {
@@ -771,7 +771,7 @@ function Show-PIMReport {
                         scales: {
                             x: {
                                 beginAtZero: true,
-                                ticks: { 
+                                ticks: {
                                     stepSize: 1,
                                     font: { size: 16 }
                                 }
@@ -830,13 +830,13 @@ function Show-PIMReport {
                         scales: {
                             x: {
                                 beginAtZero: true,
-                                ticks: { 
+                                ticks: {
                                     stepSize: 1,
                                     font: { size: 16 }
                                 }
                             },
                             y: {
-                                ticks: { 
+                                ticks: {
                                     font: { size: 16 },
                                     autoSkip: false
                                 }
@@ -893,7 +893,7 @@ function Show-PIMReport {
                             },
                             y: {
                                 beginAtZero: true,
-                                ticks: { 
+                                ticks: {
                                     stepSize: 1,
                                     font: { size: 14 }
                                 }
@@ -944,7 +944,7 @@ function Show-PIMReport {
                         scales: {
                             x: {
                                 beginAtZero: true,
-                                ticks: { 
+                                ticks: {
                                     stepSize: 1,
                                     font: { size: 14 }
                                 }
@@ -998,7 +998,7 @@ function Show-PIMReport {
                         scales: {
                             x: {
                                 beginAtZero: true,
-                                ticks: { 
+                                ticks: {
                                     stepSize: 1,
                                     font: { size: 14 }
                                 }
@@ -1052,7 +1052,7 @@ function Show-PIMReport {
                         scales: {
                             x: {
                                 beginAtZero: true,
-                                ticks: { 
+                                ticks: {
                                     stepSize: 1,
                                     font: { size: 14 }
                                 }
@@ -1076,14 +1076,14 @@ function Show-PIMReport {
         # Use new architecture for HTML generation
         . "$PSScriptRoot\..\internal\Build-ChartData.ps1"
         . "$PSScriptRoot\..\internal\Build-ReportHTML.ps1"
-        
+
         # Build chart data
         $chartData = Build-ChartData -Activities $Myoutput -StartDate $StartDate -EndDate $EndDate
-        
+
         # Load template
         $templatePath = Join-Path $PSScriptRoot "..\templates\report-template.html"
         $template = Get-Content $templatePath -Raw
-        
+
         # Build HTML using new architecture
         $buildParams = @{
             Template = $template
@@ -1092,10 +1092,10 @@ function Show-PIMReport {
         }
         if ($StartDate) { $buildParams['StartDate'] = $StartDate }
         if ($EndDate) { $buildParams['EndDate'] = $EndDate }
-        
+
         $html = Build-ReportHTML @buildParams
 
-        
+
 
         # Determine HTML file path
         if ($Path -and ($Format -eq 'HTML')) {
