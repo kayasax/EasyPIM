@@ -1085,7 +1085,15 @@ function Show-PIMReport {
         $template = Get-Content $templatePath -Raw
         
         # Build HTML using new architecture
-        $html = Build-ReportHTML -Template $template -ChartData $chartData -NoCodeSnippets:$NoCodeSnippets
+        $buildParams = @{
+            Template = $template
+            ChartData = $chartData
+            NoCodeSnippets = $NoCodeSnippets
+        }
+        if ($StartDate) { $buildParams['StartDate'] = $StartDate }
+        if ($EndDate) { $buildParams['EndDate'] = $EndDate }
+        
+        $html = Build-ReportHTML @buildParams
 
         
 

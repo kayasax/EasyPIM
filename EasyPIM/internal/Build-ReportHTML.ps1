@@ -49,8 +49,22 @@ function Build-ReportHTML {
         [Parameter(Mandatory)]
         [hashtable]$ChartData,
         
-        [switch]$NoCodeSnippets
+        [switch]$NoCodeSnippets,
+        
+        [datetime]$StartDate,
+        
+        [datetime]$EndDate
     )
+    
+    # Build date range display
+    $dateRangeHTML = ""
+    if ($StartDate -and $EndDate) {
+        $dateRangeHTML = @"
+<div style="text-align: center; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 20px;">
+    <strong>📅 Showing activities from $($StartDate.ToString('yyyy-MM-dd')) to $($EndDate.ToString('yyyy-MM-dd'))</strong>
+</div>
+"@
+    }
     
     # Build summary tiles
     $tilesHTML = @"
@@ -306,6 +320,7 @@ function Build-ReportHTML {
     # Replace placeholders
     $html = $Template
     $html = $html -replace '<!-- PLACEHOLDER_SUMMARY_TILES -->', $tilesHTML
+    $html = $html -replace '<!-- PLACEHOLDER_DATE_RANGE -->', $dateRangeHTML
     $html = $html -replace '<!-- PLACEHOLDER_CHARTS -->', $chartsHTML
     $html = $html -replace '<!-- PLACEHOLDER_DATE -->', (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
     $html = $html -replace '// PLACEHOLDER_CHART_SCRIPTS', $chartScripts

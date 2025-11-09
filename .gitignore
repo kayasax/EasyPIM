@@ -65,3 +65,4 @@ fix-*.ps1
 # Ensure newline normalization (see .gitattributes)
 session_starter.md
 PostHog-Dashboard-Guide.md
+EasyPIM/functions/Show-PIMReport.ps1.backup
