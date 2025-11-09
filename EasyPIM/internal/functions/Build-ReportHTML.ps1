@@ -43,9 +43,9 @@ function Build-ReportHTML {
 "@
     }
     
-    # Build summary tiles
+    # Build summary tiles with anchor
     $tilesHTML = @"
-<div class="summary-tiles">
+<div id="summary" class="summary-tiles">
     <div class="tile">
         <div class="tile-label">Total Activities</div>
         <div class="tile-value">$($ChartData.totalActivities)</div>
@@ -245,9 +245,10 @@ function Build-ReportHTML {
             continue
         }
         
-        # Add section header if specified
+        # Add section header with anchor ID if specified
         if ($config.sectionTitle) {
-            $chartsHTML += "<h2 class='section-header' style='$($config.sectionStyle)'>$($config.sectionTitle)</h2>`n"
+            $anchorId = $config.id -replace 'Chart$', ''
+            $chartsHTML += "<h2 id='$anchorId' class='section-header' style='$($config.sectionStyle)'>$($config.sectionTitle)</h2>`n"
         }
         
         # Determine container class and height
