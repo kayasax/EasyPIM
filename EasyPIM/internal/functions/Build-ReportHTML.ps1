@@ -1,28 +1,5 @@
 ﻿<#
 .SYNOPSIS
-    Loads the HTML report template
-
-.DESCRIPTION
-    Reads the HTML template file from the module templates directory
-    
-.EXAMPLE
-    Get-ReportTemplate
-#>
-function Get-ReportTemplate {
-    [CmdletBinding()]
-    param()
-    
-    $templatePath = Join-Path $PSScriptRoot "..\templates\report-template.html"
-    
-    if (-not (Test-Path $templatePath)) {
-        throw "Template file not found: $templatePath"
-    }
-    
-    return Get-Content $templatePath -Raw
-}
-
-<#
-.SYNOPSIS
     Builds the complete HTML report
 
 .DESCRIPTION
@@ -295,9 +272,7 @@ function Build-ReportHTML {
 
 "@
         
-        # Generate chart configuration using ECharts
-        . "$PSScriptRoot\New-EChartsConfig.ps1"
-        
+        # Generate chart configuration using ECharts (function is auto-loaded from internal/functions)
         $horizontal = if ($config.horizontal) { $true } else { $false }
         $chartConfigObj = New-EChartsConfig -Type $config.type -Data $config.data -Title $config.title -Horizontal:$horizontal
         
