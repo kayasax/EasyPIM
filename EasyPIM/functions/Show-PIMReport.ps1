@@ -979,11 +979,6 @@ function Show-PIMReport {
 
         #$myscript
 
-
-        # Use new architecture for HTML generation
-        . "$PSScriptRoot\..\internal\Build-ChartData.ps1"
-        . "$PSScriptRoot\..\internal\Build-ReportHTML.ps1"
-
         # Build chart data
         $chartData = Build-ChartData -Activities $Myoutput -StartDate $StartDate -EndDate $EndDate
 
