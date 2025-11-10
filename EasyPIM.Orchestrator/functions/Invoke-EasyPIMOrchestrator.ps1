@@ -113,8 +113,7 @@ function Invoke-EasyPIMOrchestrator {
 			$ProtectedRoleOverrideToken = $ProtectedRoleOverrideToken.Trim()
 			if ($ProtectedRoleOverrideToken.Length -gt 0) {
 				$protectedRoleOverrideTokenProvided = $true
-			}
-			else {
+			} else {
 				$ProtectedRoleOverrideToken = $null
 			}
 		}
@@ -124,8 +123,8 @@ function Invoke-EasyPIMOrchestrator {
 		$mgContext = Get-MgContext -ErrorAction SilentlyContinue
 
 		$requiresGraphScopes =	($Operations -contains "All") -or
-								($Operations -contains "EntraRoles") -or
-								($Operations -contains "GroupRoles")
+		($Operations -contains "EntraRoles") -or
+		($Operations -contains "GroupRoles")
 
 		if (-not $mgContext) {
 			# Only check/require Graph authentication if needed
@@ -141,11 +140,9 @@ function Invoke-EasyPIMOrchestrator {
 		# PowerShell 5.x compatible null handling
 		$authIdentifier = if ($mgContext.Account) {
 			$mgContext.Account
-		}
-		elseif ($mgContext.ClientId) {
+		} elseif ($mgContext.ClientId) {
 			$mgContext.ClientId
-		}
-		else {
+		} else {
 			"Service Principal"
 		}
 
@@ -174,11 +171,9 @@ function Invoke-EasyPIMOrchestrator {
 			# PowerShell 5.x compatible null handling
 			$accountInfo = if ($azContext.Account) {
 				$azContext.Account
-			}
-			elseif ($azContext.Account.Id) {
+			} elseif ($azContext.Account.Id) {
 				$azContext.Account.Id
-			}
-			else {
+			} else {
 				"Service Principal"
 			}
 			Write-Host "✅ [AUTH] Azure PowerShell connection verified (Account: $accountInfo, Subscription: $($azContext.Subscription.Name))" -ForegroundColor Green
@@ -204,8 +199,7 @@ function Invoke-EasyPIMOrchestrator {
 			Write-Host "Option 1 - Azure PowerShell (Interactive):" -ForegroundColor Cyan
 			if ($TenantId) {
 				Write-Host "  Connect-AzAccount -TenantId '$TenantId'" -ForegroundColor Green
-			}
-			else {
+			} else {
 				Write-Host "  Connect-AzAccount" -ForegroundColor Green
 				Write-Host "  # Or specify tenant: Connect-AzAccount -TenantId 'your-tenant-id'" -ForegroundColor Gray
 			}
@@ -216,8 +210,7 @@ function Invoke-EasyPIMOrchestrator {
 			Write-Host ""
 			throw "Azure authentication required. Please authenticate using one of the methods above."
 		}
-	}
- catch {
+	} catch {
 		Write-Error "Authentication check failed: $($_.Exception.Message)"
 		return
 	}
@@ -229,8 +222,7 @@ function Invoke-EasyPIMOrchestrator {
 		# 1. Load configuration
 		$config = if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
 			Get-EasyPIMConfiguration -KeyVaultName $KeyVaultName -SecretName $SecretName
-		}
-		else {
+		} else {
 			Get-EasyPIMConfiguration -ConfigFilePath $ConfigFilePath
 		}
 
@@ -274,8 +266,7 @@ function Invoke-EasyPIMOrchestrator {
 				Write-Error $errorMsg
 				throw $errorMsg
 			}
-		}
-		else {
+		} else {
 			Write-Host "✅ Configuration validation passed" -ForegroundColor Green
 		}
 
@@ -302,14 +293,12 @@ function Invoke-EasyPIMOrchestrator {
 				# For KeyVault configs, pass the loaded config object directly
 				Write-Host "🔍 [DEBUG] Using KeyVault parameter set for telemetry" -ForegroundColor Yellow
 				Send-TelemetryEventFromConfig -EventName "orchestrator_startup" -Properties $startupProperties -Config $config
-			}
-			else {
+			} else {
 				# For file-based configs, use the file path
 				Write-Host "🔍 [DEBUG] Using file-based parameter set for telemetry" -ForegroundColor Yellow
 				Send-TelemetryEvent -EventName "orchestrator_startup" -Properties $startupProperties -ConfigPath $ConfigFilePath
 			}
-		}
-		catch {
+		} catch {
 			Write-Verbose "Telemetry startup failed (non-blocking): $($_.Exception.Message)"
 			Write-Host "❌ [DEBUG] Telemetry startup failed: $($_.Exception.Message)" -ForegroundColor Red
 		}
@@ -322,8 +311,7 @@ function Invoke-EasyPIMOrchestrator {
 		try {
 			$script:tenantID = $TenantId
 			Set-Variable -Scope Global -Name tenantID -Value $TenantId -Force
-		}
-		catch {
+		} catch {
 			Write-Warning "Failed to set tenant ID variables: $($_.Exception.Message)"
 		}
 		# Initialize subscription context EARLY for downstream helpers (Invoke-ARM, get-config)
@@ -333,8 +321,7 @@ function Invoke-EasyPIMOrchestrator {
 				try {
 					$azCtx = Get-AzContext -ErrorAction SilentlyContinue
 					if ($azCtx -and $azCtx.Subscription -and $azCtx.Subscription.Id) { $SubscriptionId = $azCtx.Subscription.Id }
-				}
-				catch {
+				} catch {
 					Write-Debug "Could not retrieve Azure context for subscription ID"
 				}
 			}
@@ -346,8 +333,7 @@ function Invoke-EasyPIMOrchestrator {
 				$script:subscriptionID = $SubscriptionId
 				Set-Variable -Scope Global -Name subscriptionID -Value $SubscriptionId -Force
 			}
-		}
-		catch {
+		} catch {
 			Write-Warning "Failed to set subscription ID variables: $($_.Exception.Message)"
 		}
 		# 2. Process and normalize config based on selected operations
@@ -398,27 +384,23 @@ function Invoke-EasyPIMOrchestrator {
 				foreach ($key in $filteredPolicyConfig.Keys) {
 					if ($processedConfig.PSObject.Properties[$key]) {
 						$processedConfig.PSObject.Properties[$key].Value = $filteredPolicyConfig[$key]
-					}
-					else {
+					} else {
 						$processedConfig | Add-Member -MemberType NoteProperty -Name $key -Value $filteredPolicyConfig[$key]
 					}
 				}
-			}
-			else {
+			} else {
 				# Merge all policy config with processed config
 				foreach ($key in $policyConfig.Keys) {
 					if ($key -match ".*Policies$") {
 						if ($processedConfig.PSObject.Properties[$key]) {
 							$processedConfig.PSObject.Properties[$key].Value = $policyConfig[$key]
-						}
-						else {
+						} else {
 							$processedConfig | Add-Member -MemberType NoteProperty -Name $key -Value $policyConfig[$key]
 						}
 					}
 				}
 			}
-		}
-		elseif ($SkipPolicies) {
+		} elseif ($SkipPolicies) {
 			Write-Host -Object "⏭️ [WARN] Skipping policy processing as requested by SkipPolicies parameter" -ForegroundColor Yellow
 		}
 		# Filter config based on selected operations
@@ -463,8 +445,7 @@ function Invoke-EasyPIMOrchestrator {
 				if ($filteredAssignments.PSObject.Properties.Name.Count -gt 0) {
 					$filteredConfig.Assignments = $filteredAssignments
 					Write-Verbose "[Filter Debug] Assignments block preserved with $($filteredAssignments.PSObject.Properties.Name.Count) sections"
-				}
-				else {
+				} else {
 					Write-Verbose "[Filter Debug] No matching assignment sections found, Assignments block will be empty"
 				}
 			}
@@ -505,12 +486,10 @@ function Invoke-EasyPIMOrchestrator {
 			$tpeCmd = Get-Command Test-PrincipalExists -ErrorAction SilentlyContinue
 			if ($tpeCmd) {
 				Write-Host ("[Debug] Using Test-PrincipalExists from: {0} ({1})" -f $tpeCmd.Source, $tpeCmd.Path) -ForegroundColor DarkGray
-			}
-			else {
+			} else {
 				Write-Host "[Debug] Test-PrincipalExists not found in scope" -ForegroundColor Yellow
 			}
-		}
-		catch {
+		} catch {
 			Write-Debug "Failed to check Test-PrincipalExists command availability"
 		}
 		$policyApproverRefs = @()
@@ -640,8 +619,7 @@ function Invoke-EasyPIMOrchestrator {
 				# Reuse cached object if available
 				if ($script:principalObjectCache -and $script:principalObjectCache.ContainsKey($principalIdIter)) {
 					$obj = $script:principalObjectCache[$principalIdIter]
-				}
-				else {
+				} else {
 					try { $obj = invoke-graph -Endpoint "directoryObjects/$principalIdIter" -ErrorAction Stop } catch {
 						Write-Verbose -Message "Suppressed directory object fetch failure for ${principalIdIter}: $($_.Exception.Message)"
 					}
@@ -655,8 +633,7 @@ function Invoke-EasyPIMOrchestrator {
 						try {
 							$g = Get-MgGroup -GroupId $principalIdIter -Property Id, DisplayName -ErrorAction SilentlyContinue
 							if ($g) { $displayName = $g.DisplayName }
-						}
-						catch { Write-Verbose -Message "Suppressed group lookup failure for ${principalIdIter}: $($_.Exception.Message)" }
+						} catch { Write-Verbose -Message "Suppressed group lookup failure for ${principalIdIter}: $($_.Exception.Message)" }
 					}
 				}
 			}
@@ -669,20 +646,17 @@ function Invoke-EasyPIMOrchestrator {
 				$refRoles = ($policyApproverRefs | Where-Object -FilterScript { $_.PrincipalId -eq $m.PrincipalId } | Select-Object -ExpandProperty RoleName -Unique)
 				if ($refRoles) {
 					Write-Host -Object "   - $($m.PrincipalId): DOES NOT EXIST (referenced as Approver for Entra role(s): $([string]::Join(', ', $refRoles)))" -ForegroundColor Red
-				}
-				else {
+				} else {
 					Write-Host -Object "   - $($m.PrincipalId): DOES NOT EXIST" -ForegroundColor Red
 				}
 			}
 			if ($WhatIfPreference) {
 				Write-Host -Object "Proceeding due to -WhatIf (preview) to allow cleanup delta visibility. These principals will be ignored." -ForegroundColor Yellow
-			}
-			else {
+			} else {
 				Write-Host -Object "Aborting before any policy or assignment processing. Fix these IDs or run with -WhatIf to preview." -ForegroundColor Red
 				return
 			}
-		}
-		else {
+		} else {
 			$checked = $validationResults.Count
 			Write-Host -Object "✅ [OK] Principal validation passed ($checked principals checked, 0 missing)" -ForegroundColor Green
 		}
@@ -695,8 +669,7 @@ function Invoke-EasyPIMOrchestrator {
 			$dbgGroupElig = ($processedConfig.GroupRoles    | Measure-Object).Count
 			$dbgGroupAct = ($processedConfig.GroupRolesActive | Measure-Object).Count
 			Write-Host -Object "[Orchestrator Debug] Assignment counts -> Azure(E:$dbgAzureElig A:$dbgAzureAct) Entra(E:$dbgEntraElig A:$dbgEntraAct) Groups(E:$dbgGroupElig A:$dbgGroupAct)" -ForegroundColor DarkCyan
-		}
-		catch { Write-Host -Object "[Orchestrator Debug] Failed to compute assignment debug counts: $($_.Exception.Message)" -ForegroundColor DarkYellow }
+		} catch { Write-Host -Object "[Orchestrator Debug] Failed to compute assignment debug counts: $($_.Exception.Message)" -ForegroundColor DarkYellow }
 		# Re-affirm subscription context later as well, but avoid noisy logs
 		if (-not $SubscriptionId -or [string]::IsNullOrWhiteSpace($SubscriptionId)) {
 			$SubscriptionId = $env:subscriptionid
@@ -707,8 +680,7 @@ function Invoke-EasyPIMOrchestrator {
 				$script:subscriptionID = $SubscriptionId
 				Set-Variable -Scope Global -Name subscriptionID -Value $SubscriptionId -Force
 			}
-		}
-		catch {
+		} catch {
 			Write-Warning "Failed to set subscription ID variables (second attempt): $($_.Exception.Message)"
 		}
 		# 3. Process policies FIRST (skip if requested) - CRITICAL: Policies must be applied before assignments to ensure compliance
@@ -760,12 +732,10 @@ function Invoke-EasyPIMOrchestrator {
 					if ($protectedRoleOverrideTokenProvided) {
 						$confirmation = $ProtectedRoleOverrideToken
 						Write-Host "🔒 [SECURITY] Protected role override token supplied via parameter - bypassing interactive confirmation" -ForegroundColor Green
-					}
-					else {
+					} else {
 						try {
 							$confirmation = Read-Host "Type 'CONFIRM-PROTECTED-OVERRIDE' to proceed"
-						}
-						catch {
+						} catch {
 							throw "Protected role policy confirmation requires interactive input. Supply -ProtectedRoleOverrideToken 'CONFIRM-PROTECTED-OVERRIDE' when running in non-interactive automation contexts."
 						}
 					}
@@ -783,27 +753,23 @@ function Invoke-EasyPIMOrchestrator {
 			$policyResults = New-EPOEasyPIMPolicy -Config $policyConfigObject -TenantId $TenantId -SubscriptionId $SubscriptionId -PolicyMode $effectivePolicyMode -AllowProtectedRoles:$AllowProtectedRoles -WhatIf:$WhatIfPreference
 			if ($WhatIfPreference) {
 				Write-Host -Object "✅ [OK] Policy dry-run completed (-WhatIf) - role policies appear correctly configured for assignment compliance" -ForegroundColor Green
-			}
-			else {
+			} else {
 				$failed = 0; $succeeded = 0
 				try {
 					if ($policyResults -and $policyResults.Summary) {
 						$failed = [int]$policyResults.Summary.Failed
 						$succeeded = [int]$policyResults.Summary.Successful
 					}
-				}
-				catch {
+				} catch {
 					Write-Verbose -Message ("[Orchestrator] Unable to read policy summary counts: {0}" -f $_.Exception.Message)
 				}
 				if ($failed -gt 0) {
 					Write-Host -Object "⚠️ [WARN] Policy configuration completed with errors (Successful: $succeeded, Failed: $failed). Proceeding with assignments." -ForegroundColor Yellow
-				}
-				else {
+				} else {
 					Write-Host -Object "✅ [OK] Policy configuration completed - proceeding with assignments using updated role policies" -ForegroundColor Green
 				}
 			}
-		}
-		elseif ($SkipPolicies) {
+		} elseif ($SkipPolicies) {
 			Write-Warning -Message "Policy processing skipped - assignments may not comply with intended role policies"
 		}
 		# 4. Perform cleanup operations AFTER policy processing (skip if requested or if assignments are skipped)
@@ -817,8 +783,7 @@ function Invoke-EasyPIMOrchestrator {
 				}
 			}
 			$cleanupResult
-		}
-		else {
+		} else {
 			if ($SkipAssignments) { Write-Host -Object "[WARN] Skipping cleanup because SkipAssignments was specified (no assignment delta expected)" -ForegroundColor Yellow }
 			elseif ($SkipCleanup) { Write-Host -Object "[WARN] Skipping cleanup as requested by SkipCleanup parameter" -ForegroundColor Yellow }
 			else { Write-Host -Object "[WARN] Skipping cleanup as specific operations were selected" -ForegroundColor Yellow }
@@ -862,8 +827,7 @@ function Invoke-EasyPIMOrchestrator {
 					}
 				}
 			}
-		}
-		else {
+		} else {
 			Write-Host -Object "[WARN] Skipping assignment creation as requested" -ForegroundColor Yellow
 			$assignmentResults = $null
 		}
@@ -909,17 +873,14 @@ function Invoke-EasyPIMOrchestrator {
 			if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
 				# For KeyVault configs, pass the loaded config object directly
 				Send-TelemetryEventFromConfig -EventName "orchestrator_completion" -Properties $completionProperties -Config $config
-			}
-			else {
+			} else {
 				# For file-based configs, use the file path
 				Send-TelemetryEvent -EventName "orchestrator_completion" -Properties $completionProperties -ConfigPath $ConfigFilePath
 			}
-		}
-		catch {
+		} catch {
 			Write-Verbose "Telemetry completion failed (non-blocking): $($_.Exception.Message)"
 		}
-	}
-	catch {
+	} catch {
 		# Send error telemetry (non-blocking)
 		if ($sessionId) {
 			$errorProperties = @{
@@ -940,13 +901,11 @@ function Invoke-EasyPIMOrchestrator {
 				if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
 					# For KeyVault configs, pass the loaded config object directly
 					Send-TelemetryEventFromConfig -EventName "orchestrator_error" -Properties $errorProperties -Config $config
-				}
-				else {
+				} else {
 					# For file-based configs, use the file path
 					Send-TelemetryEvent -EventName "orchestrator_error" -Properties $errorProperties -ConfigPath $ConfigFilePath
 				}
-			}
-			catch {
+			} catch {
 				Write-Verbose "Telemetry error failed (non-blocking): $($_.Exception.Message)"
 			}
 		}
