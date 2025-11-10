@@ -58,11 +58,11 @@ Always run destructive 'initial' mode with -WhatIf first; inspect summary and ex
 https://github.com/kayasax/EasyPIM/wiki/Invoke%E2%80%90EasyPIMOrchestrator
 #>
 function Invoke-EasyPIMOrchestrator {
-	[CmdletBinding(DefaultParameterSetName = 'Default', SupportsShouldProcess = $true, ConfirmImpact='Medium')]
+	[CmdletBinding(DefaultParameterSetName = 'Default', SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
 	[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingWriteHost", "")]
-	[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingPositionalParameters", "", Justification="All public cmdlets use named parameters; any remaining triggers are false positives or internal methods.")]
-	[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseShouldProcessForStateChangingFunctions", "", Justification="Top-level ShouldProcess invoked; inner creation functions also use ShouldProcess")]
-	[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSShouldProcess", "", Justification="False positive previously; pattern implemented below")]
+	[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingPositionalParameters", "", Justification = "All public cmdlets use named parameters; any remaining triggers are false positives or internal methods.")]
+	[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseShouldProcessForStateChangingFunctions", "", Justification = "Top-level ShouldProcess invoked; inner creation functions also use ShouldProcess")]
+	[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSShouldProcess", "", Justification = "False positive previously; pattern implemented below")]
 	param (
 		[Parameter(Mandatory = $true, ParameterSetName = 'KeyVault')]
 		[string]$KeyVaultName,
@@ -87,8 +87,8 @@ function Invoke-EasyPIMOrchestrator {
 		[Parameter(Mandatory = $false)]
 		[switch]$SkipPolicies,
 		[Parameter(Mandatory = $false)]
-	[ValidateSet("All", "AzureRoles", "EntraRoles", "GroupRoles")]
-	[string[]]$PolicyOperations = @("All"),
+		[ValidateSet("All", "AzureRoles", "EntraRoles", "GroupRoles")]
+		[string[]]$PolicyOperations = @("All"),
 		[Parameter(Mandatory = $false)]
 		[string]$WouldRemoveExportPath,
 		[Parameter(Mandatory = $false)]
@@ -113,7 +113,8 @@ function Invoke-EasyPIMOrchestrator {
 			$ProtectedRoleOverrideToken = $ProtectedRoleOverrideToken.Trim()
 			if ($ProtectedRoleOverrideToken.Length -gt 0) {
 				$protectedRoleOverrideTokenProvided = $true
-			} else {
+			}
+			else {
 				$ProtectedRoleOverrideToken = $null
 			}
 		}
@@ -121,26 +122,30 @@ function Invoke-EasyPIMOrchestrator {
 	# Check Microsoft Graph authentication before proceeding
 	try {
 		$mgContext = Get-MgContext -ErrorAction SilentlyContinue
+
+		$requiresGraphScopes =	($Operations -contains "All") -or
+								($Operations -contains "EntraRoles") -or
+								($Operations -contains "GroupRoles")
+
 		if (-not $mgContext) {
-			Write-Host "🔐 [AUTH] Microsoft Graph authentication required for EasyPIM operations." -ForegroundColor Yellow
-			# RoleManagement.ReadWrite.Directory is only needed for non-AzureRoles operations, if we're only doing AzureRoles this is not required
-			if ($Operations -ne "AzureRoles") {
+			# Only check/require Graph authentication if needed
+			if ($requiresGraphScopes) {
+				Write-Host "🔐 [AUTH] Microsoft Graph authentication required for EasyPIM operations." -ForegroundColor Yellow
 				Write-Host "🔐 [AUTH] Please connect to Microsoft Graph with appropriate scopes:" -ForegroundColor Yellow
 				Write-Host "  Connect-MgGraph -Scopes 'RoleManagement.ReadWrite.Directory'" -ForegroundColor Green
-			} else {
-				Write-Host "🔐 [AUTH] Please connect to Microsoft Graph:" -ForegroundColor Yellow
-				Write-Host "  Connect-MgGraph" -ForegroundColor Green
+				throw "Microsoft Graph authentication required. Please run Connect-MgGraph first."
 			}
-			throw "Microsoft Graph authentication required. Please run Connect-MgGraph first."
 		}
 
 		# For federated credentials, Account may be null but ClientId should be present
 		# PowerShell 5.x compatible null handling
 		$authIdentifier = if ($mgContext.Account) {
 			$mgContext.Account
-		} elseif ($mgContext.ClientId) {
+		}
+		elseif ($mgContext.ClientId) {
 			$mgContext.ClientId
-		} else {
+		}
+		else {
 			"Service Principal"
 		}
 
@@ -149,7 +154,7 @@ function Invoke-EasyPIMOrchestrator {
 		$currentScopes = $mgContext.Scopes
 
 		# RoleManagement.ReadWrite.Directory is only needed for non-AzureRoles operations, if we're only doing AzureRoles, skip this check
-		if ((-not $currentScopes -or ($requiredScopes | Where-Object { $_ -notin $currentScopes })) -and ($Operations -ne "AzureRoles")) {
+		if ((-not $currentScopes -or ($requiredScopes | Where-Object { $_ -notin $currentScopes })) -and ($requiresGraphScopes)) {
 			Write-Host "⚠️ [AUTH] Insufficient Microsoft Graph permissions detected." -ForegroundColor Yellow
 			Write-Host "🔐 [AUTH] Please reconnect with required scopes:" -ForegroundColor Yellow
 			Write-Host "  Connect-MgGraph -Scopes 'RoleManagement.ReadWrite.Directory'" -ForegroundColor Green
@@ -169,9 +174,11 @@ function Invoke-EasyPIMOrchestrator {
 			# PowerShell 5.x compatible null handling
 			$accountInfo = if ($azContext.Account) {
 				$azContext.Account
-			} elseif ($azContext.Account.Id) {
+			}
+			elseif ($azContext.Account.Id) {
 				$azContext.Account.Id
-			} else {
+			}
+			else {
 				"Service Principal"
 			}
 			Write-Host "✅ [AUTH] Azure PowerShell connection verified (Account: $accountInfo, Subscription: $($azContext.Subscription.Name))" -ForegroundColor Green
@@ -197,7 +204,8 @@ function Invoke-EasyPIMOrchestrator {
 			Write-Host "Option 1 - Azure PowerShell (Interactive):" -ForegroundColor Cyan
 			if ($TenantId) {
 				Write-Host "  Connect-AzAccount -TenantId '$TenantId'" -ForegroundColor Green
-			} else {
+			}
+			else {
 				Write-Host "  Connect-AzAccount" -ForegroundColor Green
 				Write-Host "  # Or specify tenant: Connect-AzAccount -TenantId 'your-tenant-id'" -ForegroundColor Gray
 			}
@@ -208,7 +216,8 @@ function Invoke-EasyPIMOrchestrator {
 			Write-Host ""
 			throw "Azure authentication required. Please authenticate using one of the methods above."
 		}
-	} catch {
+	}
+ catch {
 		Write-Error "Authentication check failed: $($_.Exception.Message)"
 		return
 	}
@@ -220,7 +229,8 @@ function Invoke-EasyPIMOrchestrator {
 		# 1. Load configuration
 		$config = if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
 			Get-EasyPIMConfiguration -KeyVaultName $KeyVaultName -SecretName $SecretName
-		} else {
+		}
+		else {
 			Get-EasyPIMConfiguration -ConfigFilePath $ConfigFilePath
 		}
 
@@ -264,7 +274,8 @@ function Invoke-EasyPIMOrchestrator {
 				Write-Error $errorMsg
 				throw $errorMsg
 			}
-		} else {
+		}
+		else {
 			Write-Host "✅ Configuration validation passed" -ForegroundColor Green
 		}
 
@@ -275,14 +286,14 @@ function Invoke-EasyPIMOrchestrator {
 
 		# Send startup telemetry (non-blocking)
 		$startupProperties = @{
-			"execution_mode" = if ($WhatIfPreference) { "WhatIf" } else { $Mode }
-			"protected_roles_override" = $AllowProtectedRoles.IsPresent
+			"execution_mode"                          = if ($WhatIfPreference) { "WhatIf" } else { $Mode }
+			"protected_roles_override"                = $AllowProtectedRoles.IsPresent
 			"protected_roles_override_token_supplied" = $protectedRoleOverrideTokenProvided
-			"config_source" = if ($PSCmdlet.ParameterSetName -eq 'KeyVault') { "KeyVault" } else { "File" }
-			"skip_assignments" = $SkipAssignments.IsPresent
-			"skip_cleanup" = $SkipCleanup.IsPresent
-			"skip_policies" = $SkipPolicies.IsPresent
-			"session_id" = $sessionId
+			"config_source"                           = if ($PSCmdlet.ParameterSetName -eq 'KeyVault') { "KeyVault" } else { "File" }
+			"skip_assignments"                        = $SkipAssignments.IsPresent
+			"skip_cleanup"                            = $SkipCleanup.IsPresent
+			"skip_policies"                           = $SkipPolicies.IsPresent
+			"session_id"                              = $sessionId
 		}
 		# Send startup telemetry (non-blocking)
 		try {
@@ -291,12 +302,14 @@ function Invoke-EasyPIMOrchestrator {
 				# For KeyVault configs, pass the loaded config object directly
 				Write-Host "🔍 [DEBUG] Using KeyVault parameter set for telemetry" -ForegroundColor Yellow
 				Send-TelemetryEventFromConfig -EventName "orchestrator_startup" -Properties $startupProperties -Config $config
-			} else {
+			}
+			else {
 				# For file-based configs, use the file path
 				Write-Host "🔍 [DEBUG] Using file-based parameter set for telemetry" -ForegroundColor Yellow
 				Send-TelemetryEvent -EventName "orchestrator_startup" -Properties $startupProperties -ConfigPath $ConfigFilePath
 			}
-		} catch {
+		}
+		catch {
 			Write-Verbose "Telemetry startup failed (non-blocking): $($_.Exception.Message)"
 			Write-Host "❌ [DEBUG] Telemetry startup failed: $($_.Exception.Message)" -ForegroundColor Red
 		}
@@ -309,7 +322,8 @@ function Invoke-EasyPIMOrchestrator {
 		try {
 			$script:tenantID = $TenantId
 			Set-Variable -Scope Global -Name tenantID -Value $TenantId -Force
-		} catch {
+		}
+		catch {
 			Write-Warning "Failed to set tenant ID variables: $($_.Exception.Message)"
 		}
 		# Initialize subscription context EARLY for downstream helpers (Invoke-ARM, get-config)
@@ -319,7 +333,8 @@ function Invoke-EasyPIMOrchestrator {
 				try {
 					$azCtx = Get-AzContext -ErrorAction SilentlyContinue
 					if ($azCtx -and $azCtx.Subscription -and $azCtx.Subscription.Id) { $SubscriptionId = $azCtx.Subscription.Id }
-				} catch {
+				}
+				catch {
 					Write-Debug "Could not retrieve Azure context for subscription ID"
 				}
 			}
@@ -331,7 +346,8 @@ function Invoke-EasyPIMOrchestrator {
 				$script:subscriptionID = $SubscriptionId
 				Set-Variable -Scope Global -Name subscriptionID -Value $SubscriptionId -Force
 			}
-		} catch {
+		}
+		catch {
 			Write-Warning "Failed to set subscription ID variables: $($_.Exception.Message)"
 		}
 		# 2. Process and normalize config based on selected operations
@@ -343,15 +359,15 @@ function Invoke-EasyPIMOrchestrator {
 			$PolicyOperations = $Operations
 		}
 		if (-not $SkipPolicies -and (
-			($config.PSObject.Properties['AzureRolePolicies'] -and $config.AzureRolePolicies) -or
-			($config.PSObject.Properties['EntraRolePolicies'] -and $config.EntraRolePolicies) -or
-			($config.PSObject.Properties['GroupPolicies'] -and $config.GroupPolicies) -or
-			($config.PSObject.Properties['PolicyTemplates'] -and $config.PolicyTemplates) -or
-			($config.PSObject.Properties['Policies'] -and $config.Policies) -or
-			($config.PSObject.Properties['EntraRoles'] -and $config.EntraRoles.PSObject.Properties['Policies'] -and $config.EntraRoles.Policies) -or
-			($config.PSObject.Properties['AzureRoles'] -and $config.AzureRoles.PSObject.Properties['Policies'] -and $config.AzureRoles.Policies) -or
-			($config.PSObject.Properties['GroupRoles'] -and $config.GroupRoles.PSObject.Properties['Policies'] -and $config.GroupRoles.Policies)
-		)) {
+				($config.PSObject.Properties['AzureRolePolicies'] -and $config.AzureRolePolicies) -or
+				($config.PSObject.Properties['EntraRolePolicies'] -and $config.EntraRolePolicies) -or
+				($config.PSObject.Properties['GroupPolicies'] -and $config.GroupPolicies) -or
+				($config.PSObject.Properties['PolicyTemplates'] -and $config.PolicyTemplates) -or
+				($config.PSObject.Properties['Policies'] -and $config.Policies) -or
+				($config.PSObject.Properties['EntraRoles'] -and $config.EntraRoles.PSObject.Properties['Policies'] -and $config.EntraRoles.Policies) -or
+				($config.PSObject.Properties['AzureRoles'] -and $config.AzureRoles.PSObject.Properties['Policies'] -and $config.AzureRoles.Policies) -or
+				($config.PSObject.Properties['GroupRoles'] -and $config.GroupRoles.PSObject.Properties['Policies'] -and $config.GroupRoles.Policies)
+			)) {
 			Write-Host -Object "⚙️ [PROC] Processing policy configurations..." -ForegroundColor Cyan
 			$policyConfig = Initialize-EasyPIMPolicies -Config $config -PolicyOperations $PolicyOperations -AllowProtectedRoles:$AllowProtectedRoles
 			# Filter policy config based on selected policy operations
@@ -382,23 +398,27 @@ function Invoke-EasyPIMOrchestrator {
 				foreach ($key in $filteredPolicyConfig.Keys) {
 					if ($processedConfig.PSObject.Properties[$key]) {
 						$processedConfig.PSObject.Properties[$key].Value = $filteredPolicyConfig[$key]
-					} else {
+					}
+					else {
 						$processedConfig | Add-Member -MemberType NoteProperty -Name $key -Value $filteredPolicyConfig[$key]
 					}
 				}
-			} else {
+			}
+			else {
 				# Merge all policy config with processed config
 				foreach ($key in $policyConfig.Keys) {
 					if ($key -match ".*Policies$") {
 						if ($processedConfig.PSObject.Properties[$key]) {
 							$processedConfig.PSObject.Properties[$key].Value = $policyConfig[$key]
-						} else {
+						}
+						else {
 							$processedConfig | Add-Member -MemberType NoteProperty -Name $key -Value $policyConfig[$key]
 						}
 					}
 				}
 			}
-		} elseif ($SkipPolicies) {
+		}
+		elseif ($SkipPolicies) {
 			Write-Host -Object "⏭️ [WARN] Skipping policy processing as requested by SkipPolicies parameter" -ForegroundColor Yellow
 		}
 		# Filter config based on selected operations
@@ -443,7 +463,8 @@ function Invoke-EasyPIMOrchestrator {
 				if ($filteredAssignments.PSObject.Properties.Name.Count -gt 0) {
 					$filteredConfig.Assignments = $filteredAssignments
 					Write-Verbose "[Filter Debug] Assignments block preserved with $($filteredAssignments.PSObject.Properties.Name.Count) sections"
-				} else {
+				}
+				else {
 					Write-Verbose "[Filter Debug] No matching assignment sections found, Assignments block will be empty"
 				}
 			}
@@ -465,35 +486,37 @@ function Invoke-EasyPIMOrchestrator {
 			}
 			$processedConfig = $filteredConfig
 		}
-	# Always perform principal & group validation before any policy or assignment operations
-	# CRITICAL: We need to validate every principal ID in our configuration across ALL contexts:
-	# - Entra roles: approvers in policy templates and inline policy definitions
-	# - Azure roles: approvers in policy templates and inline policy definitions
-	# - Groups: approvers in policy templates and inline policy definitions
-	# - Assignments: principalId for role assignments (EntraRoles, AzureRoles, Groups)
-	# - Legacy assignments: PrincipalId and GroupId in legacy assignment formats
-	#
-	# Invalid principal IDs cause 400 Bad Request errors from ARM/Graph APIs when:
-	# - Creating approval rules with non-existent approver IDs
-	# - Creating assignments with non-existent principal/group IDs
-	# - Any policy or assignment operation referencing deleted/invalid principals
+		# Always perform principal & group validation before any policy or assignment operations
+		# CRITICAL: We need to validate every principal ID in our configuration across ALL contexts:
+		# - Entra roles: approvers in policy templates and inline policy definitions
+		# - Azure roles: approvers in policy templates and inline policy definitions
+		# - Groups: approvers in policy templates and inline policy definitions
+		# - Assignments: principalId for role assignments (EntraRoles, AzureRoles, Groups)
+		# - Legacy assignments: PrincipalId and GroupId in legacy assignment formats
+		#
+		# Invalid principal IDs cause 400 Bad Request errors from ARM/Graph APIs when:
+		# - Creating approval rules with non-existent approver IDs
+		# - Creating assignments with non-existent principal/group IDs
+		# - Any policy or assignment operation referencing deleted/invalid principals
 		Write-Host -Object "🔍 [TEST] Validating principal and group IDs..." -ForegroundColor Cyan
 		$principalIds = New-Object -TypeName "System.Collections.Generic.HashSet[string]"
 		Write-Verbose ("[Orchestrator] TenantId in context before validation: {0}" -f ($TenantId))
 		try {
 			$tpeCmd = Get-Command Test-PrincipalExists -ErrorAction SilentlyContinue
-			if($tpeCmd){
-				Write-Host ("[Debug] Using Test-PrincipalExists from: {0} ({1})" -f $tpeCmd.Source,$tpeCmd.Path) -ForegroundColor DarkGray
-			} else {
+			if ($tpeCmd) {
+				Write-Host ("[Debug] Using Test-PrincipalExists from: {0} ({1})" -f $tpeCmd.Source, $tpeCmd.Path) -ForegroundColor DarkGray
+			}
+			else {
 				Write-Host "[Debug] Test-PrincipalExists not found in scope" -ForegroundColor Yellow
 			}
-		} catch {
+		}
+		catch {
 			Write-Debug "Failed to check Test-PrincipalExists command availability"
 		}
-	$policyApproverRefs = @()
+		$policyApproverRefs = @()
 		if ($processedConfig.PSObject.Properties.Name -contains 'Assignments' -and $processedConfig.Assignments) {
 			$assign = $processedConfig.Assignments
-			foreach ($section in 'EntraRoles','AzureRoles','Groups') {
+			foreach ($section in 'EntraRoles', 'AzureRoles', 'Groups') {
 				if ($assign.PSObject.Properties.Name -contains $section -and $assign.$section) {
 					foreach ($roleBlock in $assign.$section) {
 						if ($roleBlock.PSObject.Properties.Name -contains 'assignments') {
@@ -504,7 +527,7 @@ function Invoke-EasyPIMOrchestrator {
 				}
 			}
 		}
-		foreach ($legacySection in 'EntraIDRoles','EntraIDRolesActive','AzureRoles','AzureRolesActive','GroupRoles','GroupRolesActive') {
+		foreach ($legacySection in 'EntraIDRoles', 'EntraIDRolesActive', 'AzureRoles', 'AzureRolesActive', 'GroupRoles', 'GroupRolesActive') {
 			if ($processedConfig.PSObject.Properties.Name -contains $legacySection -and $processedConfig.$legacySection) {
 				foreach ($item in $processedConfig.$legacySection) {
 					if ($item.PrincipalId) { [void]$principalIds.Add($item.PrincipalId) }
@@ -516,9 +539,9 @@ function Invoke-EasyPIMOrchestrator {
 		$approverRefsFound = 0
 		$hasEntraPolicies = $false
 		if ($policyConfig -and (
-			($policyConfig -is [hashtable] -and $policyConfig.ContainsKey('EntraRolePolicies') -and $policyConfig.EntraRolePolicies) -or
-			($policyConfig -isnot [hashtable] -and $policyConfig.PSObject.Properties['EntraRolePolicies'] -and $policyConfig.EntraRolePolicies)
-		)) {
+				($policyConfig -is [hashtable] -and $policyConfig.ContainsKey('EntraRolePolicies') -and $policyConfig.EntraRolePolicies) -or
+				($policyConfig -isnot [hashtable] -and $policyConfig.PSObject.Properties['EntraRolePolicies'] -and $policyConfig.EntraRolePolicies)
+			)) {
 			$hasEntraPolicies = $true
 			foreach ($pol in $policyConfig.EntraRolePolicies) {
 				$roleNameRef = $pol.RoleName
@@ -533,9 +556,9 @@ function Invoke-EasyPIMOrchestrator {
 				elseif ($policyRef -and $policyRef.PSObject.Properties['Approvers']) { $approvers = $policyRef.Approvers }
 				if ($approvers) {
 					foreach ($ap in $approvers) {
-			$apId = $null
-			if ($ap -is [string]) { $apId = $ap }
-			else { $apId = $ap.Id; if (-not $apId) { $apId = $ap.id } }
+						$apId = $null
+						if ($ap -is [string]) { $apId = $ap }
+						else { $apId = $ap.Id; if (-not $apId) { $apId = $ap.id } }
 						if ($apId) {
 							[void]$principalIds.Add([string]$apId)
 							$policyApproverRefs += [pscustomobject]@{ PrincipalId = [string]$apId; RoleName = $roleNameRef }
@@ -617,10 +640,11 @@ function Invoke-EasyPIMOrchestrator {
 				# Reuse cached object if available
 				if ($script:principalObjectCache -and $script:principalObjectCache.ContainsKey($principalIdIter)) {
 					$obj = $script:principalObjectCache[$principalIdIter]
-				} else {
-						try { $obj = invoke-graph -Endpoint "directoryObjects/$principalIdIter" -ErrorAction Stop } catch {
-							Write-Verbose -Message "Suppressed directory object fetch failure for ${principalIdIter}: $($_.Exception.Message)"
-						}
+				}
+				else {
+					try { $obj = invoke-graph -Endpoint "directoryObjects/$principalIdIter" -ErrorAction Stop } catch {
+						Write-Verbose -Message "Suppressed directory object fetch failure for ${principalIdIter}: $($_.Exception.Message)"
+					}
 				}
 				if ($obj -and $obj.'@odata.type') { $type = $obj.'@odata.type' }
 				if ($type -eq '#microsoft.graph.group') {
@@ -629,45 +653,50 @@ function Invoke-EasyPIMOrchestrator {
 					elseif ($env:EASYPIM_VERBOSE_PRINCIPAL) { $doLookup = $true }
 					if ($doLookup) {
 						try {
-							$g = Get-MgGroup -GroupId $principalIdIter -Property Id,DisplayName -ErrorAction SilentlyContinue
+							$g = Get-MgGroup -GroupId $principalIdIter -Property Id, DisplayName -ErrorAction SilentlyContinue
 							if ($g) { $displayName = $g.DisplayName }
-						} catch { Write-Verbose -Message "Suppressed group lookup failure for ${principalIdIter}: $($_.Exception.Message)" }
+						}
+						catch { Write-Verbose -Message "Suppressed group lookup failure for ${principalIdIter}: $($_.Exception.Message)" }
 					}
 				}
 			}
 			$validationResults += [pscustomobject]@{ PrincipalId = $principalIdIter; Exists = $exists; Type = $type; DisplayName = $displayName }
 		}
-	$missing = $validationResults | Where-Object -FilterScript { -not $_.Exists }
+		$missing = $validationResults | Where-Object -FilterScript { -not $_.Exists }
 		if ($missing.Count -gt 0) {
 			Write-Host -Object "⚠️ [WARN] Principal validation failed:" -ForegroundColor Yellow
 			foreach ($m in $missing) {
 				$refRoles = ($policyApproverRefs | Where-Object -FilterScript { $_.PrincipalId -eq $m.PrincipalId } | Select-Object -ExpandProperty RoleName -Unique)
 				if ($refRoles) {
 					Write-Host -Object "   - $($m.PrincipalId): DOES NOT EXIST (referenced as Approver for Entra role(s): $([string]::Join(', ', $refRoles)))" -ForegroundColor Red
-				} else {
+				}
+				else {
 					Write-Host -Object "   - $($m.PrincipalId): DOES NOT EXIST" -ForegroundColor Red
 				}
 			}
 			if ($WhatIfPreference) {
 				Write-Host -Object "Proceeding due to -WhatIf (preview) to allow cleanup delta visibility. These principals will be ignored." -ForegroundColor Yellow
-			} else {
+			}
+			else {
 				Write-Host -Object "Aborting before any policy or assignment processing. Fix these IDs or run with -WhatIf to preview." -ForegroundColor Red
 				return
 			}
-		} else {
+		}
+		else {
 			$checked = $validationResults.Count
 			Write-Host -Object "✅ [OK] Principal validation passed ($checked principals checked, 0 missing)" -ForegroundColor Green
 		}
 		# Debug: show processed assignment counts (eligible/active) before policy & cleanup phases
 		try {
 			$dbgAzureElig = ($processedConfig.AzureRoles    | Measure-Object).Count
-			$dbgAzureAct  = ($processedConfig.AzureRolesActive | Measure-Object).Count
+			$dbgAzureAct = ($processedConfig.AzureRolesActive | Measure-Object).Count
 			$dbgEntraElig = ($processedConfig.EntraIDRoles  | Measure-Object).Count
-			$dbgEntraAct  = ($processedConfig.EntraIDRolesActive | Measure-Object).Count
+			$dbgEntraAct = ($processedConfig.EntraIDRolesActive | Measure-Object).Count
 			$dbgGroupElig = ($processedConfig.GroupRoles    | Measure-Object).Count
-			$dbgGroupAct  = ($processedConfig.GroupRolesActive | Measure-Object).Count
+			$dbgGroupAct = ($processedConfig.GroupRolesActive | Measure-Object).Count
 			Write-Host -Object "[Orchestrator Debug] Assignment counts -> Azure(E:$dbgAzureElig A:$dbgAzureAct) Entra(E:$dbgEntraElig A:$dbgEntraAct) Groups(E:$dbgGroupElig A:$dbgGroupAct)" -ForegroundColor DarkCyan
-		} catch { Write-Host -Object "[Orchestrator Debug] Failed to compute assignment debug counts: $($_.Exception.Message)" -ForegroundColor DarkYellow }
+		}
+		catch { Write-Host -Object "[Orchestrator Debug] Failed to compute assignment debug counts: $($_.Exception.Message)" -ForegroundColor DarkYellow }
 		# Re-affirm subscription context later as well, but avoid noisy logs
 		if (-not $SubscriptionId -or [string]::IsNullOrWhiteSpace($SubscriptionId)) {
 			$SubscriptionId = $env:subscriptionid
@@ -678,16 +707,17 @@ function Invoke-EasyPIMOrchestrator {
 				$script:subscriptionID = $SubscriptionId
 				Set-Variable -Scope Global -Name subscriptionID -Value $SubscriptionId -Force
 			}
-		} catch {
+		}
+		catch {
 			Write-Warning "Failed to set subscription ID variables (second attempt): $($_.Exception.Message)"
 		}
 		# 3. Process policies FIRST (skip if requested) - CRITICAL: Policies must be applied before assignments to ensure compliance
 		$policyResults = $null
 		if (-not $SkipPolicies -and $policyConfig -and (
-			($policyConfig.ContainsKey('AzureRolePolicies') -and $policyConfig.AzureRolePolicies) -or
-			($policyConfig.ContainsKey('EntraRolePolicies') -and $policyConfig.EntraRolePolicies) -or
-			($policyConfig.ContainsKey('GroupPolicies') -and $policyConfig.GroupPolicies)
-		)) {
+				($policyConfig.ContainsKey('AzureRolePolicies') -and $policyConfig.AzureRolePolicies) -or
+				($policyConfig.ContainsKey('EntraRolePolicies') -and $policyConfig.EntraRolePolicies) -or
+				($policyConfig.ContainsKey('GroupPolicies') -and $policyConfig.GroupPolicies)
+			)) {
 			# Policy functions no longer support a separate 'validate' mode. Always use 'delta'; rely on -WhatIf for preview.
 			$effectivePolicyMode = "delta"
 			# Protected roles safety check: identify and confirm if protected roles are being modified
@@ -699,8 +729,8 @@ function Invoke-EasyPIMOrchestrator {
 				}
 			}
 			if ($AllowProtectedRoles -and -not $WhatIfPreference) {
-				$protectedEntraRoles = @("Privileged Role Administrator","Security Administrator","User Access Administrator")
-				$protectedAzureRoles = @("Owner","User Access Administrator")
+				$protectedEntraRoles = @("Privileged Role Administrator", "Security Administrator", "User Access Administrator")
+				$protectedAzureRoles = @("Owner", "User Access Administrator")
 				$protectedRolesFound = @()
 				# Check for protected Entra roles
 				if ($policyConfig.ContainsKey('EntraRolePolicies') -and $policyConfig.EntraRolePolicies) {
@@ -730,10 +760,12 @@ function Invoke-EasyPIMOrchestrator {
 					if ($protectedRoleOverrideTokenProvided) {
 						$confirmation = $ProtectedRoleOverrideToken
 						Write-Host "🔒 [SECURITY] Protected role override token supplied via parameter - bypassing interactive confirmation" -ForegroundColor Green
-					} else {
+					}
+					else {
 						try {
 							$confirmation = Read-Host "Type 'CONFIRM-PROTECTED-OVERRIDE' to proceed"
-						} catch {
+						}
+						catch {
 							throw "Protected role policy confirmation requires interactive input. Supply -ProtectedRoleOverrideToken 'CONFIRM-PROTECTED-OVERRIDE' when running in non-interactive automation contexts."
 						}
 					}
@@ -751,23 +783,27 @@ function Invoke-EasyPIMOrchestrator {
 			$policyResults = New-EPOEasyPIMPolicy -Config $policyConfigObject -TenantId $TenantId -SubscriptionId $SubscriptionId -PolicyMode $effectivePolicyMode -AllowProtectedRoles:$AllowProtectedRoles -WhatIf:$WhatIfPreference
 			if ($WhatIfPreference) {
 				Write-Host -Object "✅ [OK] Policy dry-run completed (-WhatIf) - role policies appear correctly configured for assignment compliance" -ForegroundColor Green
-			} else {
+			}
+			else {
 				$failed = 0; $succeeded = 0
 				try {
 					if ($policyResults -and $policyResults.Summary) {
 						$failed = [int]$policyResults.Summary.Failed
 						$succeeded = [int]$policyResults.Summary.Successful
 					}
-				} catch {
+				}
+				catch {
 					Write-Verbose -Message ("[Orchestrator] Unable to read policy summary counts: {0}" -f $_.Exception.Message)
 				}
 				if ($failed -gt 0) {
 					Write-Host -Object "⚠️ [WARN] Policy configuration completed with errors (Successful: $succeeded, Failed: $failed). Proceeding with assignments." -ForegroundColor Yellow
-				} else {
+				}
+				else {
 					Write-Host -Object "✅ [OK] Policy configuration completed - proceeding with assignments using updated role policies" -ForegroundColor Green
 				}
 			}
-		} elseif ($SkipPolicies) {
+		}
+		elseif ($SkipPolicies) {
 			Write-Warning -Message "Policy processing skipped - assignments may not comply with intended role policies"
 		}
 		# 4. Perform cleanup operations AFTER policy processing (skip if requested or if assignments are skipped)
@@ -781,7 +817,8 @@ function Invoke-EasyPIMOrchestrator {
 				}
 			}
 			$cleanupResult
-		} else {
+		}
+		else {
 			if ($SkipAssignments) { Write-Host -Object "[WARN] Skipping cleanup because SkipAssignments was specified (no assignment delta expected)" -ForegroundColor Yellow }
 			elseif ($SkipCleanup) { Write-Host -Object "[WARN] Skipping cleanup as requested by SkipCleanup parameter" -ForegroundColor Yellow }
 			else { Write-Host -Object "[WARN] Skipping cleanup as specific operations were selected" -ForegroundColor Yellow }
@@ -825,15 +862,16 @@ function Invoke-EasyPIMOrchestrator {
 					}
 				}
 			}
-		} else {
+		}
+		else {
 			Write-Host -Object "[WARN] Skipping assignment creation as requested" -ForegroundColor Yellow
 			$assignmentResults = $null
 		}
 		# 6. Display summary
-	# Summary no longer distinguishes 'validate' policy mode; pass 'delta' and rely on -WhatIf for preview messaging upstream
-	$effectivePolicyMode = 'delta'
-	Write-EasyPIMSummary -CleanupResults $cleanupResults -AssignmentResults $assignmentResults -PolicyResults $policyResults -PolicyMode $effectivePolicyMode
-	Write-Host -Object "Mode semantics: delta = add/update only (no removals), initial = full reconcile (destructive)." -ForegroundColor Gray
+		# Summary no longer distinguishes 'validate' policy mode; pass 'delta' and rely on -WhatIf for preview messaging upstream
+		$effectivePolicyMode = 'delta'
+		Write-EasyPIMSummary -CleanupResults $cleanupResults -AssignmentResults $assignmentResults -PolicyResults $policyResults -PolicyMode $effectivePolicyMode
+		Write-Host -Object "Mode semantics: delta = add/update only (no removals), initial = full reconcile (destructive)." -ForegroundColor Gray
 		Write-Host -Object "=== EasyPIM orchestration completed successfully ===" -ForegroundColor Green
 
 		# Send completion telemetry (non-blocking)
@@ -841,13 +879,13 @@ function Invoke-EasyPIMOrchestrator {
 		$executionDuration = ($telemetryEndTime - $telemetryStartTime).TotalSeconds
 
 		$completionProperties = @{
-			"execution_mode" = if ($WhatIfPreference) { "WhatIf" } else { $Mode }
-			"protected_roles_override" = $AllowProtectedRoles.IsPresent
+			"execution_mode"                          = if ($WhatIfPreference) { "WhatIf" } else { $Mode }
+			"protected_roles_override"                = $AllowProtectedRoles.IsPresent
 			"protected_roles_override_token_supplied" = $protectedRoleOverrideTokenProvided
-			"execution_duration_seconds" = [math]::Round($executionDuration, 2)
-			"success" = $true
-			"errors_encountered" = 0
-			"session_id" = $sessionId
+			"execution_duration_seconds"              = [math]::Round($executionDuration, 2)
+			"success"                                 = $true
+			"errors_encountered"                      = 0
+			"session_id"                              = $sessionId
 		}
 
 		# Add result counts if available
@@ -871,11 +909,13 @@ function Invoke-EasyPIMOrchestrator {
 			if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
 				# For KeyVault configs, pass the loaded config object directly
 				Send-TelemetryEventFromConfig -EventName "orchestrator_completion" -Properties $completionProperties -Config $config
-			} else {
+			}
+			else {
 				# For file-based configs, use the file path
 				Send-TelemetryEvent -EventName "orchestrator_completion" -Properties $completionProperties -ConfigPath $ConfigFilePath
 			}
-		} catch {
+		}
+		catch {
 			Write-Verbose "Telemetry completion failed (non-blocking): $($_.Exception.Message)"
 		}
 	}
@@ -883,12 +923,12 @@ function Invoke-EasyPIMOrchestrator {
 		# Send error telemetry (non-blocking)
 		if ($sessionId) {
 			$errorProperties = @{
-				"execution_mode" = if ($WhatIfPreference) { "WhatIf" } else { $Mode }
-				"protected_roles_override" = $AllowProtectedRoles.IsPresent
+				"execution_mode"                          = if ($WhatIfPreference) { "WhatIf" } else { $Mode }
+				"protected_roles_override"                = $AllowProtectedRoles.IsPresent
 				"protected_roles_override_token_supplied" = $protectedRoleOverrideTokenProvided
-				"success" = $false
-				"error_type" = $_.Exception.GetType().Name
-				"session_id" = $sessionId
+				"success"                                 = $false
+				"error_type"                              = $_.Exception.GetType().Name
+				"session_id"                              = $sessionId
 			}
 
 			if ($telemetryStartTime) {
@@ -900,16 +940,18 @@ function Invoke-EasyPIMOrchestrator {
 				if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
 					# For KeyVault configs, pass the loaded config object directly
 					Send-TelemetryEventFromConfig -EventName "orchestrator_error" -Properties $errorProperties -Config $config
-				} else {
+				}
+				else {
 					# For file-based configs, use the file path
 					Send-TelemetryEvent -EventName "orchestrator_error" -Properties $errorProperties -ConfigPath $ConfigFilePath
 				}
-			} catch {
+			}
+			catch {
 				Write-Verbose "Telemetry error failed (non-blocking): $($_.Exception.Message)"
 			}
 		}
 
-	Write-Error -Message "[ERROR] An error occurred: $($_.Exception.Message)"
+		Write-Error -Message "[ERROR] An error occurred: $($_.Exception.Message)"
 		Write-Verbose -Message "Stack trace: $($_.ScriptStackTrace)"
 		throw
 	}
