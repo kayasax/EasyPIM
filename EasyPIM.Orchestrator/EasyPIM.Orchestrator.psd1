@@ -1,6 +1,6 @@
 @{
     RootModule        = 'EasyPIM.Orchestrator.psm1'
-    ModuleVersion = '1.4.9'
+    ModuleVersion = '1.4.10'
     GUID              = 'b6f9b3c9-bc6a-4d4b-8c51-7c45d42157cd'
     Author            = 'Loïc MICHEL'
     CompanyName       = 'EasyPIM'
@@ -30,14 +30,17 @@
         ProjectUri = 'https://kayasax.github.io/EasyPIM/template-guide.html'
         LicenseUri = 'https://github.com/kayasax/EasyPIM/blob/main/LICENSE'
 ReleaseNotes = @'
-EasyPIM.Orchestrator v1.4.9 - Automation Override Token
-
-Added
-- `Invoke-EasyPIMOrchestrator` now accepts `-ProtectedRoleOverrideToken` so CI and scheduled automation can authorize protected-role policy updates without interactive prompts.
+EasyPIM.Orchestrator v1.4.10 - Graph Scope Optimization
 
 Improved
-- Telemetry captures whether the override token was supplied to provide audit trails for protected role changes.
-- Added Pester coverage verifying the override token bypasses prompts only when the confirmation value matches, preventing regression.
+- Optimized Microsoft Graph authentication requirements: Graph scopes are now only required when operations include EntraRoles, GroupRoles, or All. Azure-only operations (AzureRoles) no longer require RoleManagement.ReadWrite.Directory permissions, reducing permission footprint for Azure RBAC-focused deployments.
+- Enhanced authentication flow with clearer messaging about required scopes based on operation type.
+
+Contributors
+- @AzureStackNerd - Graph scope optimization (PR #225)
+
+Previous releases:
+v1.4.9 - Automation override token for protected roles in CI/CD
 '@
     } }
 }
