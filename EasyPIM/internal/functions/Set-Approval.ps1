@@ -77,6 +77,17 @@ function Set-Approval ($ApprovalRequired, $Approvers, [switch]$entraRole) {
             $type = $_.Type
             if (-not $type) { $type = $_.type }
 
+            # Normalize type to proper case (User/Group) for ARM API compatibility
+            if ($type) {
+                $typeLower = $type.ToString().Trim().ToLower()
+                if ($typeLower -eq 'user') {
+                    $type = 'User'
+                }
+                elseif ($typeLower -eq 'group') {
+                    $type = 'Group'
+                }
+            }
+
             # Auto-detect/validate object type by querying Azure AD (only if we have a valid ID)
             if ($id) {
                 Write-Verbose "Validating/detecting object type for approver $id (configured type: $type)"

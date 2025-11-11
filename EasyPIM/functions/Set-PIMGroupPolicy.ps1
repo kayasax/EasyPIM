@@ -10,7 +10,7 @@
       .EXAMPLE
         PS>  Set-PIMGroupPolicy -tenantID $tenantID -groupID $gID -type member -ActivationDuration "P1D" -ApprovalRequired $true -Approvers @(@{"Id"="25f3deb5-1c8d-4035-942d-b3cbbad98b8e";"Name"="John";"Type"="user"}) -Notification_EligibleAssignment_Alert @{"isDefaultRecipientEnabled"="true"; "notificationLevel"="All";"Recipients" = @("email1@domain.com","email2@domain.com")}
 
-        Require  approval on activation and set John as an approver, configure some notifications for the member role of the group $gIDs
+        Require  approval on activation and set John as an approver, configure some notifications for the member role of the group $gIDs. Note: Type is case-insensitive
 
       .Link
 
@@ -83,6 +83,7 @@ function Set-PIMGroupPolicy {
 
         [Parameter()]
         # Array of approvers in the format: @(@{"Id"=<ObjectID>;"Name"="John":"Type"="user|group"}, .... )
+        # Note: Type is case-insensitive (accepts "user", "User", "group", "Group")
         $Approvers,
 
         [Parameter()]

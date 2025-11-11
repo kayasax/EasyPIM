@@ -7,8 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Security
-- Enforced Global Administrator policy protection, ensuring orchestrator automation always skips modifications for this break-glass role.
+## [EasyPIM Core 2.0.41] - 2025-11-11
+
+### Fixed
+- **Approver Type Case-Insensitivity**: Approver `Type` parameter now accepts case-insensitive values ("user"/"User", "group"/"Group"). ARM API previously rejected lowercase values with 400 Bad Request. Fixes #218.
+
+### Enhanced
+- **Documentation**: Updated all Set-PIM*Policy functions to clarify that approver Type is case-insensitive in examples and parameter descriptions.
+
+## [EasyPIM Core 2.0.40] - 2025-11-11
+
+### Fixed
+- **Backup Resilience**: `Backup-PIMAzureResourcePolicy` now gracefully handles 404 errors when custom roles have PIM policies at child scopes (e.g., resource groups). Emits warning and continues backup instead of failing. Fixes #223.
+
+## [EasyPIM Core 2.0.39] - 2025-11-11
+
+### Enhanced
+- **Package Metadata**: Updated ProjectUri to GitHub Pages documentation site (https://kayasax.github.io/EasyPIM/)
+- **Discoverability**: Enhanced module descriptions emphasizing ease of use, automation capabilities, and overcoming portal/API limitations
+- **Tags**: Added comprehensive tags for better PowerShell Gallery discovery (RBAC, Identity, Security, Governance, Compliance, ARM, Graph)
+
+## [EasyPIM.Orchestrator 1.4.10] - 2025-11-11
+
+### Enhanced
+- **Graph Scope Optimization**: Graph authentication now only required for Entra/Group operations, not Azure-only operations. Contributed by @AzureStackNerd (PR #225).
+- **Package Metadata**: Enhanced description highlighting PIM-as-Code, configuration-driven deployment, and drift detection capabilities
+- **Tags**: Added PIM-as-Code, GitOps, Infrastructure-as-Code, Automation, Configuration-Management tags
+
+## [EasyPIM Core 2.0.38] - 2025-11-11
+
+### Fixed
+- **Report Accuracy**: Fixed unique users count in PIM activity reports to use `initiatedBy` property instead of `requestor`, resolving discrepancy with top requestors display.
+
+## [EasyPIM Core 2.0.37] - 2025-11-11
+
+### Added
+- **Report Navigation**: Added fixed sidebar navigation with jump links to report sections (Summary, Categories, Results, Activity, Requestors, Azure Roles, Entra Roles)
+- **PDF Export**: Added one-click PDF export button using browser print functionality
+- **Print-Friendly CSS**: Enhanced report template with print-optimized styling (page-break-inside: avoid, hidden navigation)
+
+## [EasyPIM Core 2.0.35] - 2025-11-11
+
+### Fixed
+- **Module Loading Architecture**: Removed all internal function dot-sourcing to support build process concatenation
+- **Template Path Resolution**: Fixed template path logic to work in both source and built module scenarios
+- **Build Compatibility**: Ensured helper functions in `internal/functions/` auto-load without explicit dot-sourcing
+
+## [EasyPIM Core 2.0.33] - 2025-11-11
+
+### Fixed
+- **Module Structure**: Moved internal helper functions from `internal/` to `internal/functions/` for proper auto-loading in built modules
+- **Function Loading**: Resolved module import issues where internal functions were not available after publish
+
+## [EasyPIM Core 2.0.32] - 2025-11-11
+
+### Added
+- **Report Branding**: Added EasyPIM logo display in report header and footer with brightness enhancement for dark backgrounds
+- **Date Range Display**: Added date filtering information when StartDate/EndDate parameters used in reports
+
+### Fixed
+- **Documentation URLs**: Corrected all documentation links to point to GitHub Pages site
+- **Code Quality**: Achieved 100% PSScriptAnalyzer compliance (7,018 tests passing)
+- **Unused Code Cleanup**: Removed ~94 lines of unused variables from pre-refactor code in Show-PIMReport
 
 ## [EasyPIM Core 2.0.31] - 2025-10-11
 
