@@ -99,6 +99,7 @@ function Set-PIMEntraRolePolicy {
 
         [Parameter()]
         # Array of approvers in the format: @(@{"Id"=<ObjectID>;"Name"="John":"Type"="user|group"}, .... )
+        # Note: Type is case-insensitive (accepts "user", "User", "group", "Group")
         $Approvers,
 
         [Parameter()]
