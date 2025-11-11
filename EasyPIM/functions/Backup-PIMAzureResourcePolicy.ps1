@@ -57,7 +57,30 @@ function Backup-PIMAzureResourcePolicy {
         $policies | ForEach-Object {
             log "exporting $_ role settings"
             #write-verbose  $_
-            $exports += get-config $scope $_.Trim()
+            try {
+                $config = get-config $scope $_.Trim()
+                if ($null -ne $config) {
+                    $exports += $config
+                }
+            }
+            catch {
+                # Check if this is a 404 error (role has PIM policy at child scope like resource group)
+                $is404 = $false
+                if ($_.Exception.Response.StatusCode -eq 'NotFound' -or $_.Exception.Response.StatusCode.value__ -eq 404) {
+                    $is404 = $true
+                }
+                elseif ($_.Exception.Message -match '404|Not Found') {
+                    $is404 = $true
+                }
+                
+                if ($is404) {
+                    Write-Warning "⚠️ Skipping role '$_' - PIM policy not found at scope '$scope'. Role may be configured at child scope level (e.g., resource group)."
+                }
+                else {
+                    # For non-404 errors, re-throw to maintain existing error handling
+                    throw
+                }
+            }
         }
         $date = get-date -Format FileDateTime
         # Prefer -path if provided, else fallback to -exportFilename, else default
