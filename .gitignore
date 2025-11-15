@@ -37,6 +37,15 @@ examples/
 # Session memory file (do not commit persistent AI session state)
 session_starter.md
 
+# Agent configurations (personal workspace setup - don't commit)
+.agents/
+.github/agents/
+
+# Agent plans (optional - commit if you want historical record)
+# Uncomment to ignore:
+plans/
+# Or keep plans/ committed for audit trail
+
 # PR description files (use .github/pull_request_templates/ for templates)
 PR-DESCRIPTION.md
 pr-description.md
@@ -66,3 +75,5 @@ fix-*.ps1
 session_starter.md
 PostHog-Dashboard-Guide.md
 EasyPIM/functions/Show-PIMReport.ps1.backup
+QUICKSTART-AGENTS.md
+BATCH3-SUMMARY.md

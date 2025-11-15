@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Issue #239**: MFA requirement on active assignments now properly preserved during `Copy-PIMEntraRolePolicy` operations
+  - **Root Cause**: `Import-EntraRoleSettings` and `Set-ActiveAssignmentRequirement` were incorrectly filtering out `MultiFactorAuthentication` from `ActiveAssignmentRequirement` (Rule #7: `Enablement_Admin_Assignment`)
+  - **Corrected Understanding**: Old code comment incorrectly stated "no MFA on Admin assignment" - Microsoft Graph API Rule #7 DOES support MFA on active assignments
+  - **Fix Applied**: Added `'MultiFactorAuthentication'` to allowed admin enablement rules for Rule #7
+  - **Additional Correction**: Removed `'Ticketing'` from Rule #7 allowed values - Ticketing is only supported for Rule #2 (`Enablement_EndUser_Assignment` - end-user activation), not Rule #7 (admin assignment)
+  - **Rule #7 Valid Values**: `Justification`, `MultiFactorAuthentication` (per Microsoft Graph API specification)
+  - **Updated Documentation**: Clarified function help to distinguish Rule #2 (activation) vs Rule #7 (active assignment)
+  - **Reference**: [Microsoft Docs - PIM Rules Mapping](https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview#assignment-rules) (Rule #7: Enablement_Admin_Assignment)
+  - **Impact**: Security settings now properly copied between roles; MFA requirements no longer silently dropped
+  - **Testing**: Added comprehensive regression test suite with 5 test cases; verified RED→GREEN TDD cycle
+  - **Reported by**: @artorro
+
 ## [EasyPIM Core 2.0.41] - 2025-11-11
 
 ### Fixed

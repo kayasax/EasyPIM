@@ -1,11 +1,16 @@
 ﻿<#
       .Synopsis
-       Rule for active assignment requirement
+       Rule for active assignment requirement (Rule #7 - Enablement_Admin_Assignment)
       .Description
-       rule 2 in https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview#activation-rules
+       Configures requirements when admins create ACTIVE (not eligible) role assignments.
+       This is Rule #7 in https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview#assignment-rules
+       
+       Note: This is different from Rule #2 (Enablement_EndUser_Assignment) which controls end-user ACTIVATION.
+       Rule #7 supports only Justification and MFA. Ticketing is only available for Rule #2 (activation).
       .Parameter ActiveAssignmentRequirement
-       value can be "None", or one or more value from "Justification","MultiFactoAuthentication"
-       WARNING options are case sensitive!
+       value can be "None", or one or more value from "Justification","MultiFactorAuthentication"
+       WARNING: Options are case sensitive!
+       Reference: https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview#assignment-rules (Rule #7)
       .EXAMPLE
         PS> Set-ActiveAssignmentRequirement "Justification"
 
@@ -24,8 +29,10 @@ function Set-ActiveAssignmentRequirement($ActiveAssignmentRequirement, [switch]$
         if ($ActiveAssignmentRequirement -match ',') { $ActiveAssignmentRequirement = ($ActiveAssignmentRequirement -split ',') } else { $ActiveAssignmentRequirement = @($ActiveAssignmentRequirement) }
     }
 
-    # Filter to allowed admin enablement rules only (no MFA on Admin assignment)
-    $allowedAdmin = @('Justification','Ticketing')
+    # Filter to allowed admin enablement rules for Rule #7 (Enablement_Admin_Assignment)
+    # Allowed: Justification, MultiFactorAuthentication (Ticketing is ONLY for Rule #2 - activation)
+    # Reference: https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview#assignment-rules (Rule #7)
+    $allowedAdmin = @('Justification','MultiFactorAuthentication')
     $ActiveAssignmentRequirement = @($ActiveAssignmentRequirement | Where-Object { $_ -and ($allowedAdmin -contains $_.Trim()) })
 
     if (($ActiveAssignmentRequirement -eq "None") -or ($ActiveAssignmentRequirement.Count -eq 0)) {
