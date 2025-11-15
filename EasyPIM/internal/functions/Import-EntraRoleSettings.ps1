@@ -74,10 +74,12 @@ function Import-EntraRoleSettings  {
             Write-Verbose 'Skipping Enablement_EndUser_Assignment (no allowed end-user rules)'
         }
 
-        # Filter enablement rules for Admin Assignment (allowed: Justification, Ticketing)
+        # Filter enablement rules for Admin Assignment (Rule #7: Enablement_Admin_Assignment)
+        # Allowed: Justification, MultiFactorAuthentication (Ticketing is ONLY for Rule #2 - end-user activation)
+        # Reference: https://learn.microsoft.com/en-us/graph/identity-governance-pim-rules-overview#assignment-rules (Rule #7)
         $activeAssignmentRequirements = Split-OrEmpty $_.ActiveAssignmentRequirement
         if ($activeAssignmentRequirements) {
-            $allowedAdmin = @('Justification','Ticketing')
+            $allowedAdmin = @('Justification','MultiFactorAuthentication')
             $activeAssignmentRequirements = @($activeAssignmentRequirements | Where-Object { $allowedAdmin -contains $_ })
         }
         if ($activeAssignmentRequirements.Count -gt 0) {
