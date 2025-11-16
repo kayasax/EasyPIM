@@ -37,6 +37,11 @@ examples/
 # Session memory file (do not commit persistent AI session state)
 session_starter.md
 
+# Environment files with secrets (Service Principal credentials, API keys)
+.env
+.env.local
+.env.*.local
+
 # Agent configurations (personal workspace setup - don't commit)
 .agents/
 .github/agents/
