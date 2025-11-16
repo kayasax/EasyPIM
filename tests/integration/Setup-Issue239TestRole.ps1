@@ -53,47 +53,60 @@ $tenantId = $context.TenantId
 Write-Host "📋 Tenant ID: $tenantId" -ForegroundColor Gray
 Write-Host ""
 
-# Step 2: Find the AcrPull role (safer, non-critical role)
-Write-Host "Step 2: Finding 'AcrPull' role..." -ForegroundColor Yellow
-$acrPullRole = Invoke-MgGraphRequest -Method GET `
-    -Uri "https://graph.microsoft.com/v1.0/roleManagement/directory/roleDefinitions" |
-    Select-Object -ExpandProperty value |
-    Where-Object { $_.displayName -eq "AcrPull" }
+# Step 2: Pick an existing Entra (directory) role from a safe list
+Write-Host "Step 2: Locating a safe Entra role (Security Reader, Global Reader, Directory Readers, Reports Reader)..." -ForegroundColor Yellow
 
-if (-not $acrPullRole) {
-    Write-Error "❌ AcrPull role not found in tenant"
-    Write-Host ""
-    Write-Host "Alternative test roles you can use:" -ForegroundColor Yellow
-    Write-Host "  • Security Reader" -ForegroundColor White
-    Write-Host "  • Directory Readers" -ForegroundColor White
-    Write-Host "  • Reports Reader" -ForegroundColor White
+$preferredRoles = @(
+    'Security Reader'
+    'Global Reader'
+    'Directory Readers'
+    'Reports Reader'
+)
+
+try {
+    $allRoles = (Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/roleManagement/directory/roleDefinitions" -ErrorAction Stop).value
+} catch {
+    Write-Error "❌ Failed to query directory role definitions: $_"
     exit 1
 }
 
-Write-Host "✅ Found: $($acrPullRole.displayName) ($($acrPullRole.id))" -ForegroundColor Green
+$selectedRole = $null
+foreach ($r in $preferredRoles) {
+    $match = $allRoles | Where-Object { $_.displayName -eq $r }
+    if ($match) { $selectedRole = $match; break }
+}
+
+if (-not $selectedRole) {
+    Write-Error "❌ No preferred Entra role found in tenant. Available roles (sample):"
+    $allRoles | Select-Object -First 10 -Property displayName,id | Format-Table
+    exit 1
+}
+
+Write-Host "✅ Selected Entra role: $($selectedRole.displayName) ($($selectedRole.id))" -ForegroundColor Green
 Write-Host ""
 
 # Step 3: Get current policy
 Write-Host "Step 3: Getting current AcrPull policy..." -ForegroundColor Yellow
 try {
-    $currentConfig = Get-PIMEntraRolePolicy -tenantID $tenantId -rolename "AcrPull"
-    Write-Host "✅ Current policy retrieved" -ForegroundColor Green
+    $roleName = $selectedRole.displayName
+    $currentConfig = Get-PIMEntraRolePolicy -tenantID $tenantId -rolename $roleName
+    Write-Host "✅ Current policy retrieved for role '$roleName'" -ForegroundColor Green
     Write-Host "   Current ActiveAssignmentRequirement: $($currentConfig.rules | Where-Object id -eq 'Enablement_Admin_Assignment' | Select-Object -ExpandProperty enabledRules)" -ForegroundColor Gray
 } catch {
-    Write-Error "❌ Failed to get current policy: $_"
+    Write-Error "❌ Failed to get current policy for role '$roleName': $_"
     exit 1
 }
 
 Write-Host ""
 
 # Step 4: Configure MFA on active assignment
-Write-Host "Step 4: Configuring MFA on AcrPull active assignment (Rule #7)..." -ForegroundColor Yellow
-Write-Host "   Adding: MultiFactorAuthentication + Justification" -ForegroundColor Gray
+Write-Host "Step 4: Configuring MFA on selected Entra role active assignment (Rule #7)..." -ForegroundColor Yellow
+Write-Host "   Adding: MultiFactorAuthentication + Justification to role '$roleName'" -ForegroundColor Gray
 
 try {
     # Use Set-PIMEntraRolePolicy to update the policy
     Set-PIMEntraRolePolicy -tenantID $tenantId `
-                          -rolename "AcrPull" `
+                          -rolename $roleName `
                           -ActiveAssignmentRequirement "MultiFactorAuthentication", "Justification" `
                           -Verbose
     
@@ -111,18 +124,28 @@ try {
 Write-Host ""
 
 # Step 5: Verify the change
-Write-Host "Step 5: Verifying configuration..." -ForegroundColor Yellow
-Start-Sleep -Seconds 2  # Wait for Azure to propagate changes
+Write-Host "Step 5: Verifying configuration (polling for propagation)..." -ForegroundColor Yellow
 
-$verifyConfig = Get-PIMEntraRolePolicy -tenantID $tenantId -rolename "AcrPull"
-$activeRule = $verifyConfig.rules | Where-Object id -eq 'Enablement_Admin_Assignment'
+# Wait up to 60s for the MFA requirement to appear (poll every 5s)
+$ok = $false
+try {
+    $ok = Wait-ForPolicyRule -TenantId $tenantId -RoleName $roleName -RuleId 'Enablement_Admin_Assignment' -ExpectedValue 'MultiFactorAuthentication' -TimeoutSeconds 60 -IntervalSeconds 5
+} catch {
+    Write-Warning "Verification helper failed: $_"
+}
 
-if ($activeRule.enabledRules -contains 'MultiFactorAuthentication') {
-    Write-Host "✅ MFA successfully configured!" -ForegroundColor Green
+if ($ok) {
+    $verifyConfig = Get-PIMEntraRolePolicy -tenantID $tenantId -rolename $roleName
+    $activeRule = $verifyConfig.rules | Where-Object id -eq 'Enablement_Admin_Assignment'
+    Write-Host "✅ MFA successfully configured and observed after propagation!" -ForegroundColor Green
     Write-Host "   ActiveAssignmentRequirement: $($activeRule.enabledRules -join ', ')" -ForegroundColor Gray
 } else {
-    Write-Warning "⚠️  MFA not detected in configuration. This may take a few moments to propagate."
-    Write-Host "   Current value: $($activeRule.enabledRules -join ', ')" -ForegroundColor Gray
+    Write-Warning "⚠️  MFA not detected after polling. This may take longer to propagate or the update did not apply correctly."
+    try {
+        $verifyConfig = Get-PIMEntraRolePolicy -tenantID $tenantId -rolename $roleName
+        $activeRule = $verifyConfig.rules | Where-Object id -eq 'Enablement_Admin_Assignment'
+        Write-Host "   Current value: $($activeRule.enabledRules -join ', ')" -ForegroundColor Gray
+    } catch { }
 }
 
 Write-Host ""
