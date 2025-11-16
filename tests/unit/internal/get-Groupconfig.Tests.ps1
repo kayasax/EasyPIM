@@ -15,6 +15,12 @@
 
 Describe "get-Groupconfig" {
     
+    BeforeAll {
+        # Import module
+        $modulePath = Join-Path $PSScriptRoot "..\..\..\EasyPIM\EasyPIM.psd1"
+        Import-Module $modulePath -Force -ErrorAction Stop
+    }
+    
     Context "When retrieving group owner configuration" {
         
         It "Should return config for group owner role" {
@@ -395,12 +401,10 @@ Describe "get-Groupconfig" {
                 # Arrange
                 $groupId = "filter-owner-test-1234"
                 $roleType = "owner"
+                $script:capturedEndpoint = $null
                 Mock invoke-graph {
-                    param($Endpoint, $Filter)
-                    $Endpoint | Should -Match "roleManagementPolicyAssignments"
-                    $Filter | Should -Match "scopeId eq '$groupId'"
-                    $Filter | Should -Match "scopeType eq 'Group'"
-                    $Filter | Should -Match "roleDefinitionId eq '$roleType'"
+                    param($Endpoint)
+                    $script:capturedEndpoint = $Endpoint
                     return @{
                         value = @{
                             policyid = "policy-id"
@@ -412,8 +416,11 @@ Describe "get-Groupconfig" {
                 # Act
                 $result = get-Groupconfig -id $groupId -type $roleType
                 
-                # Assert
-                $result | Should -Not -BeNullOrEmpty
+                # Assert - check filter was built into endpoint URL
+                $script:capturedEndpoint | Should -Match "roleManagementPolicyAssignments"
+                $script:capturedEndpoint | Should -Match "scopeId eq '$groupId'"
+                $script:capturedEndpoint | Should -Match "scopeType eq 'Group'"
+                $script:capturedEndpoint | Should -Match "roleDefinitionId eq '$roleType'"
             }
         }
         
@@ -422,11 +429,10 @@ Describe "get-Groupconfig" {
                 # Arrange
                 $groupId = "filter-member-test-1234"
                 $roleType = "member"
+                $script:capturedEndpoint = $null
                 Mock invoke-graph {
-                    param($Endpoint, $Filter)
-                    $Endpoint | Should -Match "roleManagementPolicyAssignments"
-                    $Filter | Should -Match "scopeId eq '$groupId'"
-                    $Filter | Should -Match "roleDefinitionId eq '$roleType'"
+                    param($Endpoint)
+                    $script:capturedEndpoint = $Endpoint
                     return @{
                         value = @{
                             policyid = "policy-id"
@@ -438,8 +444,10 @@ Describe "get-Groupconfig" {
                 # Act
                 $result = get-Groupconfig -id $groupId -type $roleType
                 
-                # Assert
-                $result | Should -Not -BeNullOrEmpty
+                # Assert - check filter was built into endpoint URL
+                $script:capturedEndpoint | Should -Match "roleManagementPolicyAssignments"
+                $script:capturedEndpoint | Should -Match "scopeId eq '$groupId'"
+                $script:capturedEndpoint | Should -Match "roleDefinitionId eq '$roleType'"
             }
         }
         
