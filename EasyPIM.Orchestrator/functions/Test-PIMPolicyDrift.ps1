@@ -181,6 +181,11 @@ function Test-PIMPolicyDrift {
 	} catch {
 		Write-Warning "Failed to use orchestrator policy processing, falling back to local logic: $_"
 
+		# Clear any partially populated collections to prevent duplication
+		$expectedAzure = @()
+		$expectedEntra = @()
+		$expectedGroup = @()
+
 	# Fallback to original logic - process different configuration formats
 	if ($json.PSObject.Properties['AzureRolePolicies']) { $expectedAzure += $json.AzureRolePolicies }
 	if ($json.PSObject.Properties['EntraRolePolicies']) {
