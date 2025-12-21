@@ -83,18 +83,10 @@ function New-EPOEasyPIMPolicies {
                                 $live = Get-PIMAzureResourcePolicy -tenantID $TenantId -subscriptionID $subId -rolename $roles -ErrorAction SilentlyContinue
                                 if ($live) {
                                     foreach ($l in $live) {
-                                        $key = "$scope|$($l.roleDefinitionId)" # Get-PIMAzureResourcePolicy returns roleDefinitionId as name sometimes? No, it returns object with properties.
-                                        # Actually Get-PIMAzureResourcePolicy returns object with 'roleDefinitionId' but we need to match by Name.
-                                        # The output of Get-PIMAzureResourcePolicy seems to be the policy rule itself.
-                                        # Let's check Get-PIMAzureResourcePolicy output structure.
-                                        # It returns properties like 'roleDefinitionId', 'id', 'type', 'name' (which is policy name).
-                                        # It does NOT seem to return the Role Name (DisplayName) easily unless we map it.
-                                        # Wait, the input was RoleName. The output should ideally be correlated.
-                                        # Get-PIMAzureResourcePolicy iterates input role names and calls get-config.
-                                        # It returns the policy object.
-                                        # We need to map it back to the RoleName.
-                                        # Since we can't easily map back without extra calls, we might have to skip optimization for Azure or do it one by one.
-                                        # Doing it one by one in WhatIf is acceptable.
+                                        # Note: Get-PIMAzureResourcePolicy returns policy objects but mapping them back to RoleName 
+                                        # without additional API calls is complex. For now, we skip the optimization of pre-fetching 
+                                        # and mapping for Azure policies and rely on individual fetching in the loop below.
+                                        # This ensures accuracy at the cost of performance in WhatIf mode.
                                     }
                                 }
                             } catch { Write-Verbose "Failed to fetch live Azure policy for scope $scope: $_" }
@@ -398,11 +390,10 @@ function New-EPOEasyPIMPolicies {
                         $roles = $groupGroup.Group.RoleName
                         if ($groupId -and $roles) {
                             try {
-                                # Get-PIMGroupPolicy takes GroupID and Type (owner/member).
-                                # It doesn't seem to take RoleName array directly to filter?
-                                # Let's check Get-PIMGroupPolicy. It takes GroupID and Type.
-                                # Wait, the config has RoleName (owner/member).
-                                # So we need to call it for each role type present.
+                                # Get-PIMGroupPolicy requires GroupID and Type (owner/member).
+                                # It does not support filtering by an array of RoleNames directly.
+                                # Therefore, we iterate through each unique role type (owner/member) present in the configuration
+                                # to fetch the corresponding policies.
                                 $types = $roles | Select-Object -Unique
                                 foreach ($type in $types) {
                                     $live = Get-PIMGroupPolicy -tenantID $TenantId -groupID $groupId -type $type -ErrorAction SilentlyContinue
