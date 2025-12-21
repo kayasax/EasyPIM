@@ -15,7 +15,7 @@ function ConvertTo-BooleanString {
 	#>
 	param([object]$Value)
 
-	if ($null -eq $Value -or $Value -eq '' -or $Value -eq 'None') {
+	if ($null -eq $Value) {
 		return 'false'
 	}
 
@@ -25,7 +25,12 @@ function ConvertTo-BooleanString {
 	}
 
 	# Handle string representations
-	$stringValue = "$Value".ToLower().Trim()
+	$stringValue = "$Value".Trim()
+	if ($stringValue -eq '' -or $stringValue -eq 'None') {
+		return 'false'
+	}
+
+	$stringValue = $stringValue.ToLower()
 	if ($stringValue -in @('true', '1', 'yes', 'on', 'enabled')) {
 		return 'true'
 	}
