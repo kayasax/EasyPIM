@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [EasyPIM.Orchestrator 1.4.12] - 2025-12-21
+
+### Fixed
+- **Drift Detection**: Fixed a bug in `Test-PIMPolicyDrift` where policy entries were duplicated in the output if the primary logic failed after partial processing. The fallback logic now correctly clears previous results before running. Fixes #243.
+
+## [EasyPIM.Orchestrator 1.4.11] - 2025-12-21
+
+### Fixed
+- **Drift Detection**: Fixed a bug in `Test-PIMPolicyDrift` where boolean values in policies were incorrectly flagged as drift when compared against string representations (e.g., "False" vs $false). Fixes #242.
+
 ### Fixed
 - **Issue #239**: MFA requirement on active assignments now properly preserved during `Copy-PIMEntraRolePolicy` operations
   - **Root Cause**: `Import-EntraRoleSettings` and `Set-ActiveAssignmentRequirement` were incorrectly filtering out `MultiFactorAuthentication` from `ActiveAssignmentRequirement` (Rule #7: `Enablement_Admin_Assignment`)
