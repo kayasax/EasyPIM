@@ -1,6 +1,6 @@
 @{
     RootModule        = 'EasyPIM.Orchestrator.psm1'
-    ModuleVersion = '1.4.10'
+    ModuleVersion = '1.4.11'
     GUID              = 'b6f9b3c9-bc6a-4d4b-8c51-7c45d42157cd'
     Author            = 'Loïc MICHEL'
     CompanyName       = 'EasyPIM'
@@ -30,17 +30,17 @@
         ProjectUri = 'https://kayasax.github.io/EasyPIM/template-guide.html'
         LicenseUri = 'https://github.com/kayasax/EasyPIM/blob/main/LICENSE'
 ReleaseNotes = @'
-EasyPIM.Orchestrator v1.4.10 - Graph Scope Optimization
+EasyPIM.Orchestrator v1.4.11 - Fix Drift Detection
 
-Improved
-- Optimized Microsoft Graph authentication requirements: Graph scopes are now only required when operations include EntraRoles, GroupRoles, or All. Azure-only operations (AzureRoles) no longer require RoleManagement.ReadWrite.Directory permissions, reducing permission footprint for Azure RBAC-focused deployments.
-- Enhanced authentication flow with clearer messaging about required scopes based on operation type.
+Fixed
+- Resolved Issue #242: Fixed false positive drift detection in Test-PIMPolicyDrift where boolean values were being compared incorrectly (e.g. JSON 'true' vs API 'True').
 
 Contributors
-- @AzureStackNerd - Graph scope optimization (PR #225)
+- @leighmo - Issue report
+- @kayasax - Fix implementation
 
 Previous releases:
-v1.4.9 - Automation override token for protected roles in CI/CD
+v1.4.10 - Graph Scope Optimization
 '@
     } }
 }
