@@ -166,7 +166,8 @@ function Build-ChartData {
 
     # Summary statistics
     $chartData['totalActivities'] = $Activities.Count
-    $successCount = ($Activities | Where-Object { $_.result -eq 'success' }).Count
+    # Force array wrap to ensure .Count returns array length, not hashtable key count when single result
+    $successCount = @($Activities | Where-Object { $_.result -eq 'success' }).Count
     $chartData['successRate'] = if ($Activities.Count -gt 0) {
         [math]::Round(($successCount / $Activities.Count) * 100, 1)
     } else {

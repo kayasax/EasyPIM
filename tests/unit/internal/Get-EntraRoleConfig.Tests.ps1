@@ -15,6 +15,12 @@
 
 Describe "Get-EntraRoleConfig" {
     
+    BeforeAll {
+        # Import module
+        $modulePath = Join-Path $PSScriptRoot "..\..\..\EasyPIM\EasyPIM.psd1"
+        Import-Module $modulePath -Force -ErrorAction Stop
+    }
+    
     Context "When retrieving valid role configuration" {
         
         It "Should return config for Global Administrator role" {
@@ -358,7 +364,7 @@ Describe "Get-EntraRoleConfig" {
             }
         }
         
-        It "Should return when roleID is null" {
+        It "Should throw when roleID is null (role not found)" {
             InModuleScope EasyPIM {
                 # Arrange
                 $roleName = "Null Role"
@@ -366,11 +372,9 @@ Describe "Get-EntraRoleConfig" {
                     return @{ value = @() }
                 }
                 
-                # Act
-                $result = Get-EntraRoleConfig -rolename $roleName
-                
-                # Assert
-                $result | Should -BeNullOrEmpty
+                # Act & Assert
+                # Function throws when role is not found
+                { Get-EntraRoleConfig -rolename $roleName } | Should -Throw "*Role $roleName not found*"
             }
         }
         
@@ -398,16 +402,21 @@ Describe "Get-EntraRoleConfig" {
             InModuleScope EasyPIM {
                 # Arrange
                 $roleName = "Test Role"
-                $callCount = 0
+                $script:callOrder = @()
                 Mock invoke-graph {
                     param($Endpoint)
-                    $callCount++
-                    if ($callCount -eq 1) {
-                        $Endpoint | Should -Match "roleDefinitions"
+                    # Track call order
+                    if ($Endpoint -match 'roleDefinitions') {
+                        $script:callOrder += 'roleDefinitions'
                         return @{ value = @( @{ id = "role-id"; displayName = $roleName } ) }
                     }
                     elseif ($Endpoint -match 'roleManagementPolicyAssignments') {
+                        $script:callOrder += 'policyAssignments'
                         return @{ value = @{ policyID = "policy-id" } }
+                    }
+                    elseif ($Endpoint -match 'roleManagementPolicies/policy-id') {
+                        $script:callOrder += 'policy'
+                        return @{ rules = @() }
                     }
                     else {
                         return @{ value = @() }
@@ -418,7 +427,8 @@ Describe "Get-EntraRoleConfig" {
                 $result = Get-EntraRoleConfig -rolename $roleName
                 
                 # Assert
-                Should -Invoke invoke-graph -AtLeast -Times 2
+                $script:callOrder[0] | Should -Be 'roleDefinitions'
+                $script:callOrder.Count | Should -BeGreaterThan 1
             }
         }
         

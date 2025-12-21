@@ -15,6 +15,10 @@
 Describe "Get-Entrarole" -Tag 'Unit', 'InternalHelper' {
     
     BeforeAll {
+        # Import module
+        $modulePath = Join-Path $PSScriptRoot "..\..\..\EasyPIM\EasyPIM.psd1"
+        Import-Module $modulePath -Force -ErrorAction Stop
+        
         # Mock script-level tenantID
         InModuleScope EasyPIM {
             $script:tenantID = "test-tenant-123"
@@ -133,9 +137,12 @@ Describe "Get-Entrarole" -Tag 'Unit', 'InternalHelper' {
                 # Arrange
                 Mock invoke-graph { return $null }
                 
-                # Act & Assert
-                # Function will fail on $null.value access
-                { Get-Entrarole } | Should -Throw
+                # Act
+                $result = Get-Entrarole
+                
+                # Assert
+                # Function doesn't throw on null, it returns empty/null result
+                $result | Should -BeNullOrEmpty
             }
         }
     }

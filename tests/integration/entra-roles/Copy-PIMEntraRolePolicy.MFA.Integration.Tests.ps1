@@ -23,10 +23,20 @@
 
 #Requires -Modules @{ ModuleName="Pester"; ModuleVersion="5.0.0" }
 
+# Discovery-time helper load: ensure `Test-IntegrationTestAuth` is available
+$helperPath = Join-Path $PSScriptRoot "..\helpers\IntegrationTestBase.ps1"
+if (Test-Path $helperPath) { . $helperPath }
+if ($null -eq $script:testConfig) { $script:testConfig = @{} }
+$script:testConfig.IsAuthenticated = Test-IntegrationTestAuth
+
 BeforeAll {
     # Import module
     $modulePath = Join-Path $PSScriptRoot "..\..\..\EasyPIM\EasyPIM.psd1"
     Import-Module $modulePath -Force
+    
+    # Import integration test helpers
+    $helperPath = Join-Path $PSScriptRoot "..\helpers\IntegrationTestBase.ps1"
+    . $helperPath
     
     # Integration test setup
     Write-Host "🔐 Integration Test - Real Authentication Required" -ForegroundColor Cyan
@@ -47,25 +57,33 @@ BeforeAll {
         
         # Temp file for CSV export
         TempCSV = Join-Path $env:TEMP "easypim-issue239-test-$(Get-Date -Format 'yyyyMMdd-HHmmss').csv"
+        
+        # Check auth with helper function
+        IsAuthenticated = Test-IntegrationTestAuth
     }
     
-    # Verify authentication before running tests
-    try {
-        Write-Host "🔍 Checking Microsoft Graph authentication..." -ForegroundColor Cyan
-        $testAuth = Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/me" -ErrorAction Stop
-        Write-Host "✅ Authenticated as: $($testAuth.userPrincipalName)" -ForegroundColor Green
-    } catch {
-        Write-Warning "❌ Microsoft Graph authentication required!"
-        Write-Warning "Please authenticate first using one of:"
-        Write-Warning "  Connect-MgGraph -Scopes 'RoleManagement.Read.Directory'"
-        Write-Warning "  Connect-MgGraph -Scopes 'RoleManagement.ReadWrite.Directory'"
-        throw "Authentication required for integration tests"
+    # Report auth status
+    if ($script:testConfig.IsAuthenticated) {
+        $context = Get-MgContext
+        Write-Host "✅ Authenticated as: $($context.Account)" -ForegroundColor Green
+        Write-Host "   Tenant: $($context.TenantId)" -ForegroundColor Gray
+    } else {
+        Write-Host "⚠️  Microsoft Graph authentication not available - tests will SKIP" -ForegroundColor Yellow
+        Write-Host "   To authenticate: Connect-MgGraph -Scopes 'RoleManagement.Read.Directory'" -ForegroundColor Yellow
     }
     
     Write-Host ""
 }
 
 Describe "Copy-PIMEntraRolePolicy - Issue #239 MFA Preservation (Integration)" -Tag "Integration", "Issue239", "MFA", "SlowTest" {
+    
+    # Early exit if auth not available - prevents all Context blocks from executing
+    if (-not $script:testConfig.IsAuthenticated) {
+        It "Skipped: Graph auth not available" {
+            Set-ItResult -Skipped -Because "Microsoft Graph authentication not available"
+        }
+        return
+    }
     
     Context "When exporting role policy with MFA on active assignment (Real API)" {
         
