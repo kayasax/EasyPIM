@@ -66,7 +66,7 @@
 	if ($assign.PSObject.Properties.Name -contains 'EntraRoles' -and $assign.EntraRoles) {
 		foreach ($roleBlock in $assign.EntraRoles) {
 			$roleName = $roleBlock.roleName
-            
+
             # Optimization: Pre-fetch all assignments for this role to avoid N+1 API calls
             $cachedActive = @()
             $cachedEligible = @()
@@ -80,7 +80,7 @@
 
 			foreach ($a in ($roleBlock.assignments | Where-Object { $_ })) {
 				$ctx = "Entra/$roleName/$($a.principalId) [$($a.assignmentType)]"
-				
+
 				# Idempotency: skip if already assigned (active or eligible) for directory scope '/'
 				try {
 					# Check against cached lists first
@@ -88,12 +88,12 @@
                     $existsElig = $cachedEligible | Where-Object { $_.principalId -eq $a.principalId }
 
                     # Fallback to individual check if cache was empty (maybe API failure or just no assignments) but we want to be sure?
-                    # Actually, if cache is empty it means no assignments found (or API error). 
-                    # If API error, we might want to try individual call? 
+                    # Actually, if cache is empty it means no assignments found (or API error).
+                    # If API error, we might want to try individual call?
                     # For now, let's trust the pre-fetch. If pre-fetch failed, lists are empty, so we might proceed to create and fail there.
-                    # But to be safe, if we really want to be robust, we could try individual if cache is empty? 
+                    # But to be safe, if we really want to be robust, we could try individual if cache is empty?
                     # No, that defeats the purpose. Let's assume pre-fetch works.
-                    
+
 					if ($existsActive -or $existsElig) {
 						$existingType = if ($existsActive) { "Active" } else { "Eligible" }
 						if ($whatIf) {
@@ -154,7 +154,7 @@
 
 			foreach ($a in ($roleBlock.assignments | Where-Object { $_ })) {
 				$ctx = "Azure/$roleName@$scope/$($a.principalId) [$($a.assignmentType)]"
-				
+
 				# Idempotency: naive check via active/eligible getters if available; otherwise proceed
 				try {
 					$roleMatch = {
@@ -219,7 +219,7 @@
 			# normalize to API expected values for group membership type (owner|member)
 			$groupType = $roleName
 			try { if ($roleName) { $ln = $roleName.ToLower(); if ($ln -in @('owner','member')) { $groupType = $ln } } } catch { Write-Verbose "[Assignments] Could not normalize group type '$roleName': $($_.Exception.Message)" }
-			
+
             # Optimization: Pre-fetch all assignments for this group/type
             $cachedActive = @()
             $cachedEligible = @()
@@ -233,20 +233,20 @@
 
             foreach ($a in ($grp.assignments | Where-Object { $_ })) {
 				$ctx = "Group/$groupId/$roleName/$($a.principalId) [$($a.assignmentType)]"
-				
+
 				# Idempotency: check existing elig/active for group PIM
 				try {
                     # Check against cached lists
                     $existsActive = $cachedActive | Where-Object { $_.principalId -eq $a.principalId }
                     $existsElig = $cachedEligible | Where-Object { $_.principalId -eq $a.principalId }
 
-					if ($existsActive -or $existsElig) { 
+					if ($existsActive -or $existsElig) {
 						if ($whatIf) {
 							Write-Host "  ✅ [MATCH] Assignment exists: $ctx" -ForegroundColor Green
 						} else {
 							Write-Host "  ⏭️ Skipped existing: $ctx" -ForegroundColor Yellow
 						}
-						$summary.Skipped++; continue 
+						$summary.Skipped++; continue
 					}
 				} catch {
 					$VerbosePreference = $script:originalVerbosePreference
