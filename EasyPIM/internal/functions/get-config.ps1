@@ -18,13 +18,13 @@
         Author: Loïc MICHEL
         Homepage: https://github.com/kayasax/EasyPIM
      #>
-function get-config ($scope, $rolename, $copyFrom = $null) {
+function get-config ($scope, $rolename, $copyFrom = $null, $TenantId = $null) {
 
     $ARMhost = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM' -Verbose:$false
-    $ARMendpoint = "$($ARMhost.TrimEnd('/'))/$scope/providers/Microsoft.Authorization"
+    $ARMendpoint = "$($ARMhost.TrimEnd('/'))/$($scope.TrimStart('/'))/providers/Microsoft.Authorization"
     # Try to extract SubscriptionId from scope (if scope is at subscription level)
     $subId = $null
-    try { $m = [regex]::Match($scope, '^subscriptions/([0-9a-fA-F\-]{36})'); if ($m.Success) { $subId = $m.Groups[1].Value } }
+    try { $m = [regex]::Match($scope, '^/?subscriptions/([0-9a-fA-F\-]{36})'); if ($m.Success) { $subId = $m.Groups[1].Value } }
     catch {
         Write-Verbose "get-config: failed to extract SubscriptionId from scope '$scope': $($_.Exception.Message)"
     }
@@ -36,9 +36,9 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
 
         write-verbose " #1 Get role definition for the role $rolename assignable at the scope $scope at $restUri"
         #$response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
-    if ($subId) { $response = Invoke-ARM -restURI $restUri -method "get" -body $null -SubscriptionId $subId }
-    else { $response = Invoke-ARM -restURI $restUri -method "get" -body $null }
-        $roleID = $response.value.id
+    if ($subId) { $response = Invoke-ARM -restURI $restUri -method "get" -body $null -SubscriptionId $subId -TenantId $TenantId }
+    else { $response = Invoke-ARM -restURI $restUri -method "get" -body $null -TenantId $TenantId }
+        $roleID = $response.value[0].id
         #if ($null -eq $roleID) { throw "An exception occured : can't find a roleID for $rolename at scope $scope" }
         Write-Verbose ">> RodeId = $roleID"
 
@@ -52,17 +52,17 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
         $restUri = "$ARMendpoint/roleManagementPolicyAssignments?api-version=2020-10-01&`$filter=roleDefinitionId eq '$roleID'"
         write-verbose " #2 Get the Assignment for $rolename at $restUri"
         #$response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
-    if ($subId) { $response = Invoke-ARM -restURI $restUri -Method Get -SubscriptionId $subId }
-    else { $response = Invoke-ARM -restURI $restUri -Method Get }
-        $policyId = $response.value.properties.policyId #.split('/')[-1]
+    if ($subId) { $response = Invoke-ARM -restURI $restUri -Method Get -SubscriptionId $subId -TenantId $TenantId }
+    else { $response = Invoke-ARM -restURI $restUri -Method Get -TenantId $TenantId }
+        $policyId = $response.value[0].properties.policyId #.split('/')[-1]
         Write-Verbose ">> policy ID = $policyId"
 
         # 3 get the role policy for the policyID found in #2
         $restUri = "$ARMhost/$policyId/?api-version=2020-10-01"
         write-verbose " #3 get role policy at $restUri"
         #$response = Invoke-RestMethod -Uri $restUri -Method Get -Headers $authHeader -verbose:$false
-    if ($subId) { $response = Invoke-ARM -restURI $restUri -Method Get -SubscriptionId $subId }
-    else { $response = Invoke-ARM -restURI $restUri -Method Get }
+    if ($subId) { $response = Invoke-ARM -restURI $restUri -Method Get -SubscriptionId $subId -TenantId $TenantId }
+    else { $response = Invoke-ARM -restURI $restUri -Method Get -TenantId $TenantId }
 
         #Write-Verbose "copy from = $copyFrom"
         if ($null -ne $copyFrom) {
@@ -89,7 +89,7 @@ function get-config ($scope, $rolename, $copyFrom = $null) {
         # Get config values in a new object:
 
         # Maximum end user activation duration in Hour (PT24H) // Max 24H in portal but can be greater
-        $_activationDuration = $response.properties.rules | Where-Object { $_.id -eq "Expiration_EndUser_Assignment" } | Select-Object -ExpandProperty maximumduration
+        $_activationDuration = $response.properties.rules | Where-Object { $_.id -eq "Expiration_EndUser_Assignment" } | Select-Object -ExpandProperty maximumDuration
         # End user enablement rule (MultiFactorAuthentication, Justification, Ticketing)
         $_enablementRules = $response.properties.rules | Where-Object { $_.id -eq "Enablement_EndUser_Assignment" } | Select-Object -expand enabledRules
         # active assignment rules

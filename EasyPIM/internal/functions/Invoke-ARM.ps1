@@ -42,7 +42,11 @@ function Invoke-ARM {
 
         [Parameter(Position = 3)]
         [System.String]
-        $SubscriptionId
+        $SubscriptionId,
+
+        [Parameter(Position = 4)]
+        [System.String]
+        $TenantId
     )
 
     try {
@@ -50,6 +54,51 @@ function Invoke-ARM {
         $token = $null
         $tokenAcquisitionErrors = @()
         $authMethod = "Unknown"
+
+        # Method 0: Specific Context via PowerShell (PRIORITIZED when Tenant/Subscription specified)
+        # If the user explicitly requested a specific Tenant or Subscription, we prioritize the PowerShell context
+        # because it's the most likely to have the correct session for that specific scope.
+        if (-not $token -and ($SubscriptionId -or $TenantId)) {
+            try {
+                $azContext = $null
+                if ($SubscriptionId) {
+                    $azContext = Get-AzContext -SubscriptionId $SubscriptionId -ErrorAction SilentlyContinue
+                }
+                if (-not $azContext -and $TenantId) {
+                     $azContext = Get-AzContext -List | Where-Object { $_.Tenant.Id -eq $TenantId } | Select-Object -First 1
+                }
+
+                # If we found a context matching the request, use it
+                if ($azContext) {
+                    $tokenParams = @{
+                        ResourceUrl = "https://management.azure.com/"
+                        ErrorAction = "Stop"
+                    }
+                    if ($azContext.Tenant.Id) { $tokenParams["TenantId"] = $azContext.Tenant.Id }
+
+                    $tokenObj = Get-AzAccessToken @tokenParams
+                    $token = if ($tokenObj.Token -is [System.Security.SecureString]) {
+                        if ($PSVersionTable.PSVersion.Major -ge 7) {
+                            ConvertFrom-SecureString -SecureString $tokenObj.Token -AsPlainText
+                        } else {
+                            try {
+                                [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenObj.Token))
+                            } catch {
+                                $encryptedToken = ConvertFrom-SecureString -SecureString $tokenObj.Token -Force
+                                $secureToken = ConvertTo-SecureString -String $encryptedToken -Force
+                                [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureToken))
+                            }
+                        }
+                    } else {
+                        $tokenObj.Token
+                    }
+                    $authMethod = "Azure PowerShell (Specific Context)"
+                    Write-Verbose "ARM token acquired from Azure PowerShell for specific context ($($azContext.Name))"
+                }
+            } catch {
+                $tokenAcquisitionErrors += "PowerShell Specific Context: $($_.Exception.Message)"
+            }
+        }
 
         # Method 1: Environment Variables (PRIORITIZED - Works best in GitHub Actions OIDC)
         # This method is prioritized because it's the most reliable in CI/CD environments
@@ -70,16 +119,31 @@ function Invoke-ARM {
                 # Check if Azure CLI is available and authenticated
                 $cliCheck = az account show --query id --output tsv 2>$null
                 if ($cliCheck) {
-                    $cliToken = az account get-access-token --resource https://management.azure.com/ --query accessToken --output tsv 2>$null
+                    # Build CLI command with specific context if requested
+                    $cliArgs = @("account", "get-access-token", "--resource", "https://management.azure.com/", "--query", "accessToken", "--output", "tsv")
+
+                    # Only append subscription/tenant if we haven't already found a token (which we haven't if we are here)
+                    # and if they are provided.
+                    if ($SubscriptionId) {
+                        $cliArgs += "--subscription"
+                        $cliArgs += $SubscriptionId
+                    } elseif ($TenantId) {
+                        $cliArgs += "--tenant"
+                        $cliArgs += $TenantId
+                    }
+
+                    $cliToken = az @cliArgs 2>$null
                     if ($cliToken -and $cliToken.Trim() -ne "") {
                         $token = $cliToken.Trim()
                         $authMethod = "Azure CLI (GitHub Actions OIDC Compatible)"
                         Write-Verbose "ARM token acquired from Azure CLI - works reliably with azure/login@v2"
                     } else {
-                        throw "Azure CLI returned empty token"
+                        # Don't throw here, just let it fall through to next method
+                        Write-Verbose "Azure CLI returned empty token"
                     }
                 } else {
-                    throw "Azure CLI not authenticated"
+                    # Don't throw here
+                    Write-Verbose "Azure CLI not authenticated"
                 }
             } catch {
                 $tokenAcquisitionErrors += "Azure CLI: $($_.Exception.Message)"
@@ -90,10 +154,37 @@ function Invoke-ARM {
         # Keep this as fallback since it can be unreliable with OIDC in some configurations
         if (-not $token) {
             try {
-                $azContext = Get-AzContext -ErrorAction Stop
+                $azContext = $null
+                if ($SubscriptionId) {
+                    # Try to get context for the specific subscription to ensure correct TenantId
+                    $azContext = Get-AzContext -SubscriptionId $SubscriptionId -ErrorAction SilentlyContinue
+                }
+
+                # If no subscription context found (or not provided), try TenantId
+                if (-not $azContext -and $TenantId) {
+                     # Try to find a context for this tenant
+                     $azContext = Get-AzContext -List | Where-Object { $_.Tenant.Id -eq $TenantId } | Select-Object -First 1
+                }
+
+                if (-not $azContext) {
+                    $azContext = Get-AzContext -ErrorAction Stop
+                }
+
                 if ($azContext -and $azContext.Account) {
                     # Use Get-AzAccessToken for ARM resource (recommended approach)
-                    $tokenObj = Get-AzAccessToken -ResourceUrl "https://management.azure.com/" -ErrorAction Stop
+                    $tokenParams = @{
+                        ResourceUrl = "https://management.azure.com/"
+                        ErrorAction = "Stop"
+                    }
+
+                    # CRITICAL FIX: Explicitly use the TenantId from the context to avoid cross-tenant token issues
+                    if ($azContext.Tenant.Id) {
+                        $tokenParams["TenantId"] = $azContext.Tenant.Id
+                    } elseif ($TenantId) {
+                        $tokenParams["TenantId"] = $TenantId
+                    }
+
+                    $tokenObj = Get-AzAccessToken @tokenParams
                     $token = if ($tokenObj.Token -is [System.Security.SecureString]) {
                         # PowerShell version-aware SecureString conversion
                         if ($PSVersionTable.PSVersion.Major -ge 7) {

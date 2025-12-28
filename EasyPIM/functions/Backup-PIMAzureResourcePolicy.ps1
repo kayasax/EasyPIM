@@ -52,13 +52,13 @@ function Backup-PIMAzureResourcePolicy {
             $scope = "subscriptions/$subscriptionID"
         }
 
-        $policies = Get-AllPolicies $scope
+        $policies = Get-AllPolicies $scope $script:tenantID
 
         $policies | ForEach-Object {
             log "exporting $_ role settings"
             #write-verbose  $_
             try {
-                $config = get-config $scope $_.Trim()
+                $config = get-config $scope $_.Trim() $null $script:tenantID
                 if ($null -ne $config) {
                     $exports += $config
                 }
@@ -72,7 +72,7 @@ function Backup-PIMAzureResourcePolicy {
                 elseif ($_.Exception.Message -match '404|Not Found') {
                     $is404 = $true
                 }
-                
+
                 if ($is404) {
                     Write-Warning "⚠️ Skipping role '$_' - PIM policy not found at scope '$scope'. Role may be configured at child scope level (e.g., resource group)."
                 }

@@ -90,7 +90,7 @@ function Get-PIMAzureResourceActiveAssignment {
         # the downside is we will not get assignment with a future start date
         #$restURI = "https://management.azure.com/$scope/providers/Microsoft.Authorization/roleAssignmentSchedules?api-version=2020-10-01"
         $armEndpoint = Get-PIMAzureEnvironmentEndpoint -EndpointType 'ARM'
-        $restURI = "$($armEndpoint.TrimEnd('/'))/$scope/providers/Microsoft.Authorization/roleAssignmentScheduleInstances?api-version=2020-10-01-preview"
+        $restURI = "$($armEndpoint.TrimEnd('/'))/$($scope.TrimStart('/'))/providers/Microsoft.Authorization/roleAssignmentScheduleInstances?api-version=2020-10-01-preview"
 
         # Determine which principal ID to use for filtering
         $effectivePrincipalId = $null
@@ -118,7 +118,7 @@ function Get-PIMAzureResourceActiveAssignment {
             $restURI += "&`$filter=assignedto('"+$effectivePrincipalId+"')"
         }
 
-        $response = Invoke-ARM -restURI $restURI -method get
+        $response = Invoke-ARM -restURI $restURI -method get -TenantId $tenantID -SubscriptionId $subscriptionID
         #$response|select -first 1
 
         $return = @()

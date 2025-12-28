@@ -96,6 +96,7 @@ function Test-EasyPIMConfigurationValidity {
                     Context = "$Context.$propertyName"
                     Message = "Invalid value 'AuthenticationContext' detected in $propertyName. This requirement is controlled by AuthenticationContext_Enabled and AuthenticationContext_Value."
                     Suggestion = "Remove 'AuthenticationContext' from $propertyName and rely on AuthenticationContext_Enabled plus AuthenticationContext_Value to enforce authentication context."
+                    Corrected = $false
                 }
                 $validationResult.HasIssues = $true
                 $validationResult.Issues += $issue
@@ -129,6 +130,7 @@ function Test-EasyPIMConfigurationValidity {
 
                     $validationResult.Corrections += "Auto-removed 'AuthenticationContext' from $Context.$propertyName"
                     $validationResult.ValidationSummary.AutoCorrections++
+                    $issue.Corrected = $true
                 }
             }
         }
@@ -153,6 +155,7 @@ function Test-EasyPIMConfigurationValidity {
 
                 if ($approverIssues.HasIssues) {
                     $validationResult.HasIssues = $true
+                    $approverIssues.Issues | ForEach-Object { if (-not $_.PSObject.Properties['Corrected']) { $_ | Add-Member -NotePropertyName Corrected -NotePropertyValue $false -Force } }
                     $validationResult.Issues += $approverIssues.Issues
                     $validationResult.ValidationSummary.ApproverFieldMismatches += $approverIssues.Issues.Count
 
@@ -160,6 +163,7 @@ function Test-EasyPIMConfigurationValidity {
                         $validationResult.CorrectedConfig.PolicyTemplates.$templateName.Approvers = $approverIssues.CorrectedApprovers
                         $validationResult.Corrections += "Auto-corrected Approvers format in PolicyTemplates.$templateName"
                         $validationResult.ValidationSummary.AutoCorrections++
+                        $approverIssues.Issues | Where-Object { $_.Category -eq 'FieldNameMismatch' } | ForEach-Object { $_.Corrected = $true }
                     }
                 }
             }
@@ -189,6 +193,7 @@ function Test-EasyPIMConfigurationValidity {
 
                     if ($approverIssues.HasIssues) {
                         $validationResult.HasIssues = $true
+                        $approverIssues.Issues | ForEach-Object { if (-not $_.PSObject.Properties['Corrected']) { $_ | Add-Member -NotePropertyName Corrected -NotePropertyValue $false -Force } }
                         $validationResult.Issues += $approverIssues.Issues
                         $validationResult.ValidationSummary.ApproverFieldMismatches += $approverIssues.Issues.Count
 
@@ -196,6 +201,7 @@ function Test-EasyPIMConfigurationValidity {
                             $Config.EntraRolePolicies[$index].Approvers = $approverIssues.CorrectedApprovers
                             $validationResult.Corrections += "Auto-corrected Approvers format in $context"
                             $validationResult.ValidationSummary.AutoCorrections++
+                            $approverIssues.Issues | Where-Object { $_.Category -eq 'FieldNameMismatch' } | ForEach-Object { $_.Corrected = $true }
                         }
                     }
                 }
@@ -562,7 +568,7 @@ function Test-EasyPIMConfigurationValidity {
                 if (-not $rolePolicy) { $index++; continue }
                 $roleName = if ($rolePolicy.PSObject.Properties['RoleName']) { $rolePolicy.RoleName } else { "Unknown" }
                 $templateName = & $getTemplateName $rolePolicy
-                
+
                 if (-not [string]::IsNullOrWhiteSpace([string]$templateName)) {
                     if ($templateName -notin $templateNames) {
                         $issue = [PSCustomObject]@{
@@ -779,6 +785,11 @@ function Test-ApproversFormat {
         $approverContext = "$Context.Approvers[$i]"
         $correctedApprover = @{}
         $approverNeedsCorrection = $false
+
+        if ($approver -is [string]) {
+            $correctedApprovers += [PSCustomObject]@{ Id = $approver; Name = $approver }
+            continue
+        }
 
         # Check for common field name mismatches (case-sensitive)
         $fieldMappings = @{

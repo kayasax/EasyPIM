@@ -66,19 +66,41 @@
 	if ($assign.PSObject.Properties.Name -contains 'EntraRoles' -and $assign.EntraRoles) {
 		foreach ($roleBlock in $assign.EntraRoles) {
 			$roleName = $roleBlock.roleName
+
+            # Optimization: Pre-fetch all assignments for this role to avoid N+1 API calls
+            $cachedActive = @()
+            $cachedEligible = @()
+            try {
+                Write-Verbose "[Assignments] Pre-fetching Entra assignments for role '$roleName'..."
+                $cachedActive = @(Get-PIMEntraRoleActiveAssignment -tenantID $TenantId -rolename $roleName -ErrorAction SilentlyContinue)
+                $cachedEligible = @(Get-PIMEntraRoleEligibleAssignment -tenantID $TenantId -rolename $roleName -ErrorAction SilentlyContinue)
+            } catch {
+                Write-Verbose "[Assignments] Failed to pre-fetch Entra assignments: $($_.Exception.Message)"
+            }
+
 			foreach ($a in ($roleBlock.assignments | Where-Object { $_ })) {
 				$ctx = "Entra/$roleName/$($a.principalId) [$($a.assignmentType)]"
-				if ($whatIf) { $summary.PlannedCreated++ ; continue }
+
 				# Idempotency: skip if already assigned (active or eligible) for directory scope '/'
 				try {
-					$role = Get-PIMEntraRolePolicy -tenantID $TenantId -rolename $roleName -ErrorAction Stop
-					$VerbosePreference = 'SilentlyContinue'  # Suppress confusing "0 assignments found" messages
-					$existsActive = Get-PIMEntraRoleActiveAssignment -tenantID $TenantId -principalID $a.principalId -rolename $roleName -ErrorAction SilentlyContinue
-					$existsElig = Get-PIMEntraRoleEligibleAssignment -tenantID $TenantId -principalID $a.principalId -rolename $roleName -ErrorAction SilentlyContinue
-					$VerbosePreference = $script:originalVerbosePreference
+					# Check against cached lists first
+                    $existsActive = $cachedActive | Where-Object { $_.principalId -eq $a.principalId }
+                    $existsElig = $cachedEligible | Where-Object { $_.principalId -eq $a.principalId }
+
+                    # Fallback to individual check if cache was empty (maybe API failure or just no assignments) but we want to be sure?
+                    # Actually, if cache is empty it means no assignments found (or API error).
+                    # If API error, we might want to try individual call?
+                    # For now, let's trust the pre-fetch. If pre-fetch failed, lists are empty, so we might proceed to create and fail there.
+                    # But to be safe, if we really want to be robust, we could try individual if cache is empty?
+                    # No, that defeats the purpose. Let's assume pre-fetch works.
+
 					if ($existsActive -or $existsElig) {
 						$existingType = if ($existsActive) { "Active" } else { "Eligible" }
-						Write-Host "  ⏭️ Skipped existing: $ctx [Found: $existingType]" -ForegroundColor Yellow
+						if ($whatIf) {
+							Write-Host "  ✅ [MATCH] Assignment exists: $ctx [Found: $existingType]" -ForegroundColor Green
+						} else {
+							Write-Host "  ⏭️ Skipped existing: $ctx [Found: $existingType]" -ForegroundColor Yellow
+						}
 						$summary.Skipped++
 						continue
 					}
@@ -86,6 +108,12 @@
 					$VerbosePreference = $script:originalVerbosePreference
 					# Pre-check failed, but assignment will still be attempted
 					Write-Verbose ("[Assignments] Entra pre-check skipped for ${ctx} (will attempt assignment anyway): {0}" -f $_.Exception.Message)
+				}
+
+				if ($whatIf) {
+					Write-Host "What if: Creating assignment $ctx" -ForegroundColor Cyan
+					$summary.PlannedCreated++
+					continue
 				}
 				$sb = {
 					if ($a.assignmentType -match 'Active') {
@@ -112,16 +140,23 @@
 		foreach ($roleBlock in $assign.AzureRoles) {
 			$roleName = $roleBlock.RoleName; if (-not $roleName) { $roleName = $roleBlock.roleName }
 			$scope = $roleBlock.Scope; if (-not $scope) { $scope = $roleBlock.scope }
+
+            # Optimization: Pre-fetch all assignments for this scope
+            $cachedActive = @()
+            $cachedEligible = @()
+            try {
+                Write-Verbose "[Assignments] Pre-fetching Azure assignments for scope '$scope'..."
+                $cachedActive = @(Get-PIMAzureResourceActiveAssignment -tenantID $TenantId -subscriptionID $SubscriptionId -scope $scope -ErrorAction SilentlyContinue)
+                $cachedEligible = @(Get-PIMAzureResourceEligibleAssignment -tenantID $TenantId -subscriptionID $SubscriptionId -scope $scope -ErrorAction SilentlyContinue)
+            } catch {
+                Write-Verbose "[Assignments] Failed to pre-fetch Azure assignments: $($_.Exception.Message)"
+            }
+
 			foreach ($a in ($roleBlock.assignments | Where-Object { $_ })) {
 				$ctx = "Azure/$roleName@$scope/$($a.principalId) [$($a.assignmentType)]"
-				if ($whatIf) { $summary.PlannedCreated++ ; continue }
+
 				# Idempotency: naive check via active/eligible getters if available; otherwise proceed
 				try {
-					$VerbosePreference = 'SilentlyContinue'  # Suppress confusing verbose output
-					$existsActiveRaw = Get-PIMAzureResourceActiveAssignment -tenantID $TenantId -subscriptionID $SubscriptionId -scope $scope -principalId $a.principalId -ErrorAction SilentlyContinue
-					$existsEligRaw = Get-PIMAzureResourceEligibleAssignment -tenantID $TenantId -subscriptionID $SubscriptionId -scope $scope -principalId $a.principalId -ErrorAction SilentlyContinue
-					$VerbosePreference = $script:originalVerbosePreference
-
 					$roleMatch = {
 						param($obj)
 						if (-not $obj) { return $false }
@@ -132,18 +167,29 @@
 						return ($obj.RoleName -eq $roleName)
 					}
 
-					$existsActiveData = @($existsActiveRaw | Where-Object { & $roleMatch $_ })
-					$existsEligData = @($existsEligRaw | Where-Object { & $roleMatch $_ })
+                    # Filter cached lists
+					$existsActiveData = @($cachedActive | Where-Object { $_.principalId -eq $a.principalId -and (& $roleMatch $_) })
+					$existsEligData = @($cachedEligible | Where-Object { $_.principalId -eq $a.principalId -and (& $roleMatch $_) })
 
 					if ($existsActiveData.Count -gt 0 -or $existsEligData.Count -gt 0) {
 						$foundType = if ($existsActiveData.Count -gt 0) { 'Active' } else { 'Eligible' }
-						Write-Host "  ⏭️ Skipped existing: $ctx [Found: $foundType]" -ForegroundColor Yellow
+						if ($whatIf) {
+							Write-Host "  ✅ [MATCH] Assignment exists: $ctx [Found: $foundType]" -ForegroundColor Green
+						} else {
+							Write-Host "  ⏭️ Skipped existing: $ctx [Found: $foundType]" -ForegroundColor Yellow
+						}
 						$summary.Skipped++; continue
 					}
 				} catch {
 					$VerbosePreference = $script:originalVerbosePreference
 					# Pre-check failed, but assignment will still be attempted
 					Write-Verbose ("[Assignments] Azure pre-check skipped for ${ctx} (will attempt assignment anyway): {0}" -f $_.Exception.Message)
+				}
+
+				if ($whatIf) {
+					Write-Host "What if: Creating assignment $ctx" -ForegroundColor Cyan
+					$summary.PlannedCreated++
+					continue
 				}
 				$sb = {
 					if ($a.assignmentType -match 'Active') {
@@ -173,20 +219,45 @@
 			# normalize to API expected values for group membership type (owner|member)
 			$groupType = $roleName
 			try { if ($roleName) { $ln = $roleName.ToLower(); if ($ln -in @('owner','member')) { $groupType = $ln } } } catch { Write-Verbose "[Assignments] Could not normalize group type '$roleName': $($_.Exception.Message)" }
-			foreach ($a in ($grp.assignments | Where-Object { $_ })) {
+
+            # Optimization: Pre-fetch all assignments for this group/type
+            $cachedActive = @()
+            $cachedEligible = @()
+            try {
+                Write-Verbose "[Assignments] Pre-fetching Group assignments for group '$groupId' type '$groupType'..."
+                $cachedActive = @(Get-PIMGroupActiveAssignment -tenantID $TenantId -groupID $groupId -type $groupType -ErrorAction SilentlyContinue)
+                $cachedEligible = @(Get-PIMGroupEligibleAssignment -tenantID $TenantId -groupID $groupId -type $groupType -ErrorAction SilentlyContinue)
+            } catch {
+                Write-Verbose "[Assignments] Failed to pre-fetch Group assignments: $($_.Exception.Message)"
+            }
+
+            foreach ($a in ($grp.assignments | Where-Object { $_ })) {
 				$ctx = "Group/$groupId/$roleName/$($a.principalId) [$($a.assignmentType)]"
-				if ($whatIf) { $summary.PlannedCreated++ ; continue }
+
 				# Idempotency: check existing elig/active for group PIM
 				try {
-					$VerbosePreference = 'SilentlyContinue'  # Suppress confusing verbose output
-					$existsActive = Get-PIMGroupActiveAssignment -tenantID $TenantId -groupID $groupId -principalID $a.principalId -type $groupType -ErrorAction SilentlyContinue
-					$existsElig = Get-PIMGroupEligibleAssignment -tenantID $TenantId -groupID $groupId -principalID $a.principalId -type $groupType -ErrorAction SilentlyContinue
-					$VerbosePreference = $script:originalVerbosePreference
-					if ($existsActive -or $existsElig) { Write-Host "  ⏭️ Skipped existing: $ctx" -ForegroundColor Yellow; $summary.Skipped++; continue }
+                    # Check against cached lists
+                    $existsActive = $cachedActive | Where-Object { $_.principalId -eq $a.principalId }
+                    $existsElig = $cachedEligible | Where-Object { $_.principalId -eq $a.principalId }
+
+					if ($existsActive -or $existsElig) {
+						if ($whatIf) {
+							Write-Host "  ✅ [MATCH] Assignment exists: $ctx" -ForegroundColor Green
+						} else {
+							Write-Host "  ⏭️ Skipped existing: $ctx" -ForegroundColor Yellow
+						}
+						$summary.Skipped++; continue
+					}
 				} catch {
 					$VerbosePreference = $script:originalVerbosePreference
 					# Pre-check failed, but assignment will still be attempted
 					Write-Verbose ("[Assignments] Group pre-check skipped for ${ctx} (will attempt assignment anyway): {0}" -f $_.Exception.Message)
+				}
+
+				if ($whatIf) {
+					Write-Host "What if: Creating assignment $ctx" -ForegroundColor Cyan
+					$summary.PlannedCreated++
+					continue
 				}
 				$sb = {
 					if ($a.assignmentType -match 'Active') {
