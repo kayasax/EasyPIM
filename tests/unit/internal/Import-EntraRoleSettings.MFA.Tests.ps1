@@ -200,7 +200,7 @@ Describe "Import-EntraRoleSettings - Issue #239 MFA Preservation" -Tag 'Unit', '
             }
         }
         
-        It "Should not call Set-ActiveAssignmentRequirement when ActiveAssignmentRequirement is empty" {
+        It "Should call Set-ActiveAssignmentRequirement when ActiveAssignmentRequirement is empty (Issue #245)" {
             InModuleScope EasyPIM {
                 # Arrange: CSV with no active assignment requirements
                 $tempCsv = Join-Path $env:TEMP "test-issue239-empty-$(Get-Random).csv"
@@ -231,8 +231,10 @@ Describe "Import-EntraRoleSettings - Issue #239 MFA Preservation" -Tag 'Unit', '
                     Import-EntraRoleSettings -Path $tempCsv
                 } catch { }
                 
-                # Assert: Should NOT be called when requirements are empty
-                Assert-MockCalled Set-ActiveAssignmentRequirement -Times 0 -Exactly
+                # Assert: Should be called with empty array to clear settings (Issue #245)
+                Assert-MockCalled Set-ActiveAssignmentRequirement -Times 1 -Exactly -ParameterFilter {
+                    $ActiveAssignmentRequirement.Count -eq 0
+                }
                 
                 # Cleanup
                 if (Test-Path $tempCsv) { Remove-Item $tempCsv -Force }

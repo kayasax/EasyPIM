@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Issue #245**: Fixed a bug in `Copy-PIMEntraRolePolicy` where empty requirements ("None") were not clearing existing settings on the target role.
+  - **Root Cause**: `Import-EntraRoleSettings` was skipping the update call if the requirements list was empty, causing the target role to retain its previous configuration.
+  - **Fix**: Updated logic to always apply requirements, even if empty, ensuring that "None" is correctly propagated.
+
 ## [EasyPIM.Orchestrator 1.5.0] - 2025-12-28
 
 ### Added
