@@ -35,7 +35,7 @@ function Import-EntraRoleSettings  {
     # Local helper to safely split comma-delimited strings, returning an empty array for null/empty
     function Split-OrEmpty([object]$value) {
         $s = [string]$value
-        if ([string]::IsNullOrWhiteSpace($s)) { return @() }
+        if ([string]::IsNullOrWhiteSpace($s)) { return ,@() }
         return ($s -split ',')
     }
 
@@ -68,11 +68,8 @@ function Import-EntraRoleSettings  {
                 }
             }
         }
-        if ($enablementRules.Count -gt 0) {
-            $rules += Set-ActivationRequirement $enablementRules -entraRole
-        } else {
-            Write-Verbose 'Skipping Enablement_EndUser_Assignment (no allowed end-user rules)'
-        }
+        # Always apply the rule to ensure we clear settings if the source has none
+        $rules += Set-ActivationRequirement $enablementRules -entraRole
 
         # Filter enablement rules for Admin Assignment (Rule #7: Enablement_Admin_Assignment)
         # Allowed: Justification, MultiFactorAuthentication (Ticketing is ONLY for Rule #2 - end-user activation)
@@ -82,11 +79,8 @@ function Import-EntraRoleSettings  {
             $allowedAdmin = @('Justification','MultiFactorAuthentication')
             $activeAssignmentRequirements = @($activeAssignmentRequirements | Where-Object { $allowedAdmin -contains $_ })
         }
-        if ($activeAssignmentRequirements.Count -gt 0) {
-            $rules += Set-ActiveAssignmentRequirement $activeAssignmentRequirements -entraRole
-        } else {
-            Write-Verbose 'Skipping Enablement_Admin_Assignment (no allowed admin rules)'
-        }
+        # Always apply the rule to ensure we clear settings if the source has none
+        $rules += Set-ActiveAssignmentRequirement $activeAssignmentRequirements -entraRole
 
         # Authentication Context (Issue #121): map CSV -> rule for Entra roles
         if ($_.PSObject.Properties['AuthenticationContext_Enabled']) {

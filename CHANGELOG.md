@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [EasyPIM Core 2.2.1] - 2025-12-28
+
+### Fixed
+- **Issue #245**: Fixed a bug in `Copy-PIMEntraRolePolicy` where empty requirements ("None") were not clearing existing settings on the target role.
+  - **Root Cause**: `Import-EntraRoleSettings` was skipping the update call if the requirements list was empty, causing the target role to retain its previous configuration.
+  - **Fix**: Updated logic to always apply requirements, even if empty, ensuring that "None" is correctly propagated.
+
 ## [EasyPIM.Orchestrator 1.5.0] - 2025-12-28
 
 ### Added
@@ -19,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Assignment Logging**: "Planned" assignments are now clearly distinguished from "Existing" ones in the summary.
 - **Idempotency**: Improved logic to correctly identify existing assignments in `WhatIf` mode.
 
-## [EasyPIM Core 2.1.0] - 2025-12-28
+## [EasyPIM Core 2.2.0] - 2025-12-28
 
 ### Changed
 - **Synchronized Release**: Version bump to align with EasyPIM.Orchestrator 1.5.0 performance and feature updates.
