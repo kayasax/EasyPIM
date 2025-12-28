@@ -233,8 +233,9 @@ function Invoke-EasyPIMOrchestrator {
 		if ($validationResult.HasIssues) {
 			Write-Host "⚠️ Configuration validation found issues:" -ForegroundColor Yellow
 
-			$errorCount = ($validationResult.Issues | Where-Object { $_.Severity -eq 'Error' }).Count
-			$warningCount = ($validationResult.Issues | Where-Object { $_.Severity -eq 'Warning' }).Count
+			# Filter out corrected issues from the count
+			$errorCount = ($validationResult.Issues | Where-Object { $_.Severity -eq 'Error' -and -not $_.Corrected }).Count
+			$warningCount = ($validationResult.Issues | Where-Object { $_.Severity -eq 'Warning' -and -not $_.Corrected }).Count
 
 			if ($errorCount -gt 0) {
 				Write-Host "  ❌ Errors: $errorCount" -ForegroundColor Red
@@ -246,9 +247,13 @@ function Invoke-EasyPIMOrchestrator {
 			# Show detailed issues
 			foreach ($issue in $validationResult.Issues | Sort-Object Severity -Descending) {
 				$icon = if ($issue.Severity -eq 'Error') { '❌' } else { '⚠️' }
-				Write-Host "  $icon [$($issue.Category)] $($issue.Context)" -ForegroundColor White
+				$status = if ($issue.Corrected) { " [AUTO-CORRECTED]" } else { "" }
+
+				Write-Host "  $icon [$($issue.Category)]$status $($issue.Context)" -ForegroundColor White
 				Write-Host "    $($issue.Message)" -ForegroundColor Gray
-				Write-Host "    💡 $($issue.Suggestion)" -ForegroundColor Cyan
+				if (-not $issue.Corrected) {
+					Write-Host "    💡 $($issue.Suggestion)" -ForegroundColor Cyan
+				}
 			}
 
 			if ($validationResult.Corrections.Count -gt 0) {
@@ -288,19 +293,19 @@ function Invoke-EasyPIMOrchestrator {
 		}
 		# Send startup telemetry (non-blocking)
 		try {
-			Write-Host "🔍 [DEBUG] Attempting to send startup telemetry..." -ForegroundColor Yellow
+			Write-Debug "🔍 [DEBUG] Attempting to send startup telemetry..."
 			if ($PSCmdlet.ParameterSetName -eq 'KeyVault') {
 				# For KeyVault configs, pass the loaded config object directly
-				Write-Host "🔍 [DEBUG] Using KeyVault parameter set for telemetry" -ForegroundColor Yellow
+				Write-Debug "🔍 [DEBUG] Using KeyVault parameter set for telemetry"
 				Send-TelemetryEventFromConfig -EventName "orchestrator_startup" -Properties $startupProperties -Config $config
 			} else {
 				# For file-based configs, use the file path
-				Write-Host "🔍 [DEBUG] Using file-based parameter set for telemetry" -ForegroundColor Yellow
+				Write-Debug "🔍 [DEBUG] Using file-based parameter set for telemetry"
 				Send-TelemetryEvent -EventName "orchestrator_startup" -Properties $startupProperties -ConfigPath $ConfigFilePath
 			}
 		} catch {
 			Write-Verbose "Telemetry startup failed (non-blocking): $($_.Exception.Message)"
-			Write-Host "❌ [DEBUG] Telemetry startup failed: $($_.Exception.Message)" -ForegroundColor Red
+			Write-Debug "❌ [DEBUG] Telemetry startup failed: $($_.Exception.Message)"
 		}
 		# Session rule: prefer environment variables for TenantId / SubscriptionId when not explicitly supplied
 		if (-not $TenantId -or [string]::IsNullOrWhiteSpace($TenantId)) {
@@ -485,9 +490,9 @@ function Invoke-EasyPIMOrchestrator {
 		try {
 			$tpeCmd = Get-Command Test-PrincipalExists -ErrorAction SilentlyContinue
 			if ($tpeCmd) {
-				Write-Host ("[Debug] Using Test-PrincipalExists from: {0} ({1})" -f $tpeCmd.Source, $tpeCmd.Path) -ForegroundColor DarkGray
+				Write-Debug ("[Debug] Using Test-PrincipalExists from: {0} ({1})" -f $tpeCmd.Source, $tpeCmd.Path)
 			} else {
-				Write-Host "[Debug] Test-PrincipalExists not found in scope" -ForegroundColor Yellow
+				Write-Debug "[Debug] Test-PrincipalExists not found in scope"
 			}
 		} catch {
 			Write-Debug "Failed to check Test-PrincipalExists command availability"
@@ -579,7 +584,7 @@ function Invoke-EasyPIMOrchestrator {
 
 		# Add Azure role approver validation (missing from original logic)
 		# Simple regex approach: extract all GUIDs from config (excluding scopes) and validate them
-		Write-Host "🔍 [DEBUG] Starting GUID extraction validation..." -ForegroundColor Magenta
+		Write-Debug "🔍 [DEBUG] Starting GUID extraction validation..."
 		$configJson = $processedConfig | ConvertTo-Json -Depth 10
 		Write-Verbose -Message ("[DEBUG] Extracting GUIDs from configuration using regex...")
 		Write-Verbose -Message ("[DEBUG] Config JSON length: $($configJson.Length) characters")
@@ -608,7 +613,7 @@ function Invoke-EasyPIMOrchestrator {
 		}
 
 		Write-Verbose -Message ("[Orchestrator] Extracted {0} potential principal GUIDs for validation" -f $principalGuids.Count)
-		Write-Host "🔍 [DEBUG] About to start validation loop with $($principalIds.Count) principals" -ForegroundColor Magenta
+		Write-Debug "🔍 [DEBUG] About to start validation loop with $($principalIds.Count) principals"
 
 		$validationResults = @()
 		foreach ($principalIdIter in $principalIds) {
@@ -668,8 +673,8 @@ function Invoke-EasyPIMOrchestrator {
 			$dbgEntraAct = ($processedConfig.EntraIDRolesActive | Measure-Object).Count
 			$dbgGroupElig = ($processedConfig.GroupRoles    | Measure-Object).Count
 			$dbgGroupAct = ($processedConfig.GroupRolesActive | Measure-Object).Count
-			Write-Host -Object "[Orchestrator Debug] Assignment counts -> Azure(E:$dbgAzureElig A:$dbgAzureAct) Entra(E:$dbgEntraElig A:$dbgEntraAct) Groups(E:$dbgGroupElig A:$dbgGroupAct)" -ForegroundColor DarkCyan
-		} catch { Write-Host -Object "[Orchestrator Debug] Failed to compute assignment debug counts: $($_.Exception.Message)" -ForegroundColor DarkYellow }
+			Write-Debug -Message "[Orchestrator Debug] Assignment counts -> Azure(E:$dbgAzureElig A:$dbgAzureAct) Entra(E:$dbgEntraElig A:$dbgEntraAct) Groups(E:$dbgGroupElig A:$dbgGroupAct)"
+		} catch { Write-Debug -Message "[Orchestrator Debug] Failed to compute assignment debug counts: $($_.Exception.Message)" }
 		# Re-affirm subscription context later as well, but avoid noisy logs
 		if (-not $SubscriptionId -or [string]::IsNullOrWhiteSpace($SubscriptionId)) {
 			$SubscriptionId = $env:subscriptionid
@@ -752,7 +757,15 @@ function Invoke-EasyPIMOrchestrator {
 			$policyConfigObject = [PSCustomObject]$policyConfig
 			$policyResults = New-EPOEasyPIMPolicy -Config $policyConfigObject -TenantId $TenantId -SubscriptionId $SubscriptionId -PolicyMode $effectivePolicyMode -AllowProtectedRoles:$AllowProtectedRoles -WhatIf:$WhatIfPreference
 			if ($WhatIfPreference) {
-				Write-Host -Object "✅ [OK] Policy dry-run completed (-WhatIf) - role policies appear correctly configured for assignment compliance" -ForegroundColor Green
+				$driftCount = 0
+				if ($policyResults -and $policyResults.Summary -and $policyResults.Summary.DriftDetected) {
+					$driftCount = $policyResults.Summary.DriftDetected
+				}
+				if ($driftCount -gt 0) {
+					Write-Host -Object "⚠️ [DRIFT] Policy dry-run completed (-WhatIf) - $driftCount policy drifts detected" -ForegroundColor Yellow
+				} else {
+					Write-Host -Object "✅ [OK] Policy dry-run completed (-WhatIf) - role policies appear correctly configured for assignment compliance" -ForegroundColor Green
+				}
 			} else {
 				$failed = 0; $succeeded = 0
 				try {
@@ -780,7 +793,9 @@ function Invoke-EasyPIMOrchestrator {
 				Write-Host -Object "📊 [CLEANUP] Analysis complete. Found $($cleanupResult.DesiredAssignments) desired assignments." -ForegroundColor Cyan
 				if ($Mode -eq 'delta') {
 					Write-Host -Object "🔄 [CLEANUP] Delta mode: No assignments will be removed (add/update only)." -ForegroundColor DarkGray
-				}
+				} elseif ($Mode -eq 'initial') {
+                    Write-Host -Object "⚠️ [CLEANUP] Initial mode: Assignments not in configuration will be removed." -ForegroundColor Yellow
+                }
 			}
 			$cleanupResult
 		} else {
@@ -805,7 +820,9 @@ function Invoke-EasyPIMOrchestrator {
 			$assignmentResults = New-EasyPIMAssignments -Config $processedConfig -TenantId $TenantId -SubscriptionId $SubscriptionId
 			if ($assignmentResults) {
 				$totalAttempted = ($assignmentResults.Created + $assignmentResults.Failed + $assignmentResults.Skipped)
-				Write-Host -Object "[ASSIGN] Assignment processing complete: $totalAttempted total, $($assignmentResults.Created) created, $($assignmentResults.Failed) failed, $($assignmentResults.Skipped) skipped" -ForegroundColor Cyan
+                $planned = 0
+                if ($assignmentResults.PSObject.Properties.Name -contains 'PlannedCreated') { $planned = $assignmentResults.PlannedCreated; $totalAttempted += $planned }
+				Write-Host -Object "[ASSIGN] Assignment processing complete: $totalAttempted total, $($assignmentResults.Created) created, $($assignmentResults.Failed) failed, $($assignmentResults.Skipped) skipped, $planned planned" -ForegroundColor Cyan
 			}
 			# After assignments, attempt deferred group policies if any
 			if (Get-Command -Name Invoke-EPODeferredGroupPolicies -ErrorAction SilentlyContinue) {
@@ -879,6 +896,15 @@ function Invoke-EasyPIMOrchestrator {
 			}
 		} catch {
 			Write-Verbose "Telemetry completion failed (non-blocking): $($_.Exception.Message)"
+		}
+
+		return [pscustomobject]@{
+			Success           = $true
+			PolicyResults     = $policyResults
+			AssignmentResults = $assignmentResults
+			CleanupResults    = $cleanupResults
+			Mode              = $Mode
+			WhatIf            = $WhatIfPreference.IsPresent
 		}
 	} catch {
 		# Send error telemetry (non-blocking)

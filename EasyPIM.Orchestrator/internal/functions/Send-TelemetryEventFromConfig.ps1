@@ -43,18 +43,18 @@ function Send-TelemetryEventFromConfig {
 
     try {
         Write-Verbose "🔍 [TELEMETRY] Checking telemetry configuration from config object..."
-        Write-Host "🔍 [DEBUG] Send-TelemetryEventFromConfig called for event: $EventName" -ForegroundColor Yellow
+        Write-Debug "🔍 [DEBUG] Send-TelemetryEventFromConfig called for event: $EventName"
 
         if (-not $Config) {
             Write-Verbose "❌ [TELEMETRY] No configuration object provided - skipping telemetry"
-            Write-Host "❌ [DEBUG] No config object provided to telemetry function" -ForegroundColor Red
+            Write-Debug "❌ [DEBUG] No config object provided to telemetry function"
             return
         }
 
-        Write-Host "🔍 [DEBUG] Config object received, checking TelemetrySettings..." -ForegroundColor Yellow
-        Write-Host "🔍 [DEBUG] Config.TelemetrySettings exists: $($null -ne $Config.TelemetrySettings)" -ForegroundColor Yellow
+        Write-Debug "🔍 [DEBUG] Config object received, checking TelemetrySettings..."
+        Write-Debug "🔍 [DEBUG] Config.TelemetrySettings exists: $($null -ne $Config.TelemetrySettings)"
         if ($Config.TelemetrySettings) {
-            Write-Host "🔍 [DEBUG] Config.TelemetrySettings.ALLOW_TELEMETRY value: $($Config.TelemetrySettings.ALLOW_TELEMETRY)" -ForegroundColor Yellow
+            Write-Debug "🔍 [DEBUG] Config.TelemetrySettings.ALLOW_TELEMETRY value: $($Config.TelemetrySettings.ALLOW_TELEMETRY)"
         }
 
         # Check if telemetry is enabled (default to false - opt-in only)
@@ -65,12 +65,12 @@ function Send-TelemetryEventFromConfig {
 
         if (-not $TelemetryEnabled) {
             Write-Verbose "❌ [TELEMETRY] Telemetry disabled in configuration - skipping event: $EventName"
-            Write-Host "❌ [DEBUG] Telemetry disabled or not configured - skipping event: $EventName" -ForegroundColor Red
+            Write-Debug "❌ [DEBUG] Telemetry disabled or not configured - skipping event: $EventName"
             return
         }
 
         Write-Verbose "✅ [TELEMETRY] Telemetry enabled - preparing event: $EventName"
-        Write-Host "✅ [DEBUG] Telemetry enabled - proceeding with event: $EventName" -ForegroundColor Green
+        Write-Debug "✅ [DEBUG] Telemetry enabled - proceeding with event: $EventName"
 
         # Get Microsoft Graph context for tenant information
         $Context = $null
@@ -98,7 +98,7 @@ function Send-TelemetryEventFromConfig {
             }
         }
         if (-not $TenantIdentifier) {
-            Write-Host "🔧 [DEBUG] Using inline salted hashing for tenant identifier" -ForegroundColor Yellow
+            Write-Debug "🔧 [DEBUG] Using inline salted hashing for tenant identifier"
             $Salt = "EasyPIM-Privacy-Salt-2025-PostHog"
             $StringToHash = "$($Context.TenantId)-$Salt"
             try {
@@ -113,11 +113,11 @@ function Send-TelemetryEventFromConfig {
 
         if (-not $TenantIdentifier) {
             Write-Verbose "Failed to create telemetry identifier - skipping event"
-            Write-Host "❌ [DEBUG] Telemetry identifier is null" -ForegroundColor Red
+            Write-Debug "❌ [DEBUG] Telemetry identifier is null"
             return
         }
 
-        Write-Host "✅ [DEBUG] Telemetry identifier created successfully" -ForegroundColor Green
+        Write-Debug "✅ [DEBUG] Telemetry identifier created successfully"
 
         # Enhance properties with system information
         $EnhancedProperties = $Properties.Clone()
@@ -133,7 +133,7 @@ function Send-TelemetryEventFromConfig {
         Send-PostHogEvent -DistinctId $TenantIdentifier -EventName $EventName -Properties $EnhancedProperties
 
         Write-Verbose "Telemetry event sent successfully: $EventName"
-        Write-Host "✅ [DEBUG] Telemetry event sent successfully: $EventName" -ForegroundColor Green
+        Write-Debug "✅ [DEBUG] Telemetry event sent successfully: $EventName"
 
     }
     catch {
@@ -191,11 +191,11 @@ function Send-PostHogEvent {
         # Send with short timeout to avoid blocking main operations
         $Response = Invoke-RestMethod -Uri $PostHogApiUrl -Method Post -Body $Body -ContentType "application/json" -TimeoutSec 5 -ErrorAction Stop
         Write-Verbose "PostHog API responded successfully. Status: $(if($Response.status) { $Response.status } else { 'OK' })"
-        Write-Host "✅ [DEBUG] PostHog API call succeeded" -ForegroundColor Green
+        Write-Debug "✅ [DEBUG] PostHog API call succeeded"
     }
     catch {
         Write-Verbose "PostHog API call failed: $($_.Exception.Message)"
-        Write-Host "❌ [DEBUG] PostHog API call failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Debug "❌ [DEBUG] PostHog API call failed: $($_.Exception.Message)"
         # Don't throw - telemetry failures should not affect main operations
     }
 }

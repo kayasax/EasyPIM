@@ -145,5 +145,4 @@
     }
 }
 
-# Export the function
-Export-ModuleMember -Function Test-PIMRolePolicy
+

@@ -40,12 +40,12 @@ function Send-TelemetryEvent {
 
     try {
         Write-Verbose "Checking telemetry configuration..."
-        Write-Host "🔍 [DEBUG] Send-TelemetryEvent called for event: $EventName" -ForegroundColor Yellow
+        Write-Debug "🔍 [DEBUG] Send-TelemetryEvent called for event: $EventName"
 
         # Load configuration to check telemetry settings
         if (-not (Test-Path $ConfigPath)) {
             Write-Verbose "Configuration file not found - skipping telemetry"
-            Write-Host "❌ [DEBUG] Configuration file not found: $ConfigPath" -ForegroundColor Red
+            Write-Debug "❌ [DEBUG] Configuration file not found: $ConfigPath"
             return
         }
 
@@ -67,19 +67,19 @@ function Send-TelemetryEvent {
             $TelemetryEnabled = $Config.TelemetrySettings.ALLOW_TELEMETRY
         }
 
-        Write-Host "🔍 [DEBUG] Config.TelemetrySettings exists: $($null -ne $Config.TelemetrySettings)" -ForegroundColor Yellow
+        Write-Debug "🔍 [DEBUG] Config.TelemetrySettings exists: $($null -ne $Config.TelemetrySettings)"
         if ($Config.TelemetrySettings) {
-            Write-Host "🔍 [DEBUG] Config.TelemetrySettings.ALLOW_TELEMETRY value: $($Config.TelemetrySettings.ALLOW_TELEMETRY)" -ForegroundColor Yellow
+            Write-Debug "🔍 [DEBUG] Config.TelemetrySettings.ALLOW_TELEMETRY value: $($Config.TelemetrySettings.ALLOW_TELEMETRY)"
         }
 
         if (-not $TelemetryEnabled) {
             Write-Verbose "Telemetry disabled in configuration - skipping event: $EventName"
-            Write-Host "❌ [DEBUG] Telemetry disabled or not configured - skipping event: $EventName" -ForegroundColor Red
+            Write-Debug "❌ [DEBUG] Telemetry disabled or not configured - skipping event: $EventName"
             return
         }
 
         Write-Verbose "Telemetry enabled - preparing event: $EventName"
-        Write-Host "✅ [DEBUG] Telemetry enabled - proceeding with event: $EventName" -ForegroundColor Green
+        Write-Debug "✅ [DEBUG] Telemetry enabled - proceeding with event: $EventName"
 
         # Get Microsoft Graph context for tenant information
         $Context = $null
@@ -107,7 +107,7 @@ function Send-TelemetryEvent {
             }
         }
         if (-not $TenantIdentifier) {
-            Write-Host "🔧 [DEBUG] Using inline salted hashing for tenant identifier" -ForegroundColor Yellow
+            Write-Debug "🔧 [DEBUG] Using inline salted hashing for tenant identifier"
             $Salt = "EasyPIM-Privacy-Salt-2025-PostHog"
             $StringToHash = "$($Context.TenantId)-$Salt"
             try {
@@ -122,11 +122,11 @@ function Send-TelemetryEvent {
 
         if (-not $TenantIdentifier) {
             Write-Verbose "Failed to create telemetry identifier - skipping event"
-            Write-Host "❌ [DEBUG] Telemetry identifier is null" -ForegroundColor Red
+            Write-Debug "❌ [DEBUG] Telemetry identifier is null"
             return
         }
 
-        Write-Host "✅ [DEBUG] Telemetry identifier created successfully" -ForegroundColor Green
+        Write-Debug "✅ [DEBUG] Telemetry identifier created successfully"
 
         # Enhance properties with system information
         $EnhancedProperties = $Properties.Clone()
@@ -142,7 +142,7 @@ function Send-TelemetryEvent {
         Send-PostHogEvent -DistinctId $TenantIdentifier -EventName $EventName -Properties $EnhancedProperties
 
         Write-Verbose "Telemetry event sent successfully: $EventName"
-        Write-Host "✅ [DEBUG] Telemetry event sent successfully: $EventName" -ForegroundColor Green
+        Write-Debug "✅ [DEBUG] Telemetry event sent successfully: $EventName"
     }
     catch {
         # Telemetry must never fail the main operation

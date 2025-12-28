@@ -193,7 +193,7 @@ function Set-PIMAzureResourcePolicy {
         if ($ApprovalRequired -eq $true -and $null -eq $Approvers ) { throw "`n /!\ At least one approver is required if approval is enable, please set -Approvers parameter`n`n" }
 
         $rolename | ForEach-Object {
-            $config = get-config $script:scope $_
+            $config = get-config $script:scope $_ $null $script:tenantID
             $rules = @()
 
             if ($PSBoundParameters.Keys.Contains('ActivationDuration')) {

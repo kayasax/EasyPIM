@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [EasyPIM.Orchestrator 1.5.0] - 2025-12-28
+
+### Added
+- **Rich Return Object**: `Invoke-EasyPIMOrchestrator` now returns a detailed `PSCustomObject` containing success status, policy results, assignment results, and cleanup analysis.
+- **Cleanup Analysis**: `initial` mode now performs and displays a full cleanup analysis (showing exactly what would be removed) even in `WhatIf` mode.
+- **Performance**: Implemented batch pre-fetching for assignments, significantly reducing Graph/ARM API calls during validation.
+
+### Changed
+- **Drift Output**: `WhatIf` output now explicitly reports "⚠️ [DRIFT]" instead of "✅ [OK]" when policy drift is detected.
+- **Assignment Logging**: "Planned" assignments are now clearly distinguished from "Existing" ones in the summary.
+- **Idempotency**: Improved logic to correctly identify existing assignments in `WhatIf` mode.
+
+## [EasyPIM Core 2.1.0] - 2025-12-28
+
+### Changed
+- **Synchronized Release**: Version bump to align with EasyPIM.Orchestrator 1.5.0 performance and feature updates.
+
 ## [EasyPIM.Orchestrator 1.4.12] - 2025-12-21
 
 ### Fixed

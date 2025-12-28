@@ -1,6 +1,6 @@
 @{
     RootModule        = 'EasyPIM.Orchestrator.psm1'
-    ModuleVersion = '1.4.12'
+    ModuleVersion = '1.5.0'
     GUID              = 'b6f9b3c9-bc6a-4d4b-8c51-7c45d42157cd'
     Author            = 'Loïc MICHEL'
     CompanyName       = 'EasyPIM'
@@ -30,17 +30,20 @@
         ProjectUri = 'https://kayasax.github.io/EasyPIM/template-guide.html'
         LicenseUri = 'https://github.com/kayasax/EasyPIM/blob/main/LICENSE'
 ReleaseNotes = @'
-EasyPIM.Orchestrator v1.4.11 - Fix Drift Detection
+EasyPIM.Orchestrator v1.5.0 - Performance & Drift Detection Overhaul
 
-Fixed
-- Resolved Issue #242: Fixed false positive drift detection in Test-PIMPolicyDrift where boolean values were being compared incorrectly (e.g. JSON 'true' vs API 'True').
+Added
+- **Rich Return Object**: `Invoke-EasyPIMOrchestrator` now returns a detailed `PSCustomObject` containing success status, policy results, assignment results, and cleanup analysis, enabling better programmatic integration.
+- **Cleanup Analysis**: `initial` mode now performs and displays a full cleanup analysis (showing exactly what would be removed) even in `WhatIf` mode.
+- **Performance**: Implemented batch pre-fetching for assignments, significantly reducing Graph/ARM API calls during validation (O(1) vs O(N)).
 
-Contributors
-- @leighmo - Issue report
-- @kayasax - Fix implementation
+Changed
+- **Drift Output**: `WhatIf` output now explicitly reports "⚠️ [DRIFT]" instead of "✅ [OK]" when policy drift is detected.
+- **Assignment Logging**: "Planned" assignments (those that would be created) are now clearly distinguished from "Existing" ones in the summary.
+- **Idempotency**: Improved logic to correctly identify existing assignments in `WhatIf` mode, preventing false "Creating..." logs.
 
 Previous releases:
-v1.4.10 - Graph Scope Optimization
+v1.4.12 - Fix Drift Detection
 '@
     } }
 }

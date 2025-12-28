@@ -39,7 +39,7 @@ function Update-Policy  {
             }
         }'
 
-    $restUri = "$ARMhost/$PolicyId/?api-version=2020-10-01"
+    $restUri = "$($ARMhost.TrimEnd('/'))/$($PolicyId.TrimStart('/'))/?api-version=2020-10-01"
    <# write-verbose "`n>> PATCH body: $body"
 
     write-verbose "Patch URI : $restURI"
@@ -48,16 +48,16 @@ function Update-Policy  {
   # Try to extract SubscriptionId from scope (if scope is at subscription level)
   $subId = $null
   try {
-    $m = [regex]::Match($scope, '^subscriptions/([0-9a-fA-F\-]{36})')
+    $m = [regex]::Match($scope, '^/?subscriptions/([0-9a-fA-F\-]{36})')
     if ($m.Success) { $subId = $m.Groups[1].Value }
   } catch {
     Write-Verbose "Update-Policy: failed to extract SubscriptionId from scope '$scope': $($_.Exception.Message)"
   }
 
   if ($subId) {
-    $response = invoke-ARM -restURI $restUri -Method "PATCH" -Body $body -SubscriptionId $subId
+    $response = invoke-ARM -restURI $restUri -Method "PATCH" -Body $body -SubscriptionId $subId -TenantId $script:tenantID
   } else {
-    $response = invoke-ARM -restURI $restUri -Method "PATCH" -Body $body
+    $response = invoke-ARM -restURI $restUri -Method "PATCH" -Body $body -TenantId $script:tenantID
   }
     #
     return $response

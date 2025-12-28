@@ -286,5 +286,6 @@ function Compare-PIMPolicy {
 		Target = $ExtraId
 		Status = $status
 		Differences = ($differences -join '; ')
+		DifferencesList = $differences
 	}
 }

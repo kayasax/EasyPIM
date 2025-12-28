@@ -37,7 +37,7 @@ function New-EPOEasyPIMPolicies {
         [switch]$AllowProtectedRoles
     )
     Write-Verbose "Starting New-EPOEasyPIMPolicies in $PolicyMode mode"
-    
+
     # Detect WhatIf mode
     $isWhatIf = $PSCmdlet.ParameterSetName -eq 'WhatIf' -or $PSCmdlet.MyInvocation.BoundParameters.ContainsKey('WhatIf') -or $WhatIfPreference.IsPresent
 
@@ -52,48 +52,21 @@ function New-EPOEasyPIMPolicies {
             Failed = 0
             Skipped = 0
             RolesNotFound = 0
+            DriftDetected = 0
         }
     }
     try {
         # If the provided Config has no policy sections, nothing to do
-        if (-not ($Config.PSObject.Properties['AzureRolePolicies'] -or $Config.PSObject.Properties['EntraRolePolicies'] -or $Config.PSObject.Properties['GroupPolicies'])) {
+        if (-not ($Config.AzureRolePolicies -or $Config.EntraRolePolicies -or $Config.GroupPolicies)) {
             Write-Verbose "No policy sections present in Config; skipping policy processing."
             return $results
         }
         # Azure Role Policies
-        if ($Config.PSObject.Properties['AzureRolePolicies'] -and $Config.AzureRolePolicies -and $Config.AzureRolePolicies.Count -gt 0) {
+        if ($Config.AzureRolePolicies -and $Config.AzureRolePolicies.Count -gt 0) {
             $whatIfDetails = @()
-            
-            # Pre-fetch live policies if in WhatIf mode to filter out matching ones
-            $azureLivePolicies = @{}
-            if ($isWhatIf) {
-                Write-Verbose "WhatIf mode detected: Pre-fetching Azure policies to filter matching configurations..."
-                try {
-                    # Group by scope to optimize calls
-                    $policiesByScope = $Config.AzureRolePolicies | Group-Object -Property { if ($_.Scope) { $_.Scope } else { "subscriptions/$SubscriptionId" } }
-                    foreach ($scopeGroup in $policiesByScope) {
-                        $scope = $scopeGroup.Name
-                        $roles = $scopeGroup.Group.RoleName
-                        if ($scope -and $roles) {
-                            # Extract subscription ID from scope if possible, or use provided one
-                            $subId = $SubscriptionId
-                            if ($scope -match 'subscriptions/([^/]+)') { $subId = $matches[1] }
-                            
-                            try {
-                                $live = Get-PIMAzureResourcePolicy -tenantID $TenantId -subscriptionID $subId -rolename $roles -ErrorAction SilentlyContinue
-                                if ($live) {
-                                    foreach ($l in $live) {
-                                        # Note: Get-PIMAzureResourcePolicy returns policy objects but mapping them back to RoleName 
-                                        # without additional API calls is complex. For now, we skip the optimization of pre-fetching 
-                                        # and mapping for Azure policies and rely on individual fetching in the loop below.
-                                        # This ensures accuracy at the cost of performance in WhatIf mode.
-                                    }
-                                }
-                            } catch { Write-Verbose "Failed to fetch live Azure policy for scope $scope: $_" }
-                        }
-                    }
-                } catch { Write-Verbose "Error pre-fetching Azure policies: $_" }
-            }
+
+            # Note: For Azure policies, we do not pre-fetch in bulk because mapping back to RoleName is complex.
+            # We fetch individually in the loop below.
 
             foreach ($policyDef in $Config.AzureRolePolicies) {
                 $resolvedPolicy = if ($policyDef.ResolvedPolicy) { $policyDef.ResolvedPolicy } else { $policyDef }
@@ -109,22 +82,25 @@ function New-EPOEasyPIMPolicies {
                 # WhatIf Logic: Check for drift if in WhatIf mode
                 $isDrift = $true
                 $driftReason = ""
+                $live = $null
+                $fetchError = $null
                 if ($isWhatIf) {
                     try {
                         # Determine scope
                         $scope = if ($policyDef.Scope) { $policyDef.Scope } else { "subscriptions/$SubscriptionId" }
                         $subId = $SubscriptionId
                         if ($scope -match 'subscriptions/([^/]+)') { $subId = $matches[1] }
-                        
+
                         # Fetch single policy for comparison
-                        $live = Get-PIMAzureResourcePolicy -tenantID $TenantId -subscriptionID $subId -rolename $policyDef.RoleName -ErrorAction SilentlyContinue
-                        
+                        $live = Get-PIMAzureResourcePolicy -tenantID $TenantId -rolename $policyDef.RoleName -scope $scope -ErrorAction Stop
+                        if ($live -is [array]) { $live = $live | Select-Object -First 1 }
+
                         if ($live) {
                             $tempResults = @()
                             $tempDrift = 0
                             # Use Compare-PIMPolicy to check for drift
                             Compare-PIMPolicy -Type 'AzureRole' -Name $policyDef.RoleName -Expected $resolvedPolicy -Live $live -Results ([ref]$tempResults) -DriftCount ([ref]$tempDrift)
-                            
+
                             if ($tempDrift -eq 0) {
                                 $isDrift = $false
                             } else {
@@ -133,36 +109,101 @@ function New-EPOEasyPIMPolicies {
                             }
                         }
                     } catch {
+                        $fetchError = $_.Exception.Message
                         Write-Verbose "Could not verify drift for $($policyDef.RoleName): $_"
                     }
                 }
 
                 if ($isDrift) {
-                    $policyDetails = @(
-                        "Role: '$($policyDef.RoleName)'$protectedWarning$driftReason",
-                        "Scope: '$($policyDef.Scope)'",
-                        "Activation Duration: $($resolvedPolicy.ActivationDuration)",
-                        "MFA Required: $(if ($resolvedPolicy.ActivationRequirement -match 'MFA') { 'Yes' } else { 'No' })",
-                        "Justification Required: $(if ($resolvedPolicy.ActivationRequirement -match 'Justification') { 'Yes' } else { 'No' })",
-                        "Approval Required: $($resolvedPolicy.ApprovalRequired)"
-                    )
-                    if ($resolvedPolicy.ApprovalRequired -and $resolvedPolicy.PSObject.Properties['Approvers'] -and $resolvedPolicy.Approvers) {
-                        $approverList = $resolvedPolicy.Approvers | ForEach-Object {
-                            $desc = if ($_.description) { $_.description } else { $_.Name }
-                            $idValue = if ($_.id) { $_.id } else { $_.Id }
-                            "$desc ($idValue)"
+                    if ($isWhatIf) { $results.Summary.DriftDetected++ }
+                    $sb = [System.Text.StringBuilder]::new()
+                    $null = $sb.AppendLine("    * Role: '$($policyDef.RoleName)'$protectedWarning")
+                    $null = $sb.AppendLine("      Scope: '$($policyDef.Scope)'")
+
+                    if ($driftItems) {
+                        $null = $sb.AppendLine("      ⚠️  DRIFT:")
+                        $null = $sb.AppendLine("      | Setting | Actual | Expected | Drift |")
+                        $null = $sb.AppendLine("      |---|---|---|---|")
+                        foreach ($item in $driftItems) {
+                            # Support both old string-only and new list-based drift items
+                            $diffs = if ($item.PSObject.Properties['DifferencesList']) { $item.DifferencesList } else { $item.Differences -split '; ' }
+                            foreach ($diff in $diffs) {
+                                if ($diff -match "^(?<setting>[^:]+): expected='(?<expected>.*?)' actual='(?<actual>.*?)'(?<note>.*)?$") {
+                                    $s = $matches['setting']
+                                    $e = $matches['expected']
+                                    $a = $matches['actual']
+                                    $n = $matches['note']
+                                    if ($n) { $a += " *" }
+                                    $null = $sb.AppendLine("      | $s | $a | $e | Yes |")
+                                } else {
+                                    $null = $sb.AppendLine("      | $diff | | | Yes |")
+                                }
+                            }
                         }
-                        $policyDetails += "Approvers: $($approverList -join ', ')"
+                    } else {
+                        if ($isWhatIf -and -not $live) {
+                             $msg = "      ⚠️  UNKNOWN STATE (Could not fetch live policy)"
+                             if ($fetchError) { $msg += ": $fetchError" }
+                             $null = $sb.AppendLine($msg)
+                        }
+                        $null = $sb.AppendLine("      ✅  TARGET STATE:")
+                        $null = $sb.AppendLine("         - Activation: $($resolvedPolicy.ActivationDuration)")
+
+                        $reqs = @()
+                        if ($resolvedPolicy.ActivationRequirement -match 'MFA') { $reqs += 'MFA' }
+                        if ($resolvedPolicy.ActivationRequirement -match 'Justification') { $reqs += 'Justification' }
+                        $reqsStr = if ($reqs) { $reqs -join ', ' } else { 'None' }
+                        $null = $sb.AppendLine("         - Requirements: $reqsStr")
+
+                        $null = $sb.AppendLine("         - Approval: $($resolvedPolicy.ApprovalRequired)")
+
+                        if ($resolvedPolicy.ApprovalRequired -and $resolvedPolicy.PSObject.Properties['Approvers'] -and $resolvedPolicy.Approvers) {
+                            $approverList = $resolvedPolicy.Approvers | ForEach-Object {
+                                $item = $_
+                                $desc = $null
+                                $idVal = $null
+
+                                if ($item -is [hashtable]) {
+                                    if ($item.ContainsKey('description')) { $desc = $item['description'] }
+                                    elseif ($item.ContainsKey('Name')) { $desc = $item['Name'] }
+
+                                    if ($item.ContainsKey('id')) { $idVal = $item['id'] }
+                                    elseif ($item.ContainsKey('Id')) { $idVal = $item['Id'] }
+                                }
+                                elseif ($item.PSObject) {
+                                    if ($item.PSObject.Properties['description']) { $desc = $item.description }
+                                    elseif ($item.PSObject.Properties['Name']) { $desc = $item.Name }
+
+                                    if ($item.PSObject.Properties['id']) { $idVal = $item.id }
+                                    elseif ($item.PSObject.Properties['Id']) { $idVal = $item.Id }
+                                }
+
+                                if ($desc -and $idVal) {
+                                    "$desc ($idVal)"
+                                } else {
+                                    "$item"
+                                }
+                            }
+                            $null = $sb.AppendLine("         - Approvers: $($approverList -join ', ')")
+                        }
+                        if ($resolvedPolicy.PSObject.Properties['AuthenticationContext_Enabled'] -and $resolvedPolicy.AuthenticationContext_Enabled) {
+                            $null = $sb.AppendLine("         - Auth Context: $($resolvedPolicy.AuthenticationContext_Value)")
+                        }
+                        $null = $sb.AppendLine("         - Max Eligibility: $($resolvedPolicy.MaximumEligibilityDuration)")
+                        $permElig = if ($resolvedPolicy.AllowPermanentEligibility) { 'Allowed' } else { 'Not Allowed' }
+                        $null = $sb.AppendLine("         - Permanent Eligibility: $permElig")
                     }
-                    if ($resolvedPolicy.PSObject.Properties['AuthenticationContext_Enabled'] -and $resolvedPolicy.AuthenticationContext_Enabled) {
-                        $policyDetails += "Authentication Context: $($resolvedPolicy.AuthenticationContext_Value)"
-                    }
-                    $policyDetails += "Max Eligibility: $($resolvedPolicy.MaximumEligibilityDuration)"
-                    $policyDetails += "Permanent Eligibility: $(if ($resolvedPolicy.AllowPermanentEligibility) { 'Allowed' } else { 'Not Allowed' })"
-                    $whatIfDetails += "    * $($policyDetails -join ' | ')"
+
+                    $whatIfDetails += $sb.ToString()
+                } elseif ($isWhatIf) {
+                    $sb = [System.Text.StringBuilder]::new()
+                    $null = $sb.AppendLine("    * Role: '$($policyDef.RoleName)'$protectedWarning")
+                    $null = $sb.AppendLine("      Scope: '$($policyDef.Scope)'")
+                    $null = $sb.AppendLine("      ✅ [MATCH] Configuration matches live state")
+                    $whatIfDetails += $sb.ToString()
                 }
             }
-            
+
             if ($whatIfDetails.Count -eq 0 -and $Config.AzureRolePolicies.Count -gt 0) {
                 $whatIfDetails += "    * [ALL MATCH] All $($Config.AzureRolePolicies.Count) Azure role policies match the current configuration."
             }
@@ -217,14 +258,12 @@ function New-EPOEasyPIMPolicies {
                     }
                 }
             } else {
-                Write-Host "[WARNING] Skipping Azure Role Policies processing due to WhatIf" -ForegroundColor Yellow
-                Write-Host "   Would have applied the following policy configurations:" -ForegroundColor Yellow
-                foreach ($line in $whatIfDetails) { Write-Host "   $line" -ForegroundColor Yellow }
+                Write-Host "[INFO] Azure Role Policies application skipped (WhatIf mode)" -ForegroundColor Cyan
                 $results.Summary.Skipped += $Config.AzureRolePolicies.Count
             }
         }
         # Entra Role Policies
-        if ($Config.PSObject.Properties['EntraRolePolicies'] -and $Config.EntraRolePolicies -and $Config.EntraRolePolicies.Count -gt 0) {
+        if ($Config.EntraRolePolicies -and $Config.EntraRolePolicies.Count -gt 0) {
             # Pre-fetch live policies if in WhatIf mode to filter out matching ones
             $entraLivePolicies = @{}
             if ($isWhatIf) {
@@ -236,7 +275,7 @@ function New-EPOEasyPIMPolicies {
                         if ($live) {
                             foreach ($l in $live) {
                                 # Get-PIMEntraRolePolicy returns object with 'roleName' property which matches input
-                                if ($l.PSObject.Properties['roleName']) {
+                                if ($l.PSObject.Properties['roleName'] -or ($l -is [hashtable] -and $l.ContainsKey('roleName'))) {
                                     $entraLivePolicies[$l.roleName] = $l
                                 }
                             }
@@ -277,7 +316,7 @@ function New-EPOEasyPIMPolicies {
                             $tempResults = @()
                             $tempDrift = 0
                             Compare-PIMPolicy -Type 'EntraRole' -Name $policyDef.RoleName -Expected $policy -Live $live -Results ([ref]$tempResults) -DriftCount ([ref]$tempDrift)
-                            
+
                             if ($tempDrift -eq 0) {
                                 $isDrift = $false
                             } else {
@@ -289,35 +328,105 @@ function New-EPOEasyPIMPolicies {
                 }
 
                 if ($isDrift) {
-                    $roleLabel = if ($policyDef.PSObject.Properties['_RoleNotFound'] -and $policyDef._RoleNotFound) { "Role: '$($policyDef.RoleName)' [NOT FOUND - SKIPPED]" } else { "Role: '$($policyDef.RoleName)'$protectedWarning$driftReason" }
-                    $policyDetails = @( $roleLabel )
-                    if ($policy.PSObject.Properties['ActivationDuration'] -and $policy.ActivationDuration) { $policyDetails += "Activation Duration: $($policy.ActivationDuration)" } else { $policyDetails += "Activation Duration: Not specified" }
-                    $requirements = @(); if ($policy.PSObject.Properties['ActivationRequirement'] -and $policy.ActivationRequirement) { if ($policy.ActivationRequirement -match 'MultiFactorAuthentication' -or $policy.ActivationRequirement -match 'MFA') { $requirements += 'MultiFactorAuthentication' }; if ($policy.ActivationRequirement -match 'Justification') { $requirements += 'Justification' } }
-                    $policyDetails += "Requirements: $(if ($requirements) { $requirements -join ', ' } else { 'None' })"
-                    if ($policy.PSObject.Properties['ApprovalRequired'] -and $null -ne $policy.ApprovalRequired) {
-                        $policyDetails += "Approval Required: $($policy.ApprovalRequired)"
+                    if ($isWhatIf) { $results.Summary.DriftDetected++ }
+                    $sb = [System.Text.StringBuilder]::new()
+                    $roleLabel = if ($policyDef.PSObject.Properties['_RoleNotFound'] -and $policyDef._RoleNotFound) { "Role: '$($policyDef.RoleName)' [NOT FOUND - SKIPPED]" } else { "Role: '$($policyDef.RoleName)'$protectedWarning" }
+                    $null = $sb.AppendLine("    * $roleLabel")
+
+                    if ($driftItems) {
+                        $null = $sb.AppendLine("      ⚠️  DRIFT:")
+                        $null = $sb.AppendLine("      | Setting | Actual | Expected | Drift |")
+                        $null = $sb.AppendLine("      |---|---|---|---|")
+                        foreach ($item in $driftItems) {
+                            # Support both old string-only and new list-based drift items
+                            $diffs = if ($item.PSObject.Properties['DifferencesList']) { $item.DifferencesList } else { $item.Differences -split '; ' }
+                            foreach ($diff in $diffs) {
+                                if ($diff -match "^(?<setting>[^:]+): expected='(?<expected>.*?)' actual='(?<actual>.*?)'(?<note>.*)?$") {
+                                    $s = $matches['setting']
+                                    $e = $matches['expected']
+                                    $a = $matches['actual']
+                                    $n = $matches['note']
+                                    if ($n) { $a += " *" }
+                                    $null = $sb.AppendLine("      | $s | $a | $e | Yes |")
+                                } else {
+                                    $null = $sb.AppendLine("      | $diff | | | Yes |")
+                                }
+                            }
+                        }
+                    } else {
+                        $null = $sb.AppendLine("      ✅  TARGET STATE:")
+                        $actDur = if ($policy.PSObject.Properties['ActivationDuration'] -and $policy.ActivationDuration) { $policy.ActivationDuration } else { "Not specified" }
+                        $null = $sb.AppendLine("         - Activation: $actDur")
+
+                        $requirements = @()
+                        if ($policy.PSObject.Properties['ActivationRequirement'] -and $policy.ActivationRequirement) {
+                            if ($policy.ActivationRequirement -match 'MultiFactorAuthentication' -or $policy.ActivationRequirement -match 'MFA') { $requirements += 'MultiFactorAuthentication' }
+                            if ($policy.ActivationRequirement -match 'Justification') { $requirements += 'Justification' }
+                        }
+                        $reqsStr = if ($requirements) { $requirements -join ', ' } else { 'None' }
+                        $null = $sb.AppendLine("         - Requirements: $reqsStr")
+
+                        $apprReq = if ($policy.PSObject.Properties['ApprovalRequired'] -and $null -ne $policy.ApprovalRequired) { $policy.ApprovalRequired } else { "Not specified" }
+                        $null = $sb.AppendLine("         - Approval: $apprReq")
+
                         if ($policy.ApprovalRequired) {
                             if ($policy.PSObject.Properties['Approvers'] -and $policy.Approvers) {
                                 $approverList = $policy.Approvers | ForEach-Object {
-                                    if ($_.PSObject.Properties['description'] -and $_.PSObject.Properties['id']) {
-                                        $desc = if ($_.description) { $_.description } else { $_.Name }
-                                        $idValue = if ($_.id) { $_.id } else { $_.Id }
-                                        "$desc ($idValue)"
+                                    $item = $_
+                                    $desc = $null
+                                    $idVal = $null
+
+                                    if ($item -is [hashtable]) {
+                                        if ($item.ContainsKey('description')) { $desc = $item['description'] }
+                                        elseif ($item.ContainsKey('Name')) { $desc = $item['Name'] }
+
+                                        if ($item.ContainsKey('id')) { $idVal = $item['id'] }
+                                        elseif ($item.ContainsKey('Id')) { $idVal = $item['Id'] }
+                                    }
+                                    elseif ($item.PSObject) {
+                                        if ($item.PSObject.Properties['description']) { $desc = $item.description }
+                                        elseif ($item.PSObject.Properties['Name']) { $desc = $item.Name }
+
+                                        if ($item.PSObject.Properties['id']) { $idVal = $item.id }
+                                        elseif ($item.PSObject.Properties['Id']) { $idVal = $item.Id }
+                                    }
+
+                                    if ($desc -and $idVal) {
+                                        "$desc ($idVal)"
                                     } else {
-                                        "$_"
+                                        "$item"
                                     }
                                 }
-                                $policyDetails += "Approvers: $($approverList -join ', ')"
-                            } else { $policyDetails += "[WARNING: ApprovalRequired is true but no Approvers specified!]" }
+                                $null = $sb.AppendLine("         - Approvers: $($approverList -join ', ')")
+                            } else {
+                                $null = $sb.AppendLine("         - Approvers: [WARNING: ApprovalRequired is true but no Approvers specified!]")
+                            }
                         }
-                    } else { $policyDetails += "Approval Required: Not specified" }
-                    if ($policy.PSObject.Properties['AuthenticationContext_Enabled'] -and $policy.AuthenticationContext_Enabled -and $policy.PSObject.Properties['AuthenticationContext_Value'] -and $policy.AuthenticationContext_Value) { $policyDetails += "Authentication Context: $($policy.AuthenticationContext_Value)" }
-                    if ($policy.PSObject.Properties['MaximumEligibilityDuration'] -and $policy.MaximumEligibilityDuration) { $policyDetails += "Max Eligibility: $($policy.MaximumEligibilityDuration)" }
-                    if ($policy.PSObject.Properties['AllowPermanentEligibility'] -and $null -ne $policy.AllowPermanentEligibility) { $policyDetails += "Permanent Eligibility: $(if ($policy.AllowPermanentEligibility) { 'Allowed' } else { 'Not Allowed' })" }
-                    $whatIfDetails += "    * $($policyDetails -join ' | ')"
+
+                        if ($policy.PSObject.Properties['AuthenticationContext_Enabled'] -and $policy.AuthenticationContext_Enabled -and $policy.PSObject.Properties['AuthenticationContext_Value'] -and $policy.AuthenticationContext_Value) {
+                            $null = $sb.AppendLine("         - Auth Context: $($policy.AuthenticationContext_Value)")
+                        }
+
+                        if ($policy.PSObject.Properties['MaximumEligibilityDuration'] -and $policy.MaximumEligibilityDuration) {
+                            $null = $sb.AppendLine("         - Max Eligibility: $($policy.MaximumEligibilityDuration)")
+                        }
+
+                        if ($policy.PSObject.Properties['AllowPermanentEligibility'] -and $null -ne $policy.AllowPermanentEligibility) {
+                            $permElig = if ($policy.AllowPermanentEligibility) { 'Allowed' } else { 'Not Allowed' }
+                            $null = $sb.AppendLine("         - Permanent Eligibility: $permElig")
+                        }
+                    }
+
+                    $whatIfDetails += $sb.ToString()
+                } elseif ($isWhatIf) {
+                    $sb = [System.Text.StringBuilder]::new()
+                    $roleLabel = if ($policyDef.PSObject.Properties['_RoleNotFound'] -and $policyDef._RoleNotFound) { "Role: '$($policyDef.RoleName)' [NOT FOUND - SKIPPED]" } else { "Role: '$($policyDef.RoleName)'$protectedWarning" }
+                    $null = $sb.AppendLine("    * $roleLabel")
+                    $null = $sb.AppendLine("      ✅ [MATCH] Configuration matches live state")
+                    $whatIfDetails += $sb.ToString()
                 }
             }
-            
+
             if ($whatIfDetails.Count -eq 0 -and $Config.EntraRolePolicies.Count -gt 0) {
                 $whatIfDetails += "    * [ALL MATCH] All $($Config.EntraRolePolicies.Count) Entra role policies match the current configuration."
             }
@@ -367,9 +476,7 @@ function New-EPOEasyPIMPolicies {
                     } catch { $errorMsg = "Failed to apply Entra role policy for '$($policyDef.RoleName)': $($_.Exception.Message)"; Write-Error $errorMsg; $results.Errors += $errorMsg; $results.Summary.Failed++ }
                 }
             } else {
-                Write-Host "[WARNING] Skipping Entra Role Policies processing due to WhatIf" -ForegroundColor Yellow
-                Write-Host "   Would have applied the following policy configurations:" -ForegroundColor Yellow
-                foreach ($line in $whatIfDetails) { Write-Host "   $line" -ForegroundColor Yellow }
+                Write-Host "[INFO] Entra Role Policies application skipped (WhatIf mode)" -ForegroundColor Cyan
                 $results.Summary.Skipped += $Config.EntraRolePolicies.Count
                 foreach ($policyDef in $Config.EntraRolePolicies | Where-Object { $_.PSObject.Properties['_RoleNotFound'] -and $_._RoleNotFound }) {
                     $results.EntraRolePolicies += [PSCustomObject]@{ RoleName = $policyDef.RoleName; Status = 'SkippedRoleNotFound'; Mode = $PolicyMode; Details = 'Role displayName not found during pre-validation' }
@@ -377,7 +484,7 @@ function New-EPOEasyPIMPolicies {
             }
         }
         # Group Policies
-        if ($Config.PSObject.Properties['GroupPolicies'] -and $Config.GroupPolicies -and $Config.GroupPolicies.Count -gt 0) {
+        if ($Config.GroupPolicies -and $Config.GroupPolicies.Count -gt 0) {
             # Pre-fetch live policies if in WhatIf mode to filter out matching ones
             $groupLivePolicies = @{}
             if ($isWhatIf) {
@@ -397,13 +504,14 @@ function New-EPOEasyPIMPolicies {
                                 $types = $roles | Select-Object -Unique
                                 foreach ($type in $types) {
                                     $live = Get-PIMGroupPolicy -tenantID $TenantId -groupID $groupId -type $type -ErrorAction SilentlyContinue
+                                    if ($live -is [array]) { $live = $live | Select-Object -First 1 }
                                     if ($live) {
                                         # Key needs to be unique per group+role
                                         $key = "$groupId|$type"
                                         $groupLivePolicies[$key] = $live
                                     }
                                 }
-                            } catch { Write-Verbose "Failed to fetch live Group policy for group $groupId: $_" }
+                            } catch { Write-Verbose "Failed to fetch live Group policy for group $($groupId): $_" }
                         }
                     }
                 } catch { Write-Verbose "Error pre-fetching Group policies: $_" }
@@ -412,7 +520,7 @@ function New-EPOEasyPIMPolicies {
             $whatIfDetails = @()
             foreach ($policyDef in $Config.GroupPolicies) {
                 $resolvedPolicy = if ($policyDef.ResolvedPolicy) { $policyDef.ResolvedPolicy } else { $policyDef }
-                
+
                 # WhatIf Logic: Check for drift if in WhatIf mode
                 $isDrift = $true
                 $driftReason = ""
@@ -420,12 +528,12 @@ function New-EPOEasyPIMPolicies {
                     try {
                         $key = "$($policyDef.GroupId)|$($policyDef.RoleName)"
                         $live = $groupLivePolicies[$key]
-                        
+
                         if ($live) {
                             $tempResults = @()
                             $tempDrift = 0
                             Compare-PIMPolicy -Type 'Group' -Name $policyDef.RoleName -Expected $resolvedPolicy -Live $live -ExtraId $policyDef.GroupId -Results ([ref]$tempResults) -DriftCount ([ref]$tempDrift)
-                            
+
                             if ($tempDrift -eq 0) {
                                 $isDrift = $false
                             } else {
@@ -437,29 +545,105 @@ function New-EPOEasyPIMPolicies {
                 }
 
                 if ($isDrift) {
-                    $policyDetails = @(
-                        "Group ID: '$($policyDef.GroupId)'",
-                        "Role: '$($policyDef.RoleName)'$driftReason",
-                        "Activation Duration: $($resolvedPolicy.ActivationDuration)",
-                        "MFA Required: $(if ($resolvedPolicy.ActivationRequirement -match 'MFA') { 'Yes' } else { 'No' })",
-                        "Justification Required: $(if ($resolvedPolicy.ActivationRequirement -match 'Justification') { 'Yes' } else { 'No' })",
-                        "Approval Required: $($resolvedPolicy.ApprovalRequired)"
-                    )
-                    if ($resolvedPolicy.ApprovalRequired -and $resolvedPolicy.PSObject.Properties['Approvers'] -and $resolvedPolicy.Approvers) {
-                        $approverList = $resolvedPolicy.Approvers | ForEach-Object {
-                            $desc = if ($_.description) { $_.description } else { $_.Name }
-                            $idValue = if ($_.id) { $_.id } else { $_.Id }
-                            "$desc ($idValue)"
+                    if ($isWhatIf) { $results.Summary.DriftDetected++ }
+                    $sb = [System.Text.StringBuilder]::new()
+                    $null = $sb.AppendLine("    * Group ID: '$($policyDef.GroupId)'")
+                    $null = $sb.AppendLine("      Role: '$($policyDef.RoleName)'")
+
+                    if ($driftItems) {
+                        $null = $sb.AppendLine("      ⚠️  DRIFT:")
+                        $null = $sb.AppendLine("      | Setting | Actual | Expected | Drift |")
+                        $null = $sb.AppendLine("      |---|---|---|---|")
+                        foreach ($item in $driftItems) {
+                            # Support both old string-only and new list-based drift items
+                            $diffs = if ($item.PSObject.Properties['DifferencesList']) { $item.DifferencesList } else { $item.Differences -split '; ' }
+                            foreach ($diff in $diffs) {
+                                if ($diff -match "^(?<setting>[^:]+): expected='(?<expected>.*?)' actual='(?<actual>.*?)'(?<note>.*)?$") {
+                                    $s = $matches['setting']
+                                    $e = $matches['expected']
+                                    $a = $matches['actual']
+                                    $n = $matches['note']
+                                    if ($n) { $a += " *" }
+                                    $null = $sb.AppendLine("      | $s | $a | $e | Yes |")
+                                } else {
+                                    $null = $sb.AppendLine("      | $diff | | | Yes |")
+                                }
+                            }
                         }
-                        $policyDetails += "Approvers: $($approverList -join ', ')"
+                    } else {
+                        $null = $sb.AppendLine("      ✅  TARGET STATE:")
+                        $actDur = if ($resolvedPolicy.PSObject.Properties['ActivationDuration'] -and $resolvedPolicy.ActivationDuration) { $resolvedPolicy.ActivationDuration } else { "Not specified" }
+                        $null = $sb.AppendLine("         - Activation: $actDur")
+
+                        $requirements = @()
+                        if ($resolvedPolicy.PSObject.Properties['ActivationRequirement'] -and $resolvedPolicy.ActivationRequirement) {
+                            if ($resolvedPolicy.ActivationRequirement -match 'MFA') { $requirements += 'MFA' }
+                            if ($resolvedPolicy.ActivationRequirement -match 'Justification') { $requirements += 'Justification' }
+                        }
+                        $reqsStr = if ($requirements) { $requirements -join ', ' } else { 'None' }
+                        $null = $sb.AppendLine("         - Requirements: $reqsStr")
+
+                        $apprReq = if ($resolvedPolicy.PSObject.Properties['ApprovalRequired'] -and $null -ne $resolvedPolicy.ApprovalRequired) { $resolvedPolicy.ApprovalRequired } else { "Not specified" }
+                        $null = $sb.AppendLine("         - Approval: $apprReq")
+
+                        if ($resolvedPolicy.ApprovalRequired) {
+                            if ($resolvedPolicy.PSObject.Properties['Approvers'] -and $resolvedPolicy.Approvers) {
+                                $approverList = $resolvedPolicy.Approvers | ForEach-Object {
+                                    $item = $_
+                                    $desc = $null
+                                    $idVal = $null
+
+                                    if ($item -is [hashtable]) {
+                                        if ($item.ContainsKey('description')) { $desc = $item['description'] }
+                                        elseif ($item.ContainsKey('Name')) { $desc = $item['Name'] }
+
+                                        if ($item.ContainsKey('id')) { $idVal = $item['id'] }
+                                        elseif ($item.ContainsKey('Id')) { $idVal = $item['Id'] }
+                                    }
+                                    elseif ($item.PSObject) {
+                                        if ($item.PSObject.Properties['description']) { $desc = $item.description }
+                                        elseif ($item.PSObject.Properties['Name']) { $desc = $item.Name }
+
+                                        if ($item.PSObject.Properties['id']) { $idVal = $item.id }
+                                        elseif ($item.PSObject.Properties['Id']) { $idVal = $item.Id }
+                                    }
+
+                                    if ($desc -and $idVal) {
+                                        "$desc ($idVal)"
+                                    } else {
+                                        "$item"
+                                    }
+                                }
+                                $null = $sb.AppendLine("         - Approvers: $($approverList -join ', ')")
+                            } else {
+                                $null = $sb.AppendLine("         - Approvers: [WARNING: ApprovalRequired is true but no Approvers specified!]")
+                            }
+                        }
+
+                        if ($resolvedPolicy.PSObject.Properties['AuthenticationContext_Enabled'] -and $resolvedPolicy.AuthenticationContext_Enabled) {
+                            $null = $sb.AppendLine("         - Auth Context: $($resolvedPolicy.AuthenticationContext_Value)")
+                        }
+
+                        if ($resolvedPolicy.PSObject.Properties['MaximumEligibilityDuration'] -and $resolvedPolicy.MaximumEligibilityDuration) {
+                            $null = $sb.AppendLine("         - Max Eligibility: $($resolvedPolicy.MaximumEligibilityDuration)")
+                        }
+
+                        if ($resolvedPolicy.PSObject.Properties['AllowPermanentEligibility'] -and $null -ne $resolvedPolicy.AllowPermanentEligibility) {
+                            $permElig = if ($resolvedPolicy.AllowPermanentEligibility) { 'Allowed' } else { 'Not Allowed' }
+                            $null = $sb.AppendLine("         - Permanent Eligibility: $permElig")
+                        }
                     }
-                    if ($resolvedPolicy.PSObject.Properties['AuthenticationContext_Enabled'] -and $resolvedPolicy.AuthenticationContext_Enabled) { $policyDetails += "Authentication Context: $($resolvedPolicy.AuthenticationContext_Value)" }
-                    $policyDetails += "Max Eligibility: $($resolvedPolicy.MaximumEligibilityDuration)"
-                    $policyDetails += "Permanent Eligibility: $(if ($resolvedPolicy.AllowPermanentEligibility) { 'Allowed' } else { 'Not Allowed' })"
-                    $whatIfDetails += "    * $($policyDetails -join ' | ')"
+
+                    $whatIfDetails += $sb.ToString()
+                } elseif ($isWhatIf) {
+                    $sb = [System.Text.StringBuilder]::new()
+                    $null = $sb.AppendLine("    * Group ID: '$($policyDef.GroupId)'")
+                    $null = $sb.AppendLine("      Role: '$($policyDef.RoleName)'")
+                    $null = $sb.AppendLine("      ✅ [MATCH] Configuration matches live state")
+                    $whatIfDetails += $sb.ToString()
                 }
             }
-            
+
             if ($whatIfDetails.Count -eq 0 -and $Config.GroupPolicies.Count -gt 0) {
                 $whatIfDetails += "    * [ALL MATCH] All $($Config.GroupPolicies.Count) Group policies match the current configuration."
             }
@@ -508,9 +692,7 @@ function New-EPOEasyPIMPolicies {
                     } catch { $errorMsg = "Failed to apply Group policy for '$($policyDef.GroupId)' role '$($policyDef.RoleName)': $($_.Exception.Message)"; Write-Error $errorMsg; $results.Errors += $errorMsg; $results.Summary.Failed++ }
                 }
             } else {
-                Write-Host "[WARNING] Skipping Group Policies processing due to WhatIf" -ForegroundColor Yellow
-                Write-Host "   Would have applied the following policy configurations:" -ForegroundColor Yellow
-                foreach ($line in $whatIfDetails) { Write-Host "   $line" -ForegroundColor Yellow }
+                Write-Host "[INFO] Group Policies application skipped (WhatIf mode)" -ForegroundColor Cyan
                 $results.Summary.Skipped += $Config.GroupPolicies.Count
             }
         }

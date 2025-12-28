@@ -72,7 +72,7 @@ function Get-PIMAzureResourcePolicy {
         $rolename | ForEach-Object {
 
             #get curent config
-            $config = get-config $scope $_
+            $config = get-config $scope $_ $null $script:tenantID
             $out += $config
         }
         Write-Output $out -NoEnumerate
