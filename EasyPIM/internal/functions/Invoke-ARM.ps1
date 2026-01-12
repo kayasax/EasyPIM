@@ -62,7 +62,7 @@ function Invoke-ARM {
             try {
                 $azContext = $null
                 if ($SubscriptionId) {
-                    $azContext = Get-AzContext -SubscriptionId $SubscriptionId -ErrorAction SilentlyContinue
+                    $azContext = Get-AzContext -List -ErrorAction SilentlyContinue | Where-Object { $_.Subscription.Id -eq $SubscriptionId } | Select-Object -First 1
                 }
                 if (-not $azContext -and $TenantId) {
                      $azContext = Get-AzContext -List | Where-Object { $_.Tenant.Id -eq $TenantId } | Select-Object -First 1
@@ -157,7 +157,7 @@ function Invoke-ARM {
                 $azContext = $null
                 if ($SubscriptionId) {
                     # Try to get context for the specific subscription to ensure correct TenantId
-                    $azContext = Get-AzContext -SubscriptionId $SubscriptionId -ErrorAction SilentlyContinue
+                    $azContext = Get-AzContext -List -ErrorAction SilentlyContinue | Where-Object { $_.Subscription.Id -eq $SubscriptionId } | Select-Object -First 1
                 }
 
                 # If no subscription context found (or not provided), try TenantId
