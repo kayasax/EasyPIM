@@ -1,6 +1,6 @@
 @{
     RootModule        = 'EasyPIM.Orchestrator.psm1'
-    ModuleVersion = '1.5.0'
+    ModuleVersion = '1.5.1'
     GUID              = 'b6f9b3c9-bc6a-4d4b-8c51-7c45d42157cd'
     Author            = 'Loïc MICHEL'
     CompanyName       = 'EasyPIM'
@@ -30,19 +30,15 @@
         ProjectUri = 'https://kayasax.github.io/EasyPIM/template-guide.html'
         LicenseUri = 'https://github.com/kayasax/EasyPIM/blob/main/LICENSE'
 ReleaseNotes = @'
-EasyPIM.Orchestrator v1.5.0 - Performance & Drift Detection Overhaul
+EasyPIM.Orchestrator v1.5.1 - Bug Fix Release
 
-Added
-- **Rich Return Object**: `Invoke-EasyPIMOrchestrator` now returns a detailed `PSCustomObject` containing success status, policy results, assignment results, and cleanup analysis, enabling better programmatic integration.
-- **Cleanup Analysis**: `initial` mode now performs and displays a full cleanup analysis (showing exactly what would be removed) even in `WhatIf` mode.
-- **Performance**: Implemented batch pre-fetching for assignments, significantly reducing Graph/ARM API calls during validation (O(1) vs O(N)).
-
-Changed
-- **Drift Output**: `WhatIf` output now explicitly reports "⚠️ [DRIFT]" instead of "✅ [OK]" when policy drift is detected.
-- **Assignment Logging**: "Planned" assignments (those that would be created) are now clearly distinguished from "Existing" ones in the summary.
-- **Idempotency**: Improved logic to correctly identify existing assignments in `WhatIf` mode, preventing false "Creating..." logs.
+Fixed
+- **Issue**: Fixed `Test-PIMPolicyDrift` fallback logic incorrectly handling `AzureRoles.Policies` in array format, which caused it to iterate array metadata properties (Count, Length, IsFixedSize) instead of actual role entries.
+  - **Root Cause**: Fallback logic assumed `AzureRoles.Policies` was always a dictionary/object format and directly iterated PSObject.Properties without checking if it was an array first.
+  - **Fix**: Added array format detection to match existing logic for `EntraRoles.Policies` and `Groups.Policies`, ensuring proper handling of both array and dictionary formats.
 
 Previous releases:
+v1.5.0 - Performance & Drift Detection Overhaul
 v1.4.12 - Fix Drift Detection
 '@
     } }

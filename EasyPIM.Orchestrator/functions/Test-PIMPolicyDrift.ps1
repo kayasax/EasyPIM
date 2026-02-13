@@ -213,18 +213,27 @@ function Test-PIMPolicyDrift {
 
 	# Process nested format configurations
 	if ($json.PSObject.Properties['AzureRoles'] -and $json.AzureRoles.PSObject.Properties['Policies']) {
-		foreach ($prop in $json.AzureRoles.Policies.PSObject.Properties) {
-			$roleName = $prop.Name
-			$policy = $prop.Value
-			if (-not $policy) { continue }
-
-			$obj = [pscustomobject]@{ RoleName = $roleName; Scope = $policy.Scope }
-			foreach ($policyProperty in $policy.PSObject.Properties) {
-				if ($policyProperty.Name -notin @('Scope')) {
-					$obj | Add-Member -NotePropertyName $policyProperty.Name -NotePropertyValue $policyProperty.Value -Force
+		$azurePolicies = $json.AzureRoles.Policies
+		if ($azurePolicies -is [System.Collections.IEnumerable] -and $azurePolicies -isnot [string]) {
+			foreach ($entry in $azurePolicies) {
+				if ($entry -and $entry.PSObject.Properties['RoleName']) {
+					$expectedAzure += $entry
 				}
 			}
-			$expectedAzure += $obj
+		} else {
+			foreach ($prop in $azurePolicies.PSObject.Properties) {
+				$roleName = $prop.Name
+				$policy = $prop.Value
+				if (-not $policy) { continue }
+
+				$obj = [pscustomobject]@{ RoleName = $roleName; Scope = $policy.Scope }
+				foreach ($policyProperty in $policy.PSObject.Properties) {
+					if ($policyProperty.Name -notin @('Scope')) {
+						$obj | Add-Member -NotePropertyName $policyProperty.Name -NotePropertyValue $policyProperty.Value -Force
+					}
+				}
+				$expectedAzure += $obj
+			}
 		}
 	}
 
