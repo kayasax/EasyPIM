@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [EasyPIM.Orchestrator 1.5.1] - 2026-02-13
+
+### Fixed
+- **Test-PIMPolicyDrift**: Fixed fallback logic incorrectly handling `AzureRoles.Policies` in array format. The code was iterating array metadata properties (Count, Length, IsFixedSize, etc.) instead of actual role entries when `Initialize-EasyPIMPolicies` failed and fell back to local parsing.
+  - **Root Cause**: Fallback logic assumed `AzureRoles.Policies` was always a dictionary/object format and directly iterated `PSObject.Properties` without checking if it was an array first.
+  - **Fix**: Added array format detection to match the existing logic for `EntraRoles.Policies` and `Groups.Policies`, ensuring proper handling of both array and dictionary configuration formats.
+  - **Impact**: Users with array-formatted `AzureRoles.Policies` configurations will no longer see errors like "Missing Scope" for system properties.
+
 ## [EasyPIM Core 2.2.2] - 2026-01-12
 
 ### Fixed
