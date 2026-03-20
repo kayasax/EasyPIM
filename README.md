@@ -177,11 +177,6 @@ Install-Module EasyPIM, EasyPIM.Orchestrator -Scope CurrentUser
 
 ## 🤝 Contributing
 
-```powershell
-git clone https://github.com/kayasax/EasyPIM.git
-cd EasyPIM; Import-Module ./EasyPIM/EasyPIM.psd1
-```
-
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ### Contributors
