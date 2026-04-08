@@ -589,10 +589,30 @@ function Invoke-EasyPIMOrchestrator {
 		Write-Verbose -Message ("[DEBUG] Extracting GUIDs from configuration using regex...")
 		Write-Verbose -Message ("[DEBUG] Config JSON length: $($configJson.Length) characters")
 
-		# Regex to find all GUIDs, but exclude those in scope paths
+		# Regex to find all GUIDs, but exclude those in scope paths and condition expressions
 		$guidPattern = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
 		$allGuids = [System.Text.RegularExpressions.Regex]::Matches($configJson, $guidPattern) | ForEach-Object { $_.Value } | Sort-Object -Unique
 		Write-Verbose -Message ("[DEBUG] Found $($allGuids.Count) total GUIDs in configuration")
+
+		# Collect non-principal GUIDs from ABAC condition expressions (e.g. RoleDefinitionId references)
+		# PrincipalId GUIDs in conditions ARE real principals and should still be validated
+		$conditionRoleDefGuids = @{}
+		$conditionPattern = '"[Cc]ondition"\s*:\s*"([^"]*)"'
+		$conditionMatches = [System.Text.RegularExpressions.Regex]::Matches($configJson, $conditionPattern)
+		foreach ($cm in $conditionMatches) {
+			$conditionValue = $cm.Groups[1].Value
+			# Extract GUIDs from RoleDefinitionId contexts only — these are role definitions, not principals
+			# Matches any GUID operator (GuidEquals and any future variants) after RoleDefinitionId
+			$roleDefPattern = 'RoleDefinitionId\].*?\{([^}]*' + $guidPattern + '[^}]*)\}'
+			$roleDefMatches = [System.Text.RegularExpressions.Regex]::Matches($conditionValue, $roleDefPattern)
+			foreach ($rdm in $roleDefMatches) {
+				$guidsInBlock = [System.Text.RegularExpressions.Regex]::Matches($rdm.Groups[1].Value, $guidPattern)
+				foreach ($g in $guidsInBlock) { $conditionRoleDefGuids[$g.Value] = $true }
+			}
+		}
+		if ($conditionRoleDefGuids.Count -gt 0) {
+			Write-Verbose -Message ("[DEBUG] Found $($conditionRoleDefGuids.Count) RoleDefinitionId GUIDs inside ABAC conditions (excluded from validation)")
+		}
 
 		# Filter out GUIDs that are in scope paths (subscriptions, management groups, etc.)
 		$principalGuids = @()
@@ -603,9 +623,9 @@ function Invoke-EasyPIMOrchestrator {
 				Write-Verbose -Message ("[DEBUG] Skipping scope GUID: $guid")
 				continue
 			}
-			# Skip if GUID appears inside an ABAC condition expression (role definition IDs, not principals)
-			if ($configJson -match "GuidEquals\s*\{[^}]*$guid|RoleDefinitionId[^`"]*$guid") {
-				Write-Verbose -Message ("[DEBUG] Skipping condition GUID (role definition reference): $guid")
+			# Skip if GUID is a RoleDefinitionId reference inside an ABAC condition expression
+			if ($conditionRoleDefGuids.ContainsKey($guid)) {
+				Write-Verbose -Message ("[DEBUG] Skipping ABAC RoleDefinitionId GUID: $guid")
 				continue
 			}
 			$principalGuids += $guid
