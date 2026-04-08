@@ -202,7 +202,9 @@ Inline role policy objects accept the same properties as templates (ActivationDu
             "principalType": "string (required - 'User', 'Group', or 'ServicePrincipal')",
             "assignmentType": "string (required - 'Eligible' or 'Active')",
             "duration": "string (required for Active assignments - ISO 8601 duration)",
-            "justification": "string (optional - reason for assignment)"
+            "justification": "string (optional - reason for assignment)",
+            "condition": "string (optional - ABAC role assignment condition expression)",
+            "conditionVersion": "string (optional - condition language version, defaults to '2.0')"
           }
         ]
       }
@@ -247,7 +249,17 @@ Inline role policy objects accept the same properties as templates (ActivationDu
 - **Source**: Azure AD portal, PowerShell (`Get-AzADUser`, `Get-AzADGroup`), Graph API
 - **Never use**: Email addresses, display names, UPNs
 
+### Role Assignment Conditions (ABAC)
+
+Azure RBAC supports [attribute-based access control (ABAC) conditions](https://learn.microsoft.com/en-us/azure/role-based-access-control/conditions-overview) on role assignments. Conditions let you constrain what a principal can do with a role — for example, restricting a Storage Blob Data Contributor to a specific container, or limiting a Role Based Access Control Administrator to assign only certain roles.
+
+- **`condition`**: The condition expression string. Use the Azure Portal condition editor to build and copy the expression.
+- **`conditionVersion`**: The condition language version. Currently always `"2.0"`. Omit to use the default.
+
+Only supported for `Assignments.AzureRoles`. Entra ID and Group role assignments do not support conditions.
+
 ### Azure Resource Scopes
+
 - **Subscription**: `/subscriptions/{subscription-id}`
 - **Resource Group**: `/subscriptions/{subscription-id}/resourceGroups/{rg-name}`
 - **Resource**: `/subscriptions/{subscription-id}/resourceGroups/{rg-name}/providers/{provider}/{resource}`
@@ -326,6 +338,19 @@ Inline role policy objects accept the same properties as templates (ActivationDu
             "assignmentType": "Active",
             "duration": "PT8H",
             "justification": "Temporary access for project"
+          }
+        ]
+      },
+      {
+        "roleName": "Storage Blob Data Contributor",
+        "scope": "/subscriptions/12345678-1234-1234-1234-123456789012",
+        "assignments": [
+          {
+            "principalId": "87654321-4321-4321-4321-210987654321",
+            "principalType": "ServicePrincipal",
+            "assignmentType": "Eligible",
+            "condition": "((!(ActionMatches{'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals 'my-container'))",
+            "conditionVersion": "2.0"
           }
         ]
       }
