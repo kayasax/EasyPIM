@@ -82,6 +82,13 @@ function Initialize-EasyPIMAssignments {
                             $assignmentObj | Add-Member -MemberType NoteProperty -Name 'Duration' -Value $assignment.duration
                         }
 
+                        # Add condition if specified
+                        if ($assignment.PSObject.Properties['condition'] -and $assignment.condition) {
+                            $assignmentObj | Add-Member -MemberType NoteProperty -Name 'condition' -Value $assignment.condition
+                            $condVer = if ($assignment.PSObject.Properties['conditionVersion'] -and $assignment.conditionVersion) { $assignment.conditionVersion } else { '2.0' }
+                            $assignmentObj | Add-Member -MemberType NoteProperty -Name 'conditionVersion' -Value $condVer
+                        }
+
                         # Split by assignment type
                         if ($assignment.assignmentType -eq "Active") {
                             $null = $result.AzureRolesActive.Add($assignmentObj)

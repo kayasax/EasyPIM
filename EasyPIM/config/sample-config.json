@@ -22,6 +22,13 @@
       "PrincipalId": "aec7e1be-91cf-41bf-b849-10e5ada8353c", // Admin group
       "Rolename": "Owner",
       "Scope": "/providers/Microsoft.Management/managementGroups/all_sub" //management group scope
+      },
+      {
+      "PrincipalId": "a621fbf5-d750-4e68-b898-2e2b41cd45c6", // PIM5
+      "Rolename": "Storage Blob Data Contributor",
+      "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a",
+      "Condition": "((!(ActionMatches{'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals 'my-container'))",
+      "ConditionVersion": "2.0"
       }
       /*,
       {

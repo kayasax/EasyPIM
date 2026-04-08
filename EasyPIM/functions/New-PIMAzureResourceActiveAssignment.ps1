@@ -23,6 +23,11 @@
     Use this parameter if you want a permanent assignement (no expiration)
     .Parameter justification
     justification
+    .Parameter condition
+    ABAC condition expression string for role assignment conditions (e.g. to restrict access by resource attribute).
+    See https://learn.microsoft.com/en-us/azure/role-based-access-control/conditions-overview
+    .Parameter conditionVersion
+    Version of the condition language. Defaults to "2.0" when condition is provided.
 
 
     .Example
@@ -37,6 +42,10 @@
     PS> New-PIMAzureResourceActiveAssigment -tenantID $tenantID -scope "/subscriptions/$subscriptionId/resourceGroups/demo-rg" -rolename "Reader" -principalName "user@contoso.com"
 
     Resolve the provided principal name to its object ID before creating the active assignment.
+
+    PS> New-PIMAzureResourceActiveAssignment -tenantID $tenantID -subscriptionID $subscriptionId -rolename "Storage Blob Data Contributor" -principalID 3604fe63-cb67-4b60-99c9-707d46ab9092 -condition "((!(ActionMatches{'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals 'my-container'))" -conditionVersion "2.0"
+
+    Create an active assignment with an ABAC condition restricting blob access to a specific container.
 
     .Link
     https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-resource-roles-assign-roles
@@ -104,7 +113,19 @@ function New-PIMAzureResourceActiveAssignment {
         [Parameter(ParameterSetName = 'ByPrincipalName')]
         [switch]
         # the assignment will not expire
-        $permanent
+        $permanent,
+
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
+        [string]
+        # ABAC condition expression for role assignment conditions
+        $condition,
+
+        [Parameter(ParameterSetName = 'ByPrincipalId')]
+        [Parameter(ParameterSetName = 'ByPrincipalName')]
+        [string]
+        # Condition language version, defaults to "2.0" when condition is provided
+        $conditionVersion
 
     )
 
@@ -183,6 +204,17 @@ function New-PIMAzureResourceActiveAssignment {
         $type = "NoExpiration"
     }
 
+    $conditionBlock = ''
+    if ($PSBoundParameters.Keys.Contains('condition')) {
+        if (-not $PSBoundParameters.Keys.Contains('conditionVersion')) {
+            $conditionVersion = '2.0'
+        }
+        $escapedCondition = $condition -replace '"', '\"'
+        $conditionBlock = ',
+        "condition": "' + $escapedCondition + '",
+        "conditionVersion": "' + $conditionVersion + '"'
+    }
+
     $body = '
 {
     "properties": {
@@ -197,7 +229,8 @@ function New-PIMAzureResourceActiveAssignment {
                 "endDateTime": null,
                 "duration": "'+ $duration + '"
             }
-        }
+        }' + $conditionBlock + '
+    }
 }
 '
     $guid = New-Guid

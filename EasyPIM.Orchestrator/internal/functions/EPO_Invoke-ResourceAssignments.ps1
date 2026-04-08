@@ -194,15 +194,19 @@
 				$sb = {
 					if ($a.assignmentType -match 'Active') {
 						$params = @{ tenantID = $TenantId; subscriptionID = $SubscriptionId; scope = $scope; rolename = $roleName; principalID = $a.principalId }
-						if ($a.duration)   { $params.duration = $a.duration }
-						if ($a.permanent)  { $params.permanent = $true }
-						if ($a.justification) { $params.justification = $a.justification }
+						if ($a.duration)        { $params.duration = $a.duration }
+						if ($a.permanent)       { $params.permanent = $true }
+						if ($a.justification)   { $params.justification = $a.justification }
+						if ($a.condition)       { $params.condition = $a.condition }
+						if ($a.conditionVersion){ $params.conditionVersion = $a.conditionVersion }
 						New-PIMAzureResourceActiveAssignment @params | Out-Null
 					} else {
 						$params = @{ tenantID = $TenantId; subscriptionID = $SubscriptionId; scope = $scope; rolename = $roleName; principalID = $a.principalId }
-						if ($a.duration)   { $params.duration = $a.duration }
-						if ($a.permanent)  { $params.permanent = $true }
-						if ($a.justification) { $params.justification = $a.justification }
+						if ($a.duration)        { $params.duration = $a.duration }
+						if ($a.permanent)       { $params.permanent = $true }
+						if ($a.justification)   { $params.justification = $a.justification }
+						if ($a.condition)       { $params.condition = $a.condition }
+						if ($a.conditionVersion){ $params.conditionVersion = $a.conditionVersion }
 						New-PIMAzureResourceEligibleAssignment @params | Out-Null
 					}
 				}
