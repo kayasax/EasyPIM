@@ -603,6 +603,11 @@ function Invoke-EasyPIMOrchestrator {
 				Write-Verbose -Message ("[DEBUG] Skipping scope GUID: $guid")
 				continue
 			}
+			# Skip if GUID appears inside an ABAC condition expression (role definition IDs, not principals)
+			if ($configJson -match "GuidEquals\s*\{[^}]*$guid|RoleDefinitionId[^`"]*$guid") {
+				Write-Verbose -Message ("[DEBUG] Skipping condition GUID (role definition reference): $guid")
+				continue
+			}
 			$principalGuids += $guid
 			Write-Verbose -Message ("[DEBUG] Found potential principal GUID: $guid")
 		}
