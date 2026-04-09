@@ -173,12 +173,31 @@
 
 					if ($existsActiveData.Count -gt 0 -or $existsEligData.Count -gt 0) {
 						$foundType = if ($existsActiveData.Count -gt 0) { 'Active' } else { 'Eligible' }
-						if ($whatIf) {
-							Write-Host "  ✅ [MATCH] Assignment exists: $ctx [Found: $foundType]" -ForegroundColor Green
+						$existingMatch = if ($existsActiveData.Count -gt 0) { $existsActiveData[0] } else { $existsEligData[0] }
+
+						# Compare conditions: if the desired condition differs from what's deployed, remove and recreate
+						$desiredCondition = if ($a.condition) { $a.condition } else { $null }
+						$existingCondition = if ($existingMatch.Condition) { $existingMatch.Condition } else { $null }
+
+						if ($desiredCondition -ne $existingCondition) {
+							Write-Host "  🔄 Condition changed: $ctx [Found: $foundType] — removing old assignment to recreate with updated condition" -ForegroundColor Cyan
+							if (-not $whatIf) {
+								$removeParams = @{ tenantID = $TenantId; subscriptionID = $SubscriptionId; scope = $scope; rolename = $roleName; principalID = $a.principalId }
+								if ($foundType -eq 'Active') {
+									Remove-PIMAzureResourceActiveAssignment @removeParams
+								} else {
+									Remove-PIMAzureResourceEligibleAssignment @removeParams
+								}
+							}
+							# Fall through to creation below
 						} else {
-							Write-Host "  ⏭️ Skipped existing: $ctx [Found: $foundType]" -ForegroundColor Yellow
+							if ($whatIf) {
+								Write-Host "  ✅ [MATCH] Assignment exists: $ctx [Found: $foundType]" -ForegroundColor Green
+							} else {
+								Write-Host "  ⏭️ Skipped existing: $ctx [Found: $foundType]" -ForegroundColor Yellow
+							}
+							$summary.Skipped++; continue
 						}
-						$summary.Skipped++; continue
 					}
 				} catch {
 					$VerbosePreference = $script:originalVerbosePreference
