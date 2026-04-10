@@ -1024,6 +1024,8 @@ This example uses the [delegated role assignment management](https://learn.micro
 - `condition` (string, optional): The ABAC condition expression. Use the Azure Portal condition editor to build and copy it.
 - `conditionVersion` (string, optional): The condition language version. Currently always `"2.0"`. Defaults to `"2.0"` if omitted.
 
+**Conditions on unsupported roles:** If you add a condition targeting actions that the role does not have (e.g. a storage blob condition on the Reader role), the Azure API rejects the request with a `400 Bad Request`. The assignment fails but the orchestrator pipeline continues processing remaining assignments.
+
 **Condition change detection:** The orchestrator compares the desired condition with the existing one. If they differ, the old assignment is removed and recreated with the updated condition (the Azure PIM API does not support in-place condition updates).
 
 **Legacy format:** Conditions are also supported in the flat `AzureRoles` format:
