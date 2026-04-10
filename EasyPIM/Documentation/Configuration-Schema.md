@@ -251,7 +251,7 @@ Inline role policy objects accept the same properties as templates (ActivationDu
 
 ### Role Assignment Conditions (ABAC)
 
-Azure RBAC supports [attribute-based access control (ABAC) conditions](https://learn.microsoft.com/en-us/azure/role-based-access-control/conditions-overview) on role assignments. Conditions let you constrain what a principal can do with a role — for example, restricting a Storage Blob Data Contributor to a specific container, or limiting a Role Based Access Control Administrator to assign only certain roles.
+Azure RBAC supports [attribute-based access control (ABAC) conditions](https://learn.microsoft.com/en-us/azure/role-based-access-control/conditions-overview) on role assignments. Conditions allow fine-grained access control — for example, restricting a Storage Blob Data Contributor to a specific container, or constraining which roles a [Role Based Access Control Administrator](https://learn.microsoft.com/en-us/azure/role-based-access-control/delegate-role-assignments-overview) can assign. Not all roles support conditions — for details see the linked documentation.
 
 - **`condition`**: The condition expression string. Use the Azure Portal condition editor to build and copy the expression.
 - **`conditionVersion`**: The condition language version. Currently always `"2.0"`. Omit to use the default.
