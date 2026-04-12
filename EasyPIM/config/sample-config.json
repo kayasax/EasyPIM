@@ -27,7 +27,7 @@
       "PrincipalId": "a621fbf5-d750-4e68-b898-2e2b41cd45c6", // PIM5
       "Rolename": "Storage Blob Data Contributor",
       "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a",
-      "_comment": "ABAC role assignment condition. See https://learn.microsoft.com/en-us/azure/role-based-access-control/conditions-overview",
+      // ABAC role assignment condition — see https://learn.microsoft.com/en-us/azure/role-based-access-control/conditions-overview
       "Condition": "((!(ActionMatches{'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals 'my-container'))",
       "ConditionVersion": "2.0"
       }

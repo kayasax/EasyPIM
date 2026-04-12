@@ -209,7 +209,7 @@ function New-PIMAzureResourceActiveAssignment {
         if (-not $PSBoundParameters.Keys.Contains('conditionVersion')) {
             $conditionVersion = '2.0'
         }
-        $escapedCondition = $condition -replace '"', '\"'
+        $escapedCondition = ($condition | ConvertTo-Json -Compress).Trim('"')
         $conditionBlock = ',
         "condition": "' + $escapedCondition + '",
         "conditionVersion": "' + $conditionVersion + '"'
