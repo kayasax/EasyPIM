@@ -182,6 +182,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ### Contributors
 
 - **[Loïc MICHEL](https://github.com/kayasax)** — Author and maintainer
+- **[AzureStackNerd](https://github.com/AzureStackNerd)** — ABAC condition support for Azure Resource assignments, Graph scope optimization
 - **[Chase Dafnis](https://github.com/CHDAFNI-MSFT)** — Multi-cloud / Azure environment support
 - **[jeenvan](https://github.com/jeevanions)** — Orchestrator: array format & management group scope fixes
 
