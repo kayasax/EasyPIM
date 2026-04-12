@@ -18,6 +18,14 @@
             ],
             "Rolename": "Reader",
             "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a"
+        },
+        {
+            "PrincipalId": "a621fbf5-d750-4e68-b898-2e2b41cd45c6",
+            "Rolename": "Storage Blob Data Contributor",
+            "Scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a",
+            "_comment": "ABAC role assignment condition. See https://learn.microsoft.com/en-us/azure/role-based-access-control/conditions-overview",
+            "Condition": "((!(ActionMatches{'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals 'my-container'))",
+            "ConditionVersion": "2.0"
         }
     ],
     "AzureRolesActive": [
@@ -360,5 +368,34 @@
                 "notificationLevel": "All"
             }
         }
+    },
+    "Assignments": {
+        "AzureRoles": [
+            {
+                "roleName": "Storage Blob Data Contributor",
+                "scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a",
+                "assignments": [
+                    {
+                        "principalId": "a621fbf5-d750-4e68-b898-2e2b41cd45c6",
+                        "assignmentType": "Eligible",
+                        "condition": "((!(ActionMatches{'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals 'my-container'))",
+                        "conditionVersion": "2.0"
+                    }
+                ]
+            },
+            {
+                "roleName": "Storage Queue Data Contributor",
+                "scope": "/subscriptions/442734fd-2546-4a3b-b4c7-f351bd5ff93a",
+                "assignments": [
+                    {
+                        "principalId": "a621fbf5-d750-4e68-b898-2e2b41cd45c6",
+                        "assignmentType": "Eligible",
+                        "_comment": "ABAC condition — restrict queue message processing. See https://learn.microsoft.com/en-us/azure/role-based-access-control/conditions-overview",
+                        "condition": "((!(ActionMatches{'Microsoft.Storage/storageAccounts/queueServices/queues/messages/read'})) OR (@Resource[Microsoft.Storage/storageAccounts/queueServices/queues:name] StringEquals 'my-queue'))",
+                        "conditionVersion": "2.0"
+                    }
+                ]
+            }
+        ]
     }
 }

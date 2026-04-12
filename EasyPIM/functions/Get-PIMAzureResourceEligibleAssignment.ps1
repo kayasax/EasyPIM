@@ -154,13 +154,15 @@ function Get-PIMAzureResourceEligibleAssignment {
                     "ScopeId"        = $_.expandedproperties.scope.id;
                     "ScopeName"      = $_.expandedproperties.scope.displayName;
                     "ScopeType"      = $_.expandedproperties.scope.type;
-                    "Status"         = $_.Status;
-                    "createdOn"      = $_.createdOn
-                    "startDateTime"  = $_.startDateTime
-                    "endDateTime"    = $end
-                    "updatedOn"      = $_.updatedOn
-                    "memberType"     = $_.memberType
-                    "id"             = $id
+                    "Status"           = $_.Status;
+                    "createdOn"        = $_.createdOn
+                    "startDateTime"    = $_.startDateTime
+                    "endDateTime"      = $end
+                    "updatedOn"        = $_.updatedOn
+                    "memberType"       = $_.memberType
+                    "id"               = $id
+                    "Condition"        = $_.condition
+                    "ConditionVersion" = $_.conditionVersion
                 }
 
 

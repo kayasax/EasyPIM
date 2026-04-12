@@ -951,6 +951,100 @@ Multiple principals
 }
 ```
 
+### Role Assignment Conditions (ABAC)
+
+Azure RBAC supports [attribute-based access control (ABAC) conditions](https://learn.microsoft.com/en-us/azure/role-based-access-control/conditions-overview) that constrain what a principal can do with a role assignment. For example, you can restrict a Storage Blob Data Contributor to only read blobs in a specific container, or constrain a [Role Based Access Control Administrator](https://learn.microsoft.com/en-us/azure/role-based-access-control/delegate-role-assignments-overview) to only assign a specific set of roles.
+
+> **Scope:** Conditions are only supported for Azure role assignments (`Assignments.AzureRoles`). They do not apply to Entra ID roles or Group roles.
+
+> **Supported roles:** Not all roles support conditions. For details on which roles and actions support conditions, see [Azure ABAC conditions overview](https://learn.microsoft.com/en-us/azure/role-based-access-control/conditions-overview) and [Delegate role assignment management with conditions](https://learn.microsoft.com/en-us/azure/role-based-access-control/delegate-role-assignments-overview).
+
+**How to get the condition expression:**
+
+1. In the Azure Portal, create a role assignment with a condition using the visual condition editor
+2. Switch to the **Advanced** (code) tab to see the raw expression string
+3. Copy this expression into your config JSON
+
+Alternatively, retrieve an existing condition from a role assignment using `Get-PIMAzureResourceEligibleAssignment` (which now returns `Condition` and `ConditionVersion` properties).
+
+**Example: Storage Blob Data Contributor restricted to a specific container**
+
+```jsonc
+{
+  "Assignments": {
+    "AzureRoles": [
+      {
+        "roleName": "Storage Blob Data Contributor",
+        "scope": "/subscriptions/<sub-guid>",
+        "assignments": [
+          {
+            "principalId": "33333333-3333-3333-3333-333333333333",
+            "assignmentType": "Eligible",
+            "justification": "Scoped blob access",
+            // ABAC condition — see https://learn.microsoft.com/en-us/azure/role-based-access-control/conditions-overview
+            "condition": "((!(ActionMatches{'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals 'my-container'))",
+            "conditionVersion": "2.0"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Example: Role Based Access Control Administrator with constrained delegation**
+
+This example uses the [delegated role assignment management](https://learn.microsoft.com/en-us/azure/role-based-access-control/delegate-role-assignments-overview) pattern. The condition constrains the principal to only assign (and remove) a specific set of roles — following the principle of least privilege instead of granting unrestricted User Access Administrator or Owner.
+
+```json
+{
+  "Assignments": {
+    "AzureRoles": [
+      {
+        "roleName": "Role Based Access Control Administrator",
+        "scope": "/providers/Microsoft.Management/managementGroups/<mg-name>",
+        "assignments": [
+          {
+            "principalId": "11111111-2222-3333-4444-555555555555",
+            "assignmentType": "Eligible",
+            "condition": "((!(ActionMatches{'Microsoft.Authorization/roleAssignments/write'})) OR (@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {acdd72a7-3385-48ef-bd42-f606fba81ae7, 4a9ae827-6dc8-4573-8ac7-8239d42aa03f, 9980e02c-c2be-4d73-94e8-173b1dc7cf3c, f1a07417-d97a-45cb-824c-7a7467783830})) AND ((!(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'})) OR (@Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {acdd72a7-3385-48ef-bd42-f606fba81ae7, 4a9ae827-6dc8-4573-8ac7-8239d42aa03f, 9980e02c-c2be-4d73-94e8-173b1dc7cf3c, f1a07417-d97a-45cb-824c-7a7467783830}))",
+            "conditionVersion": "2.0"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+> The GUIDs are Azure built-in [role definition IDs](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles): `acdd72a7-...` = Reader, `4a9ae827-...` = Tag Contributor, `9980e02c-...` = Virtual Machine Contributor, `f1a07417-...` = Managed Identity Operator. The condition ensures this principal can only assign and remove those four roles — not Owner, User Access Administrator, or any other privileged role. In practice you will have more roles in this list; build these conditions using the [Azure Portal condition editor](https://learn.microsoft.com/en-us/azure/role-based-access-control/delegate-role-assignments-portal) or copy them from an existing assignment.
+
+**Condition properties:**
+
+- `condition` (string, optional): The ABAC condition expression. Use the Azure Portal condition editor to build and copy it.
+- `conditionVersion` (string, optional): The condition language version. Currently always `"2.0"`. Defaults to `"2.0"` if omitted.
+
+**Conditions on unsupported roles:** If you add a condition targeting actions that the role does not have (e.g. a storage blob condition on the Reader role), the Azure API rejects the request with a `400 Bad Request`. The assignment fails but the orchestrator pipeline continues processing remaining assignments.
+
+**Condition change detection:** The orchestrator compares the desired condition with the existing one. If they differ, the old assignment is removed and recreated with the updated condition (the Azure PIM API does not support in-place condition updates).
+
+**Legacy format:** Conditions are also supported in the flat `AzureRoles` format:
+
+```jsonc
+{
+  "AzureRoles": [
+    {
+      "PrincipalId": "33333333-3333-3333-3333-333333333333",
+      "Rolename": "Storage Blob Data Contributor",
+      "Scope": "/subscriptions/<sub-guid>",
+      // ABAC condition — see https://learn.microsoft.com/en-us/azure/role-based-access-control/conditions-overview
+      "Condition": "((!(ActionMatches{'Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read'})) OR (@Resource[Microsoft.Storage/storageAccounts/blobServices/containers:name] StringEquals 'my-container'))",
+      "ConditionVersion": "2.0"
+    }
+  ]
+}
+```
+
 <a id="step-8"></a>
 ## Step 8 — Optional: Groups (Policies + Assignments)
 

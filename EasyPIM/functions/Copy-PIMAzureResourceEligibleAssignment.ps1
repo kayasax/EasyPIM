@@ -83,7 +83,18 @@ function Copy-PIMAzureResourceEligibleAssignment {
         $assignments=get-PIMAzureResourceEligibleAssignment -tenantID $tenantID -scope $scope -assignee $from
         $assignments | ForEach-Object {
             Write-Verbose "Copying assignment from $from to $to at scope $($_.scopeId) with role $($_.rolename)"
-            New-PIMAzureResourceEligibleAssignment -tenantID $tenantID -subscriptionID $subscriptionID -scope $_.scopeId -rolename $_.rolename -principalID $to
+            $params = @{
+                tenantID       = $tenantID
+                subscriptionID = $subscriptionID
+                scope          = $_.scopeId
+                rolename       = $_.rolename
+                principalID    = $to
+            }
+            if ($_.Condition) {
+                $params.condition = $_.Condition
+                if ($_.ConditionVersion) { $params.conditionVersion = $_.ConditionVersion }
+            }
+            New-PIMAzureResourceEligibleAssignment @params
         }
 
     }
