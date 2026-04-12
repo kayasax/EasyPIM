@@ -180,14 +180,17 @@
 						$existingCondition = if ($existingMatch.Condition) { $existingMatch.Condition } else { $null }
 
 						if ($desiredCondition -ne $existingCondition) {
+							if ($whatIf) {
+								Write-Host "  What if: Would remove existing $foundType assignment and recreate with updated condition: $ctx" -ForegroundColor Cyan
+								$summary.PlannedCreated++
+								continue
+							}
 							Write-Host "  🔄 Condition changed: $ctx [Found: $foundType] — removing old assignment to recreate with updated condition" -ForegroundColor Cyan
-							if (-not $whatIf) {
-								$removeParams = @{ tenantID = $TenantId; subscriptionID = $SubscriptionId; scope = $scope; rolename = $roleName; principalID = $a.principalId }
-								if ($foundType -eq 'Active') {
-									Remove-PIMAzureResourceActiveAssignment @removeParams
-								} else {
-									Remove-PIMAzureResourceEligibleAssignment @removeParams
-								}
+							$removeParams = @{ tenantID = $TenantId; subscriptionID = $SubscriptionId; scope = $scope; rolename = $roleName; principalID = $a.principalId }
+							if ($foundType -eq 'Active') {
+								Remove-PIMAzureResourceActiveAssignment @removeParams
+							} else {
+								Remove-PIMAzureResourceEligibleAssignment @removeParams
 							}
 							# Fall through to creation below
 						} else {
