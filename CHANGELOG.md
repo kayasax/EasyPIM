@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [EasyPIM Core 2.3.1 & EasyPIM.Orchestrator 1.6.0] - 2026-04-12
+
+### Added
+- **ABAC Condition Support**: Added support for Attribute-Based Access Control (ABAC) conditions on Azure Resource PIM assignments. Contributed by [@AzureStackNerd](https://github.com/AzureStackNerd) (PR #266).
+  - `New-PIMAzureResourceEligibleAssignment` and `New-PIMAzureResourceActiveAssignment` now accept `-Condition` and `-ConditionVersion` parameters
+  - `Get-PIMAzureResourceEligibleAssignment` and `Get-PIMAzureResourceActiveAssignment` return condition data in output
+  - `Copy-PIMAzureResourceEligibleAssignment` preserves ABAC conditions when copying assignments
+  - `Copy-PIMAzureResourceActiveAssignment` — new cmdlet with ABAC condition and permanent assignment support
+  - Orchestrator (`Invoke-EasyPIMOrchestrator`) supports `condition` and `conditionVersion` in JSON configuration
+  - Updated documentation and sample configs with ABAC examples
+
+### Fixed
+- **ABAC Hardening** (PR #267): Fixed JSON escaping, comment style, and WhatIf output for ABAC condition parameters
+- **Identity Matching**: Fixed assignment identity comparison to correctly distinguish RoleDefinition IDs from principal IDs when ABAC conditions are present
+
 ## [EasyPIM.Orchestrator 1.5.1] - 2026-02-13
 
 ### Fixed
