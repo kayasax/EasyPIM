@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [EasyPIM Core 2.4.0 & EasyPIM.Orchestrator 1.7.0] - 2026-07-02
+
+### Added
+
+- **Pre-expiry assignment renewal (Azure resource roles)**: New `Invoke-EasyPIMAssignmentRenewal` (Orchestrator) proactively extends eligible and active Azure resource role PIM assignments that are declared in an orchestrator configuration and expiring within a threshold (default 14 days), using the ARM `AdminExtend` request type (no approval required, safe to schedule unattended). Contributed by [@AzureStackNerd](https://github.com/AzureStackNerd).
+  - New core cmdlets `Update-PIMAzureResourceEligibleAssignment` and `Update-PIMAzureResourceActiveAssignment` submit the `AdminExtend` request, resolving the target schedule and honouring the role policy maximum duration.
+  - Only assignments declared in the configuration are extended; new end date is clamped to the role policy maximum; supports `-WhatIf` and returns a summary object.
+  - v1 is Azure resource roles only; Entra directory roles and PIM-for-Groups are designed for but not yet implemented.
+
 ## [EasyPIM Core 2.3.1 & EasyPIM.Orchestrator 1.6.0] - 2026-04-12
 
 ### Added

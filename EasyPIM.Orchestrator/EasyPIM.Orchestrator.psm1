@@ -14,5 +14,6 @@ Export-ModuleMember -Function @(
 	'Test-PIMPolicyDrift',
 	'Test-PIMEndpointDiscovery',
 	'Disable-EasyPIMTelemetry',
-	'Get-EasyPIMConfiguration'
+	'Get-EasyPIMConfiguration',
+	'Invoke-EasyPIMAssignmentRenewal'
 )

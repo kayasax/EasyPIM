@@ -6,7 +6,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.3.1'
+ModuleVersion = '2.4.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -53,6 +53,8 @@ FunctionsToExport = @(
     "Get-PIMAzureResourceEligibleAssignment",
     "New-PIMAzureResourceActiveAssignment",
     "New-PIMAzureResourceEligibleAssignment",
+    "Update-PIMAzureResourceEligibleAssignment",
+    "Update-PIMAzureResourceActiveAssignment",
     "Remove-PIMAzureResourceEligibleAssignment",
     "Remove-PIMAzureResourceActiveAssignment",
     "Get-PIMEntraRolePolicy",
