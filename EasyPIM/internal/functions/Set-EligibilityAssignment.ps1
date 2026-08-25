@@ -53,10 +53,16 @@ function Set-EligibilityAssignment($MaximumEligibilityDuration, $AllowPermanentE
         write-verbose "2 setting expire to : $expire"
     }
 
+    # Azure ARM rejects an expiration rule that carries maximumDuration when isExpirationRequired is
+    # false; only include it when expiration is required (mirrors the Entra branch below).
+    $maxField = ''
+    if ($expire -eq 'true') {
+        $maxField = '"maximumDuration": "'+ $max + '",'
+    }
     $rule = '
         {
         "isExpirationRequired": '+ $expire + ',
-        "maximumDuration": "'+ $max + '",
+        '+ $maxField + '
         "id": "Expiration_Admin_Eligibility",
         "ruleType": "RoleManagementPolicyExpirationRule",
         "target": {

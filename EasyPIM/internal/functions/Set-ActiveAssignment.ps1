@@ -55,10 +55,16 @@ function Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentA
         $expire2 = "true"   # Expiration required - permanent assignments NOT allowed
     }
 
+    # Azure ARM rejects an expiration rule that carries maximumDuration when isExpirationRequired is
+    # false; only include it when expiration is required (mirrors the Entra branch below).
+    $maxField = ''
+    if ($expire2 -eq 'true') {
+        $maxField = '"maximumDuration": "'+ $MaximumActiveAssignmentDuration + '",'
+    }
     $rule = '
         {
         "isExpirationRequired": '+ $expire2 + ',
-        "maximumDuration": "'+ $MaximumActiveAssignmentDuration + '",
+        '+ $maxField + '
         "id": "Expiration_Admin_Assignment",
         "ruleType": "RoleManagementPolicyExpirationRule",
         "target": {
@@ -66,7 +72,7 @@ function Set-ActiveAssignment($MaximumActiveAssignmentDuration, $AllowPermanentA
         "operations": [
             "All"
         ],
-        "level": "Eligibility",
+        "level": "Assignment",
         "targetObjects": null,
         "inheritableSettings": null,
         "enforcedSettings": null
