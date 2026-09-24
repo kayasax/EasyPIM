@@ -313,7 +313,20 @@ For more information: https://learn.microsoft.com/en-us/azure/developer/github/c
         return $response
 
     } catch {
-        Write-Error "ARM API call failed: $($_.Exception.Message)"
+        # Surface the ARM error response body (error.code / error.message naming the offending field),
+        # not just the bare status line. Invoke-RestMethod puts it on $_.ErrorDetails.Message.
+        $armError = $_.ErrorDetails.Message
+        if (-not $armError -and $_.Exception.Response) {
+            try {
+                $stream = $_.Exception.Response.GetResponseStream()
+                if ($stream) { $armError = (New-Object System.IO.StreamReader($stream)).ReadToEnd() }
+            } catch { }
+        }
+        if ($armError) {
+            Write-Error "ARM API call failed: $($_.Exception.Message) - $armError"
+        } else {
+            Write-Error "ARM API call failed: $($_.Exception.Message)"
+        }
         Write-Verbose "Failed URI: $restURI"
         Write-Verbose "Method: $method"
         Write-Verbose "Body: $body"
