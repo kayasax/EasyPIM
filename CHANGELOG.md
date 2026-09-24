@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [EasyPIM Core 2.3.2] - 2026-09-24
+
+### Fixed
+- **Azure resource role policy expiration** (PR #273, issue #272): Omit `maximumDuration` when permanent active or eligible assignments are allowed, and use the `Assignment` target level for active assignment expiration rules.
+- **ARM error reporting**: Include error response details in failure messages when available.
+
+### Tests
+- Added offline regression coverage for Azure expiration payloads, target levels, unchanged Entra expiration behavior, and ARM error detail propagation.
+
+Thanks to Sebastian Claesson for PR #273. EasyPIM.Orchestrator is unchanged.
+
 ## [EasyPIM Core 2.3.1 & EasyPIM.Orchestrator 1.6.0] - 2026-04-12
 
 ### Added
