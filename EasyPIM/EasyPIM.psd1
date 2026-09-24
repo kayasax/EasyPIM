@@ -6,7 +6,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.3.1'
+ModuleVersion = '2.3.2'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -133,6 +133,13 @@ PrivateData = @{
 
         # ReleaseNotes of this module
     ReleaseNotes = @'
+    EasyPIM 2.3.2 (2026-09-24)
+    - Fixed Azure resource role policy expiration payloads: omit maximumDuration when permanent active or eligible assignments are allowed.
+    - Corrected the Azure active assignment expiration rule target level to Assignment.
+    - Include ARM error response details in failure messages when available.
+    - Added offline regression tests for Azure and Entra expiration rules and ARM error reporting.
+    - Includes PR #273 by Sebastian Claesson, addressing issue #272.
+
     🚀 EasyPIM v2.0.0 - Major Architectural Milestone (2025-08-28):
 
     BREAKING CHANGES:
@@ -214,4 +221,3 @@ HelpInfoURI = 'https://kayasax.github.io/EasyPIM/'
 # DefaultCommandPrefix = ''
 
 }
-
