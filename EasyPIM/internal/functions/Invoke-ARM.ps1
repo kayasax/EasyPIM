@@ -320,7 +320,9 @@ For more information: https://learn.microsoft.com/en-us/azure/developer/github/c
             try {
                 $stream = $_.Exception.Response.GetResponseStream()
                 if ($stream) { $armError = (New-Object System.IO.StreamReader($stream)).ReadToEnd() }
-            } catch { }
+            } catch {
+                Write-Verbose "ARM error response stream is unavailable; preserving the original failure."
+            }
         }
         if ($armError) {
             Write-Error "ARM API call failed: $($_.Exception.Message) - $armError"
