@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **ARM read throttling** (issue #269): The Core `Invoke-ARM` helper retries GET requests on HTTP 429, benefiting all Core ARM read callers, including backup. Retries honor `Retry-After`, are limited to five retries and 60 seconds of total sleep, and preserve failure details when exhausted. Mutation requests are not retried. Pagination remains tracked separately in issue #277.
+- **Permanent assignment policy comparison** (issue #274, PR #276): Ignore irrelevant maximum durations when permanent active or eligible assignments are allowed, preventing false Orchestrator policy drift. This records the previously merged fix.
+
 ## [EasyPIM Core 2.3.2] - 2026-09-24
 
 ### Fixed
