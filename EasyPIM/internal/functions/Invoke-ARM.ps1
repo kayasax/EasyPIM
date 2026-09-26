@@ -4,6 +4,10 @@ Invoke Azure Resource Manager (ARM) API calls
 
 .DESCRIPTION
 Core function for making Azure Resource Manager API requests with proper authentication
+GET requests retry HTTP 429 up to five times with a total sleep budget of 60 seconds.
+Retry-After seconds or HTTP dates are honored without shortening the requested wait.
+Missing or invalid headers use exponential backoff with jitter (2-30 seconds).
+Other statuses and mutation methods are never retried. Authentication is not retried.
 
 .PARAMETER restURI
 The ARM REST API URI to call
@@ -217,24 +221,24 @@ function Invoke-ARM {
             try {
                 $tokenEndpoint = "https://login.microsoftonline.com/$($env:AZURE_TENANT_ID)/oauth2/v2.0/token"
 
-                $body = @{
+                $tokenBody = @{
                     client_id = $env:AZURE_CLIENT_ID
                     scope = "https://management.azure.com/.default"
                     grant_type = "client_credentials"
                 }
 
                 if ($env:AZURE_CLIENT_SECRET) {
-                    $body.client_secret = $env:AZURE_CLIENT_SECRET
+                    $tokenBody.client_secret = $env:AZURE_CLIENT_SECRET
                     Write-Verbose "Using service principal with client secret for ARM token"
                 } elseif ($env:AZURE_CLIENT_ASSERTION) {
-                    $body.client_assertion_type = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
-                    $body.client_assertion = $env:AZURE_CLIENT_ASSERTION
+                    $tokenBody.client_assertion_type = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+                    $tokenBody.client_assertion = $env:AZURE_CLIENT_ASSERTION
                     Write-Verbose "Using service principal with client assertion for ARM token"
                 } else {
                     throw "Service principal requires AZURE_CLIENT_SECRET or AZURE_CLIENT_ASSERTION"
                 }
 
-                $response = Invoke-RestMethod -Uri $tokenEndpoint -Method POST -Body $body -ContentType "application/x-www-form-urlencoded"
+                $response = Invoke-RestMethod -Uri $tokenEndpoint -Method POST -Body $tokenBody -ContentType "application/x-www-form-urlencoded"
                 $token = $response.access_token
                 $authMethod = "Service Principal (Direct OAuth2)"
                 Write-Verbose "ARM token acquired via service principal authentication"
@@ -302,6 +306,7 @@ For more information: https://learn.microsoft.com/en-us/azure/developer/github/c
             Uri     = $restURI
             Method  = $method
             Headers = $headers
+            ErrorAction = 'Stop'
         }
 
         if ($body -and $body -ne "") {
@@ -309,8 +314,63 @@ For more information: https://learn.microsoft.com/en-us/azure/developer/github/c
         }
 
         Write-Verbose "Making ARM API call: $method $restURI"
-        $response = Invoke-RestMethod @params
-        return $response
+        $maxRetries = 5
+        $maxWaitSeconds = 60
+        $retryCount = 0
+        $waitedSeconds = 0
+        while ($true) {
+            try {
+                return Invoke-RestMethod @params
+            } catch {
+                $httpResponse = $_.Exception.Response
+                if ($method -ne 'GET' -or $null -eq $httpResponse -or
+                    [int]$httpResponse.StatusCode -ne 429 -or $retryCount -ge $maxRetries) {
+                    throw
+                }
+
+                # PS5 WebHeaderCollection and PS7 HttpResponseHeaders expose different APIs.
+                $retryAfterValues = $null
+                if ($httpResponse.Headers -is [System.Net.Http.Headers.HttpResponseHeaders]) {
+                    $values = $null
+                    if ($httpResponse.Headers.TryGetValues('Retry-After', [ref]$values)) {
+                        $retryAfterValues = $values
+                    }
+                } elseif ($null -ne $httpResponse.Headers) {
+                    $retryAfterValues = $httpResponse.Headers['Retry-After']
+                }
+
+                $delaySeconds = $null
+                foreach ($value in @($retryAfterValues)) {
+                    $text = ([string]$value).Trim()
+                    $seconds = 0.0
+                    $date = [DateTimeOffset]::MinValue
+                    $candidate = $null
+                    if ($text -match '^[0-9]+$' -and [double]::TryParse($text, [ref]$seconds)) {
+                        $candidate = $seconds
+                    } elseif ([DateTimeOffset]::TryParseExact($text, 'r',
+                            [Globalization.CultureInfo]::InvariantCulture,
+                            [Globalization.DateTimeStyles]::AssumeUniversal, [ref]$date)) {
+                        $candidate = [Math]::Max(0, [Math]::Ceiling(
+                            ($date - (Get-Date).ToUniversalTime()).TotalSeconds))
+                    }
+                    # If multiple values are supplied, never retry before any valid value.
+                    if ($null -ne $candidate -and ($null -eq $delaySeconds -or $candidate -gt $delaySeconds)) {
+                        $delaySeconds = $candidate
+                    }
+                }
+                if ($null -eq $delaySeconds) {
+                    $delaySeconds = [Math]::Min(30.0, [Math]::Pow(2, $retryCount + 1) +
+                        (Get-Random -Minimum 0 -Maximum 1000) / 1000.0)
+                }
+                if ($delaySeconds -gt ($maxWaitSeconds - $waitedSeconds)) {
+                    throw
+                }
+                $retryCount++
+                Write-Verbose "ARM GET throttled; retry $retryCount/$maxRetries in $delaySeconds seconds."
+                Start-Sleep -Milliseconds ([int][Math]::Ceiling($delaySeconds * 1000))
+                $waitedSeconds += [Math]::Ceiling($delaySeconds * 1000) / 1000.0
+            }
+        }
 
     } catch {
         # Surface the ARM error response body (error.code / error.message naming the offending field),
@@ -318,8 +378,14 @@ For more information: https://learn.microsoft.com/en-us/azure/developer/github/c
         $armError = $_.ErrorDetails.Message
         if (-not $armError -and $_.Exception.Response) {
             try {
-                $stream = $_.Exception.Response.GetResponseStream()
-                if ($stream) { $armError = (New-Object System.IO.StreamReader($stream)).ReadToEnd() }
+                if ($_.Exception.Response -is [System.Net.Http.HttpResponseMessage]) {
+                    if ($null -ne $_.Exception.Response.Content) {
+                        $armError = $_.Exception.Response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+                    }
+                } else {
+                    $stream = $_.Exception.Response.GetResponseStream()
+                    if ($stream) { $armError = (New-Object System.IO.StreamReader($stream)).ReadToEnd() }
+                }
             } catch {
                 Write-Verbose "ARM error response stream is unavailable; preserving the original failure."
             }
