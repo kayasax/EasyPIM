@@ -1,7 +1,8 @@
 ﻿(function () {
     function initializeNavToggle() {
         const navToggle = document.querySelector('.nav-toggle');
-        const primaryNav = document.getElementById('primary-nav');
+        const controlledNavId = navToggle ? navToggle.getAttribute('aria-controls') : null;
+        const primaryNav = controlledNavId ? document.getElementById(controlledNavId) : null;
 
         if (navToggle && primaryNav) {
             navToggle.addEventListener('click', function () {

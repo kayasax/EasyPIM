@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Install EasyPIM and EasyPIM.Orchestrator from PowerShell Gallery, choose the right module, and verify the commands before automating Microsoft Entra PIM.">
+    <title>Install EasyPIM from PowerShell Gallery</title>
+    <link rel="canonical" href="https://kayasax.github.io/EasyPIM/install.html">
+    <meta property="og:site_name" content="EasyPIM">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Install EasyPIM from PowerShell Gallery">
+    <meta property="og:description" content="Install EasyPIM and EasyPIM.Orchestrator from PowerShell Gallery, then verify the commands before automating Microsoft Entra PIM.">
+    <meta property="og:url" content="https://kayasax.github.io/EasyPIM/install.html">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" sizes="any">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="guide-page">
+    <header class="site-header guide-header">
+        <div class="container">
+            <a class="brand" href="index.html">
+                <span class="brand-mark" aria-hidden="true"></span>
+                <span class="brand-name">EasyPIM</span>
+            </a>
+            <nav class="site-nav" aria-label="Adoption navigation">
+                <button class="nav-toggle" aria-expanded="false" aria-controls="install-nav">Menu</button>
+                <ul id="install-nav">
+                    <li><a href="index.html">Overview</a></li>
+                    <li><a href="install.html" aria-current="page">Install</a></li>
+                    <li><a href="compare.html">Compare</a></li>
+                    <li><a href="snippets.html">Examples</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <nav class="stage-nav" aria-label="Page navigation">
+                <span>On this page</span>
+                <a href="#commands">Install commands</a>
+                <a href="#choose">Choose a module</a>
+            </nav>
+        </div>
+
+        <section class="hero guide-hero" id="overview">
+            <div class="container hero-grid">
+                <div class="hero-copy">
+                    <p class="eyebrow">PowerShell Gallery install</p>
+                    <h1>Install the EasyPIM modules for your PIM automation stage</h1>
+                    <p class="hero-lead">Use the Core module for daily Microsoft Entra PIM and Azure RBAC operations. Add EasyPIM.Orchestrator when you are ready to manage privileged access from reviewed JSON configuration.</p>
+                    <div class="hero-actions">
+                        <a class="btn" href="https://www.powershellgallery.com/packages/EasyPIM" target="_blank" rel="noopener">EasyPIM on PowerShell Gallery</a>
+                        <a class="btn" href="https://www.powershellgallery.com/packages/EasyPIM.Orchestrator" target="_blank" rel="noopener">EasyPIM.Orchestrator on PowerShell Gallery</a>
+                    </div>
+                </div>
+                <div class="hero-visual" aria-hidden="true">
+                    <div class="glass-card feature-card">
+                        <span class="card-eyebrow">Core module</span>
+                        <h2>Bulk operations first</h2>
+                        <p>Install EasyPIM to export policies, manage eligible assignments, and automate routine privileged access work.</p>
+                    </div>
+                    <div class="glass-card feature-card">
+                        <span class="card-eyebrow">Orchestrator module</span>
+                        <h2>Policy-as-code next</h2>
+                        <p>Install EasyPIM.Orchestrator when configuration files, drift checks, and deployment modes belong in your change process.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="commands">
+            <div class="container">
+                <h2>Install commands</h2>
+                <p class="section-lead">Choose PowerShellGet or PSResourceGet below. Both install from PowerShell Gallery for your current user, without requiring an elevated shell.</p>
+                <h3>Prerequisites</h3>
+                <ul class="check-list">
+                    <li>Use a supported PowerShell 7 release, or Windows PowerShell 5.1. Ensure your shell meets the requirements of the current package dependencies.</li>
+                    <li>Allow network access to PowerShell Gallery. Use PowerShellGet for <code>Install-Module</code>, or Microsoft.PowerShell.PSResourceGet for <code>Install-PSResource</code>.</li>
+                    <li>The package manager installs required modules, including Az.Accounts and Microsoft.Graph.Authentication. Orchestrator also depends on EasyPIM.</li>
+                    <li>Installation does not grant tenant access. Before running PIM commands, confirm licensing, authentication, and permissions for your target scope in the <a href="https://github.com/kayasax/EasyPIM/wiki/Documentation" target="_blank" rel="noopener">EasyPIM documentation</a>.</li>
+                </ul>
+                <div class="card-grid">
+                    <article class="value-card gradient-blue">
+                        <h3>Install EasyPIM Core</h3>
+                        <p>Start here for assignment lifecycle management, policy exports, backups, restores, and role policy updates.</p>
+                        <p>With PowerShellGet:</p>
+                        <pre class="code-block language-powershell"><code class="language-powershell">Install-Module -Name EasyPIM -Repository PSGallery -Scope CurrentUser
+Import-Module EasyPIM</code></pre>
+                        <p>Or with PSResourceGet:</p>
+                        <pre class="code-block language-powershell"><code class="language-powershell">Install-PSResource -Name EasyPIM -Repository PSGallery -Scope CurrentUser
+Import-Module EasyPIM</code></pre>
+                        <p><a href="https://www.powershellgallery.com/packages/EasyPIM" target="_blank" rel="noopener">Open the EasyPIM PowerShell Gallery package</a></p>
+                    </article>
+                    <article class="value-card gradient-purple">
+                        <h3>Install EasyPIM.Orchestrator</h3>
+                        <p>Add the orchestrator when you want JSON templates, WhatIf previews, delta mode, and drift detection.</p>
+                        <p>With PowerShellGet:</p>
+                        <pre class="code-block language-powershell"><code class="language-powershell">Install-Module -Name EasyPIM.Orchestrator -Repository PSGallery -Scope CurrentUser
+Import-Module EasyPIM.Orchestrator</code></pre>
+                        <p>Or with PSResourceGet:</p>
+                        <pre class="code-block language-powershell"><code class="language-powershell">Install-PSResource -Name EasyPIM.Orchestrator -Repository PSGallery -Scope CurrentUser
+Import-Module EasyPIM.Orchestrator</code></pre>
+                        <p><a href="https://www.powershellgallery.com/packages/EasyPIM.Orchestrator" target="_blank" rel="noopener">Open the EasyPIM.Orchestrator PowerShell Gallery package</a></p>
+                    </article>
+                    <article class="value-card gradient-teal">
+                        <h3>Verify before production</h3>
+                        <p>Confirm the module imports, list available commands, and run previews in a non-production tenant before changing live access.</p>
+                        <pre class="code-block language-powershell"><code class="language-powershell">Get-Command -Module EasyPIM
+Get-Command -Module EasyPIM.Orchestrator
+Get-Help Invoke-EasyPIMOrchestrator -Examples</code></pre>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="choose">
+            <div class="container">
+                <h2>Which module should I install?</h2>
+                <div class="card-grid">
+                    <article class="value-card gradient-blue">
+                        <h3>Choose Core for operational fixes</h3>
+                        <p>Use EasyPIM when you need to export current state, add or remove assignments, copy role settings, or standardize manual PIM tasks.</p>
+                    </article>
+                    <article class="value-card gradient-purple">
+                        <h3>Choose Orchestrator for governed rollout</h3>
+                        <p>Use EasyPIM.Orchestrator when reviewers expect a file-based model, predictable previews, and drift reports before enforcement.</p>
+                    </article>
+                    <article class="value-card gradient-amber">
+                        <h3>Use both for staged adoption</h3>
+                        <p>Start with Core to baseline and clean up, then promote stable requirements into <a href="template-guide.html">orchestrator templates</a>. Follow the <a href="https://github.com/kayasax/EasyPIM/wiki/Documentation" target="_blank" rel="noopener">project documentation</a> for authentication and command reference.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>&copy; 2025 EasyPIM. MIT Licensed. Built for Microsoft Entra PIM automation teams.</p>
+            <div class="stage-nav" aria-label="Footer navigation">
+                <a href="index.html">Overview</a>
+                <a href="install.html" aria-current="page">Install</a>
+                <a href="compare.html">Compare</a>
+                <a href="snippets.html">Examples</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Cloudflare Web Analytics -->
+    <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b40ad1359e664d4ab95292e1ebf5ec11"}'></script>
+    <!-- End Cloudflare Web Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-powershell.min.js" defer></script>
+    <script src="script.js" defer></script>
+</body>
+</html>
