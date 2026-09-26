@@ -3,78 +3,167 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="EasyPIM is the enterprise-ready PowerShell automation platform for Microsoft Entra PIM with JSON orchestration, drift detection, and CI/CD integration.">
-    <title>EasyPIM | Enterprise Entra PIM Automation</title>
+    <meta name="description" content="Automate Microsoft Entra PIM and Azure RBAC with EasyPIM PowerShell modules for bulk assignments, policy exports, drift detection, and PIM-as-code workflows.">
+    <title>EasyPIM PowerShell for Microsoft Entra PIM Automation</title>
+    <link rel="canonical" href="https://kayasax.github.io/EasyPIM/">
+    <meta property="og:site_name" content="EasyPIM">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="EasyPIM PowerShell for Microsoft Entra PIM Automation">
+    <meta property="og:description" content="Automate Microsoft Entra PIM and Azure RBAC with PowerShell modules for bulk assignments, policy exports, drift detection, and PIM-as-code workflows.">
+    <meta property="og:url" content="https://kayasax.github.io/EasyPIM/">
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" sizes="any">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
     <link rel="stylesheet" href="styles.css">
     <meta name="google-site-verification" content="kvGm0MShHrk9yIXTmsHfP2kjd5CEL90LKURsMeO5KfA" />
     <meta name="msvalidate.01" content="D37C3C9ABE86805A689CF6EC435A801F" />
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "EasyPIM",
+        "applicationCategory": "DeveloperApplication",
+        "description": "PowerShell modules for Microsoft Entra Privileged Identity Management automation, Azure RBAC governance, policy export, assignment management, drift detection, and PIM-as-code.",
+        "url": "https://kayasax.github.io/EasyPIM/",
+        "downloadUrl": "https://www.powershellgallery.com/packages/EasyPIM",
+        "installUrl": "https://kayasax.github.io/EasyPIM/install.html",
+        "license": "https://github.com/kayasax/EasyPIM/blob/main/LICENSE",
+        "softwareRequirements": "PowerShell",
+        "sameAs": [
+            "https://github.com/kayasax/EasyPIM",
+            "https://www.powershellgallery.com/packages/EasyPIM"
+        ]
+    }
+    </script>
 </head>
 <body>
     <header class="site-header">
         <div class="container">
-            <a class="brand" href="#top">
+            <a class="brand" href="index.html">
                 <span class="brand-mark" aria-hidden="true"></span>
                 <span class="brand-name">EasyPIM</span>
             </a>
             <nav class="site-nav" aria-label="Main navigation">
                 <button class="nav-toggle" aria-expanded="false" aria-controls="primary-nav">Menu</button>
                 <ul id="primary-nav">
-                    <li><a href="#adoption">Adoption path</a></li>
-                    <li><a href="compare.html">Compare workflows</a></li>
-                    <li><a href="#faq">FAQ</a></li>
-                    <li><a class="cta" href="https://github.com/kayasax/EasyPIM">Get EasyPIM</a></li>
+                    <li><a href="index.html" aria-current="page">Overview</a></li>
+                    <li><a href="install.html">Install</a></li>
+                    <li><a href="compare.html">Compare</a></li>
+                    <li><a href="snippets.html">Examples</a></li>
                 </ul>
             </nav>
         </div>
     </header>
 
     <main id="top">
-        <section class="hero adoption-hero">
+        <section class="hero outcome-hero">
             <div class="container hero-grid">
                 <div class="hero-copy">
                     <p class="eyebrow">Microsoft Entra Privileged Identity Management</p>
-                        <h1>The one module that speaks Graph and ARM.</h1>
-                        <p class="hero-subheadline">Meaningful PowerShell syntax, security-first automation, zero portal headaches.</p>
-                        <p class="hero-lead">Bulk-manage privileged access across Entra and Azure with enterprise-grade guardrails. When you're ready, follow the three-stage adoption map to roll out Core, Orchestrator, and Event-driven governance at your pace.</p>
-                        <ul class="hero-pillars">
-                            <li><span class="highlight">Unified coverage</span> Manage Entra roles, Azure RBAC, and privileged groups with one syntax.</li>
-                            <li><span class="highlight">Bulk operations</span> Clone, restore, and reconcile assignments without brittle scripts.</li>
-                            <li><span class="highlight">Security first</span> WhatIf validation, drift detection, and audit-ready reporting on every run.</li>
-                            <li><span class="highlight">Enterprise grade</span> 8,023 automated tests and consistent error handling keep releases safe.</li>
-                        </ul>
+                    <h1>Stop repeating PIM changes by hand.</h1>
+                    <p class="hero-lead">Harden several roles in one command. Reuse the settings you trust. See what drifted before you change it.</p>
+                    <p class="hero-support">EasyPIM brings repeatable PowerShell workflows to Microsoft Entra roles, Azure resources, and privileged groups.</p>
                     <div class="hero-actions">
-                        <a class="btn" href="#adoption">See the adoption path</a>
-                        <a class="btn" href="compare.html">View side-by-side comparison</a>
-                        <a class="btn" href="https://github.com/kayasax/EasyPIM/wiki/Documentation" target="_blank" rel="noopener">Browse the documentation</a>
+                        <a class="btn outcome-primary" href="install.html">Install EasyPIM</a>
                     </div>
-                    <dl class="hero-metrics">
-                        <div>
-                            <dt>50+</dt>
-                            <dd>Automation cmdlets covering Entra roles, Azure RBAC, and privileged groups</dd>
-                        </div>
-                        <div>
-                            <dt>8023</dt>
-                            <dd>Validation tests keep every release production ready</dd>
-                        </div>
-                        <div>
-                            <dt>4</dt>
-                            <dd>Clouds supported including Azure Government and China</dd>
-                        </div>
-                    </dl>
                 </div>
-                <div class="hero-visual" aria-hidden="true">
-                    <div class="glass-card feature-card">
-                        <span class="card-eyebrow">Outcome-driven</span>
-                        <h2>Prove control at every checkpoint</h2>
-                        <p>EasyPIM’s adoption stages mirror real-world governance milestones so identity, security, and platform teams can move in lockstep.</p>
+            </div>
+        </section>
+
+        <nav class="container page-outline" aria-label="On this page">
+            <span>On this page</span>
+            <a href="#outcomes">Benefits</a>
+            <a href="#example">PowerShell walkthrough</a>
+            <a href="#get-started">Quick start</a>
+            <a href="#adoption">Modules</a>
+            <a href="#faq">FAQ</a>
+        </nav>
+
+        <section id="outcomes" class="section outcomes-section">
+            <div class="container">
+                <p class="eyebrow">What do you need to fix?</p>
+                <h2>Four reasons to leave repetitive work behind.</h2>
+                <div class="outcome-grid">
+                    <article class="value-card">
+                        <span class="outcome-number">01 / BULK CHANGES</span>
+                        <h3>Same rules. Fewer clicks.</h3>
+                        <p>Apply MFA, justification, and activation limits to several roles instead of opening each policy separately.</p>
+                        <a href="#example">See a three-role example</a>
+                    </article>
+                    <article class="value-card">
+                        <span class="outcome-number">02 / REUSABLE SETTINGS</span>
+                        <h3>Configure once. Reuse it.</h3>
+                        <p>Copy role settings, export assignments, and restore saved configurations instead of rebuilding them by hand.</p>
+                        <a href="core.html">Explore copy, export, and restore</a>
+                    </article>
+                    <article class="value-card">
+                        <span class="outcome-number">03 / DRIFT DETECTION</span>
+                        <h3>Know what changed.</h3>
+                        <p>Compare live policies with your declared configuration. Review the differences before deciding what to reconcile.</p>
+                        <a href="template-guide.html">See configuration and drift workflows</a>
+                    </article>
+                    <article class="value-card">
+                        <span class="outcome-number">04 / REVIEWED CHANGES</span>
+                        <h3>Preview. Review. Then deploy.</h3>
+                        <p>Use WhatIf previews and version-controlled configuration to move from individual commands to reviewed pipeline deployments.</p>
+                        <a href="event-driven.html">Explore deployment workflows</a>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="example" class="section">
+            <div class="container example-grid">
+                <div>
+                    <p class="eyebrow">A real task, not another architecture diagram</p>
+                    <h2>Three roles.<br>One policy change.</h2>
+                    <p>Require MFA and justification, and limit activation to four hours across three Entra roles.</p>
+                    <p>This example uses <code>-WhatIf</code> to preview the operation. Authenticate with the required permissions first; review existing settings and the preview before removing that switch.</p>
+                    <a href="compare.html">Compare with the underlying API workflow</a>
+                </div>
+                <div class="example-terminal">
+                    <div class="terminal-bar"><span>PowerShell</span><span>WHATIF PREVIEW</span></div>
+                    <pre class="code-block language-powershell"><code class="language-powershell">$tenantId = Read-Host "Your tenant ID"
+$roles = @(
+    "Global Administrator"
+    "Security Administrator"
+    "Exchange Administrator"
+)
+
+$policy = @{
+    TenantID = $tenantId
+    RoleName = $roles
+    ActivationRequirement = @(
+        "MultiFactorAuthentication"
+        "Justification"
+    )
+    ActivationDuration = "PT4H"
+}
+
+Set-PIMEntraRolePolicy @policy -WhatIf</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <section id="get-started" class="section start-section">
+            <div class="container example-grid">
+                <div>
+                    <p class="eyebrow">Start with one useful command</p>
+                    <h2>Install. Connect. Take control.</h2>
+                    <p>Install EasyPIM for your current user. Follow the setup guide for prerequisites and authentication, then try a scoped operation before changing production access.</p>
+                    <div class="hero-actions">
+                        <a class="btn outcome-primary" href="install.html">Installation guide</a>
+                        <a href="https://github.com/kayasax/EasyPIM/wiki/Documentation" target="_blank" rel="noopener">Documentation (GitHub)</a>
                     </div>
-                    <div class="glass-card feature-card">
-                        <span class="card-eyebrow">Built for scale</span>
-                        <h2>Operational excellence without surprise</h2>
-                        <p>PSScriptAnalyzer compliance, consistent error handling, and thousands of automated tests make each stage safe to roll out.</p>
-                    </div>
+                </div>
+                <div class="example-terminal">
+                    <div class="terminal-bar"><span>PowerShellGet</span><span>CURRENT USER</span></div>
+                    <pre class="code-block language-powershell"><code class="language-powershell">Install-Module -Name EasyPIM `
+    -Repository PSGallery `
+    -Scope CurrentUser
+
+Import-Module EasyPIM
+Get-Command -Module EasyPIM</code></pre>
+                    <p><a href="https://www.powershellgallery.com/packages/EasyPIM">View EasyPIM on PowerShell Gallery</a></p>
                 </div>
             </div>
         </section>
@@ -101,16 +190,15 @@
                     </article>
                 </div>
                 <div class="hero-actions">
-                    <a class="btn" href="compare.html">Open the full comparison</a>
-                    <a class="btn" href="compare.html#copy-assignment">Skip to copy workflows</a>
+                    <a href="compare.html">Read the full workflow comparison</a>
                 </div>
             </div>
         </section>
 
         <section id="adoption" class="section platform">
             <div class="container">
-                <h2>Three steps to production-safe privileged access</h2>
-                <p class="section-lead">Follow the adoption map to move from urgent manual fixes to governed automation with policy-as-code and CI/CD reinforcement.</p>
+                <h2>Start small. Automate further when you need to.</h2>
+                <p class="section-lead">You do not need a pipeline to benefit from EasyPIM. Start with Core commands, add configuration-as-code with Orchestrator, then connect your deployment workflow.</p>
                 <div class="platform-grid">
                     <article class="module-card core">
                         <span class="step-label">Stage 1 · Bulk management</span>
@@ -122,7 +210,7 @@
                             <li>Adopt quickly with meaningful cmdlets, human-friendly role names, and verbose call tracing across Graph and ARM.</li>
                         </ul>
                         <div class="module-actions">
-                            <a class="btn" href="core.html">Dive into Stage 1</a>
+                            <a href="core.html">Read the Core guide</a>
                         </div>
                     </article>
                     <article class="module-card orchestrator">
@@ -135,7 +223,7 @@
                             <li>Choose your rollout path with WhatIf previews, delta mode safety, or initial mode for full enforcement.</li>
                         </ul>
                         <div class="module-actions">
-                            <a class="btn" href="template-guide.html">Dive into Stage 2</a>
+                            <a href="template-guide.html">Read the Orchestrator guide</a>
                         </div>
                     </article>
                     <article class="module-card event">
@@ -148,7 +236,7 @@
                             <li>Deploy with the included scripts and templates while generating WouldRemove, drift, and remediation evidence automatically.</li>
                         </ul>
                         <div class="module-actions">
-                            <a class="btn" href="event-driven.html">Dive into Stage 3</a>
+                            <a href="event-driven.html">Read the event-driven guide</a>
                         </div>
                     </article>
                 </div>
@@ -229,8 +317,7 @@
                 <h2>Ready to guide your privileged access journey?</h2>
                 <p>Install the modules, follow the adoption map, and bring policy-as-code discipline to Microsoft Entra PIM.</p>
                 <div class="hero-actions">
-                    <a class="btn" href="https://github.com/kayasax/EasyPIM" target="_blank" rel="noopener">View the source on GitHub</a>
-                    <a class="btn" href="#adoption">Follow the adoption path</a>
+                    <a href="https://github.com/kayasax/EasyPIM" target="_blank" rel="noopener">Source code (GitHub)</a>
                 </div>
             </div>
         </section>
@@ -239,12 +326,11 @@
     <footer class="site-footer">
         <div class="container">
             <p>&copy; 2025 EasyPIM. MIT Licensed. Built for Microsoft Entra PIM automation teams.</p>
-            <div class="stage-nav" aria-label="Footer adoption navigation">
-                <a href="#adoption">Adoption map</a>
-                <a href="compare.html">Compare workflows</a>
-                <a href="core.html">Stage 1</a>
-                <a href="template-guide.html">Stage 2</a>
-                <a href="event-driven.html">Stage 3</a>
+            <div class="stage-nav" aria-label="Footer navigation">
+                <a href="index.html" aria-current="page">Overview</a>
+                <a href="install.html">Install</a>
+                <a href="compare.html">Compare</a>
+                <a href="snippets.html">Examples</a>
             </div>
         </div>
     </footer>
