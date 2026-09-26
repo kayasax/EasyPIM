@@ -50,7 +50,8 @@ function Compare-PIMPolicy {
 	.DESCRIPTION
 	Performs field-by-field comparison of PIM policy settings, applying business
 	rules validation and handling requirement normalization. Returns structured
-	comparison results.
+	comparison results. Assignment durations are ignored only when the expected
+	policy explicitly allows the corresponding permanent assignment.
 
 	.PARAMETER Type
 	The type of policy being compared (EntraRole, AzureRole, Group).
@@ -131,9 +132,20 @@ function Compare-PIMPolicy {
 	}
 
 	$differences = @()
+	$durationPermanentFlags = @{
+		'MaximumEligibilityDuration' = 'AllowPermanentEligibility'
+		'MaximumActiveAssignmentDuration' = 'AllowPermanentActiveAssignment'
+	}
 
 	foreach ($field in $fields) {
 		if ($Expected.PSObject.Properties[$field]) {
+			if ($durationPermanentFlags.ContainsKey($field)) {
+				$permanentFlag = $durationPermanentFlags[$field]
+				if ($Expected.PSObject.Properties[$permanentFlag] -and
+					(ConvertTo-BooleanString -Value $Expected.$permanentFlag) -eq 'true') {
+					continue
+				}
+			}
 			$expectedValue = $Expected.$field
 			$liveProperty = $field
 
