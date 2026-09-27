@@ -6,7 +6,7 @@
 RootModule = 'EasyPIM.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.3.2'
+ModuleVersion = '2.3.3'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -133,6 +133,13 @@ PrivateData = @{
 
         # ReleaseNotes of this module
     ReleaseNotes = @'
+    EasyPIM 2.3.3 (2026-09-27)
+    - Fixed ARM GET throttling (#269): honor Retry-After with at most five retries and 60 seconds of total sleep. Mutation requests are not retried.
+    - Fixed Azure role enumeration pagination (#277): follow every page using the shared ARM retry helper while preserving continuation queries and authentication context.
+    - Reject cross-origin or repeated continuation URLs and fail on later-page errors instead of returning incomplete role lists.
+    - Added offline regression tests for retries, pagination, continuation validation, and failure handling.
+    - EasyPIM.Orchestrator is unchanged.
+
     EasyPIM 2.3.2 (2026-09-24)
     - Fixed Azure resource role policy expiration payloads: omit maximumDuration when permanent active or eligible assignments are allowed.
     - Corrected the Azure active assignment expiration rule target level to Assignment.
