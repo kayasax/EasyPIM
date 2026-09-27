@@ -36,14 +36,38 @@ function Get-AllPolicies {
     catch { Write-Verbose "Get-AllPolicies: failed to extract SubscriptionId from scope '$scope'" }
 
     write-verbose "Getting All Policies at $restUri"
-    if ($subId) {
-        $response = Invoke-ARM -restURI $restUri -Method 'GET' -Body $null -SubscriptionId $subId -TenantId $TenantId
-    } else {
-        $response = Invoke-ARM -restURI $restUri -Method 'GET' -Body $null -TenantId $TenantId
+    $request = @{
+        Method = 'GET'
+        Body = $null
+        TenantId = $TenantId
+        ErrorAction = 'Stop'
     }
-    Write-Verbose $response
-    $roles = $response | ForEach-Object {
-        $_.value.properties.roleName
+    if ($subId) { $request.SubscriptionId = $subId }
+
+    $origin = [uri]$ARMhost
+    $visited = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+    $roles = [System.Collections.Generic.List[string]]::new()
+    while ($restUri) {
+        $pageUri = $null
+        if (-not [uri]::TryCreate($restUri, [System.UriKind]::Absolute, [ref]$pageUri) -or
+            $pageUri.Scheme -ne 'https' -or $pageUri.Authority -ne $origin.Authority -or
+            $pageUri.UserInfo -or $pageUri.Fragment) {
+            throw 'Get-AllPolicies: invalid continuation URL or ARM origin mismatch.'
+        }
+        if (-not $visited.Add($pageUri.AbsoluteUri)) {
+            throw 'Get-AllPolicies: repeated ARM continuation URL.'
+        }
+
+        # Keep the service URL intact, including its API version and encoded continuation token.
+        $response = Invoke-ARM -restURI $restUri @request
+        Write-Verbose $response
+        foreach ($role in $response.value) {
+            if ($null -ne $role.properties.roleName) {
+                $roles.Add($role.properties.roleName)
+            }
+        }
+        $restUri = $response.nextLink
     }
+    # Emit nothing until every page succeeds so backup cannot use a partial role list.
     return $roles
 }
